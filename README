@@ -1,0 +1,134 @@
+========
+cutadapt
+========
+
+cutadapt is used to remove adapter sequences from DNA high-throughput
+sequencing data. This is usually necessary when the read length of the
+machine is longer than the molecule that is sequenced. This is, for
+example, the case in microRNA data.
+
+cutadapt is implemented in Python, with an extension module that implements
+the alignnment algorithm, which is written in C.
+
+
+Project homepage
+================
+
+See http://code.google.com/p/cutadapt/
+
+
+License
+=======
+
+Copyright (c) 2010 Marcel Martin <marcel.martin@tu-dortmund.de>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+
+Dependencies
+============
+
+cutadapt needs Python 2.6 or later. It will most likely not work with Python 3.
+For installation from sources, a C compiler needs to be installed.
+
+
+Installation
+============
+
+$ python setup.py build
+$ python setup.py install
+
+
+Use without installation
+========================
+
+Build the C extension module:
+$ python setup.py build_ext -i
+
+Then simply run the script from where it is, similar to this:
+$ /home/myname/downloads/cutadapt-0.x/cutadapt --help
+
+
+How to use, examples
+====================
+
+Please also see the command-line help:
+$ cutadapt --help
+
+
+SOLiD data
+----------
+
+Cut an adapter from SOLiD data given in solid.csfasta and solid.qual.
+Produce MAQ- and BWA-compatible output, allow 12% errors, write the
+resulting FASTQ file to output.fastq. Add the prefix "abc:" to the read
+names:
+
+$ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq solid.csfasta solid.qual > output.fastq
+
+Instead of redirecting standard output with ">", the "-o" option can be used:
+
+$ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq -o output.fastq solid.csfasta solid.qual
+
+
+FASTA file
+----------
+
+Cut an adapter from reads given in a FASTA file. Try to remove an adapter three times
+(this is usually not needed), use the default error rate of 10%, write result to output.fa:
+
+$ cutadapt -n 3 -a TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG input.fa > output.fa
+
+
+Adapters
+========
+
+These are some 454 adapters:
+A1:   5'- TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA
+A2:   5'- TGAGACAGGGAGGGAACAGATGGGACACGCAGGGATGAGATGGA
+B1:   5'- CCTATCCCCTGTGTGCCTTGCCTATCCCCTGTTGCGTGTCTCA
+B2:   5'- TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG
+
+This is an AB SOLiD adapter (in color space) used in the SREK protocol:
+330201030313112312
+
+
+Algorithm
+=========
+
+cutadapt uses a simple semiglobal alignment algorithm, without any special optimizations.
+For speed, the algorithm is implemented as a Python extension module in calignmodule.c.
+
+The program is sufficiently fast for my purposes, but speedups should be simple to achieve.
+
+
+To Do
+=====
+
+  * FASTQ input
+  * autodetect FASTA/FASTQ input in STDIN
+  * write test cases
+  * allow to give adapter in nucleotide space, but find it in color space
+  * print command-line parameters
+  * show average error rate
+  * allow comma-separated adapters in -a parameter
+  * allow stuff like: -e 2/17
+  * show table of length vs. max errors
+  * factor out a read_sequences method
+  * speed up alignment

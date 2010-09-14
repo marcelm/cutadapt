@@ -1,0 +1,415 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2010 Marcel Martin <marcel.martin@tu-dortmund.de>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+from __future__ import print_function, division
+
+import sys, re
+import fasta
+from string import maketrans
+from optparse import OptionParser
+
+from calign import semiglobalalign
+
+usage = """
+%prog [options] <FASTA/FASTQ FILE> [<QUALITY FILE>]
+
+Reads a FASTA or FASTQ file from standard input, finds and removes adapters,
+and writes the changed sequence to standard output.
+When finished, statistics are printed to standard error.
+
+This program has only been tested with single-end data.
+
+If you want to search for the reverse complement of an adapter, you must
+provide an additional adapter sequence.
+"""
+
+class FormatError(Exception):
+	pass
+
+def print_statistics(adapters, stats, outfile=sys.stderr):
+	print("# There are %7d sequences in this data set." % stats.n, file=outfile)
+	print(file=outfile)
+	print("middle:", stats.middle, file=outfile)
+	for adapter_index, adapter in enumerate(adapters):
+		print("# Statistics for adapter %s (%s, length %d)" % (adapter_index+1, adapter, len(adapter)), file=outfile)
+		#print "# The histograms follow: length of adapter vs. no. of sequences"
+		print("#", file=outfile)
+		print("# adapter found in the beginning of the sequence", file=outfile)
+		print("# length\tnumber", file=outfile)
+		total = 0
+		for k, v in stats.lengths_front[adapter_index].items():
+			print("%d\t%d" % (k, v), file=outfile)
+			total += v
+		print("total:", total, file=outfile)
+		print(file=outfile)
+		print(file=outfile)
+		print("# adapter found at the end of the sequence", file=outfile)
+		print("# length\tnumber", file=outfile)
+		total = 0
+		for k, v in stats.lengths_back[adapter_index].items():
+			print("%d\t%d" % (k, v), file=outfile)
+			total += v
+		print("total:", total, file=outfile)
+		print(file=outfile)
+		print(file=outfile)
+
+
+def quality_to_ascii(quality_line, base=33):
+	"""
+	Convert a string containing qualities given as integer to a string of ASCII-encoded qualities.
+
+	base -- ASCII code of quality zero (sensible values are 33 and 64).
+
+	>>> quality_to_ascii("17 4 29 18")
+	'2%>3'
+	"""
+	fields = map(int, quality_line.split())
+	qualities = ''.join(chr(q+base) for q in fields)
+	return qualities
+
+
+def find_best_alignment(adapters, seq):
+	"""
+	Find the best matching adapter.
+
+	Return tuple (best_alignment, best_index).
+	best_alignment is an alignment as returned by semiglobalalign.
+	best_index is the index of the best adapter into the adapters list.
+	"""
+	assert adapters
+	best_score = -1000000
+	for index, adapter in enumerate(adapters):
+		alignment = semiglobalalign(adapter, seq)
+		(r1, r2, astart, astop, rstart, rstop, errors) = alignment
+		# the length of the matching part of the adapter minus errors
+		# determines which adapter fits best
+		score = astop - astart - errors
+		if score > best_score:
+			best_alignment = alignment
+			best_score = score
+			best_index = index
+	return (best_alignment, best_index)
+
+
+def main():
+	parser = OptionParser(usage=usage)
+	parser.add_option("-e", "--error-rate", type=float, default=0.1,
+		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
+	parser.add_option("-o", "--output", default=None,
+		help="The modified sequence gets written to this file (in FASTA format) (default: standard output)")
+	parser.add_option("-a", "--adapters", action="append", # TODO
+		help="Adapter sequences")
+	parser.add_option("-n", "--times", type=int, metavar="count", default=1,
+		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
+	parser.add_option("-r", "--rest-file", default=None,
+		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
+	parser.add_option("-x", "--prefix", default='',
+		help="Add this prefix to read names")
+	#parser.add_option("-x", "--prefix", default=None,
+		#help="Enable MAQ-compatible output, and also modifies the "+
+		     #"read names to fit the format required by MAQ by prepending PREFIX to the "+
+			 #"read name and appending '/1' to it. Add options -tdc for colorspace.")
+	#print("  -p length       Print the found alignments if they are longer than length.")
+
+	parser.add_option("-c", "--colorspace", action='store_true', default=False,
+		help="Colorspace mode: Trims adapter correctly (one more character than there are matches needs to be trimmed).")
+		#Work in color space (leaves primer base alone and trims adapter correctly)")
+	parser.add_option("-d", "--double-encode", action='store_true', default=False,
+		help="When in color space, double-encode colors (mapping 0,1,2,3,4 to A,C,G,T,N).")
+	parser.add_option("-t", "--trim-primer", action='store_true', default=False,
+		help="When in color space, trim primer base and the transition to the first color")
+	parser.add_option("--maq", "--bwa", action='store_true', default=False,
+		help="MAQ/BWA-compatible color space output. Same as enabling -c, -d, -t.")
+
+	options, args = parser.parse_args()
+
+	if len(args) == 0:
+		parser.error("At least one parameter needed: name of the FASTA or FASTQ file.")
+	elif len(args) > 2:
+		parser.error("Too many parameters.")
+
+	infilename = args[0]
+	quality_filename = None
+	if len(args) == 2:
+		quality_filename = args[1]
+		print("will use qualities from", quality_filename, file=sys.stderr)
+
+	if options.output is None:
+		outfile = sys.stdout
+	else:
+		outfile = open(options.output, 'w')
+
+	if options.maq:
+		options.colorspace = True
+		options.double_encode = True
+		options.trim_primer = True
+
+	if options.trim_primer and not options.colorspace:
+		parser.error("trimming primer makes only sense in colorspace")
+	if options.double_encode and not options.colorspace:
+		parser.error("double-encoding makes only sense in colorspace")
+
+	print("maximum error rate: %.2f%%" % (options.error_rate*100.), file=sys.stderr)
+	times = options.times
+
+	if options.rest_file:
+		if options.rest_file == '-':
+			rest_file = sys.stdout
+		else:
+			rest_file = open(options.rest_file, 'w')
+	else:
+		rest_file = None
+
+	show_progress = False
+	max_error_rate = options.error_rate
+
+	if not options.adapters:
+		print("Need adapters.", file=sys.stderr)
+		sys.exit(1)
+	#if quality_file and not colorspace:
+		#print("Sorry, using quality files currently only works for color space.", file=sys.stderr)
+		#sys.exit(1)
+
+	#if (quality_file and not fastq) or (fastq and not quality_file):
+		#print("You need to provide both -m and -q at the same time.", file=sys.stderr)
+		#sys.exit(1)
+
+	class Statistics(object):
+		pass
+	stats = Statistics()
+	stats.middle = 0
+	stats.adapter_matches = len(options.adapters)*[0]
+	stats.sequence_matches = len(options.adapters)*[0]
+	stats.lengths_front = []
+	stats.lengths_back = []
+	for x in xrange(len(options.adapters)):
+		stats.lengths_front.append({})
+	for x in xrange(len(options.adapters)):
+		stats.lengths_back.append({})
+
+	if quality_filename:
+		quality_iterator = fasta.readfasta(quality_filename)
+
+	# for double-encoding colorspace sequences
+	trans = maketrans('0123.', 'ACGTN')
+
+	# length difference between sequence and qualities
+	lengthdiff = 1 if options.colorspace else 0
+
+	n = 0
+	qualities = None
+	for (desc, seq) in fasta.readfasta(infilename):
+		n += 1
+		if show_progress and n % 10000 == 0:
+			print("Processing read no.", n, file=sys.stderr)
+
+		if quality_filename:
+			quality_desc, quality_line = next(quality_iterator)
+			if quality_desc != desc:
+				raise FormatError, "Descriptions in FASTA and quality file don't match (%s and %s)." % (quality_desc, desc)
+			qualities = quality_to_ascii(quality_line)
+			assert len(qualities) == len(seq) - lengthdiff, "%d != %d-x" % (len(qualities), len(seq))
+		# count number of adapters that match
+		match = 0
+
+		# In colorspace, the first character is the last nucleotide of the primer base
+		# and the second character encodes the transition from the primer base to the
+		# first real base of the read.
+		if options.trim_primer:
+			seq = seq[2:]
+			if qualities is not None:
+				qualities = qualities[1:]
+
+		# try (possibly more than once) to remove an adapter
+		for t in xrange(times):
+			alignment, index = find_best_alignment(options.adapters, seq)
+			(r1, r2, astart, astop, rstart, rstop, errors) = alignment
+			length = astop - astart
+			if length == 0 or errors/length > max_error_rate:
+				break
+			assert length-errors > 0
+			#assert align.check_alignment(r1, r2, begin, length, errors)
+
+			#align.print_alignment(r1, r2)
+
+			adapter = options.adapters[index]
+			# TODO temporary
+			begin = max(astart, rstart)
+
+			alen = len(adapter)
+			rlen = len(seq)
+
+			if rstart == 0 and rstop == len(seq):
+				# The adapter or parts of it covers the entire read (case 1)
+				assert r1[0] != '-' and r1[-1] != '-'
+				assert rstart == 0 and rstop == len(seq)
+				assert not rstart > 0
+				#print("read %s is covered entirely by adapter %d:" % (desc.split()[0], index+1), file=sys.stderr)
+				seq = ''
+				if qualities is not None:
+					qualities = ''
+				#align.print_alignment(r1, r2, begin, length, width=1000)
+			elif rstart > 0:
+				# The adapter is at the end of the read (case 2) or in the middle (case 3)
+				assert r1[0] == '-'
+				assert not (rstart == 0 and rstop == len(seq))
+				assert astart == 0
+				assert rstart > 0
+				assert r2[0] != '-' # since that only happens when the adapter is in the front
+
+				if rstop < rlen:
+					# The adapter is in the middle of the read (case 3)
+					assert r1[-1] == '-'
+					stats.middle += 1
+					if rest_file is not None:
+						assert seq+length == rstop
+						print(seq[rstop:], file=rest_file)
+						assert begin > 0
+				assert rstart == begin
+				if options.colorspace:
+					# trim one more color
+					rstart -= 1
+				#print("rstart:", rstart)
+				#print("begin:", begin)
+				seq = seq[:rstart]
+				if qualities is not None:
+					qualities = qualities[:rstart]
+					assert len(qualities) == len(seq)
+				# TODO defaultdict?
+				stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
+			else:
+				# The adapter is in the beginning of the read (case 4)
+				# TODO should this case be ignored in color space?
+				assert r1[-1] == '-'
+				assert not (rstart == 0 and rstop == len(seq))
+				assert not rstart > 0
+
+				assert rstart == 0
+				seq = seq[rstop:]
+				#seq = seq[length:]
+				if qualities is not None:
+					qualities = qualities[rstop:]
+				stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
+			match += 1
+			stats.adapter_matches[index] += 1
+			stats.sequence_matches[index] += 1
+
+		# other modifications to the sequence or its description
+		desc = re.sub(r"\blength=[0-9]*\b", "length=%d" % len(seq), desc)
+
+		if options.double_encode:
+			# convert color space sequence to double-encoded colorspace (using
+			# characters ACGTN to represent colors)
+			seq = seq.translate(trans)
+
+
+		# write modified sequence in either FASTA or FASTQ format
+		if qualities is None:
+			# FASTA format
+			print('>%s\n%s' % (desc, seq), file=outfile)
+		else:
+			# FASTQ format
+			#assert len(qualities) == len(seq) - 1, "%d != %d" % (len(qualities), len(seq))
+			g = re.match("^(\d+)_(\d+)_(\d+)_[FR]3", desc).groups()
+			g = map(int, g)
+			desc = "%s%d_%d_%d/1" % (options.prefix, g[0], g[1], g[2])
+			print('@%s\n%s\n+\n%s' % (desc, seq, qualities), file=outfile)
+
+	stats.n = n
+	print_statistics(options.adapters, stats)
+
+if __name__ == '__main__':
+	#import cProfile as profile
+	#profile.run('main()', 'cutadapt.prof')
+	main()
+
+"""
+Interpreting the result of a semiglobal alignment between the adapter and the read sequences
+============================================================================================
+
+There are nine cases, which can be grouped into four categories.
+
+A: character of the adapter sequence (r1)
+R: character of the read sequence    (r2)
+-: gap symbol
+
+The middle of the alignment is always like this:
+AAAA
+RRRR
+
+For the part of that is before the middle and for the part that is after the middle,
+there are three possibilities each (making 3*3=9)
+
+A  and -  and  'nothing'
+-      R
+
+Grouping by semantics of those alignments, we get the following three categories.
+
+
+1. The adapter covers or parts of it cover the entire read
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+a)
+AAAA
+RRRR
+
+b)
+AAAA
+RR--
+
+c)
+AAAA
+--RR
+
+1d)
+AAAA
+-RR-
+
+2. The adapter is at the end of the read
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+a)
+---AAA
+RRRRRR
+
+b)
+---AAAA
+RRRRR--
+
+3. The adapter is in the middle of the read
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+---AAA---
+RRRRRRRRR
+
+4. The adapter is in the beginning of the read
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+a)
+AAAA----
+RRRRRRRR
+
+b)
+AAAA----
+--RRRRRR
+"""
