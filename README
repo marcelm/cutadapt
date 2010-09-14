@@ -118,10 +118,16 @@ For speed, the algorithm is implemented as a Python extension module in calignmo
 The program is sufficiently fast for my purposes, but speedups should be simple to achieve.
 
 
+Changes
+=======
+
+* v0.2 allow FASTQ input
+* v0.1 initial release
+
+
 To Do
 =====
 
-  * FASTQ input
   * autodetect FASTA/FASTQ input in STDIN
   * write test cases
   * allow to give adapter in nucleotide space, but find it in color space
@@ -130,7 +136,8 @@ To Do
   * allow comma-separated adapters in -a parameter
   * allow stuff like: -e 2/17
   * show table of length vs. max errors
-  * factor out a read_sequences method
   * speed up alignment
   * In color space and probably also for Illumina data, gapped alignment
     is not necessary
+  * show_progress is unused
+  * gzipped input

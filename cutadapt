@@ -24,11 +24,12 @@
 from __future__ import print_function, division
 
 import sys, re
-import fasta
 from string import maketrans
 from optparse import OptionParser
+from itertools import izip
 
 from calign import semiglobalalign
+import fasta
 
 usage = """
 %prog [options] <FASTA/FASTQ FILE> [<QUALITY FILE>]
@@ -54,11 +55,13 @@ Use --help to see all options.
 class FormatError(Exception):
 	pass
 
+class Error(Exception):
+	pass
 
 def print_statistics(adapters, stats, outfile=sys.stderr):
 	print("# There are %7d sequences in this data set." % stats.n, file=outfile)
 	print(file=outfile)
-	print("middle:", stats.middle, file=outfile)
+	#print("middle:", stats.middle, file=outfile)
 	for adapter_index, adapter in enumerate(adapters):
 		print("# Statistics for adapter %s (%s, length %d)" % (adapter_index+1, adapter, len(adapter)), file=outfile)
 		#print "# The histograms follow: length of adapter vs. no. of sequences"
@@ -119,6 +122,44 @@ def find_best_alignment(adapters, seq):
 			best_score = score
 			best_index = index
 	return (best_alignment, best_index)
+
+
+def read_sequences(seqfilename, qualityfilename, colorspace):
+	"""
+	Read sequences and (if available) quality information from either:
+	* seqfilename in FASTA format (qualityfilename must be None)
+	* seqfilename in FASTQ format (qualityfilename must be None)
+	* seqfilename in .csfasta format and qualityfilename in .qual format (SOLiD)
+
+	Return a generator over tuples (description, sequence, qualities).
+	qualities is None if no qualities are available.
+	"""
+	ftype = fasta.fastafiletype(seqfilename)
+
+	if ftype == 'FASTQ' and qualityfilename is not None:
+		raise Error, "If a FASTQ file is given, no quality file can be provided."
+
+	if ftype == 'FASTQ':
+		with open(seqfilename) as seqfile:
+			for desc, seq, qualities in fasta.readfastq(seqfile, colorspace=colorspace):
+				yield (desc, seq, qualities)
+	elif ftype == 'FASTA' and qualityfilename is None:
+		with open(seqfilename) as seqfile:
+			for desc, seq in fasta.readfasta(seqfile):
+				yield (desc, seq, None)
+	else:
+		assert ftype == 'FASTA' and qualityfilename is not None
+		lengthdiff = 1 if colorspace else 0
+		with open(seqfilename) as seqfile:
+			with open(qualityfilename) as qualityfile:
+				seq_iter = fasta.readfasta(seqfile)
+				qual_iter = fasta.readfasta(qualityfile)
+				for (qdesc, qseq), (rdesc, rseq) in zip(qual_iter, seq_iter):
+					if qdesc != rdesc:
+						raise FormatError, "Descriptions in FASTA and quality file don't match (%s and %s)." % (rdesc, qdesc)
+					qualities = quality_to_ascii(qseq)
+					assert len(qualities) == len(rseq) - lengthdiff, "%d != %d-x" % (len(qualities), len(rseq))
+					yield rdesc, rseq, qualities
 
 
 def main():
@@ -217,9 +258,6 @@ def main():
 	for x in xrange(len(options.adapters)):
 		stats.lengths_back.append({})
 
-	if quality_filename:
-		quality_iterator = fasta.readfasta(quality_filename)
-
 	# for double-encoding colorspace sequences
 	trans = maketrans('0123.', 'ACGTN')
 
@@ -228,17 +266,11 @@ def main():
 
 	n = 0
 	qualities = None
-	for (desc, seq) in fasta.readfasta(infilename):
+	for (desc, seq, qualities) in read_sequences(infilename, quality_filename, colorspace=options.colorspace):
 		n += 1
 		if show_progress and n % 10000 == 0:
 			print("Processing read no.", n, file=sys.stderr)
 
-		if quality_filename:
-			quality_desc, quality_line = next(quality_iterator)
-			if quality_desc != desc:
-				raise FormatError, "Descriptions in FASTA and quality file don't match (%s and %s)." % (quality_desc, desc)
-			qualities = quality_to_ascii(quality_line)
-			assert len(qualities) == len(seq) - lengthdiff, "%d != %d-x" % (len(qualities), len(seq))
 		# count number of adapters that match
 		match = 0
 
