@@ -132,3 +132,5 @@ To Do
   * show table of length vs. max errors
   * factor out a read_sequences method
   * speed up alignment
+  * In color space and probably also for Illumina data, gapped alignment
+    is not necessary

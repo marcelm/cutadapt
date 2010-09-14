@@ -33,18 +33,27 @@ from calign import semiglobalalign
 usage = """
 %prog [options] <FASTA/FASTQ FILE> [<QUALITY FILE>]
 
-Reads a FASTA or FASTQ file from standard input, finds and removes adapters,
+Reads a FASTA or FASTQ file, finds and removes adapters,
 and writes the changed sequence to standard output.
 When finished, statistics are printed to standard error.
 
-This program has only been tested with single-end data.
+If two file names are given, they are assumed to be
+.csfasta and .qual files as produced by the SOLiD sequencer.
+(You still need to provide the -c option to correctly deal
+with color space.)
 
 If you want to search for the reverse complement of an adapter, you must
 provide an additional adapter sequence.
+
+If the input sequences are in color space, the adapter must
+also be provided in color space (using a string of digits 0123).
+
+Use --help to see all options.
 """
 
 class FormatError(Exception):
 	pass
+
 
 def print_statistics(adapters, stats, outfile=sys.stderr):
 	print("# There are %7d sequences in this data set." % stats.n, file=outfile)
@@ -93,6 +102,7 @@ def find_best_alignment(adapters, seq):
 	Find the best matching adapter.
 
 	Return tuple (best_alignment, best_index).
+
 	best_alignment is an alignment as returned by semiglobalalign.
 	best_index is the index of the best adapter into the adapters list.
 	"""
@@ -117,7 +127,7 @@ def main():
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	parser.add_option("-o", "--output", default=None,
 		help="The modified sequence gets written to this file (in FASTA format) (default: standard output)")
-	parser.add_option("-a", "--adapters", action="append", # TODO
+	parser.add_option("-a", "--adapters", action="append",
 		help="Adapter sequences")
 	parser.add_option("-n", "--times", type=int, metavar="count", default=1,
 		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
@@ -139,7 +149,7 @@ def main():
 	parser.add_option("-t", "--trim-primer", action='store_true', default=False,
 		help="When in color space, trim primer base and the transition to the first color")
 	parser.add_option("--maq", "--bwa", action='store_true', default=False,
-		help="MAQ/BWA-compatible color space output. Same as enabling -c, -d, -t.")
+		help="MAQ/BWA-compatible color space output. This enables -c, -d, -t. Also, '_F3' in read names is replaced by '/1' (required by MAQ)")
 
 	options, args = parser.parse_args()
 
@@ -165,7 +175,7 @@ def main():
 		options.trim_primer = True
 
 	if options.trim_primer and not options.colorspace:
-		parser.error("trimming primer makes only sense in colorspace")
+		parser.error("trimming the primer makes only sense in colorspace")
 	if options.double_encode and not options.colorspace:
 		parser.error("double-encoding makes only sense in colorspace")
 
@@ -184,7 +194,7 @@ def main():
 	max_error_rate = options.error_rate
 
 	if not options.adapters:
-		print("Need adapters.", file=sys.stderr)
+		print("You need to provide at least one adapter sequence.", file=sys.stderr)
 		sys.exit(1)
 	#if quality_file and not colorspace:
 		#print("Sorry, using quality files currently only works for color space.", file=sys.stderr)
@@ -248,9 +258,6 @@ def main():
 			if length == 0 or errors/length > max_error_rate:
 				break
 			assert length-errors > 0
-			#assert align.check_alignment(r1, r2, begin, length, errors)
-
-			#align.print_alignment(r1, r2)
 
 			adapter = options.adapters[index]
 			# TODO temporary
@@ -315,13 +322,18 @@ def main():
 			stats.sequence_matches[index] += 1
 
 		# other modifications to the sequence or its description
+		# change any length=XX that may appear in the read description (for 454)
 		desc = re.sub(r"\blength=[0-9]*\b", "length=%d" % len(seq), desc)
+
+		desc = options.prefix + desc
+
+		if options.maq and desc.endswith('_F3'):
+			desc = desc[:-3] + '/1'
 
 		if options.double_encode:
 			# convert color space sequence to double-encoded colorspace (using
 			# characters ACGTN to represent colors)
 			seq = seq.translate(trans)
-
 
 		# write modified sequence in either FASTA or FASTQ format
 		if qualities is None:
@@ -329,10 +341,6 @@ def main():
 			print('>%s\n%s' % (desc, seq), file=outfile)
 		else:
 			# FASTQ format
-			#assert len(qualities) == len(seq) - 1, "%d != %d" % (len(qualities), len(seq))
-			g = re.match("^(\d+)_(\d+)_(\d+)_[FR]3", desc).groups()
-			g = map(int, g)
-			desc = "%s%d_%d_%d/1" % (options.prefix, g[0], g[1], g[2])
 			print('@%s\n%s\n+\n%s' % (desc, seq, qualities), file=outfile)
 
 	stats.n = n
