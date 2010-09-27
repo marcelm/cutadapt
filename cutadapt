@@ -154,7 +154,7 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 			with open(qualityfilename) as qualityfile:
 				seq_iter = fasta.readfasta(seqfile)
 				qual_iter = fasta.readfasta(qualityfile)
-				for (qdesc, qseq), (rdesc, rseq) in zip(qual_iter, seq_iter):
+				for (qdesc, qseq), (rdesc, rseq) in izip(qual_iter, seq_iter):
 					if qdesc != rdesc:
 						raise FormatError, "Descriptions in FASTA and quality file don't match (%s and %s)." % (rdesc, qdesc)
 					qualities = quality_to_ascii(qseq)
