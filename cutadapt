@@ -21,18 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from __future__ import print_function, division
-
-import sys, re
-from string import maketrans
-from optparse import OptionParser
-from itertools import izip
-
-from calign import semiglobalalign
-import fasta
-
-usage = """
-%prog [options] <FASTA/FASTQ FILE> [<QUALITY FILE>]
+"""%prog [options] <FASTA/FASTQ FILE> [<QUALITY FILE>]
 
 Reads a FASTA or FASTQ file, finds and removes adapters,
 and writes the changed sequence to standard output.
@@ -51,6 +40,17 @@ also be provided in color space (using a string of digits 0123).
 
 Use --help to see all options.
 """
+
+from __future__ import print_function, division
+
+import sys, re
+from string import maketrans
+from optparse import OptionParser
+from itertools import izip
+
+from calign import semiglobalalign
+import fasta
+
 
 class FormatError(Exception):
 	pass
@@ -163,34 +163,31 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 
 
 def main():
-	parser = OptionParser(usage=usage)
+	parser = OptionParser(usage=__doc__)
 	parser.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	parser.add_option("-o", "--output", default=None,
 		help="The modified sequence gets written to this file (in FASTA format) (default: standard output)")
 	parser.add_option("-a", "--adapters", action="append",
-		help="Adapter sequences")
+		help="Adapter sequences (use multiple -a options to search for more than one adapter)")
 	parser.add_option("-n", "--times", type=int, metavar="count", default=1,
 		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
 	parser.add_option("-r", "--rest-file", default=None,
 		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
 	parser.add_option("-x", "--prefix", default='',
 		help="Add this prefix to read names")
-	#parser.add_option("-x", "--prefix", default=None,
-		#help="Enable MAQ-compatible output, and also modifies the "+
-		     #"read names to fit the format required by MAQ by prepending PREFIX to the "+
-			 #"read name and appending '/1' to it. Add options -tdc for colorspace.")
-	#print("  -p length       Print the found alignments if they are longer than length.")
-
+	parser.add_option("-y", "--suffix", default='',
+		help="Add this suffix to read names")
 	parser.add_option("-c", "--colorspace", action='store_true', default=False,
 		help="Colorspace mode: Trims adapter correctly (one more character than there are matches needs to be trimmed).")
-		#Work in color space (leaves primer base alone and trims adapter correctly)")
 	parser.add_option("-d", "--double-encode", action='store_true', default=False,
 		help="When in color space, double-encode colors (mapping 0,1,2,3,4 to A,C,G,T,N).")
 	parser.add_option("-t", "--trim-primer", action='store_true', default=False,
 		help="When in color space, trim primer base and the transition to the first color")
+	parser.add_option("--strip-f3", action='store_true', default=False,
+		help="When in color space, strip the _F3 suffix of read names")
 	parser.add_option("--maq", "--bwa", action='store_true', default=False,
-		help="MAQ/BWA-compatible color space output. This enables -c, -d, -t. Also, '_F3' in read names is replaced by '/1' (required by MAQ)")
+		help="MAQ/BWA-compatible color space output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
 
 	options, args = parser.parse_args()
 
@@ -214,6 +211,8 @@ def main():
 		options.colorspace = True
 		options.double_encode = True
 		options.trim_primer = True
+		options.strip_f3 = True
+		options.suffix = "/1"
 
 	if options.trim_primer and not options.colorspace:
 		parser.error("trimming the primer makes only sense in colorspace")
@@ -303,7 +302,6 @@ def main():
 				assert r1[0] != '-' and r1[-1] != '-'
 				assert rstart == 0 and rstop == len(seq)
 				assert not rstart > 0
-				#print("read %s is covered entirely by adapter %d:" % (desc.split()[0], index+1), file=sys.stderr)
 				seq = ''
 				if qualities is not None:
 					qualities = ''
@@ -357,11 +355,9 @@ def main():
 		# change any length=XX that may appear in the read description (for 454)
 		desc = re.sub(r"\blength=[0-9]*\b", "length=%d" % len(seq), desc)
 
-		desc = options.prefix + desc
-
-		if options.maq and desc.endswith('_F3'):
-			desc = desc[:-3] + '/1'
-
+		if options.strip_f3 and desc.endswith('_F3'):
+			desc = desc[:-3]
+		desc = options.prefix + desc + options.suffix
 		if options.double_encode:
 			# convert color space sequence to double-encoded colorspace (using
 			# characters ACGTN to represent colors)
@@ -369,10 +365,10 @@ def main():
 
 		# write modified sequence in either FASTA or FASTQ format
 		if qualities is None:
-			# FASTA format
+			# FASTA
 			print('>%s\n%s' % (desc, seq), file=outfile)
 		else:
-			# FASTQ format
+			# FASTQ
 			print('@%s\n%s\n+\n%s' % (desc, seq, qualities), file=outfile)
 
 	stats.n = n

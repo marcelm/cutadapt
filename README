@@ -86,6 +86,10 @@ Instead of redirecting standard output with ">", the "-o" option can be used:
 
 $ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq -o output.fastq solid.csfasta solid.qual
 
+Do the same, but produce BFAST-compatible output. Strip the _F3 suffix from read names:
+
+$ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
+
 
 FASTA file
 ----------
