@@ -125,6 +125,8 @@ The program is sufficiently fast for my purposes, but speedups should be simple 
 Changes
 =======
 
+* v0.3 fix huge memory usage (entire input file was unintentionally read
+  into memory)
 * v0.2 allow FASTQ input
 * v0.1 initial release
 
