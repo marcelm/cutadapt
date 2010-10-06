@@ -147,3 +147,5 @@ To Do
     is not necessary
   * show_progress is unused
   * gzipped input
+  * option for not finding adapter in the beginning
+  * redirect stdout in print_stats
