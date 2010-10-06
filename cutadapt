@@ -55,8 +55,10 @@ import fasta
 class FormatError(Exception):
 	pass
 
+
 class Error(Exception):
 	pass
+
 
 def print_statistics(adapters, stats, outfile=sys.stderr):
 	print("# There are %7d sequences in this data set." % stats.n, file=outfile)
@@ -172,6 +174,8 @@ def main():
 		help="Adapter sequences (use multiple -a options to search for more than one adapter)")
 	parser.add_option("-n", "--times", type=int, metavar="count", default=1,
 		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
+	#parser.add_option("--front", action='store_true', default=False,
+		#help="Allow adapters to occur in the front of the read.") TODO adapter overlapping the front?
 	parser.add_option("-r", "--rest-file", default=None,
 		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
 	parser.add_option("-x", "--prefix", default='',
@@ -236,13 +240,6 @@ def main():
 	if not options.adapters:
 		print("You need to provide at least one adapter sequence.", file=sys.stderr)
 		sys.exit(1)
-	#if quality_file and not colorspace:
-		#print("Sorry, using quality files currently only works for color space.", file=sys.stderr)
-		#sys.exit(1)
-
-	#if (quality_file and not fastq) or (fastq and not quality_file):
-		#print("You need to provide both -m and -q at the same time.", file=sys.stderr)
-		#sys.exit(1)
 
 	class Statistics(object):
 		pass
@@ -261,7 +258,7 @@ def main():
 	trans = maketrans('0123.', 'ACGTN')
 
 	# length difference between sequence and qualities
-	lengthdiff = 1 if options.colorspace else 0
+	lengthdiff = 0 if options.trim_primer else 1
 
 	n = 0
 	qualities = None
@@ -280,6 +277,13 @@ def main():
 			seq = seq[2:]
 			if qualities is not None:
 				qualities = qualities[1:]
+			initial = ''
+		elif options.colorspace:
+			initial = seq[0]
+			seq = seq[1:]
+		else:
+			initial = ''
+
 
 		# try (possibly more than once) to remove an adapter
 		for t in xrange(times):
@@ -292,8 +296,6 @@ def main():
 
 			adapter = options.adapters[index]
 			# TODO temporary
-			begin = max(astart, rstart)
-
 			alen = len(adapter)
 			rlen = len(seq)
 
@@ -301,11 +303,9 @@ def main():
 				# The adapter or parts of it covers the entire read (case 1)
 				assert r1[0] != '-' and r1[-1] != '-'
 				assert rstart == 0 and rstop == len(seq)
-				assert not rstart > 0
 				seq = ''
 				if qualities is not None:
 					qualities = ''
-				#align.print_alignment(r1, r2, begin, length, width=1000)
 			elif rstart > 0:
 				# The adapter is at the end of the read (case 2) or in the middle (case 3)
 				assert r1[0] == '-'
@@ -321,32 +321,27 @@ def main():
 					if rest_file is not None:
 						assert seq+length == rstop
 						print(seq[rstop:], file=rest_file)
-						assert begin > 0
-				assert rstart == begin
+				# TODO defaultdict?
+				stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
+
 				if options.colorspace:
 					# trim one more color
 					rstart -= 1
-				#print("rstart:", rstart)
-				#print("begin:", begin)
 				seq = seq[:rstart]
 				if qualities is not None:
 					qualities = qualities[:rstart]
 					assert len(qualities) == len(seq)
-				# TODO defaultdict?
-				stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
 			else:
 				# The adapter is in the beginning of the read (case 4)
 				# TODO should this case be ignored in color space?
 				assert r1[-1] == '-'
 				assert not (rstart == 0 and rstop == len(seq))
-				assert not rstart > 0
-
 				assert rstart == 0
-				seq = seq[rstop:]
-				#seq = seq[length:]
-				if qualities is not None:
-					qualities = qualities[rstop:]
-				stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
+				if True:
+					stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
+					seq = seq[rstop:]
+					if qualities is not None:
+						qualities = qualities[rstop:]
 			match += 1
 			stats.adapter_matches[index] += 1
 			stats.sequence_matches[index] += 1
@@ -366,10 +361,11 @@ def main():
 		# write modified sequence in either FASTA or FASTQ format
 		if qualities is None:
 			# FASTA
-			print('>%s\n%s' % (desc, seq), file=outfile)
+			print('>%s\n%s%s' % (desc, initial, seq), file=outfile)
 		else:
+			assert len(seq) == len(qualities)
 			# FASTQ
-			print('@%s\n%s\n+\n%s' % (desc, seq, qualities), file=outfile)
+			print('@%s\n%s%s\n+\n%s' % (desc, initial, seq, qualities), file=outfile)
 
 	stats.n = n
 	print_statistics(options.adapters, stats)
