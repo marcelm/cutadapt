@@ -43,7 +43,10 @@ Use --help to see all options.
 
 from __future__ import print_function, division
 
-import sys, re
+__version__ = '0.3'
+
+import sys
+import re
 from string import maketrans
 from optparse import OptionParser
 from itertools import izip
@@ -110,7 +113,7 @@ def find_best_alignment(adapters, seq, max_error_rate):
 	seq -- the sequence to which the adapter should be aligned
 	max_error_rate -- maximum allowed error rate. The error rate is
 		the number of errors in the alignment divided by the length
-		of the aligment.
+		of the alignment.
 
 	Return tuple (best_alignment, best_index).
 
@@ -144,7 +147,7 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 	Read sequences and (if available) quality information from either:
 	* seqfilename in FASTA format (qualityfilename must be None)
 	* seqfilename in FASTQ format (qualityfilename must be None)
-	* seqfilename in .csfasta format and qualityfilename in .qual format (SOLiD)
+	* seqfilename in .csfasta format and qualityfilename in .qual format (SOLiD color space)
 
 	Return a generator over tuples (description, sequence, qualities).
 	qualities is None if no qualities are available.
@@ -152,7 +155,7 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 	ftype = fasta.fastafiletype(seqfilename)
 
 	if ftype == 'FASTQ' and qualityfilename is not None:
-		raise Error, "If a FASTQ file is given, no quality file can be provided."
+		raise Error("If a FASTQ file is given, no quality file can be provided.")
 
 	if ftype == 'FASTQ':
 		with open(seqfilename) as seqfile:
@@ -171,7 +174,7 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 				qual_iter = fasta.readfasta(qualityfile)
 				for (qdesc, qseq), (rdesc, rseq) in izip(qual_iter, seq_iter):
 					if qdesc != rdesc:
-						raise FormatError, "Descriptions in FASTA and quality file don't match (%s and %s)." % (rdesc, qdesc)
+						raise FormatError("Descriptions in FASTA and quality file don't match (%s and %s)." % (rdesc, qdesc))
 					qualities = quality_to_ascii(qseq)
 					assert len(qualities) == len(rseq) - lengthdiff, "%d != %d-x" % (len(qualities), len(rseq))
 					yield rdesc, rseq, qualities
