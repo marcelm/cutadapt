@@ -105,7 +105,7 @@ def quality_to_ascii(quality_line, base=33):
 	return qualities
 
 
-def find_best_alignment(adapters, seq, max_error_rate):
+def find_best_alignment(adapters, seq, max_error_rate, minimum_length):
 	"""
 	Find the best matching adapter.
 
@@ -122,19 +122,19 @@ def find_best_alignment(adapters, seq, max_error_rate):
 
 
 	"""
-	best_score = -1000000
+	best_score = 0
 	best_alignment = None
 	best_index = None
 	for index, adapter in enumerate(adapters):
 		alignment = semiglobalalign(adapter, seq)
 		(r1, r2, astart, astop, rstart, rstop, errors) = alignment
 		length = astop - astart
-		if length == 0 or errors/length > max_error_rate:
+		if length < minimum_length or errors/length > max_error_rate:
 			continue
 
 		# the length of the matching part of the adapter minus errors
 		# determines which adapter fits best
-		score = astop - astart - errors
+		score = length - errors
 		if score > best_score:
 			best_alignment = alignment
 			best_score = score
@@ -188,8 +188,10 @@ def main():
 		help="The modified sequence gets written to this file (in FASTA format) (default: standard output)")
 	parser.add_option("-a", "--adapters", action="append",
 		help="Adapter sequences (use multiple -a options to search for more than one adapter)")
-	parser.add_option("-n", "--times", type=int, metavar="count", default=1,
+	parser.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
 		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
+	parser.add_option("--minimum-length", type=int, metavar="L", default=3,
+		help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than L, the read is not modified.")
 	#parser.add_option("--front", action='store_true', default=False,
 		#help="Allow adapters to occur in the front of the read.") TODO adapter overlapping the front?
 	parser.add_option("-r", "--rest-file", default=None,
@@ -303,7 +305,7 @@ def main():
 
 		# try (possibly more than once) to remove an adapter
 		for t in xrange(times):
-			alignment, index = find_best_alignment(options.adapters, seq, max_error_rate)
+			alignment, index = find_best_alignment(options.adapters, seq, max_error_rate, options.minimum_length)
 			if alignment is None:
 				break
 
