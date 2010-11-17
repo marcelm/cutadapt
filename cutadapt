@@ -181,7 +181,7 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 
 
 def main():
-	parser = OptionParser(usage=__doc__)
+	parser = OptionParser(usage=__doc__, version=__version__)
 	parser.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	parser.add_option("-o", "--output", default=None,
