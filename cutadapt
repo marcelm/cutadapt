@@ -61,15 +61,15 @@ class Error(Exception):
 
 
 def print_statistics(adapters, stats, outfile=sys.stderr):
-	print("# There are %7d sequences in this data set." % stats.n, file=outfile)
+	print(stats.n, "sequences processed.", file=outfile)
 	print(file=outfile)
 	#print("middle:", stats.middle, file=outfile)
 	for adapter_index, adapter in enumerate(adapters):
-		print("# Statistics for adapter %s (%s, length %d)" % (adapter_index+1, adapter, len(adapter)), file=outfile)
+		print("Statistics for adapter %s (sequence '%s', length %d)" % (adapter_index+1, adapter, len(adapter)), file=outfile)
 		#print "# The histograms follow: length of adapter vs. no. of sequences"
-		print("#", file=outfile)
-		print("# adapter found in the beginning of the sequence", file=outfile)
-		print("# length\tnumber", file=outfile)
+		print(file=outfile)
+		print("adapter found in the beginning of the sequence", file=outfile)
+		print("length\tnumber", file=outfile)
 		total = 0
 		for k, v in stats.lengths_front[adapter_index].items():
 			print("%d\t%d" % (k, v), file=outfile)
@@ -77,8 +77,8 @@ def print_statistics(adapters, stats, outfile=sys.stderr):
 		print("total:", total, file=outfile)
 		print(file=outfile)
 		print(file=outfile)
-		print("# adapter found at the end of the sequence", file=outfile)
-		print("# length\tnumber", file=outfile)
+		print("adapter found at the end of the sequence", file=outfile)
+		print("length\tnumber", file=outfile)
 		total = 0
 		for k, v in stats.lengths_back[adapter_index].items():
 			print("%d\t%d" % (k, v), file=outfile)
