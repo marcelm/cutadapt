@@ -64,27 +64,25 @@ class Error(Exception):
 
 
 def print_statistics(adapters, stats, outfile=sys.stderr):
-	print(stats.n, "sequences processed.", file=outfile)
+	print(stats.n, "reads were processed. Of those", stats.reads_changed, "were trimmed (%.1f%%)" % (100.*(stats.reads_changed)/stats.n), file=outfile, end="")
 	print(file=outfile)
-	#print("middle:", stats.middle, file=outfile)
 	for adapter_index, adapter in enumerate(adapters):
 		print("Statistics for adapter %s (sequence '%s', length %d)" % (adapter_index+1, adapter, len(adapter)), file=outfile)
-		#print "# The histograms follow: length of adapter vs. no. of sequences"
 		print(file=outfile)
-		print("adapter found in the beginning of the sequence", file=outfile)
-		print("length\tnumber", file=outfile)
+		print("adapter found in the beginning of the read", file=outfile)
+		print("length", "number", sep="\t", file=outfile)
 		total = 0
 		for k, v in stats.lengths_front[adapter_index].items():
-			print("%d\t%d" % (k, v), file=outfile)
+			print(k, v, sep="\t", file=outfile)
 			total += v
 		print("total:", total, file=outfile)
 		print(file=outfile)
 		print(file=outfile)
-		print("adapter found at the end of the sequence", file=outfile)
-		print("length\tnumber", file=outfile)
+		print("adapter found at the end of the read", file=outfile)
+		print("length", "number", sep="\t", file=outfile)
 		total = 0
 		for k, v in stats.lengths_back[adapter_index].items():
-			print("%d\t%d" % (k, v), file=outfile)
+			print(k, v, sep="\t", file=outfile)
 			total += v
 		print("total:", total, file=outfile)
 		print(file=outfile)
@@ -105,7 +103,7 @@ def quality_to_ascii(quality_line, base=33):
 	return qualities
 
 
-def find_best_alignment(adapters, seq, max_error_rate, minimum_length):
+def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	"""
 	Find the best matching adapter.
 
@@ -119,8 +117,6 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_length):
 
 	best_alignment is an alignment as returned by semiglobalalign.
 	best_index is the index of the best adapter into the adapters list.
-
-
 	"""
 	best_score = 0
 	best_alignment = None
@@ -129,7 +125,7 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_length):
 		alignment = semiglobalalign(adapter, seq)
 		(r1, r2, astart, astop, rstart, rstop, errors) = alignment
 		length = astop - astart
-		if length < minimum_length or errors/length > max_error_rate:
+		if length < minimum_overlap or errors/length > max_error_rate:
 			continue
 
 		# the length of the matching part of the adapter minus errors
@@ -188,10 +184,12 @@ def main():
 		help="The modified sequence gets written to this file (in FASTA format) (default: standard output)")
 	parser.add_option("-a", "--adapters", action="append",
 		help="Adapter sequences (use multiple -a options to search for more than one adapter)")
+	parser.add_option("--discard", action='store_true', default=False,
+		help="Discard reads that contain the adapter instead of trimming them. Also use -O in order to avoid throwing away too many reads!")
 	parser.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
 		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
-	parser.add_option("--minimum-length", type=int, metavar="L", default=3,
-		help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than L, the read is not modified.")
+	parser.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
+		help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than LENGTH, the read is not modified.")
 	#parser.add_option("--front", action='store_true', default=False,
 		#help="Allow adapters to occur in the front of the read.") TODO adapter overlapping the front?
 	parser.add_option("-r", "--rest-file", default=None,
@@ -262,6 +260,7 @@ def main():
 	class Statistics(object):
 		pass
 	stats = Statistics()
+	stats.reads_changed = 0
 	stats.middle = 0
 	stats.adapter_matches = len(options.adapters)*[0]
 	stats.sequence_matches = len(options.adapters)*[0]
@@ -278,15 +277,13 @@ def main():
 	# length difference between sequence and qualities
 	lengthdiff = 0 if options.trim_primer else 1
 
+	# count the reads in which at least one adapter has been removed
 	n = 0
 	qualities = None
 	for (desc, seq, qualities) in read_sequences(infilename, quality_filename, colorspace=options.colorspace):
 		n += 1
 		if show_progress and n % 10000 == 0:
 			print("Processing read no.", n, file=sys.stderr)
-
-		# count number of adapters that match
-		match = 0
 
 		# In colorspace, the first character is the last nucleotide of the primer base
 		# and the second character encodes the transition from the primer base to the
@@ -302,19 +299,21 @@ def main():
 		else:
 			initial = ''
 
+		any_adapter_matches = False
 
 		# try (possibly more than once) to remove an adapter
 		for t in xrange(times):
-			alignment, index = find_best_alignment(options.adapters, seq, max_error_rate, options.minimum_length)
+			alignment, index = find_best_alignment(options.adapters, seq, max_error_rate, options.overlap)
 			if alignment is None:
 				break
-
+			
 			(r1, r2, astart, astop, rstart, rstop, errors) = alignment
 			length = astop - astart
 			assert length > 0
 			assert errors/length <= max_error_rate
 			assert length - errors > 0
 
+			any_adapter_matches = True
 			adapter = options.adapters[index]
 			# TODO temporary
 			alen = len(adapter)
@@ -363,9 +362,13 @@ def main():
 					seq = seq[rstop:]
 					if qualities is not None:
 						qualities = qualities[rstop:]
-			match += 1
 			stats.adapter_matches[index] += 1
 			stats.sequence_matches[index] += 1
+
+		if any_adapter_matches:
+			stats.reads_changed += 1
+		if options.discard and any_adapter_matches:
+			continue
 
 		# other modifications to the sequence or its description
 		# change any length=XX that may appear in the read description (for 454)
