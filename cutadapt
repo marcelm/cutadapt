@@ -43,7 +43,7 @@ Use --help to see all options.
 
 from __future__ import print_function, division
 
-__version__ = '0.4'
+__version__ = 'X'
 
 import sys
 import re
