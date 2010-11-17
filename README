@@ -125,9 +125,13 @@ The program is sufficiently fast for my purposes, but speedups should be simple 
 Changes
 =======
 
+v0.5
+----
+* add --discard option which makes cutadapt discard reads in which an adapter occurs
+
 v0.4
 ----
- * (more) correctly deal with multiple adapters: If a long adapter matches with lots of 
+ * (more) correctly deal with multiple adapters: If a long adapter matches with lots of
    errors, then this could lead to a a shorter adapter matching with few errors getting ignored.
 
 v0.3
