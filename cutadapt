@@ -102,20 +102,33 @@ def quality_to_ascii(quality_line, base=33):
 	return qualities
 
 
-def find_best_alignment(adapters, seq):
+def find_best_alignment(adapters, seq, max_error_rate):
 	"""
 	Find the best matching adapter.
+
+	adapters -- a list of adapter sequences
+	seq -- the sequence to which the adapter should be aligned
+	max_error_rate -- maximum allowed error rate. The error rate is
+		the number of errors in the alignment divided by the length
+		of the aligment.
 
 	Return tuple (best_alignment, best_index).
 
 	best_alignment is an alignment as returned by semiglobalalign.
 	best_index is the index of the best adapter into the adapters list.
+
+
 	"""
-	assert adapters
 	best_score = -1000000
+	best_alignment = None
+	best_index = None
 	for index, adapter in enumerate(adapters):
 		alignment = semiglobalalign(adapter, seq)
 		(r1, r2, astart, astop, rstart, rstop, errors) = alignment
+		length = astop - astart
+		if length == 0 or errors/length > max_error_rate:
+			continue
+
 		# the length of the matching part of the adapter minus errors
 		# determines which adapter fits best
 		score = astop - astart - errors
@@ -287,12 +300,15 @@ def main():
 
 		# try (possibly more than once) to remove an adapter
 		for t in xrange(times):
-			alignment, index = find_best_alignment(options.adapters, seq)
+			alignment, index = find_best_alignment(options.adapters, seq, max_error_rate)
+			if alignment is None:
+				break
+
 			(r1, r2, astart, astop, rstart, rstop, errors) = alignment
 			length = astop - astart
-			if length == 0 or errors/length > max_error_rate:
-				break
-			assert length-errors > 0
+			assert length > 0
+			assert errors/length <= max_error_rate
+			assert length - errors > 0
 
 			adapter = options.adapters[index]
 			# TODO temporary
