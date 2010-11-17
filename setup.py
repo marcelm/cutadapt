@@ -3,7 +3,7 @@ from distutils.core import setup, Extension
 module = Extension('calign', sources = [ 'calignmodule.c' ])
 
 setup(name = 'cutadapt',
-	version = '0.5'
+	version = '0.5.1',
 	description = 'trim adapters from high-throughput sequencing reads',
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@tu-dortmund.de',
