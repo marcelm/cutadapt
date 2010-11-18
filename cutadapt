@@ -57,6 +57,7 @@ __version__ = '0.5.1'
 import sys
 import re
 import gzip
+import time
 from string import maketrans
 from optparse import OptionParser
 from itertools import izip
@@ -97,7 +98,9 @@ def xopen(filename, mode='r', is_closing=True):
 
 
 def print_statistics(adapters, stats, outfile=sys.stderr):
-	print(stats.n, "reads were processed. Of those", stats.reads_changed, "were trimmed (%.1f%%)" % (100.*(stats.reads_changed)/stats.n), file=outfile, end="")
+	print("Command line parameters:", " ".join(sys.argv[1:]), file=outfile)
+	print(stats.n, "reads processed in %.2f seconds, %.2f ms per read." % (stats.time, 1000. * stats.time / stats.n), file=outfile)
+	print(stats.reads_changed, "reads were trimmed (%.1f%%)" % (100.*(stats.reads_changed)/stats.n), file=outfile)
 	print(file=outfile)
 	for adapter_index, adapter in enumerate(adapters):
 		print("Statistics for adapter %s (sequence '%s', length %d)" % (adapter_index+1, adapter, len(adapter)), file=outfile)
@@ -288,6 +291,9 @@ def main():
 	if options.double_encode and not options.colorspace:
 		parser.error("double-encoding makes only sense in colorspace")
 
+	if not (0 <= options.error_rate <= 1.):
+		parser.error("The maximum error rate must be between 0 and 1.")
+
 	print("maximum error rate: %.2f%%" % (options.error_rate*100.), file=sys.stderr)
 	times = options.times
 
@@ -329,6 +335,7 @@ def main():
 	# count the reads in which at least one adapter has been removed
 	n = 0
 	qualities = None
+	start_time = time.clock()
 	for (desc, seq, qualities) in read_sequences(infilename, quality_filename, colorspace=options.colorspace):
 		n += 1
 		if show_progress and n % 10000 == 0:
@@ -440,8 +447,10 @@ def main():
 			# FASTQ
 			print('@%s\n%s%s\n+\n%s' % (desc, initial, seq, qualities), file=outfile)
 
+	stats.time = time.clock()
 	stats.n = n
 	print_statistics(options.adapters, stats)
+
 
 if __name__ == '__main__':
 	#import cProfile as profile
