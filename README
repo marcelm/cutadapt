@@ -4,8 +4,8 @@ cutadapt
 
 cutadapt is used to remove adapter sequences from DNA high-throughput
 sequencing data. This is usually necessary when the read length of the
-machine is longer than the molecule that is sequenced. This is, for
-example, the case in microRNA data.
+machine is longer than the molecule that is sequenced. For example, This is
+the case in microRNA data.
 
 cutadapt is implemented in Python, with an extension module that implements
 the alignnment algorithm, which is written in C.
@@ -72,6 +72,14 @@ Please also see the command-line help:
 $ cutadapt --help
 
 
+Illumina data
+-------------
+
+Assuming your sequencing data is available as a FASTQ file, use this
+command line:
+$ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq
+
+
 SOLiD data
 ----------
 
@@ -89,6 +97,7 @@ $ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq -o output.fastq solid.
 Do the same, but produce BFAST-compatible output. Strip the _F3 suffix from read names:
 
 $ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
+
 
 
 FASTA file
@@ -120,6 +129,29 @@ cutadapt uses a simple semiglobal alignment algorithm, without any special optim
 For speed, the algorithm is implemented as a Python extension module in calignmodule.c.
 
 The program is sufficiently fast for my purposes, but speedups should be simple to achieve.
+
+
+Partial adapter matches
+-----------------------
+
+Since a semiglobal alignment algorithm is used, cutadapt correctly deals with partial
+adapter matches. As an example, suppose your adapter sequence is "ADAPTER".
+If you have these input sequences:
+MYSEQUENCEADAPTER
+MYSEQUENCEADAP
+MYSEQUENCEADAPTERSOMETHINGELSE
+All of them will be trimmed to "MYSEQUENCE".
+
+Adapters may also be in the 5' end of reads. That is, if you have the following input 
+sequences:
+ADAPTERMYSEQUENCE
+SOMETHINGELSEADAPTERMYSEQUENCE
+DAPTERMYSEQUENCE
+These will also be trimmed to "MYSEQUENCE".
+
+When the allowed error rate is sufficiently high (set with parameter -e), errors in
+the adapter sequence are allowed. For example, ADABTER (1 mismatch), ADAPTR (1 deletion),
+and ADAPPTER (1 insertion) will all be recognized if the error rate is set to 0.15.
 
 
 Changes

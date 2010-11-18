@@ -38,7 +38,13 @@ provide an additional adapter sequence.
 If the input sequences are in color space, the adapter must
 also be provided in color space (using a string of digits 0123).
 
-Use --help to see all options.
+EXAMPLE
+
+Assuming your sequencing data is available as a FASTQ file, use this
+command line:
+$ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq
+
+Use --help to see a description of all available command-line options.
 """
 
 from __future__ import print_function, division
