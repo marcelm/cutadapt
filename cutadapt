@@ -52,7 +52,7 @@ Use --help to see a description of all available command-line options.
 
 from __future__ import print_function, division
 
-__version__ = '0.5.1'
+__version__ = '0.6'
 
 import sys
 import re
