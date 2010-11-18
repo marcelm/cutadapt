@@ -157,6 +157,10 @@ and ADAPPTER (1 insertion) will all be recognized if the error rate is set to 0.
 Changes
 =======
 
+v0.6
+----
+* Support gzipped input and output.
+
 v0.5
 ----
 * add --discard option which makes cutadapt discard reads in which an adapter occurs
@@ -194,6 +198,5 @@ To Do
   * In color space and probably also for Illumina data, gapped alignment
     is not necessary
   * show_progress is unused
-  * gzipped input
   * option for not finding adapter in the beginning
   * redirect stdout in print_stats

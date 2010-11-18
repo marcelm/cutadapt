@@ -32,6 +32,9 @@ If two file names are given, they are assumed to be
 (You still need to provide the -c option to correctly deal
 with color space.)
 
+If the name of any input or output file ends with '.gz', it is
+assumed to be gzip-compressed.
+
 If you want to search for the reverse complement of an adapter, you must
 provide an additional adapter sequence.
 
@@ -53,9 +56,11 @@ __version__ = '0.5.1'
 
 import sys
 import re
+import gzip
 from string import maketrans
 from optparse import OptionParser
 from itertools import izip
+from contextlib import closing
 
 from calign import semiglobalalign
 import fasta
@@ -67,6 +72,28 @@ class FormatError(Exception):
 
 class Error(Exception):
 	pass
+
+
+class UnknownFileType(Exception):
+	pass
+
+
+def xopen(filename, mode='r', is_closing=True):
+	"""
+	Replacement for the "open" function that can also open
+	files that have been compressed with gzip. If the filename ends with .gz,
+	the file is opened with gzip.open(). If it doesn't, the regular open()
+	is used.
+	closing -- whether to wrap the returned GzipFile with contextlib.closing
+		to make it usable in 'with' statements. (TODO look for a nicer solution)
+	"""
+	if filename.endswith('.gz'):
+		if is_closing:
+			return closing(gzip.open(filename, mode))
+		else:
+			return gzip.open(filename, mode)
+	else:
+		return open(filename, mode)
 
 
 def print_statistics(adapters, stats, outfile=sys.stderr):
@@ -144,6 +171,22 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	return (best_alignment, best_index)
 
 
+def fastafiletype(fname):
+	"""
+	Determine file type of fname. Return the string FASTQ or FASTA or
+	raise an UnknownFileType exception.
+	"""
+	with xopen(fname) as f:
+		for line in f:
+			if line.startswith('#'):
+				continue
+			if line.startswith('@'):
+				return 'FASTQ'
+			if line.startswith('>'):
+				return 'FASTA'
+			raise UnknownFileType("neither FASTQ nor FASTA")
+
+
 def read_sequences(seqfilename, qualityfilename, colorspace):
 	"""
 	Read sequences and (if available) quality information from either:
@@ -154,24 +197,24 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 	Return a generator over tuples (description, sequence, qualities).
 	qualities is None if no qualities are available.
 	"""
-	ftype = fasta.fastafiletype(seqfilename)
+	ftype = fastafiletype(seqfilename)
 
 	if ftype == 'FASTQ' and qualityfilename is not None:
 		raise Error("If a FASTQ file is given, no quality file can be provided.")
 
 	if ftype == 'FASTQ':
-		with open(seqfilename) as seqfile:
+		with xopen(seqfilename) as seqfile:
 			for desc, seq, qualities in fasta.readfastq(seqfile, colorspace=colorspace):
 				yield (desc, seq, qualities)
 	elif ftype == 'FASTA' and qualityfilename is None:
-		with open(seqfilename) as seqfile:
+		with xopen(seqfilename) as seqfile:
 			for desc, seq in fasta.readfasta(seqfile):
 				yield (desc, seq, None)
 	else:
 		assert ftype == 'FASTA' and qualityfilename is not None
 		lengthdiff = 1 if colorspace else 0
-		with open(seqfilename) as seqfile:
-			with open(qualityfilename) as qualityfile:
+		with xopen(seqfilename) as seqfile:
+			with xopen(qualityfilename) as qualityfile:
 				seq_iter = fasta.readfasta(seqfile)
 				qual_iter = fasta.readfasta(qualityfile)
 				for (qdesc, qseq), (rdesc, rseq) in izip(qual_iter, seq_iter):
@@ -231,7 +274,7 @@ def main():
 	if options.output is None:
 		outfile = sys.stdout
 	else:
-		outfile = open(options.output, 'w')
+		outfile = xopen(options.output, 'w', is_closing=False)
 
 	if options.maq:
 		options.colorspace = True
@@ -252,7 +295,7 @@ def main():
 		if options.rest_file == '-':
 			rest_file = sys.stdout
 		else:
-			rest_file = open(options.rest_file, 'w')
+			rest_file = xopen(options.rest_file, 'w', closing=False)
 	else:
 		rest_file = None
 
