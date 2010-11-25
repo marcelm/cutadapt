@@ -1,6 +1,16 @@
+# kate: syntax python;
+
 from array import array
 
-def semiglobalalign(s1, s2, print_table=False):
+# direction constants for backtrace table
+cdef enum DIRECTION:
+	LEFT = 1
+	TOP = 2
+	DIAG = 3
+
+ctypedef signed short score_t
+
+def semiglobalalign(char* s1, char* s2, print_table=False):
 	"""
 Computes an end-gap free alignment (also called free-shift alignment) of
 strings s1 and s2, using unit costs.
@@ -40,19 +50,17 @@ MISSISSIPPI
 	#  s1 | (m, i)
 	#     |
 	#     V
-	m = len(s1)
-	n = len(s2)
+	cdef int m = len(s1)
+	cdef int n = len(s2)
+	
+	cdef score_t score, tmp
+	cdef DIRECTION bt
 
 	# the DP and backtrace table are both stored column-wise
 	# It's much faster to use two tables instead
 	# of one with tuples. (Tried both.)
 	columns = [ array('h', (m+1)*[0]) for x in xrange(n+1) ]
 	backtrace = [ array('h', (m+1)*[0]) for x in xrange(n+1) ]
-
-	# direction constants for backtrace table
-	LEFT = 1
-	TOP = 2
-	DIAG = 3
 
 	# calculate alignment (using unit costs)
 	# outer loop goes over columns
