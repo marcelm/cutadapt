@@ -224,7 +224,10 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 					if qdesc != rdesc:
 						raise FormatError("Descriptions in FASTA and quality file don't match (%s and %s)." % (rdesc, qdesc))
 					qualities = quality_to_ascii(qseq)
-					assert len(qualities) == len(rseq) - lengthdiff, "%d != %d-x" % (len(qualities), len(rseq))
+					if len(rseq) == 0 and colorspace:
+						raise FormatError("When reading '%s', no sequence was found (at least the initial primer must appear)." % rdesc)
+					if len(qualities) != len(rseq) - lengthdiff:
+						raise FormatError("While reading '%s': expected to find %d quality values, but found %d." % (rdesc, len(rseq) - lengthdiff, len(qualities)))
 					yield rdesc, rseq, qualities
 
 
@@ -434,31 +437,35 @@ def main():
 	n = 0
 	qualities = None
 	start_time = time.clock()
-	for (desc, seq, qualities) in read_sequences(infilename, quality_filename, colorspace=options.colorspace):
-		n += 1
-		if show_progress and n % 10000 == 0:
-			print("Processing read no.", n, file=sys.stderr)
+	try:
+		for (desc, seq, qualities) in read_sequences(infilename, quality_filename, colorspace=options.colorspace):
+			n += 1
+			if show_progress and n % 10000 == 0:
+				print("Processing read no.", n, file=sys.stderr)
 
-		desc, seq, qualities = process_read(desc, seq, qualities, options, stats)
-		if seq is not None:
-			# write modified sequence in either FASTA or FASTQ format
-			if qualities is None:
-				# FASTA
-				print('>%s\n%s' % (desc, seq), file=outfile)
-			else:
-				# FASTQ
-				print('@%s\n%s\n+\n%s' % (desc, seq, qualities), file=outfile)
-
+			desc, seq, qualities = process_read(desc, seq, qualities, options, stats)
+			if seq is not None:
+				# write modified sequence in either FASTA or FASTQ format
+				if qualities is None:
+					# FASTA
+					print('>%s\n%s' % (desc, seq), file=outfile)
+				else:
+					# FASTQ
+					print('@%s\n%s\n+\n%s' % (desc, seq, qualities), file=outfile)
+	except FormatError as e:
+		print(e, file=sys.stderr)
+		return 1
 
 	stats.time = time.clock()
 	stats.n = n
 	print_statistics(options.adapters, stats)
+	return 0
 
 
 if __name__ == '__main__':
 	#import cProfile as profile
 	#profile.run('main()', 'cutadapt.prof')
-	main()
+	sys.exit(main())
 
 """
 Interpreting the result of a semiglobal alignment between the adapter and the read sequences

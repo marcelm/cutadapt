@@ -157,6 +157,11 @@ and ADAPPTER (1 insertion) will all be recognized if the error rate is set to 0.
 Changes
 =======
 
+v0.7
+----
+* Useful exit codes
+* Better error reporting when malformed files are encountered
+
 v0.6
 ----
 * Support gzipped input and output.
@@ -202,3 +207,5 @@ To Do / Ideas
   * option for not finding adapter in the beginning
   * redirect stdout in print_stats
   * bzip2 support
+  * use str.format instead of %
+
