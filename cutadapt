@@ -228,6 +228,108 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 					yield rdesc, rseq, qualities
 
 
+def process_read(desc, seq, qualities, options, stats):
+	# In colorspace, the first character is the last nucleotide of the primer base
+	# and the second character encodes the transition from the primer base to the
+	# first real base of the read.
+	if options.trim_primer:
+		seq = seq[2:]
+		if qualities is not None:
+			qualities = qualities[1:]
+		initial = ''
+	elif options.colorspace:
+		initial = seq[0]
+		seq = seq[1:]
+	else:
+		initial = ''
+
+	any_adapter_matches = False
+
+	# try (possibly more than once) to remove an adapter
+	for t in xrange(options.times):
+		alignment, index = find_best_alignment(options.adapters, seq, options.error_rate, options.overlap)
+		if alignment is None:
+			break
+
+		(r1, r2, astart, astop, rstart, rstop, errors) = alignment
+		length = astop - astart
+		assert length > 0
+		assert errors/length <= options.error_rate
+		assert length - errors > 0
+
+		any_adapter_matches = True
+		adapter = options.adapters[index]
+		# TODO temporary
+		alen = len(adapter)
+		rlen = len(seq)
+
+		if rstart == 0 and rstop == len(seq):
+			# The adapter or parts of it covers the entire read (case 1)
+			assert r1[0] != '-' and r1[-1] != '-'
+			assert rstart == 0 and rstop == len(seq)
+			seq = ''
+			if qualities is not None:
+				qualities = ''
+		elif rstart > 0:
+			# The adapter is at the end of the read (case 2) or in the middle (case 3)
+			assert r1[0] == '-'
+			assert not (rstart == 0 and rstop == len(seq))
+			assert astart == 0
+			assert rstart > 0
+			assert r2[0] != '-' # since that only happens when the adapter is in the front
+
+			if rstop < rlen:
+				# The adapter is in the middle of the read (case 3)
+				assert r1[-1] == '-'
+				stats.middle += 1
+				if options.rest_file is not None:
+					print(seq[rstop:], file=options.rest_file)
+			# TODO defaultdict?
+			stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
+
+			if options.colorspace:
+				# trim one more color
+				rstart -= 1
+			seq = seq[:rstart]
+			if qualities is not None:
+				qualities = qualities[:rstart]
+				assert len(qualities) == len(seq)
+		else:
+			# The adapter is in the beginning of the read (case 4)
+			# TODO should this case be ignored in color space?
+			assert r1[-1] == '-'
+			assert not (rstart == 0 and rstop == len(seq))
+			assert rstart == 0
+			if True:
+				stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
+				seq = seq[rstop:]
+				if qualities is not None:
+					qualities = qualities[rstop:]
+		stats.adapter_matches[index] += 1
+		stats.sequence_matches[index] += 1
+
+	if any_adapter_matches:
+		stats.reads_changed += 1
+	if options.discard and any_adapter_matches:
+		return (None, None, None)
+
+	# other modifications to the sequence or its description
+	# change any length=XX that may appear in the read description (for 454)
+	desc = re.sub(r"\blength=[0-9]*\b", "length=%d" % len(seq), desc)
+
+	if options.strip_f3 and desc.endswith('_F3'):
+		desc = desc[:-3]
+	desc = options.prefix + desc + options.suffix
+	if options.double_encode:
+		# convert color space sequence to double-encoded colorspace (using
+		# characters ACGTN to represent colors)
+		seq = seq.translate(trans)
+
+	if options.colorspace:
+		assert len(seq) == len(qualities)
+	return (desc, initial + seq, qualities)
+
+
 def main():
 	parser = OptionParser(usage=__doc__, version=__version__)
 	parser.add_option("-e", "--error-rate", type=float, default=0.1,
@@ -285,7 +387,6 @@ def main():
 		options.trim_primer = True
 		options.strip_f3 = True
 		options.suffix = "/1"
-
 	if options.trim_primer and not options.colorspace:
 		parser.error("trimming the primer makes only sense in colorspace")
 	if options.double_encode and not options.colorspace:
@@ -295,18 +396,12 @@ def main():
 		parser.error("The maximum error rate must be between 0 and 1.")
 
 	print("maximum error rate: %.2f%%" % (options.error_rate*100.), file=sys.stderr)
-	times = options.times
 
-	if options.rest_file:
+	if options.rest_file is not None:
 		if options.rest_file == '-':
-			rest_file = sys.stdout
+			options.rest_file = sys.stdout
 		else:
-			rest_file = xopen(options.rest_file, 'w', closing=False)
-	else:
-		rest_file = None
-
-	show_progress = False
-	max_error_rate = options.error_rate
+			options.rest_file = xopen(options.rest_file, 'w', is_closing=False)
 
 	if not options.adapters:
 		print("You need to provide at least one adapter sequence.", file=sys.stderr)
@@ -327,10 +422,13 @@ def main():
 		stats.lengths_back.append({})
 
 	# for double-encoding colorspace sequences
+	global trans
 	trans = maketrans('0123.', 'ACGTN')
 
 	# length difference between sequence and qualities
 	lengthdiff = 0 if options.trim_primer else 1
+
+	show_progress = False
 
 	# count the reads in which at least one adapter has been removed
 	n = 0
@@ -341,111 +439,16 @@ def main():
 		if show_progress and n % 10000 == 0:
 			print("Processing read no.", n, file=sys.stderr)
 
-		# In colorspace, the first character is the last nucleotide of the primer base
-		# and the second character encodes the transition from the primer base to the
-		# first real base of the read.
-		if options.trim_primer:
-			seq = seq[2:]
-			if qualities is not None:
-				qualities = qualities[1:]
-			initial = ''
-		elif options.colorspace:
-			initial = seq[0]
-			seq = seq[1:]
-		else:
-			initial = ''
-
-		any_adapter_matches = False
-
-		# try (possibly more than once) to remove an adapter
-		for t in xrange(times):
-			alignment, index = find_best_alignment(options.adapters, seq, max_error_rate, options.overlap)
-			if alignment is None:
-				break
-			
-			(r1, r2, astart, astop, rstart, rstop, errors) = alignment
-			length = astop - astart
-			assert length > 0
-			assert errors/length <= max_error_rate
-			assert length - errors > 0
-
-			any_adapter_matches = True
-			adapter = options.adapters[index]
-			# TODO temporary
-			alen = len(adapter)
-			rlen = len(seq)
-
-			if rstart == 0 and rstop == len(seq):
-				# The adapter or parts of it covers the entire read (case 1)
-				assert r1[0] != '-' and r1[-1] != '-'
-				assert rstart == 0 and rstop == len(seq)
-				seq = ''
-				if qualities is not None:
-					qualities = ''
-			elif rstart > 0:
-				# The adapter is at the end of the read (case 2) or in the middle (case 3)
-				assert r1[0] == '-'
-				assert not (rstart == 0 and rstop == len(seq))
-				assert astart == 0
-				assert rstart > 0
-				assert r2[0] != '-' # since that only happens when the adapter is in the front
-
-				if rstop < rlen:
-					# The adapter is in the middle of the read (case 3)
-					assert r1[-1] == '-'
-					stats.middle += 1
-					if rest_file is not None:
-						assert seq+length == rstop
-						print(seq[rstop:], file=rest_file)
-				# TODO defaultdict?
-				stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
-
-				if options.colorspace:
-					# trim one more color
-					rstart -= 1
-				seq = seq[:rstart]
-				if qualities is not None:
-					qualities = qualities[:rstart]
-					assert len(qualities) == len(seq)
+		desc, seq, qualities = process_read(desc, seq, qualities, options, stats)
+		if seq is not None:
+			# write modified sequence in either FASTA or FASTQ format
+			if qualities is None:
+				# FASTA
+				print('>%s\n%s' % (desc, seq), file=outfile)
 			else:
-				# The adapter is in the beginning of the read (case 4)
-				# TODO should this case be ignored in color space?
-				assert r1[-1] == '-'
-				assert not (rstart == 0 and rstop == len(seq))
-				assert rstart == 0
-				if True:
-					stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
-					seq = seq[rstop:]
-					if qualities is not None:
-						qualities = qualities[rstop:]
-			stats.adapter_matches[index] += 1
-			stats.sequence_matches[index] += 1
+				# FASTQ
+				print('@%s\n%s\n+\n%s' % (desc, seq, qualities), file=outfile)
 
-		if any_adapter_matches:
-			stats.reads_changed += 1
-		if options.discard and any_adapter_matches:
-			continue
-
-		# other modifications to the sequence or its description
-		# change any length=XX that may appear in the read description (for 454)
-		desc = re.sub(r"\blength=[0-9]*\b", "length=%d" % len(seq), desc)
-
-		if options.strip_f3 and desc.endswith('_F3'):
-			desc = desc[:-3]
-		desc = options.prefix + desc + options.suffix
-		if options.double_encode:
-			# convert color space sequence to double-encoded colorspace (using
-			# characters ACGTN to represent colors)
-			seq = seq.translate(trans)
-
-		# write modified sequence in either FASTA or FASTQ format
-		if qualities is None:
-			# FASTA
-			print('>%s\n%s%s' % (desc, initial, seq), file=outfile)
-		else:
-			assert len(seq) == len(qualities)
-			# FASTQ
-			print('@%s\n%s%s\n+\n%s' % (desc, initial, seq, qualities), file=outfile)
 
 	stats.time = time.clock()
 	stats.n = n

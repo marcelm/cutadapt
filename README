@@ -142,7 +142,7 @@ MYSEQUENCEADAP
 MYSEQUENCEADAPTERSOMETHINGELSE
 All of them will be trimmed to "MYSEQUENCE".
 
-Adapters may also be in the 5' end of reads. That is, if you have the following input 
+Adapters may also be in the 5' end of reads. That is, if you have the following input
 sequences:
 ADAPTERMYSEQUENCE
 SOMETHINGELSEADAPTERMYSEQUENCE
@@ -160,6 +160,7 @@ Changes
 v0.6
 ----
 * Support gzipped input and output.
+* Print timing information in statistics.
 
 v0.5
 ----
@@ -183,8 +184,8 @@ v0.1
 * initial release
 
 
-To Do
-=====
+To Do / Ideas
+=============
 
   * autodetect FASTA/FASTQ input in STDIN
   * write test cases
@@ -200,3 +201,4 @@ To Do
   * show_progress is unused
   * option for not finding adapter in the beginning
   * redirect stdout in print_stats
+  * bzip2 support
