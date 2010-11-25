@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2010 Marcel Martin <marcel.martin@tu-dortmund.de>
@@ -63,7 +63,7 @@ from optparse import OptionParser
 from itertools import izip
 from contextlib import closing
 
-from align import semiglobalalign
+from calign import semiglobalalign
 import fasta
 
 
@@ -339,13 +339,12 @@ def main():
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	parser.add_option("-o", "--output", default=None,
 		help="The modified sequence gets written to this file (in FASTA format) (default: standard output)")
-	parser.add_option("-a", "--adapter", action="append", dest="adapters",
-		help="Adapter sequence (use multiple -a options to search for more than one adapter)")
-	
+	parser.add_option("-a", "--adapters", action="append",
+		help="Adapter sequences (use multiple -a options to search for more than one adapter)")
 	parser.add_option("--discard", action='store_true', default=False,
 		help="Discard reads that contain the adapter instead of trimming them. Also use -O in order to avoid throwing away too many reads!")
 	parser.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
-		help="Try to remove adapters at most COUNT times. Useful, for example, when an adapter sometimes gets appended multiple times.")
+		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
 	parser.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
 		help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than LENGTH, the read is not modified.")
 	#parser.add_option("--front", action='store_true', default=False,
