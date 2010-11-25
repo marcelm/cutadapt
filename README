@@ -145,7 +145,6 @@ All of them will be trimmed to "MYSEQUENCE".
 Adapters may also be in the 5' end of reads. That is, if you have the following input
 sequences:
 ADAPTERMYSEQUENCE
-SOMETHINGELSEADAPTERMYSEQUENCE
 DAPTERMYSEQUENCE
 These will also be trimmed to "MYSEQUENCE".
 
