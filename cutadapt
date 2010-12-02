@@ -63,7 +63,7 @@ from optparse import OptionParser
 from itertools import izip
 from contextlib import closing
 
-from calign import semiglobalalign
+from align import semiglobalalign
 import fasta
 
 class FormatError(Exception):

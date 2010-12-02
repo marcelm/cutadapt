@@ -38,7 +38,7 @@ enum FLAG {
 
 // TODO: use match,mismatch,indel 2/1/0?
 // TODO convert this stuff to costs, don't use scores
-// TODO allow to change this at runtime
+// TODO allow to change scores/costs at runtime
 
 // insertion means: inserted into seq1 (does not appear in seq2)
 #define SCORE_MATCH 1
@@ -179,22 +179,21 @@ py_globalalign(PyObject *self UNUSED, PyObject *args)
 		prev_column = cur_column;
 	}
 
-/*	printf("s1: %s\ns2: %s\n", s1, s2);
-	printf("m: %d n: %d\n", m, n);*/
-// 	for (i = 0; i <= m; ++i) {
-// 		printf("i=%5d   %c", i, (i>0)?s1[i-1]:'X');
-// 		for (j = 0; j <= n; ++j) {
-// 			printf("%3d ", columns[j*(m+1) + i].score); //, columns[j*(m+1) + i].backtrace);
-// 		}
-// 		printf("\n");
-// 	}
-
-
 	// initialize best score and its position to the bottomright cell
 	int best_i = m; // also: s1stop
 	int best_j = n; // also: s2stop
 	int best = columns[(n+1)*(m+1)-1].score;
 	
+	if (flags & STOP_WITHIN_SEQ2) {
+		// search also in last row
+		for (j = 0; j <= n; ++j) {
+			if (columns[j*(m+1)+m].score >= best) {
+				best = columns[j*(m+1)+m].score;
+				best_i = m;
+				best_j = j;
+			}
+		}
+	}
 	if (flags & STOP_WITHIN_SEQ1) {
 		// search also in last column
 		Entry* last_column = columns + n*(m+1);
@@ -207,16 +206,18 @@ py_globalalign(PyObject *self UNUSED, PyObject *args)
 		}
 	}
 
-	if (flags & STOP_WITHIN_SEQ2) {
-		// search also in last row
+/*	
+	printf("s1: %s\ns2: %s\n", s1, s2);
+	printf("m: %d n: %d\n", m, n);
+	for (i = 0; i <= m; ++i) {
+		printf("i=%5d   %c", i, (i>0)?s1[i-1]:'X');
 		for (j = 0; j <= n; ++j) {
-			if (columns[j*(m+1)+m].score >= best) {
-				best = columns[j*(m+1)+m].score;
-				best_i = m;
-				best_j = j;
-			}
+			printf("%3d ", columns[j*(m+1) + i].score); //, columns[j*(m+1) + i].backtrace);
 		}
+		printf("\n");
 	}
+	printf("best: (%d, %d)\n", best_i, best_j);
+*/
 
 	// trace back
 	char* alignment1 = malloc((m+n+4)*sizeof(char));
@@ -284,13 +285,13 @@ py_globalalign(PyObject *self UNUSED, PyObject *args)
 
 	errors += (i - start1) + (j - start2);
 
-	while (i > 0) {
-		*p1++ = s1[--i];
-		*p2++ = '-';
-	}
 	while (j > 0) {
 		*p1++ = '-';
 		*p2++ = s2[--j];
+	}
+	while (i > 0) {
+		*p1++ = s1[--i];
+		*p2++ = '-';
 	}
 	assert(i == 0 && j == 0);
 
