@@ -28,6 +28,24 @@ THE SOFTWARE.
 #define UNUSED
 #endif
 
+enum FLAG {
+	START_WITHIN_SEQ1 = 1,
+	START_WITHIN_SEQ2 = 2,
+	STOP_WITHIN_SEQ1 = 4,
+	STOP_WITHIN_SEQ2 = 8
+};
+
+
+// TODO: use match,mismatch,indel 2/1/0?
+// TODO convert this stuff to costs, don't use scores
+// TODO allow to change this at runtime
+
+// insertion means: inserted into seq1 (does not appear in seq2)
+#define SCORE_MATCH 1
+#define SCORE_MISMATCH -1
+#define SCORE_DELETION -1
+#define SCORE_INSERTION -1
+
 /** Reverse a string in-place (helper function) */
 static void reverse_string(char* s, int len) {
 	int i;
@@ -38,8 +56,10 @@ static void reverse_string(char* s, int len) {
 	}
 }
 
-PyDoc_STRVAR(semiglobalalign__doc__,
-"semiglobalalign(string1, string2) -> (r1, r2, start1, stop1, start2, stop2, errors)\n\n\
+// TODO fix docstring!
+
+PyDoc_STRVAR(globalalign__doc__,
+"globalalign(string1, string2) -> (r1, r2, start1, stop1, start2, stop2, errors)\n\n\
 \n\
 Compute an end-gap free alignment (also called free-shift alignment or\n\
 semiglobal alignment) of strings s1 and s2.\n\
@@ -78,13 +98,14 @@ This corresponds to the following alignment:\n\
 MISSISSIPPI\n");
 
 static PyObject *
-py_semiglobalalign(PyObject *self UNUSED, PyObject *args)
+py_globalalign(PyObject *self UNUSED, PyObject *args)
 {
 	const char *s1;
 	const char *s2;
 	int m, n;
+	int flags = 0;
 
-	if (!PyArg_ParseTuple(args, "s#s#", &s1, &m, &s2, &n))
+	if (!PyArg_ParseTuple(args, "s#s#|i", &s1, &m, &s2, &n, &flags))
 		return NULL;
 
 	/*
@@ -111,7 +132,7 @@ py_semiglobalalign(PyObject *self UNUSED, PyObject *args)
 	enum { LEFT = 1, UP = 2, DIAG = 3 };
 
 	// structure for a DP matrix entry
-	typedef struct { int score; int backtrack; } Entry;
+	typedef struct { int score; int backtrace; } Entry;
 
 	// the DP matrix is stored column-major
 	Entry* columns;
@@ -123,16 +144,17 @@ py_semiglobalalign(PyObject *self UNUSED, PyObject *args)
 
 	// initialize first column
 	for (i = 0; i <= m; ++i) {
-		columns[i].score = 0;
-		columns[i].backtrack = UP; // TODO never read
-	}
-	// initialize first row
-	for (j = 0; j <= n; ++j) {
-		columns[j*(m+1)].score = 0;
-		columns[j*(m+1)].backtrack = LEFT; // TODO never read
+		columns[i].score = (flags & START_WITHIN_SEQ1) ? 0 : i * SCORE_DELETION;
+		columns[i].backtrace = UP;
 	}
 
-	// fill DP matrix
+	// initialize first row
+	for (j = 0; j <= n; ++j) {
+		columns[j*(m+1)].score = (flags & START_WITHIN_SEQ2) ? 0 : j * SCORE_INSERTION;
+		columns[j*(m+1)].backtrace = LEFT;
+	}
+
+	// fill the entire DP matrix
 	// outer loop goes over columns
 	Entry* cur_column;
 	Entry* prev_column = columns;
@@ -140,42 +162,61 @@ py_semiglobalalign(PyObject *self UNUSED, PyObject *args)
 		cur_column = columns + j*(m+1);
 		for (i = 1; i <= m; ++i) {
 			int bt = DIAG;
-			int score = prev_column[i-1].score + ((s1[i-1] == s2[j-1]) ? 1 : -1);
-			int tmp = cur_column[i-1].score - 1;
+			int score = prev_column[i-1].score + ((s1[i-1] == s2[j-1]) ? SCORE_MATCH : SCORE_MISMATCH);
+			int tmp = cur_column[i-1].score + SCORE_INSERTION;
 			if (tmp > score) {
 				bt = UP;
 				score = tmp;
 			}
-			tmp = prev_column[i].score - 1;
+			tmp = prev_column[i].score + SCORE_DELETION;
 			if (tmp > score) {
 				bt = LEFT;
 				score = tmp;
 			}
 			cur_column[i].score = score;
-			cur_column[i].backtrack = bt;
+			cur_column[i].backtrace = bt;
 		}
 		prev_column = cur_column;
 	}
 
-	// find position with highest score in last column or last row
-	int best = -1, best_j = -1, best_i = -1;
-	for (j = 0; j <= n; ++j) { // last row
-		if (columns[j*(m+1)+m].score >= best) {
-			best_i = m;
-			best_j = j;
-			best = columns[j*(m+1)+m].score;
+/*	printf("s1: %s\ns2: %s\n", s1, s2);
+	printf("m: %d n: %d\n", m, n);*/
+// 	for (i = 0; i <= m; ++i) {
+// 		printf("i=%5d   %c", i, (i>0)?s1[i-1]:'X');
+// 		for (j = 0; j <= n; ++j) {
+// 			printf("%3d ", columns[j*(m+1) + i].score); //, columns[j*(m+1) + i].backtrace);
+// 		}
+// 		printf("\n");
+// 	}
+
+
+	// initialize best score and its position to the bottomright cell
+	int best_i = m; // also: s1stop
+	int best_j = n; // also: s2stop
+	int best = columns[(n+1)*(m+1)-1].score;
+	
+	if (flags & STOP_WITHIN_SEQ1) {
+		// search also in last column
+		Entry* last_column = columns + n*(m+1);
+		for (i = 0; i <= m; ++i) {
+			if (last_column[i].score >= best) {
+				best_i = i;
+				best_j = n;
+				best = last_column[i].score;
+			}
 		}
 	}
-	assert(best_j != -1);
-	Entry* last_column = columns + n*(m+1);
-	for (i = 0; i <= m; ++i) {
-		if (last_column[i].score >= best) {
-			best_i = i;
-			best_j = n;
-			best = last_column[i].score;
+
+	if (flags & STOP_WITHIN_SEQ2) {
+		// search also in last row
+		for (j = 0; j <= n; ++j) {
+			if (columns[j*(m+1)+m].score >= best) {
+				best = columns[j*(m+1)+m].score;
+				best_i = m;
+				best_j = j;
+			}
 		}
 	}
-	assert(best_i != -1);
 
 	// trace back
 	char* alignment1 = malloc((m+n+4)*sizeof(char));
@@ -189,26 +230,38 @@ py_semiglobalalign(PyObject *self UNUSED, PyObject *args)
 
 	// first, walk from the lower right corner to the
 	// position where we found the maximum score
+
+	int errors = 0;
+	
+/*	printf("best_i: %d   best_j: %d\n", best_i, best_j);
+	printf("i: %d   j: %d\n", i, j);*/
+	
+	int gaps_are_errors; // if gaps are currently errors, this is 1, 0 otherwise
+	gaps_are_errors = (flags & STOP_WITHIN_SEQ2) ? 0 : 1;
 	if (i == best_i) { // we are in the last row
 		while (j > best_j) {
 			*p1++ = '-';
 			*p2++ = s2[--j];
+			errors += gaps_are_errors;
 		}
 	}
 	else { // we are in the last column
+		gaps_are_errors = (flags & STOP_WITHIN_SEQ1) ? 0 : 1;
 		while (i > best_i) {
 			*p1++ = s1[--i];
 			*p2++ = '-';
+			errors += gaps_are_errors;
 		}
 	}
+// 	printf("i: %d   j: %d\n", i, j);
 
-	int errors = 0;
+	assert(i == best_i && j == best_j);
 
-	// the actual backtracing.
-	// we build reverse sequences while backtracing and
-	// reverse them afterwards.
+	// the actual backtracing
+	// The alignments are constructed in reverse
+	// and this is undone afterwards.
 	while (i > 0 && j > 0) {
-		int direction = columns[j*(m+1)+i].backtrack;
+		int direction = columns[j*(m+1)+i].backtrace;
 		if (direction == DIAG) {
 			if (s1[--i] != s2[--j])
 				errors++;
@@ -224,24 +277,24 @@ py_semiglobalalign(PyObject *self UNUSED, PyObject *args)
 			errors++;
 		}
 	}
-
 	free(columns);
 
-	int start1 = i;
-	int start2 = j;
+	int start1 = (flags & START_WITHIN_SEQ1) ? i : 0;
+	int start2 = (flags & START_WITHIN_SEQ2) ? j : 0;
 
+	errors += (i - start1) + (j - start2);
 
-	while (j > 0) {
-		*p1++ = '-';
-		*p2++ = s2[--j];
-	}
 	while (i > 0) {
 		*p1++ = s1[--i];
 		*p2++ = '-';
 	}
+	while (j > 0) {
+		*p1++ = '-';
+		*p2++ = s2[--j];
+	}
 	assert(i == 0 && j == 0);
 
-	assert(columns[best_j*(m+1)+best_i].score == length - 2*errors);
+	//assert(columns[best_j*(m+1)+best_i].score == /*length*/ - 2*errors);
 
 	// reverse result
 	reverse_string(alignment1, p1-alignment1);
@@ -261,7 +314,7 @@ py_semiglobalalign(PyObject *self UNUSED, PyObject *args)
 /* module initialization */
 
 static PyMethodDef methods[] = {
-	{ "semiglobalalign", py_semiglobalalign, METH_VARARGS, semiglobalalign__doc__ },
+	{ "globalalign", py_globalalign, METH_VARARGS, globalalign__doc__ },
 	{NULL, NULL, 0, NULL} /* Sentinel */
 };
 

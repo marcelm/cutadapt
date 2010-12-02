@@ -10,6 +10,6 @@ setup(name = 'cutadapt',
 	url = 'http://cutadapt.googlecode.com/',
 	license = 'MIT',
 	ext_modules = [ module ],
-	py_modules = ['fasta'],
+	py_modules = ['fasta', 'align'],
 	scripts = ['cutadapt']
 )
