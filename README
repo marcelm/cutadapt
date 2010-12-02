@@ -207,4 +207,6 @@ To Do / Ideas
   * redirect stdout in print_stats
   * bzip2 support
   * use str.format instead of %
+  * check for exact matches first, idea from
+  http://bcbio.wordpress.com/2009/08/09/trimming-adaptors-from-short-read-sequences/
 
