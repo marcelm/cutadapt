@@ -160,6 +160,10 @@ v0.7
 ----
 * Useful exit codes
 * Better error reporting when malformed files are encountered
+* Add --minimum-length parameter for discarding reads that are shorter than
+  a specified length after trimming.
+* Generalize the alignment function a bit. This is preparation for
+  supporting adapters that are specific to either the 5' or 3' end.
 
 v0.6
 ----
