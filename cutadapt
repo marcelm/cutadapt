@@ -96,33 +96,33 @@ def xopen(filename, mode='r', is_closing=True):
 		return open(filename, mode)
 
 
-def print_statistics(adapters, stats, outfile=sys.stderr):
-	print("Command line parameters:", " ".join(sys.argv[1:]), file=outfile)
-	print(stats.n, "reads processed in %.2f seconds, %.2f ms per read." % (stats.time, 1000. * stats.time / stats.n), file=outfile)
-	print(stats.reads_changed, "reads trimmed (%.1f%%)" % (100.*(stats.reads_changed)/stats.n), file=outfile)
-	print(stats.too_short, "reads too short (%.1f%% of processed reads)." % (100.*stats.too_short/stats.n), file=outfile)
-	print(file=outfile)
+def print_statistics(adapters, stats):
+	print("Command line parameters:", " ".join(sys.argv[1:]))
+	print(stats.n, "reads processed in %.2f seconds, %.2f ms per read." % (stats.time, 1000. * stats.time / stats.n))
+	print(stats.reads_changed, "reads trimmed (%.1f%%)" % (100.*(stats.reads_changed)/stats.n))
+	print(stats.too_short, "reads too short (%.1f%% of processed reads)." % (100.*stats.too_short/stats.n))
+	print()
 	for adapter_index, adapter in enumerate(adapters):
-		print("Statistics for adapter %s (sequence '%s', length %d)" % (adapter_index+1, adapter, len(adapter)), file=outfile)
-		print(file=outfile)
-		print("adapter found in the beginning of the read", file=outfile)
-		print("length", "number", sep="\t", file=outfile)
+		print("Statistics for adapter %s (sequence '%s', length %d)" % (adapter_index+1, adapter, len(adapter)))
+		print()
+		print("adapter found in the beginning of the read")
+		print("length", "number", sep="\t")
 		total = 0
 		for k, v in stats.lengths_front[adapter_index].items():
-			print(k, v, sep="\t", file=outfile)
+			print(k, v, sep="\t")
 			total += v
-		print("total:", total, file=outfile)
-		print(file=outfile)
-		print(file=outfile)
-		print("adapter found at the end of the read", file=outfile)
-		print("length", "number", sep="\t", file=outfile)
+		print("total:", total)
+		print()
+		print()
+		print("adapter found at the end of the read")
+		print("length", "number", sep="\t")
 		total = 0
 		for k, v in stats.lengths_back[adapter_index].items():
-			print(k, v, sep="\t", file=outfile)
+			print(k, v, sep="\t")
 			total += v
-		print("total:", total, file=outfile)
-		print(file=outfile)
-		print(file=outfile)
+		print("total:", total)
+		print()
+		print()
 
 
 def quality_to_ascii(quality_line, base=33):
@@ -464,7 +464,9 @@ def main():
 
 	stats.time = time.clock()
 	stats.n = n
+	sys.stdout = sys.stderr
 	print_statistics(options.adapters, stats)
+	sys.stdout = sys.__stdout__
 	return 0
 
 
