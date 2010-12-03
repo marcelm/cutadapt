@@ -36,7 +36,7 @@ If the name of any input or output file ends with '.gz', it is
 assumed to be gzip-compressed.
 
 If you want to search for the reverse complement of an adapter, you must
-provide an additional adapter sequence.
+provide an additional adapter sequence using two '-a' parameters.
 
 If the input sequences are in color space, the adapter must
 also be provided in color space (using a string of digits 0123).
@@ -99,7 +99,8 @@ def xopen(filename, mode='r', is_closing=True):
 def print_statistics(adapters, stats, outfile=sys.stderr):
 	print("Command line parameters:", " ".join(sys.argv[1:]), file=outfile)
 	print(stats.n, "reads processed in %.2f seconds, %.2f ms per read." % (stats.time, 1000. * stats.time / stats.n), file=outfile)
-	print(stats.reads_changed, "reads were trimmed (%.1f%%)" % (100.*(stats.reads_changed)/stats.n), file=outfile)
+	print(stats.reads_changed, "reads trimmed (%.1f%%)" % (100.*(stats.reads_changed)/stats.n), file=outfile)
+	print(stats.too_short, "reads too short (%.1f%% of processed reads)." % (100.*stats.too_short/stats.n), file=outfile)
 	print(file=outfile)
 	for adapter_index, adapter in enumerate(adapters):
 		print("Statistics for adapter %s (sequence '%s', length %d)" % (adapter_index+1, adapter, len(adapter)), file=outfile)
@@ -126,7 +127,8 @@ def print_statistics(adapters, stats, outfile=sys.stderr):
 
 def quality_to_ascii(quality_line, base=33):
 	"""
-	Convert a string containing qualities given as integer to a string of ASCII-encoded qualities.
+	Convert a string containing qualities given as integer to a string of 
+	ASCII-encoded qualities.
 
 	base -- ASCII code of quality zero (sensible values are 33 and 64).
 
@@ -194,7 +196,8 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 	Read sequences and (if available) quality information from either:
 	* seqfilename in FASTA format (qualityfilename must be None)
 	* seqfilename in FASTQ format (qualityfilename must be None)
-	* seqfilename in .csfasta format and qualityfilename in .qual format (SOLiD color space)
+	* seqfilename in .csfasta format and qualityfilename in .qual format 
+	  (SOLiD color space)
 
 	Return a generator over tuples (description, sequence, qualities).
 	qualities is None if no qualities are available.
@@ -278,7 +281,7 @@ def process_read(desc, seq, qualities, options, stats):
 			assert not (rstart == 0 and rstop == len(seq))
 			assert astart == 0
 			assert rstart > 0
-			assert r2[0] != '-' # since that only happens when the adapter is in the front
+			assert r2[0] != '-'
 
 			if rstop < rlen:
 				# The adapter is in the middle of the read (case 3)
@@ -298,7 +301,6 @@ def process_read(desc, seq, qualities, options, stats):
 				assert len(qualities) == len(seq)
 		else:
 			# The adapter is in the beginning of the read (case 4)
-			# TODO should this case be ignored in color space?
 			assert r1[-1] == '-'
 			assert not (rstart == 0 and rstop == len(seq))
 			assert rstart == 0
@@ -314,6 +316,9 @@ def process_read(desc, seq, qualities, options, stats):
 		stats.reads_changed += 1
 	if options.discard and any_adapter_matches:
 		return (None, None, None)
+	if len(seq) < options.minimum_length:
+		stats.too_short += 1
+		return (None, None, None)
 
 	# other modifications to the sequence or its description
 	# change any length=XX that may appear in the read description (for 454)
@@ -328,7 +333,7 @@ def process_read(desc, seq, qualities, options, stats):
 		seq = seq.translate(trans)
 
 	if options.colorspace:
-		assert len(seq) == len(qualities)
+		assert not qualities or (len(seq) == len(qualities))
 	return (desc, initial + seq, qualities)
 
 
@@ -346,6 +351,8 @@ def main():
 		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
 	parser.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
 		help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than LENGTH, the read is not modified.")
+	parser.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
+		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
 	#parser.add_option("--front", action='store_true', default=False,
 		#help="Allow adapters to occur in the front of the read.") TODO adapter overlapping the front?
 	parser.add_option("-r", "--rest-file", default=None,
@@ -355,7 +362,7 @@ def main():
 	parser.add_option("-y", "--suffix", default='',
 		help="Add this suffix to read names")
 	parser.add_option("-c", "--colorspace", action='store_true', default=False,
-		help="Colorspace mode: Trims adapter correctly (one more character than there are matches needs to be trimmed).")
+		help="Colorspace mode: Also trim the color that is adjacent to the found adapter.")
 	parser.add_option("-d", "--double-encode", action='store_true', default=False,
 		help="When in color space, double-encode colors (mapping 0,1,2,3,4 to A,C,G,T,N).")
 	parser.add_option("-t", "--trim-primer", action='store_true', default=False,
@@ -368,16 +375,14 @@ def main():
 	options, args = parser.parse_args()
 
 	if len(args) == 0:
-		parser.error("At least one parameter needed: name of the FASTA or FASTQ file.")
+		parser.error("At least one parameter needed: name of a FASTA or FASTQ file.")
 	elif len(args) > 2:
 		parser.error("Too many parameters.")
 
-	infilename = args[0]
+	input_filename = args[0]
 	quality_filename = None
 	if len(args) == 2:
 		quality_filename = args[1]
-		print("will use qualities from", quality_filename, file=sys.stderr)
-
 	if options.output is None:
 		outfile = sys.stdout
 	else:
@@ -418,6 +423,7 @@ def main():
 	stats.sequence_matches = len(options.adapters)*[0]
 	stats.lengths_front = []
 	stats.lengths_back = []
+	stats.too_short = 0
 	for x in xrange(len(options.adapters)):
 		stats.lengths_front.append({})
 	for x in xrange(len(options.adapters)):
@@ -437,7 +443,8 @@ def main():
 	qualities = None
 	start_time = time.clock()
 	try:
-		for (desc, seq, qualities) in read_sequences(infilename, quality_filename, colorspace=options.colorspace):
+		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace)
+		for (desc, seq, qualities) in reader:
 			n += 1
 			if show_progress and n % 10000 == 0:
 				print("Processing read no.", n, file=sys.stderr)
