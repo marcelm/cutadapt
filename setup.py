@@ -1,4 +1,9 @@
 from distutils.core import setup, Extension
+import sys
+
+if sys.version_info < (2, 6):
+	print "At least Python 2.6 is required."
+	sys.exit(1)
 
 module = Extension('calign', sources = [ 'calignmodule.c' ])
 
