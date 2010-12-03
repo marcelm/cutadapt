@@ -143,10 +143,10 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	Find the best matching adapter.
 
 	adapters -- a list of adapter sequences
-	seq -- the sequence to which the adapter should be aligned
+	seq -- the sequence to which each adapter will be aligned
 	max_error_rate -- maximum allowed error rate. The error rate is
 		the number of errors in the alignment divided by the length
-		of the alignment.
+		of the part of the alignment that matches the adapter.
 
 	Return tuple (best_alignment, best_index).
 
@@ -462,9 +462,12 @@ def main():
 
 
 if __name__ == '__main__':
-	#import cProfile as profile
-	#profile.run('main()', 'cutadapt.prof')
-	sys.exit(main())
+	if sys.argv[1] == '--profile':
+		del sys.argv[1]
+		import cProfile as profile
+		profile.run('main()', 'cutadapt.prof')
+	else:
+		sys.exit(main())
 
 """
 Interpreting the result of a semiglobal alignment between the adapter and the read sequences
