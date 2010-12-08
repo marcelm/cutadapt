@@ -8,7 +8,7 @@ if sys.version_info < (2, 6):
 module = Extension('calign', sources = [ 'calignmodule.c' ])
 
 setup(name = 'cutadapt',
-	version = '0.7',
+	version = '0.8',
 	description = 'trim adapters from high-throughput sequencing reads',
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@tu-dortmund.de',

@@ -49,7 +49,7 @@ $ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq"""
 
 from __future__ import print_function, division
 
-__version__ = '0.7'
+__version__ = '0.8'
 
 import sys
 import re
