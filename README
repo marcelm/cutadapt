@@ -2,13 +2,13 @@
 cutadapt
 ========
 
-cutadapt is used to remove adapter sequences from DNA high-throughput
+cutadapt removes adapter sequences from DNA high-throughput
 sequencing data. This is usually necessary when the read length of the
-machine is longer than the molecule that is sequenced. For example, This is
-the case in microRNA data.
+machine is longer than the molecule that is sequenced, such as in
+microRNA data.
 
-cutadapt is implemented in Python, with an extension module that implements
-the alignnment algorithm, which is written in C.
+cutadapt is implemented in Python, with an extension module,
+written in C, that implements the alignnment algorithm.
 
 
 Project homepage
@@ -19,6 +19,8 @@ See http://code.google.com/p/cutadapt/
 
 License
 =======
+
+(This is the MIT license.)
 
 Copyright (c) 2010 Marcel Martin <marcel.martin@tu-dortmund.de>
 
@@ -46,6 +48,7 @@ Dependencies
 
 cutadapt needs Python 2.6 or later. It will most likely not work with Python 3.
 For installation from sources, a C compiler needs to be installed.
+The program has been developed and tested on Ubuntu and OpenSuSE.
 
 
 Installation
@@ -62,7 +65,7 @@ Build the C extension module:
 $ python setup.py build_ext -i
 
 Then simply run the script from where it is, similar to this:
-$ /home/myname/downloads/cutadapt-0.x/cutadapt --help
+$ /home/username/downloads/cutadapt-0.x/cutadapt --help
 
 
 How to use, examples
@@ -77,7 +80,14 @@ Illumina data
 
 Assuming your sequencing data is available as a FASTQ file, use this
 command line:
-$ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq
+$ cutadapt -a ADAPTER-SEQUENCE input.fastq > output.fastq
+
+gz-compressed input is supported:
+$ cutadapt -a ADAPTER-SEQUENCE input.fastq.gz > output.fastq
+
+gz-compressed output is also supported, but the -o parameter (output file) needs
+to be used (gzip compression is autodetected by looking at the file name):
+$ cutadapt -a ADAPTER-SEQUENCE -o output.fastq.gz input.fastq.gz
 
 
 SOLiD data
@@ -94,10 +104,9 @@ Instead of redirecting standard output with ">", the "-o" option can be used:
 
 $ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq -o output.fastq solid.csfasta solid.qual
 
-Do the same, but produce BFAST-compatible output. Strip the _F3 suffix from read names:
+Do the same, but produce BFAST-compatible output and strip the _F3 suffix from read names:
 
 $ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
-
 
 
 FASTA file
@@ -134,25 +143,47 @@ The program is sufficiently fast for my purposes, but speedups should be simple 
 Partial adapter matches
 -----------------------
 
-Since a semiglobal alignment algorithm is used, cutadapt correctly deals with partial
-adapter matches. As an example, suppose your adapter sequence is "ADAPTER".
-If you have these input sequences:
+Cutadapt correctly deals with partial adapter matches. As an example, suppose 
+your adapter sequence is "ADAPTER" (specified via the -a or --adapter
+command-line parameter). If you have these input sequences:
+
 MYSEQUENCEADAPTER
 MYSEQUENCEADAP
 MYSEQUENCEADAPTERSOMETHINGELSE
-All of them will be trimmed to "MYSEQUENCE".
 
-TODO Fix this for v0.8:
+All of them will be trimmed to "MYSEQUENCE". If the sequence starts with an 
+adapter, such as this one:
 
-Adapters may also be in the 5' end of reads. That is, if you have the following input
-sequences:
-ADAPTERMYSEQUENCE
-DAPTERMYSEQUENCE
-These will also be trimmed to "MYSEQUENCE".
+ADAPTERSOMETHING
+
+it wil be empty after trimming.
 
 When the allowed error rate is sufficiently high (set with parameter -e), errors in
 the adapter sequence are allowed. For example, ADABTER (1 mismatch), ADAPTR (1 deletion),
 and ADAPPTER (1 insertion) will all be recognized if the error rate is set to 0.15.
+
+
+Allowing adapters anywhere
+--------------------------
+
+Cutadapt assumes that any adapter specified via the -a (or --adapter) parameter
+was ligated to the 3' end of the sequence. This is the correct assumption for
+at least the SOLiD and Illumina small RNA protocols and probably others.
+
+If, on the other hand, your adapter can also be ligated to the 5' end (on 
+purpose or by accident), you should tell cutadapt so by using the -b (or
+--anywhere) parameter. It will then use a different alignment algorithm and
+correctly trim adapters that appear in the beginning of a read. An adapter
+specified via -b will also be found if it appears only partially in the
+beginning of a read. For example, these sequences
+
+ADAPTERMYSEQUENCE
+PTERMYSEQUENCE
+
+will be trimmed to "MYSEQUENCE". Note that the regular algorithm would trim
+the first read to an empty sequence.
+
+The -b parameter currently does not work with color space data.
 
 
 Changes
@@ -161,9 +192,14 @@ Changes
 v0.8
 ----
 * Change default behavior of searching for an adapter: The adapter is now assumed to
-  be an adapter that has been ligated to the 3' end. To get the old behavior, which used
-  a heuristic to determine whether the adapter was ligated to the 5' or 3' end and trimmed
-  the read accordingly, use the new -b (--anywhere) option.
+  be an adapter that has been ligated to the 3' end. This should be the correct behavior
+  for at least the SOLiD small RNA protocol (SREK) and also for the Illumina protocol.
+  To get the old behavior, which uses a heuristic to determine whether the adapter was
+  ligated to the 5' or 3' end and then trimmed the read accordingly, use the new
+  -b (--anywhere) option.
+* Clear up how the statistics after processing all reads are printed.
+* Fix incorrect statistics. Adapters starting at pos. 0 were correctly trimmed,
+  but not counted.
 * Modify scoring scheme: Improves trimming (some reads that should have been
   trimmed were not). Increases no. of trimmed reads in one of our SOLiD data sets
   from 36.5 to 37.6%.
@@ -209,7 +245,6 @@ To Do / Ideas
 =============
 
   * write test cases
-  * option for not finding adapter in the beginning
   * autodetect FASTA/FASTQ input in STDIN
   * allow to give adapter in nucleotide space, but find it in color space
   * show average error rate
@@ -221,12 +256,11 @@ To Do / Ideas
   * bzip2 support
   * use str.format instead of %
   * check for exact matches first, idea from
-  http://bcbio.wordpress.com/2009/08/09/trimming-adaptors-from-short-read-sequences/
+    http://bcbio.wordpress.com/2009/08/09/trimming-adaptors-from-short-read-sequences/
   * allow to change scores at runtime (perhaps using command-line parameters)
   * multithreading
   * Python 2.5 compatibility
   * --progress
-  * clean up statistics
   * refactoring
-
-
+  * make it easy_installable (or use pip)
+  * run pylint, pychecker
