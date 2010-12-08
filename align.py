@@ -3,6 +3,7 @@ Alignment module.
 """
 from __future__ import print_function
 from array import array
+import sys
 
 # flags for global alignment
 
@@ -121,7 +122,6 @@ def pysemiglobalalign(s1, s2, print_table=False):
 	if print_table:
 		print("s1:", s1)
 		print("s2:", s2)
-		import sys
 		print("best i,j", best_i, best_j)
 		print("      ", end="")
 		for j in xrange(n):
