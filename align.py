@@ -23,8 +23,11 @@ SEMIGLOBAL = START_WITHIN_SEQ1 | START_WITHIN_SEQ2 | STOP_WITHIN_SEQ1 | STOP_WIT
 
 SCORE_MATCH = 1
 SCORE_MISMATCH = -1
-SCORE_DELETION = -1
-SCORE_INSERTION = -1
+SCORE_DELETION = -2
+SCORE_INSERTION = SCORE_DELETION
+
+def _ansired(s):
+	return "\x1b[1;31m" + s + "\x1b[00m"
 
 
 # Pure Python implementation, fallback for when the C module is not available.
@@ -116,12 +119,14 @@ def pysemiglobalalign(s1, s2, print_table=False):
 		best = col_best
 
 	if print_table:
+		print("s1:", s1)
+		print("s2:", s2)
 		import sys
-		print("i,j", best_i, best_j)
+		print("best i,j", best_i, best_j)
 		print("      ", end="")
 		for j in xrange(n):
-			print("%2c" % s2[j], end="")
-		print
+			print("%3c" % s2[j], end="")
+		print()
 		for i in xrange(m+1):
 			if i > 0:
 				print("%3c" % s1[i-1], end="")
@@ -129,7 +134,7 @@ def pysemiglobalalign(s1, s2, print_table=False):
 				print("   ", end="")
 			for j in xrange(n+1):
 				if (i,j) == (best_i, best_j):
-					st = "%3d"
+					st = _ansired("%3d")
 				else:
 					st = "%3d"
 				sys.stdout.write(st % columns[j][i])
@@ -199,7 +204,7 @@ def pysemiglobalalign(s1, s2, print_table=False):
 		i -= 1
 	assert i == 0 and j == 0
 
-	assert columns[best_j][best_i] == length - 2*errors
+	#TODO assert columns[best_j][best_i] == length - 2*errors
 	r1.reverse()
 	r2.reverse()
 

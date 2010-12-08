@@ -156,6 +156,12 @@ and ADAPPTER (1 insertion) will all be recognized if the error rate is set to 0.
 Changes
 =======
 
+v0.8
+----
+* Modify scoring scheme: Improves trimming (some reads that should have been
+  trimmed were not). Increases no. of trimmed reads in one of our SOLiD data sets
+  from 36.5 to 37.6%.
+
 v0.7
 ----
 * Useful exit codes
@@ -200,7 +206,6 @@ To Do / Ideas
   * allow to give adapter in nucleotide space, but find it in color space
   * print command-line parameters
   * show average error rate
-  * allow comma-separated adapters in -a parameter
   * allow stuff like: -e 2/17
   * show table of length vs. max errors
   * speed up alignment
@@ -208,9 +213,8 @@ To Do / Ideas
     is not necessary
   * show_progress is unused
   * option for not finding adapter in the beginning
-  * redirect stdout in print_stats
   * bzip2 support
   * use str.format instead of %
   * check for exact matches first, idea from
   http://bcbio.wordpress.com/2009/08/09/trimming-adaptors-from-short-read-sequences/
-
+  * allow to change scores at runtime (perhaps using command-line parameters)

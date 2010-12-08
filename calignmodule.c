@@ -35,16 +35,11 @@ enum FLAG {
 	STOP_WITHIN_SEQ2 = 8
 };
 
-
-// TODO: use match,mismatch,indel 2/1/0?
-// TODO convert this stuff to costs, don't use scores
-// TODO allow to change scores/costs at runtime
-
 // insertion means: inserted into seq1 (does not appear in seq2)
 #define SCORE_MATCH 1
 #define SCORE_MISMATCH -1
-#define SCORE_DELETION -1
-#define SCORE_INSERTION -1
+#define SCORE_DELETION -2
+#define SCORE_INSERTION -2
 
 /** Reverse a string in-place (helper function) */
 static void reverse_string(char* s, int len) {
