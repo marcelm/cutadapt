@@ -62,6 +62,7 @@ from string import maketrans
 from optparse import OptionParser
 from itertools import izip
 from contextlib import closing
+from collections import defaultdict
 
 import align
 import fasta
@@ -115,7 +116,7 @@ def print_statistics(adapters, stats):
 		print("adapter found in the beginning of the read")
 		print("length", "number", sep="\t")
 		total = 0
-		for k, v in stats.lengths_front[adapter_index].items():
+		for k, v in stats.lengths_front[adapter_index].iteritems():
 			print(k, v, sep="\t")
 			total += v
 		print("total:", total)
@@ -124,7 +125,7 @@ def print_statistics(adapters, stats):
 		print("adapter found at the end of the read")
 		print("length", "number", sep="\t")
 		total = 0
-		for k, v in stats.lengths_back[adapter_index].items():
+		for k, v in stats.lengths_back[adapter_index].iteritems():
 			print(k, v, sep="\t")
 			total += v
 		print("total:", total)
@@ -289,8 +290,7 @@ def process_read(desc, seq, qualities, options, adapters, stats):
 					# The adapter is in the middle of the read (case 3)
 					if options.rest_file is not None:
 						print(seq[rstop:], file=options.rest_file)
-				# TODO defaultdict?
-				stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
+				stats.lengths_back[index][length] += 1
 
 				if options.colorspace:
 					# trim one more color if long enough
@@ -302,7 +302,7 @@ def process_read(desc, seq, qualities, options, adapters, stats):
 			else:
 				# The adapter is in the beginning of the read (case 4)
 				assert rstart == 0
-				stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
+				stats.lengths_front[index][length] += 1
 				# TODO in color space, one more color should be trimmed!
 				seq = seq[rstop:]
 				if qualities is not None:
@@ -456,10 +456,10 @@ def main():
 	stats.too_short = 0
 	stats.lengths_front = []
 	for a in adapters:
-		stats.lengths_front.append({})
+		stats.lengths_front.append(defaultdict(int))
 	stats.lengths_back = []
 	for a in adapters:
-		stats.lengths_back.append({})
+		stats.lengths_back.append(defaultdict(int))
 
 	# for double-encoding colorspace sequences
 	global trans
