@@ -181,7 +181,7 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	best_alignment = None
 	best_index = None
 	for index, (where, adapter) in enumerate(adapters):
-		# try exact matching first
+		# try to find an exact match first
 		pos = seq.find(adapter)
 		if pos >= 0:
 			alignment = (None, None, 0, len(adapter), pos, pos + len(adapter), 0)
@@ -294,59 +294,32 @@ def process_read(desc, seq, qualities, options, adapters, stats):
 		any_adapter_matches = True
 		where, adapter = adapters[index]
 		
-		if where == ANYWHERE:
-			if astart == 0 and rstart > 0:
-				# The adapter is at the end of the read (case 2) or in the middle (case 3)
-				if rstop < len(seq):
-					# The adapter is in the middle of the read (case 3)
-					if options.rest_file is not None:
-						print(seq[rstop:], file=options.rest_file)
-				stats.lengths_back[index][length] += 1
+		if where == BACK or (astart == 0 and rstart > 0):
+			assert where == ANYWHERE or astart == 0
+			# The adapter is at the end of the read (case 2) or in the middle (case 3)
+			if rstop < len(seq):
+				# The adapter is in the middle of the read (case 3)
+				if options.rest_file is not None:
+					print(seq[rstop:], file=options.rest_file)
+			stats.lengths_back[index][length] += 1
 
-				if options.colorspace:
-					# trim one more color if long enough
-					rstart = max(0, rstart - 1)
-				seq = seq[:rstart]
-				if qualities is not None:
-					qualities = qualities[:rstart]
-					assert len(qualities) == len(seq)
-			else:
-				# The adapter is in the beginning of the read (case 4)
-				assert rstart == 0
-				stats.lengths_front[index][length] += 1
-				# TODO in color space, one more color should be trimmed!
-				seq = seq[rstop:]
-				if qualities is not None:
-					qualities = qualities[rstop:]
-		elif where == BACK:
-			DOES_NOT_WORK
-			if rstart == 0 and rstop == len(seq):
-				# The adapter or parts of it cover the entire read (case 1)
-				assert rstart == 0 and rstop == len(seq)
-				seq = ''
-				if qualities is not None:
-					qualities = ''
-			elif rstart > 0:
-				# The adapter is at the end of the read (case 2) or in the middle (case 3)
-				if rstop < rlen:
-					# The adapter is in the middle of the read (case 3)
-					if options.rest_file is not None:
-						print(seq[rstop:], file=options.rest_file)
-				# TODO defaultdict?
-				stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
-				if options.colorspace:
-					# trim one more color
-					rstart -= 1
-				seq = seq[:rstart]
-				if qualities is not None:
-					qualities = qualities[:rstart]
-					assert len(qualities) == len(seq)
-			else:
-				# The adapter is in the beginning of the read (case 4)
-				stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
-				seq = seq[rstop:]
-				if qualities is not None:
-					qualities = qualities[rstop:]
+			if options.colorspace:
+				# trim one more color if long enough
+				rstart = max(0, rstart - 1)
+			seq = seq[:rstart]
+			if qualities is not None:
+				qualities = qualities[:rstart]
+				assert len(qualities) == len(seq)
+		elif where == ANYWHERE:
+			# The adapter is in the beginning of the read (case 4)
+			assert rstart == 0
+			stats.lengths_front[index][length] += 1
+			# TODO What should we do in color space?
+			seq = seq[rstop:]
+			if qualities is not None:
+				qualities = qualities[rstop:]
+		else:
+			assert False
 
 	if any_adapter_matches:
 		stats.reads_changed += 1
@@ -432,10 +405,11 @@ def main():
 		options.strip_f3 = True
 		options.suffix = "/1"
 	if options.trim_primer and not options.colorspace:
-		parser.error("trimming the primer makes only sense in colorspace")
+		parser.error("trimming the primer makes only sense in color space")
 	if options.double_encode and not options.colorspace:
-		parser.error("double-encoding makes only sense in colorspace")
-
+		parser.error("double-encoding makes only sense in color space")
+	if options.anywhere and options.colorspace:
+		parser.error("using --anywhere with color space reads is currently not supported (if you think you need this feature, contact the author)")
 	if not (0 <= options.error_rate <= 1.):
 		parser.error("The maximum error rate must be between 0 and 1.")
 
@@ -470,7 +444,7 @@ def main():
 	for a in adapters:
 		stats.lengths_back.append(defaultdict(int))
 
-	# for double-encoding colorspace sequences
+	# for double-encoding colors pace sequences
 	global trans
 	trans = maketrans('0123.', 'ACGTN')
 
