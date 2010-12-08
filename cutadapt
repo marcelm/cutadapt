@@ -270,22 +270,18 @@ def process_read(desc, seq, qualities, options, stats):
 
 		if rstart == 0 and rstop == len(seq):
 			# The adapter or parts of it covers the entire read (case 1)
-			assert r1[0] != '-' and r1[-1] != '-'
 			assert rstart == 0 and rstop == len(seq)
 			seq = ''
 			if qualities is not None:
 				qualities = ''
 		elif rstart > 0:
 			# The adapter is at the end of the read (case 2) or in the middle (case 3)
-			assert r1[0] == '-'
 			assert not (rstart == 0 and rstop == len(seq))
 			assert astart == 0
 			assert rstart > 0
-			assert r2[0] != '-'
 
 			if rstop < rlen:
 				# The adapter is in the middle of the read (case 3)
-				assert r1[-1] == '-'
 				stats.middle += 1
 				if options.rest_file is not None:
 					print(seq[rstop:], file=options.rest_file)
@@ -301,7 +297,6 @@ def process_read(desc, seq, qualities, options, stats):
 				assert len(qualities) == len(seq)
 		else:
 			# The adapter is in the beginning of the read (case 4)
-			assert r1[-1] == '-'
 			assert not (rstart == 0 and rstop == len(seq))
 			assert rstart == 0
 			if True:
