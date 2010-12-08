@@ -283,45 +283,30 @@ def process_read(desc, seq, qualities, options, adapters, stats):
 		where, adapter = adapters[index]
 		
 		if where == ANYWHERE:
-			# TODO temporary
-			alen = len(adapter)
-			rlen = len(seq)
-
-			if rstart == 0 and rstop == len(seq):
-				# The adapter or parts of it cover the entire read (case 1)
-				seq = ''
-				if qualities is not None:
-					qualities = ''
-			elif rstart > 0:
+			if astart == 0 and rstart > 0:
 				# The adapter is at the end of the read (case 2) or in the middle (case 3)
-				assert not (rstart == 0 and rstop == len(seq))
-				assert astart == 0
-
-				if rstop < rlen:
+				if rstop < len(seq):
 					# The adapter is in the middle of the read (case 3)
-					stats.middle += 1
 					if options.rest_file is not None:
 						print(seq[rstop:], file=options.rest_file)
 				# TODO defaultdict?
 				stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
 
 				if options.colorspace:
-					# trim one more color
-					rstart -= 1
+					# trim one more color if long enough
+					rstart = max(0, rstart - 1)
 				seq = seq[:rstart]
 				if qualities is not None:
 					qualities = qualities[:rstart]
 					assert len(qualities) == len(seq)
 			else:
 				# The adapter is in the beginning of the read (case 4)
-				assert not (rstart == 0 and rstop == len(seq))
 				assert rstart == 0
-				if True:
-					stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
-					seq = seq[rstop:]
-					if qualities is not None:
-						qualities = qualities[rstop:]
-			stats.adapter_matches[index] += 1
+				stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
+				# TODO in color space, one more color should be trimmed!
+				seq = seq[rstop:]
+				if qualities is not None:
+					qualities = qualities[rstop:]
 		elif where == BACK:
 			DOES_NOT_WORK
 			if rstart == 0 and rstop == len(seq):
@@ -334,7 +319,6 @@ def process_read(desc, seq, qualities, options, adapters, stats):
 				# The adapter is at the end of the read (case 2) or in the middle (case 3)
 				if rstop < rlen:
 					# The adapter is in the middle of the read (case 3)
-					stats.middle += 1
 					if options.rest_file is not None:
 						print(seq[rstop:], file=options.rest_file)
 				# TODO defaultdict?
@@ -352,7 +336,6 @@ def process_read(desc, seq, qualities, options, adapters, stats):
 				seq = seq[rstop:]
 				if qualities is not None:
 					qualities = qualities[rstop:]
-			stats.adapter_matches[index] += 1
 
 	if any_adapter_matches:
 		stats.reads_changed += 1
@@ -470,14 +453,12 @@ def main():
 		pass
 	stats = Statistics()
 	stats.reads_changed = 0
-	stats.middle = 0
-	stats.adapter_matches = len(adapters)*[0]
-	stats.lengths_front = []
-	stats.lengths_back = []
 	stats.too_short = 0
-	for x in xrange(len(adapters)):
+	stats.lengths_front = []
+	for a in adapters:
 		stats.lengths_front.append({})
-	for x in xrange(len(adapters)):
+	stats.lengths_back = []
+	for a in adapters:
 		stats.lengths_back.append({})
 
 	# for double-encoding colorspace sequences

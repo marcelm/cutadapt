@@ -142,6 +142,8 @@ MYSEQUENCEADAP
 MYSEQUENCEADAPTERSOMETHINGELSE
 All of them will be trimmed to "MYSEQUENCE".
 
+TODO Fix this for v0.8:
+
 Adapters may also be in the 5' end of reads. That is, if you have the following input
 sequences:
 ADAPTERMYSEQUENCE
@@ -158,6 +160,10 @@ Changes
 
 v0.8
 ----
+* Change default behavior of searching for an adapter: The adapter is now assumed to
+  be an adapter that has been ligated to the 3' end. To get the old behavior, which used
+  a heuristic to determine whether the adapter was ligated to the 5' or 3' end and trimmed
+  the read accordingly, use the new -b (--anywhere) option.
 * Modify scoring scheme: Improves trimming (some reads that should have been
   trimmed were not). Increases no. of trimmed reads in one of our SOLiD data sets
   from 36.5 to 37.6%.
@@ -220,4 +226,7 @@ To Do / Ideas
   * multithreading
   * Python 2.5 compatibility
   * --progress
+  * clean up statistics
+  * refactoring
+
 
