@@ -113,19 +113,20 @@ def print_statistics(adapters, stats):
 	for adapter_index, (where, adapter) in enumerate(adapters):
 		print("Statistics for adapter %s (sequence '%s', length %d)" % (adapter_index+1, adapter, len(adapter)))
 		print()
-		print("adapter found in the beginning of the read")
-		print("length", "number", sep="\t")
-		total = 0
-		for k, v in stats.lengths_front[adapter_index].iteritems():
-			print(k, v, sep="\t")
-			total += v
-		print("total:", total)
-		print()
-		print()
+		if where == ANYWHERE:
+			print("adapter found in the beginning of the read")
+			print("length", "number", sep="\t")
+			total = 0
+			for k, v in sorted(stats.lengths_front[adapter_index].items()):
+				print(k, v, sep="\t")
+				total += v
+			print("total:", total)
+			print()
+			print()
 		print("adapter found at the end of the read")
 		print("length", "number", sep="\t")
 		total = 0
-		for k, v in stats.lengths_back[adapter_index].iteritems():
+		for k, v in sorted(stats.lengths_back[adapter_index].items()):
 			print(k, v, sep="\t")
 			total += v
 		print("total:", total)
