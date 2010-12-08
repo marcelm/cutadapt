@@ -159,7 +159,12 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	best_alignment = None
 	best_index = None
 	for index, adapter in enumerate(adapters):
-		alignment = semiglobalalign(adapter, seq)
+		# try exact matching first
+		pos = seq.find(adapter)
+		if pos >= 0:
+			alignment = (None, None, 0, len(adapter), pos, pos + len(adapter), 0)
+		else:
+			alignment = semiglobalalign(adapter, seq)
 		(r1, r2, astart, astop, rstart, rstop, errors) = alignment
 		length = astop - astart
 		if length < minimum_overlap or errors/length > max_error_rate:
@@ -317,7 +322,7 @@ def process_read(desc, seq, qualities, options, stats):
 
 	# other modifications to the sequence or its description
 	# change any length=XX that may appear in the read description (for 454)
-	desc = re.sub(r"\blength=[0-9]*\b", "length=%d" % len(seq), desc)
+	desc = lengthregex.sub("length=%d" % len(seq), desc)
 
 	if options.strip_f3 and desc.endswith('_F3'):
 		desc = desc[:-3]
@@ -428,6 +433,8 @@ def main():
 	global trans
 	trans = maketrans('0123.', 'ACGTN')
 
+	global lengthregex
+	lengthregex = re.compile(r"\blength=[0-9]*\b")
 	# length difference between sequence and qualities
 	lengthdiff = 0 if options.trim_primer else 1
 
