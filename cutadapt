@@ -102,36 +102,46 @@ def xopen(filename, mode='r', is_closing=True):
 		return open(filename, mode)
 
 
-def print_statistics(adapters, stats):
-	#where_names = { BACK: "3' adapter", ANYWHERE: "5' or 3' adapter" }
-	
-	print("Command line parameters:", " ".join(sys.argv[1:]))
-	print(stats.n, "reads processed in %.2f seconds, %.3f ms per read." % (stats.time, 1000. * stats.time / stats.n))
-	print(stats.reads_changed, "reads trimmed (%.1f%%)" % (100.*(stats.reads_changed)/stats.n))
-	print(stats.too_short, "reads too short (%.1f%% of processed reads)." % (100.*stats.too_short/stats.n))
+def print_histogram(d):
+	"""d -- a dictionary mapping values to their respective frequency"""
+	print("length", "count", sep="\t")
+	for key in sorted(d):
+		print(key, d[key], sep="\t")
 	print()
-	for adapter_index, (where, adapter) in enumerate(adapters):
-		print("Statistics for adapter %s (sequence '%s', length %d)" % (adapter_index+1, adapter, len(adapter)))
+	
+	
+def print_statistics(adapters, stats, error_rate):
+	print("cutadapt version", __version__)
+	print("Command line parameters:", " ".join(sys.argv[1:]))
+	print("Maximum error rate: %.2f%%" % (error_rate * 100.))
+	print("   Processed reads:", stats.n)
+	print("     Trimmed reads:", stats.reads_changed, "(%5.1f%%)" % (100. * stats.reads_changed / stats.n))
+	print("   Too short reads:", stats.too_short, "(%5.1f%% of processed reads)" % (100. * stats.too_short / stats.n))
+	print("        Total time: %9.2f s" % stats.time)
+	print("     Time per read: %9.2f ms" % (1000. * stats.time / stats.n))
+	print()
+	for index, (where, adapter) in enumerate(adapters):
+		total_front = sum(stats.lengths_front[index].values())
+		total_back = sum(stats.lengths_back[index].values())
+		total = total_front + total_back
+		assert where == ANYWHERE or (where == BACK and total_front == 0)
+		
+		print("=" * 3, "Adapter", index+1, "=" * 3)
 		print()
+		print("Adapter '%s'," % adapter, "length %d," % len(adapter), "was trimmed", total, "times.")
 		if where == ANYWHERE:
-			print("adapter found in the beginning of the read")
-			print("length", "number", sep="\t")
-			total = 0
-			for k, v in sorted(stats.lengths_front[adapter_index].items()):
-				print(k, v, sep="\t")
-				total += v
-			print("total:", total)
+			print(total_front, "times, it overlapped the 5' end of a read")
+			print(total_back, "times, it overlapped the 3' end or was within the read")
 			print()
+			print("Histogram of adapter lengths (5')")
+			print_histogram(stats.lengths_front[index])
 			print()
-		print("adapter found at the end of the read")
-		print("length", "number", sep="\t")
-		total = 0
-		for k, v in sorted(stats.lengths_back[adapter_index].items()):
-			print(k, v, sep="\t")
-			total += v
-		print("total:", total)
-		print()
-		print()
+			print("Histogram of adapter lengths (3' or within)")
+			print_histogram(stats.lengths_back[index])
+		else:
+			print()
+			print("Histogram of adapter lengths")
+			print_histogram(stats.lengths_back[index])
 
 
 def quality_to_ascii(quality_line, base=33):
@@ -429,8 +439,6 @@ def main():
 	if not (0 <= options.error_rate <= 1.):
 		parser.error("The maximum error rate must be between 0 and 1.")
 
-	print("maximum error rate: %.2f%%" % (options.error_rate*100.), file=sys.stderr)
-
 	if options.rest_file is not None:
 		if options.rest_file == '-':
 			options.rest_file = sys.stdout
@@ -497,7 +505,7 @@ def main():
 	stats.time = time.clock()
 	stats.n = n
 	sys.stdout = sys.stderr
-	print_statistics(adapters, stats)
+	print_statistics(adapters, stats, options.error_rate)
 	sys.stdout = sys.__stdout__
 	return 0
 
