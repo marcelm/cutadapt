@@ -322,7 +322,8 @@ def process_read(desc, seq, qualities, options, stats):
 
 	# other modifications to the sequence or its description
 	# change any length=XX that may appear in the read description (for 454)
-	desc = lengthregex.sub("length=%d" % len(seq), desc)
+	if desc.find("length=") >= 0:
+		desc = lengthregex.sub("length=%d" % len(seq), desc)
 
 	if options.strip_f3 and desc.endswith('_F3'):
 		desc = desc[:-3]
