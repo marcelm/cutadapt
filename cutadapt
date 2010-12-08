@@ -45,10 +45,7 @@ EXAMPLE
 
 Assuming your sequencing data is available as a FASTQ file, use this
 command line:
-$ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq
-
-Use --help to see a description of all available command-line options.
-"""
+$ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq"""
 
 from __future__ import print_function, division
 
@@ -82,6 +79,13 @@ class Error(Exception):
 
 class UnknownFileType(Exception):
 	pass
+
+
+class HelpfulOptionParser(OptionParser):
+	"""An OptionParser that prints full help on errors."""
+	def error(self, msg):
+		self.print_help(sys.stderr)
+		self.exit(2, "\n%s: error: %s\n" % (self.get_prog_name(), msg))
 
 
 def xopen(filename, mode='r', is_closing=True):
@@ -348,7 +352,7 @@ def process_read(desc, seq, qualities, options, adapters, stats):
 
 
 def main():
-	parser = OptionParser(usage=__doc__, version=__version__)
+	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
 	parser.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	parser.add_option("-o", "--output", default=None,
@@ -374,7 +378,7 @@ def main():
 	parser.add_option("-c", "--colorspace", action='store_true', default=False,
 		help="Colorspace mode: Also trim the color that is adjacent to the found adapter.")
 	parser.add_option("-d", "--double-encode", action='store_true', default=False,
-		help="When in color space, double-encode colors (mapping 0,1,2,3,4 to A,C,G,T,N).")
+		help="When in color space, double-encode colors (map 0,1,2,3,4 to A,C,G,T,N).")
 	parser.add_option("-t", "--trim-primer", action='store_true', default=False,
 		help="When in color space, trim primer base and the first color (which is the transition to the first nucleotide)")
 	parser.add_option("--strip-f3", action='store_true', default=False,
@@ -405,11 +409,11 @@ def main():
 		options.strip_f3 = True
 		options.suffix = "/1"
 	if options.trim_primer and not options.colorspace:
-		parser.error("trimming the primer makes only sense in color space")
+		parser.error("Trimming the primer makes only sense in color space.")
 	if options.double_encode and not options.colorspace:
-		parser.error("double-encoding makes only sense in color space")
+		parser.error("Double-encoding makes only sense in color space.")
 	if options.anywhere and options.colorspace:
-		parser.error("using --anywhere with color space reads is currently not supported (if you think you need this feature, contact the author)")
+		parser.error("Using --anywhere with color space reads is currently not supported  (if you think this may be useful, contact the author).")
 	if not (0 <= options.error_rate <= 1.):
 		parser.error("The maximum error rate must be between 0 and 1.")
 

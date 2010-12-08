@@ -213,6 +213,8 @@ v0.7
   a specified length after trimming.
 * Generalize the alignment function a bit. This is preparation for
   supporting adapters that are specific to either the 5' or 3' end.
+* pure Python fallback for alignment function for when the C module cannot
+  be used.
 
 v0.6
 ----
