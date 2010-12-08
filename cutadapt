@@ -453,8 +453,6 @@ def main():
 	# length difference between sequence and qualities
 	lengthdiff = 0 if options.trim_primer else 1
 
-	show_progress = False
-
 	# count the reads in which at least one adapter has been removed
 	n = 0
 	qualities = None
