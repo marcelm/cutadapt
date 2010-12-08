@@ -63,8 +63,13 @@ from optparse import OptionParser
 from itertools import izip
 from contextlib import closing
 
-from align import semiglobalalign
+import align
 import fasta
+
+# constants for the find_best_alignment function
+BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
+ANYWHERE = align.SEMIGLOBAL
+
 
 class FormatError(Exception):
 	pass
@@ -97,12 +102,14 @@ def xopen(filename, mode='r', is_closing=True):
 
 
 def print_statistics(adapters, stats):
+	#where_names = { BACK: "3' adapter", ANYWHERE: "5' or 3' adapter" }
+	
 	print("Command line parameters:", " ".join(sys.argv[1:]))
-	print(stats.n, "reads processed in %.2f seconds, %.2f ms per read." % (stats.time, 1000. * stats.time / stats.n))
+	print(stats.n, "reads processed in %.2f seconds, %.3f ms per read." % (stats.time, 1000. * stats.time / stats.n))
 	print(stats.reads_changed, "reads trimmed (%.1f%%)" % (100.*(stats.reads_changed)/stats.n))
 	print(stats.too_short, "reads too short (%.1f%% of processed reads)." % (100.*stats.too_short/stats.n))
 	print()
-	for adapter_index, adapter in enumerate(adapters):
+	for adapter_index, (where, adapter) in enumerate(adapters):
 		print("Statistics for adapter %s (sequence '%s', length %d)" % (adapter_index+1, adapter, len(adapter)))
 		print()
 		print("adapter found in the beginning of the read")
@@ -144,9 +151,12 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	"""
 	Find the best matching adapter.
 
-	adapters -- a list of adapter sequences
-	seq -- the sequence to which each adapter will be aligned
-	max_error_rate -- maximum allowed error rate. The error rate is
+	adapters -- List of adapter sequences
+	seq -- The sequence to which each adapter will be aligned
+	where -- Where in the sequence the adapter may be found. 
+		One of BACK and FRONT_OR_BACK. For both, 
+		the adapter will also be found if it is in the middle.
+	max_error_rate -- Maximum allowed error rate. The error rate is
 		the number of errors in the alignment divided by the length
 		of the part of the alignment that matches the adapter.
 
@@ -158,13 +168,13 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	best_score = 0
 	best_alignment = None
 	best_index = None
-	for index, adapter in enumerate(adapters):
+	for index, (where, adapter) in enumerate(adapters):
 		# try exact matching first
 		pos = seq.find(adapter)
 		if pos >= 0:
 			alignment = (None, None, 0, len(adapter), pos, pos + len(adapter), 0)
 		else:
-			alignment = semiglobalalign(adapter, seq)
+			alignment = align.globalalign(adapter, seq, where)
 		(r1, r2, astart, astop, rstart, rstop, errors) = alignment
 		length = astop - astart
 		if length < minimum_overlap or errors/length > max_error_rate:
@@ -238,7 +248,8 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 					yield rdesc, rseq, qualities
 
 
-def process_read(desc, seq, qualities, options, stats):
+# TODO refactor this into an AdapterCutter class
+def process_read(desc, seq, qualities, options, adapters, stats):
 	# In colorspace, the first character is the last nucleotide of the primer base
 	# and the second character encodes the transition from the primer base to the
 	# first real base of the read.
@@ -257,8 +268,9 @@ def process_read(desc, seq, qualities, options, stats):
 
 	# try (possibly more than once) to remove an adapter
 	for t in xrange(options.times):
-		alignment, index = find_best_alignment(options.adapters, seq, options.error_rate, options.overlap)
+		alignment, index = find_best_alignment(adapters, seq, options.error_rate, options.overlap)
 		if alignment is None:
+			# nothing found
 			break
 
 		(r1, r2, astart, astop, rstart, rstop, errors) = alignment
@@ -268,49 +280,79 @@ def process_read(desc, seq, qualities, options, stats):
 		assert length - errors > 0
 
 		any_adapter_matches = True
-		adapter = options.adapters[index]
-		# TODO temporary
-		alen = len(adapter)
-		rlen = len(seq)
+		where, adapter = adapters[index]
+		
+		if where == ANYWHERE:
+			# TODO temporary
+			alen = len(adapter)
+			rlen = len(seq)
 
-		if rstart == 0 and rstop == len(seq):
-			# The adapter or parts of it covers the entire read (case 1)
-			assert rstart == 0 and rstop == len(seq)
-			seq = ''
-			if qualities is not None:
-				qualities = ''
-		elif rstart > 0:
-			# The adapter is at the end of the read (case 2) or in the middle (case 3)
-			assert not (rstart == 0 and rstop == len(seq))
-			assert astart == 0
-			assert rstart > 0
+			if rstart == 0 and rstop == len(seq):
+				# The adapter or parts of it cover the entire read (case 1)
+				seq = ''
+				if qualities is not None:
+					qualities = ''
+			elif rstart > 0:
+				# The adapter is at the end of the read (case 2) or in the middle (case 3)
+				assert not (rstart == 0 and rstop == len(seq))
+				assert astart == 0
 
-			if rstop < rlen:
-				# The adapter is in the middle of the read (case 3)
-				stats.middle += 1
-				if options.rest_file is not None:
-					print(seq[rstop:], file=options.rest_file)
-			# TODO defaultdict?
-			stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
+				if rstop < rlen:
+					# The adapter is in the middle of the read (case 3)
+					stats.middle += 1
+					if options.rest_file is not None:
+						print(seq[rstop:], file=options.rest_file)
+				# TODO defaultdict?
+				stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
 
-			if options.colorspace:
-				# trim one more color
-				rstart -= 1
-			seq = seq[:rstart]
-			if qualities is not None:
-				qualities = qualities[:rstart]
-				assert len(qualities) == len(seq)
-		else:
-			# The adapter is in the beginning of the read (case 4)
-			assert not (rstart == 0 and rstop == len(seq))
-			assert rstart == 0
-			if True:
+				if options.colorspace:
+					# trim one more color
+					rstart -= 1
+				seq = seq[:rstart]
+				if qualities is not None:
+					qualities = qualities[:rstart]
+					assert len(qualities) == len(seq)
+			else:
+				# The adapter is in the beginning of the read (case 4)
+				assert not (rstart == 0 and rstop == len(seq))
+				assert rstart == 0
+				if True:
+					stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
+					seq = seq[rstop:]
+					if qualities is not None:
+						qualities = qualities[rstop:]
+			stats.adapter_matches[index] += 1
+		elif where == BACK:
+			DOES_NOT_WORK
+			if rstart == 0 and rstop == len(seq):
+				# The adapter or parts of it cover the entire read (case 1)
+				assert rstart == 0 and rstop == len(seq)
+				seq = ''
+				if qualities is not None:
+					qualities = ''
+			elif rstart > 0:
+				# The adapter is at the end of the read (case 2) or in the middle (case 3)
+				if rstop < rlen:
+					# The adapter is in the middle of the read (case 3)
+					stats.middle += 1
+					if options.rest_file is not None:
+						print(seq[rstop:], file=options.rest_file)
+				# TODO defaultdict?
+				stats.lengths_back[index][length] = stats.lengths_back[index].get(length, 0) + 1
+				if options.colorspace:
+					# trim one more color
+					rstart -= 1
+				seq = seq[:rstart]
+				if qualities is not None:
+					qualities = qualities[:rstart]
+					assert len(qualities) == len(seq)
+			else:
+				# The adapter is in the beginning of the read (case 4)
 				stats.lengths_front[index][length] = stats.lengths_front[index].get(length, 0) + 1
 				seq = seq[rstop:]
 				if qualities is not None:
 					qualities = qualities[rstop:]
-		stats.adapter_matches[index] += 1
-		stats.sequence_matches[index] += 1
+			stats.adapter_matches[index] += 1
 
 	if any_adapter_matches:
 		stats.reads_changed += 1
@@ -334,7 +376,7 @@ def process_read(desc, seq, qualities, options, stats):
 		seq = seq.translate(trans)
 
 	if options.colorspace:
-		assert not qualities or (len(seq) == len(qualities))
+		assert not qualities or len(seq) == len(qualities)
 	return (desc, initial + seq, qualities)
 
 
@@ -343,9 +385,11 @@ def main():
 	parser.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	parser.add_option("-o", "--output", default=None,
-		help="The modified sequence gets written to this file (in FASTA format) (default: standard output)")
-	parser.add_option("-a", "--adapters", action="append",
-		help="Adapter sequences (use multiple -a options to search for more than one adapter)")
+		help="The modified sequence gets written to this file. The format is FASTQ if qualities are available, FASTA otherwise. (default: standard output)")
+	parser.add_option("-a", "--adapter", action="append", dest="adapters",
+		help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed. If multiple -a or -b options are given, only the best matching adapter is trimmed.")
+	parser.add_option("-b", "--anywhere", action="append", metavar="ADAPTER",
+		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a or -b options are given, only the best matching adapter is trimmed.")
 	parser.add_option("--discard", action='store_true', default=False,
 		help="Discard reads that contain the adapter instead of trimming them. Also use -O in order to avoid throwing away too many reads!")
 	parser.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
@@ -354,8 +398,6 @@ def main():
 		help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than LENGTH, the read is not modified.")
 	parser.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
 		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
-	#parser.add_option("--front", action='store_true', default=False,
-		#help="Allow adapters to occur in the front of the read.") TODO adapter overlapping the front?
 	parser.add_option("-r", "--rest-file", default=None,
 		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
 	parser.add_option("-x", "--prefix", default='',
@@ -367,9 +409,9 @@ def main():
 	parser.add_option("-d", "--double-encode", action='store_true', default=False,
 		help="When in color space, double-encode colors (mapping 0,1,2,3,4 to A,C,G,T,N).")
 	parser.add_option("-t", "--trim-primer", action='store_true', default=False,
-		help="When in color space, trim primer base and the transition to the first color")
+		help="When in color space, trim primer base and the first color (which is the transition to the first nucleotide)")
 	parser.add_option("--strip-f3", action='store_true', default=False,
-		help="When in color space, strip the _F3 suffix of read names")
+		help="For color space: Strip the _F3 suffix of read names")
 	parser.add_option("--maq", "--bwa", action='store_true', default=False,
 		help="MAQ/BWA-compatible color space output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
 
@@ -411,23 +453,31 @@ def main():
 		else:
 			options.rest_file = xopen(options.rest_file, 'w', is_closing=False)
 
-	if not options.adapters:
-		print("You need to provide at least one adapter sequence.", file=sys.stderr)
-		sys.exit(1)
+	adapters = []
+	if options.adapters:
+		adapters = [ (BACK, adapter) for adapter in options.adapters ]
+	if options.anywhere:
+		adapters += [ (ANYWHERE, adapter) for adapter in options.anywhere ]
+	del options.adapters
+	del options.anywhere
 
+	if not adapters:
+		print("You need to provide at least one adapter sequence.", file=sys.stderr)
+		return 1
+
+	# TODO refactor this (put it into the AdapterCutter class
 	class Statistics(object):
 		pass
 	stats = Statistics()
 	stats.reads_changed = 0
 	stats.middle = 0
-	stats.adapter_matches = len(options.adapters)*[0]
-	stats.sequence_matches = len(options.adapters)*[0]
+	stats.adapter_matches = len(adapters)*[0]
 	stats.lengths_front = []
 	stats.lengths_back = []
 	stats.too_short = 0
-	for x in xrange(len(options.adapters)):
+	for x in xrange(len(adapters)):
 		stats.lengths_front.append({})
-	for x in xrange(len(options.adapters)):
+	for x in xrange(len(adapters)):
 		stats.lengths_back.append({})
 
 	# for double-encoding colorspace sequences
@@ -449,10 +499,7 @@ def main():
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace)
 		for (desc, seq, qualities) in reader:
 			n += 1
-			if show_progress and n % 10000 == 0:
-				print("Processing read no.", n, file=sys.stderr)
-
-			desc, seq, qualities = process_read(desc, seq, qualities, options, stats)
+			desc, seq, qualities = process_read(desc, seq, qualities, options, adapters, stats)
 			if seq is not None:
 				# write modified sequence in either FASTA or FASTQ format
 				if qualities is None:
@@ -468,7 +515,7 @@ def main():
 	stats.time = time.clock()
 	stats.n = n
 	sys.stdout = sys.stderr
-	print_statistics(options.adapters, stats)
+	print_statistics(adapters, stats)
 	sys.stdout = sys.__stdout__
 	return 0
 
