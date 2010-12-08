@@ -8,7 +8,7 @@ machine is longer than the molecule that is sequenced, such as in
 microRNA data.
 
 cutadapt is implemented in Python, with an extension module,
-written in C, that implements the alignnment algorithm.
+written in C, that implements the alignment algorithm.
 
 
 Project homepage
@@ -86,7 +86,7 @@ gz-compressed input is supported:
 $ cutadapt -a ADAPTER-SEQUENCE input.fastq.gz > output.fastq
 
 gz-compressed output is also supported, but the -o parameter (output file) needs
-to be used (gzip compression is autodetected by looking at the file name):
+to be used (gzip compression is auto-detected by looking at the file name):
 $ cutadapt -a ADAPTER-SEQUENCE -o output.fastq.gz input.fastq.gz
 
 
@@ -134,7 +134,7 @@ This is an AB SOLiD adapter (in color space) used in the SREK protocol:
 Algorithm
 =========
 
-cutadapt uses a simple semiglobal alignment algorithm, without any special optimizations.
+cutadapt uses a simple semi-global alignment algorithm, without any special optimizations.
 For speed, the algorithm is implemented as a Python extension module in calignmodule.c.
 
 The program is sufficiently fast for my purposes, but speedups should be simple to achieve.
@@ -152,11 +152,11 @@ MYSEQUENCEADAP
 MYSEQUENCEADAPTERSOMETHINGELSE
 
 All of them will be trimmed to "MYSEQUENCE". If the sequence starts with an 
-adapter, such as this one:
+adapter, like this:
 
 ADAPTERSOMETHING
 
-it wil be empty after trimming.
+It will be empty after trimming.
 
 When the allowed error rate is sufficiently high (set with parameter -e), errors in
 the adapter sequence are allowed. For example, ADABTER (1 mismatch), ADAPTR (1 deletion),
@@ -245,7 +245,7 @@ To Do / Ideas
 =============
 
   * write test cases
-  * autodetect FASTA/FASTQ input in STDIN
+  * auto-detect FASTA/FASTQ input in STDIN
   * allow to give adapter in nucleotide space, but find it in color space
   * show average error rate
   * allow stuff like: -e 2/17
@@ -258,7 +258,7 @@ To Do / Ideas
   * check for exact matches first, idea from
     http://bcbio.wordpress.com/2009/08/09/trimming-adaptors-from-short-read-sequences/
   * allow to change scores at runtime (perhaps using command-line parameters)
-  * multithreading
+  * multi-threading
   * Python 2.5 compatibility
   * --progress
   * refactoring
