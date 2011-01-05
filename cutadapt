@@ -121,6 +121,7 @@ def print_statistics(adapters, stats, error_rate):
 	print("   Processed reads:", stats.n)
 	print("     Trimmed reads:", stats.reads_changed, "(%5.1f%%)" % (100. * stats.reads_changed / stats.n))
 	print("   Too short reads:", stats.too_short, "(%5.1f%% of processed reads)" % (100. * stats.too_short / stats.n))
+	print("    Too long reads:", stats.too_long, "(%5.1f%% of processed reads)" % (100. * stats.too_long / stats.n))
 	print("        Total time: %9.2f s" % stats.time)
 	print("     Time per read: %9.2f ms" % (1000. * stats.time / stats.n))
 	print()
@@ -336,6 +337,9 @@ def process_read(desc, seq, qualities, options, adapters, stats):
 	if len(seq) < options.minimum_length:
 		stats.too_short += 1
 		return (None, None, None)
+	if len(seq) > options.maximum_length:
+		stats.too_long += 1
+		return (None, None, None)
 
 	# other modifications to the sequence or its description
 	# change any length=XX that may appear in the read description (for 454)
@@ -373,6 +377,8 @@ def main():
 		help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than LENGTH, the read is not modified.")
 	parser.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
 		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
+	parser.add_option("-M", "--maximum-length", type=int, default=sys.maxint, metavar="LENGTH",
+		help="Discard trimmed reads that are longer than LENGTH. Reads that are too long even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
 	parser.add_option("-r", "--rest-file", default=None,
 		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
 	parser.add_option("-x", "--prefix", default='',
@@ -445,6 +451,7 @@ def main():
 	stats = Statistics()
 	stats.reads_changed = 0
 	stats.too_short = 0
+	stats.too_long = 0
 	stats.lengths_front = []
 	for a in adapters:
 		stats.lengths_front.append(defaultdict(int))
