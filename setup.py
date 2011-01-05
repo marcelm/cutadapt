@@ -7,14 +7,26 @@ if sys.version_info < (2, 6):
 
 module = Extension('calign', sources = [ 'calignmodule.c' ])
 
-setup(name = 'cutadapt',
+setup(
+	name = 'cutadapt',
 	version = '0.9',
-	description = 'trim adapters from high-throughput sequencing reads',
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@tu-dortmund.de',
 	url = 'http://cutadapt.googlecode.com/',
+	description = 'trim adapters from high-throughput sequencing reads',
 	license = 'MIT',
 	ext_modules = [ module ],
 	py_modules = ['fasta', 'align'],
-	scripts = ['cutadapt']
+	scripts = ['cutadapt'],
+	classifiers = [
+		"Development Status :: 5 - Production/Stable",
+		"Environment :: Console",
+		"Intended Audience :: Science/Research",
+		"License :: OSI Approved :: MIT License",
+		"Natural Language :: English",
+		"Programming Language :: Python",
+		#"Programming Language :: Python :: 3",
+		#"Operating System :: POSIX",
+		"Topic :: Scientific/Engineering :: Bio-Informatics"
+	]
 )
