@@ -62,7 +62,7 @@ semiglobal alignment) of strings s1 and s2.\n\
 The alignment uses the following score function:\n\
 match    +1\n\
 mismatch -1\n\
-indel    -1\n\
+indel    -2\n\
 \n\
 Return a tuple (r1, r2, start1, stop1, start2, stop2, errors)\n\
 where r1 and r2 are sequences of the same length containing the alignment\n\

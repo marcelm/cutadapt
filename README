@@ -74,6 +74,22 @@ How to use, examples
 Please also see the command-line help:
 $ cutadapt --help
 
+The basic command-line for cutadapt looks like this:
+$ cutadapt -a AACCGGTT input.fastq > output.fastq
+The adapter sequence is given with -a option. Replace
+AACCGGTT with your actual adapter sequence.
+
+Multiple adapters can be provided using -a more than once.
+The program will then search for all given adapters and remove
+the one that matches best.
+
+input.fastq is a file with reads. The result will be written
+to standard output. Use redirection with '>' (or cutadapt's -o
+option) to write the output to a file.
+
+By default, the output file contains all reads, even those
+that did not contain an adapter. (See also the --discard option.)
+
 
 Illumina data
 -------------
@@ -92,6 +108,9 @@ $ cutadapt -a ADAPTER-SEQUENCE -o output.fastq.gz input.fastq.gz
 
 SOLiD data
 ----------
+
+With color space data, the option -c must be used and also the adapter must
+be given in color space.
 
 Cut an adapter from SOLiD data given in solid.csfasta and solid.qual.
 Produce MAQ- and BWA-compatible output, allow 12% errors, write the
@@ -143,7 +162,7 @@ The program is sufficiently fast for my purposes, but speedups should be simple 
 Partial adapter matches
 -----------------------
 
-Cutadapt correctly deals with partial adapter matches. As an example, suppose 
+Cutadapt correctly deals with partial adapter matches. As an example, suppose
 your adapter sequence is "ADAPTER" (specified via the -a or --adapter
 command-line parameter). If you have these input sequences:
 
@@ -151,7 +170,7 @@ MYSEQUENCEADAPTER
 MYSEQUENCEADAP
 MYSEQUENCEADAPTERSOMETHINGELSE
 
-All of them will be trimmed to "MYSEQUENCE". If the sequence starts with an 
+All of them will be trimmed to "MYSEQUENCE". If the sequence starts with an
 adapter, like this:
 
 ADAPTERSOMETHING
@@ -170,7 +189,7 @@ Cutadapt assumes that any adapter specified via the -a (or --adapter) parameter
 was ligated to the 3' end of the sequence. This is the correct assumption for
 at least the SOLiD and Illumina small RNA protocols and probably others.
 
-If, on the other hand, your adapter can also be ligated to the 5' end (on 
+If, on the other hand, your adapter can also be ligated to the 5' end (on
 purpose or by accident), you should tell cutadapt so by using the -b (or
 --anywhere) parameter. It will then use a different alignment algorithm and
 correctly trim adapters that appear in the beginning of a read. An adapter
@@ -254,15 +273,20 @@ To Do / Ideas
   * show table of length vs. max errors
   * In color space and probably also for Illumina data, gapped alignment
     is not necessary
-  * show_progress is unused
   * bzip2 support
   * use str.format instead of %
-  * check for exact matches first, idea from
-    http://bcbio.wordpress.com/2009/08/09/trimming-adaptors-from-short-read-sequences/
   * allow to change scores at runtime (perhaps using command-line parameters)
   * multi-threading
   * Python 2.5 compatibility
   * --progress
-  * refactoring
-  * make it easy_installable (or use pip)
+  * refactor
+  * make it easy_installable/pipable
   * run pylint, pychecker
+  * print adapter fragments in statistics
+  * allow adapter in lower case
+  * --maximum-length
+  * --discard-uncut (discard sequences in which no adapter was found)
+  * giving a qual file should enable color space
+  * no. of trimmed nucleotides
+  * length histogram
+  * uppercase/lowercase

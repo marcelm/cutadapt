@@ -49,7 +49,7 @@ $ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq"""
 
 from __future__ import print_function, division
 
-__version__ = '0.8'
+__version__ = '0.9'
 
 import sys
 import re
@@ -112,8 +112,8 @@ def print_histogram(d):
 	for key in sorted(d):
 		print(key, d[key], sep="\t")
 	print()
-	
-	
+
+
 def print_statistics(adapters, stats, error_rate):
 	print("cutadapt version", __version__)
 	print("Command line parameters:", " ".join(sys.argv[1:]))
@@ -129,7 +129,7 @@ def print_statistics(adapters, stats, error_rate):
 		total_back = sum(stats.lengths_back[index].values())
 		total = total_front + total_back
 		assert where == ANYWHERE or (where == BACK and total_front == 0)
-		
+
 		print("=" * 3, "Adapter", index+1, "=" * 3)
 		print()
 		print("Adapter '%s'," % adapter, "length %d," % len(adapter), "was trimmed", total, "times.")
@@ -150,7 +150,7 @@ def print_statistics(adapters, stats, error_rate):
 
 def quality_to_ascii(quality_line, base=33):
 	"""
-	Convert a string containing qualities given as integer to a string of 
+	Convert a string containing qualities given as integer to a string of
 	ASCII-encoded qualities.
 
 	base -- ASCII code of quality zero (sensible values are 33 and 64).
@@ -169,8 +169,8 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 
 	adapters -- List of adapter sequences
 	seq -- The sequence to which each adapter will be aligned
-	where -- Where in the sequence the adapter may be found. 
-		One of BACK and FRONT_OR_BACK. For both, 
+	where -- Where in the sequence the adapter may be found.
+		One of BACK and FRONT_OR_BACK. For both,
 		the adapter will also be found if it is in the middle.
 	max_error_rate -- Maximum allowed error rate. The error rate is
 		the number of errors in the alignment divided by the length
@@ -227,7 +227,7 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 	Read sequences and (if available) quality information from either:
 	* seqfilename in FASTA format (qualityfilename must be None)
 	* seqfilename in FASTQ format (qualityfilename must be None)
-	* seqfilename in .csfasta format and qualityfilename in .qual format 
+	* seqfilename in .csfasta format and qualityfilename in .qual format
 	  (SOLiD color space)
 
 	Return a generator over tuples (description, sequence, qualities).
@@ -260,7 +260,11 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 					if len(rseq) == 0 and colorspace:
 						raise FormatError("When reading '%s', no sequence was found (at least the initial primer must appear)." % rdesc)
 					if len(qualities) != len(rseq) - lengthdiff:
-						raise FormatError("While reading '%s': expected to find %d quality values, but found %d." % (rdesc, len(rseq) - lengthdiff, len(qualities)))
+						if lengthdiff == 0 and len(qualities) == len(rseq) - 1:
+							msg = "\nIf this is color space data, you must say so by using the -c command-line option."
+						else:
+							msg = ""
+						raise FormatError("While reading '%s': expected to find %d quality values, but found %d.%s" % (rdesc, len(rseq) - lengthdiff, len(qualities), msg))
 					yield rdesc, rseq, qualities
 
 
@@ -297,7 +301,7 @@ def process_read(desc, seq, qualities, options, adapters, stats):
 
 		any_adapter_matches = True
 		where, adapter = adapters[index]
-		
+
 		if where == BACK or (astart == 0 and rstart > 0):
 			assert where == ANYWHERE or astart == 0
 			# The adapter is at the end of the read (case 2) or in the middle (case 3)
