@@ -56,7 +56,7 @@ import re
 import gzip
 import time
 from string import maketrans
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 from itertools import izip
 from contextlib import closing
 from collections import defaultdict
@@ -413,40 +413,52 @@ class AdapterCutter(object):
 def main():
 	"""Main function that evaluates command-line parameters and contains the main loop over all reads."""
 	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
-	parser.add_option("-e", "--error-rate", type=float, default=0.1,
-		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
-	parser.add_option("-o", "--output", default=None,
-		help="The modified sequence gets written to this file. The format is FASTQ if qualities are available, FASTA otherwise. (default: standard output)")
-	parser.add_option("-a", "--adapter", action="append", dest="adapters",
+
+	group = OptionGroup(parser, "Options that influence how the adapters are found")
+	group.add_option("-a", "--adapter", action="append", dest="adapters",
 		help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed. If multiple -a or -b options are given, only the best matching adapter is trimmed.")
-	parser.add_option("-b", "--anywhere", action="append", metavar="ADAPTER",
+	group.add_option("-b", "--anywhere", action="append", metavar="ADAPTER",
 		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a or -b options are given, only the best matching adapter is trimmed.")
-	parser.add_option("--discard", action='store_true', default=False,
-		help="Discard reads that contain the adapter instead of trimming them. Also use -O in order to avoid throwing away too many reads!")
-	parser.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
+	group.add_option("-e", "--error-rate", type=float, default=0.1,
+		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
+	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
 		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
-	parser.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
+	group.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
 		help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than LENGTH, the read is not modified.")
-	parser.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
+	parser.add_option_group(group)
+
+	group = OptionGroup(parser, "Options for filtering of processed reads")
+	group.add_option("--discard", "--discard-trimmed", action='store_true', default=False,
+		help="Discard reads that contain the adapter instead of trimming them. Also use -O in order to avoid throwing away too many randomly matching reads!")
+	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
 		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
-	parser.add_option("-M", "--maximum-length", type=int, default=sys.maxint, metavar="LENGTH",
+	group.add_option("-M", "--maximum-length", type=int, default=sys.maxint, metavar="LENGTH",
 		help="Discard trimmed reads that are longer than LENGTH. Reads that are too long even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
-	parser.add_option("-r", "--rest-file", default=None,
+	parser.add_option_group(group)
+
+	group = OptionGroup(parser, "Options that influence what gets output to where")
+	group.add_option("-o", "--output", default=None,
+		help="The modified sequence gets written to this file. The format is FASTQ if qualities are available, FASTA otherwise. (default: standard output)")
+	group.add_option("-r", "--rest-file", default=None,
 		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
-	parser.add_option("-x", "--prefix", default='',
+	parser.add_option_group(group)
+
+	group = OptionGroup(parser, "Additional modifications to the reads")
+	group.add_option("-x", "--prefix", default='',
 		help="Add this prefix to read names")
-	parser.add_option("-y", "--suffix", default='',
+	group.add_option("-y", "--suffix", default='',
 		help="Add this suffix to read names")
-	parser.add_option("-c", "--colorspace", action='store_true', default=False,
+	group.add_option("-c", "--colorspace", action='store_true', default=False,
 		help="Colorspace mode: Also trim the color that is adjacent to the found adapter.")
-	parser.add_option("-d", "--double-encode", action='store_true', default=False,
+	group.add_option("-d", "--double-encode", action='store_true', default=False,
 		help="When in color space, double-encode colors (map 0,1,2,3,4 to A,C,G,T,N).")
-	parser.add_option("-t", "--trim-primer", action='store_true', default=False,
+	group.add_option("-t", "--trim-primer", action='store_true', default=False,
 		help="When in color space, trim primer base and the first color (which is the transition to the first nucleotide)")
-	parser.add_option("--strip-f3", action='store_true', default=False,
+	group.add_option("--strip-f3", action='store_true', default=False,
 		help="For color space: Strip the _F3 suffix of read names")
-	parser.add_option("--maq", "--bwa", action='store_true', default=False,
+	group.add_option("--maq", "--bwa", action='store_true', default=False,
 		help="MAQ/BWA-compatible color space output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
+	parser.add_option_group(group)
 
 	options, args = parser.parse_args()
 
