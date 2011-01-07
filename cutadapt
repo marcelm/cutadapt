@@ -496,10 +496,7 @@ def main():
 		parser.error("The maximum error rate must be between 0 and 1.")
 
 	if options.rest_file is not None:
-		if options.rest_file == '-':
-			options.rest_file = sys.stdout
-		else:
-			options.rest_file = xopen(options.rest_file, 'w', is_closing=False)
+		options.rest_file = xopen(options.rest_file, 'w', is_closing=False)
 
 	adapters = []
 	if options.adapters:
