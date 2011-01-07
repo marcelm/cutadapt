@@ -68,16 +68,17 @@ import fasta
 BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
 ANYWHERE = align.SEMIGLOBAL
 
+# for double-encoding colorspace sequences
+DOUBLE_ENCODE_TRANS = maketrans('0123.', 'ACGTN')
+
 
 class FormatError(Exception):
-	pass
-
-
-class Error(Exception):
+	"""Exception raised for parse errors in the input files"""
 	pass
 
 
 class UnknownFileType(Exception):
+	"""Raised by fastafiletype function if file type is unknown"""
 	pass
 
 
@@ -132,6 +133,7 @@ class Statistics(object):
 			self.lengths_back.append(defaultdict(int))
 
 	def stop_clock(self):
+		"""Stop the timer that was automatically started when the class was instantiated."""
 		self.time = time.clock() - self._start_time
 
 	def print_statistics(self, error_rate):
@@ -246,6 +248,24 @@ def fastafiletype(fname):
 			raise UnknownFileType("neither FASTQ nor FASTA")
 
 
+def readsolid(seqfile, qualityfile):
+	"""
+	Read sequences from a .csfasta and a .qual file.
+	Since this file format is used only by SOLiD, the data is assumed to be in color space.
+	"""
+	seq_iter = fasta.readfasta(seqfile)
+	quality_iter = fasta.readfasta(qualityfile)
+	for (qdesc, qseq), (rdesc, rseq) in izip(quality_iter, seq_iter):
+		if qdesc != rdesc:
+			raise FormatError("Descriptions in FASTA and quality file don't match (%s and %s)." % (rdesc, qdesc))
+		qualities = quality_to_ascii(qseq)
+		if len(rseq) == 0:
+			raise FormatError("When reading '%s', no sequence was found (at least the initial primer must appear)." % rdesc)
+		if len(qualities) != len(rseq) - 1:
+			raise FormatError("While reading '%s': expected to find %d quality values, but found %d." % (rdesc, len(rseq) - 1, len(qualities)))
+		yield rdesc, rseq, qualities
+
+
 def read_sequences(seqfilename, qualityfilename, colorspace):
 	"""
 	Read sequences and (if available) quality information from either:
@@ -256,49 +276,51 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 
 	Return a generator over tuples (description, sequence, qualities).
 	qualities is None if no qualities are available.
+	qualities are ASCII-encoded (chr(quality) + 33).
 	"""
 	ftype = fastafiletype(seqfilename)
 
 	if ftype == 'FASTQ' and qualityfilename is not None:
-		raise Error("If a FASTQ file is given, no quality file can be provided.")
+		raise ValueError("If a FASTQ file is given, no quality file can be provided.")
 
-	if ftype == 'FASTQ':
-		with xopen(seqfilename) as seqfile:
+	with xopen(seqfilename) as seqfile:
+		if ftype == 'FASTQ':
 			for desc, seq, qualities in fasta.readfastq(seqfile, colorspace=colorspace):
 				yield (desc, seq, qualities)
-	elif ftype == 'FASTA' and qualityfilename is None:
-		with xopen(seqfilename) as seqfile:
+		elif ftype == 'FASTA' and qualityfilename is None:
 			for desc, seq in fasta.readfasta(seqfile):
 				yield (desc, seq, None)
-	else:
-		assert ftype == 'FASTA' and qualityfilename is not None
-		lengthdiff = 1 if colorspace else 0
-		with xopen(seqfilename) as seqfile:
+		else:
+			# read from .CSFASTA/.QUAL
+			if not colorspace:
+				raise ValueError(".csfasta/.qual file found, please specify -c") # TODO enable automatically
+			assert ftype == 'FASTA' and qualityfilename is not None and colorspace
 			with xopen(qualityfilename) as qualityfile:
-				seq_iter = fasta.readfasta(seqfile)
-				qual_iter = fasta.readfasta(qualityfile)
-				for (qdesc, qseq), (rdesc, rseq) in izip(qual_iter, seq_iter):
-					if qdesc != rdesc:
-						raise FormatError("Descriptions in FASTA and quality file don't match (%s and %s)." % (rdesc, qdesc))
-					qualities = quality_to_ascii(qseq)
-					if len(rseq) == 0 and colorspace:
-						raise FormatError("When reading '%s', no sequence was found (at least the initial primer must appear)." % rdesc)
-					if len(qualities) != len(rseq) - lengthdiff:
-						if lengthdiff == 0 and len(qualities) == len(rseq) - 1:
-							msg = "\nIf this is color space data, you must say so by using the -c command-line option."
-						else:
-							msg = ""
-						raise FormatError("While reading '%s': expected to find %d quality values, but found %d.%s" % (rdesc, len(rseq) - lengthdiff, len(qualities), msg))
-					yield rdesc, rseq, qualities
+				for desc, seq, qualities in readsolid(seqfile, qualityfile):
+					yield (desc, seq, qualities)
 
 
 class AdapterCutter(object):
+	"""Cut adapters from reads."""
+
 	def __init__(self, options, adapters):
 		self.options = options
 		self.adapters = adapters
 		self.stats = Statistics(adapters)
+		# regular expression used to replace "length=..." strings in sequence descriptions
+		self.lengthregex = re.compile(r"\blength=[0-9]*\b")
 
-	def process_read(self, desc, seq, qualities):
+	def cut(self, desc, seq, qualities):
+		"""
+		Cut adapters from a single read.
+
+		seq -- sequence of the read
+		desc -- description of the read
+		qualities -- quality values of the read
+
+		Return a modified tuple (seq, desc, qualities)
+		TODO (None, None, None)
+		"""
 		self.stats.n += 1
 		# In colorspace, the first character is the last nucleotide of the primer base
 		# and the second character encodes the transition from the primer base to the
@@ -330,7 +352,7 @@ class AdapterCutter(object):
 			assert length - errors > 0
 
 			any_adapter_matches = True
-			where, adapter = self.adapters[index]
+			where = self.adapters[index][0]
 
 			if where == BACK or (astart == 0 and rstart > 0):
 				assert where == ANYWHERE or astart == 0
@@ -373,7 +395,7 @@ class AdapterCutter(object):
 		# other modifications to the sequence or its description
 		# change any length=XX that may appear in the read description (for 454)
 		if desc.find("length=") >= 0:
-			desc = lengthregex.sub("length=%d" % len(seq), desc)
+			desc = self.lengthregex.sub("length=%d" % len(seq), desc)
 
 		if self.options.strip_f3 and desc.endswith('_F3'):
 			desc = desc[:-3]
@@ -381,7 +403,7 @@ class AdapterCutter(object):
 		if self.options.double_encode:
 			# convert color space sequence to double-encoded colorspace (using
 			# characters ACGTN to represent colors)
-			seq = seq.translate(trans)
+			seq = seq.translate(DOUBLE_ENCODE_TRANS)
 
 		if self.options.colorspace:
 			assert not qualities or len(seq) == len(qualities)
@@ -389,6 +411,7 @@ class AdapterCutter(object):
 
 
 def main():
+	"""Main function that evaluates command-line parameters and contains the main loop over all reads."""
 	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
 	parser.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
@@ -474,25 +497,14 @@ def main():
 		print("You need to provide at least one adapter sequence.", file=sys.stderr)
 		return 1
 
-	# for double-encoding colors pace sequences
-	global trans
-	trans = maketrans('0123.', 'ACGTN')
-
-	global lengthregex
-	lengthregex = re.compile(r"\blength=[0-9]*\b")
-	# length difference between sequence and qualities
-	lengthdiff = 0 if options.trim_primer else 1
-
-	# count the reads in which at least one adapter has been removed
-	qualities = None
 	cutter = AdapterCutter(options, adapters)
 	try:
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace)
 		for (desc, seq, qualities) in reader:
-			desc, seq, qualities = cutter.process_read(desc, seq, qualities)
+			desc, seq, qualities = cutter.cut(desc, seq, qualities)
 			if seq is not None:
 				# write modified sequence in either FASTA or FASTQ format
-				if qualities is None:
+				if qualities is None: # TODO refactor and put into Fast(a|q)Writer class
 					# FASTA
 					print('>%s\n%s' % (desc, seq), file=outfile)
 				else:
@@ -514,74 +526,3 @@ if __name__ == '__main__':
 		profile.run('main()', 'cutadapt.prof')
 	else:
 		sys.exit(main())
-
-"""
-Interpreting the result of a semiglobal alignment between the adapter and the read sequences
-============================================================================================
-
-There are nine cases, which can be grouped into four categories.
-
-A: character of the adapter sequence (r1)
-R: character of the read sequence    (r2)
--: gap symbol
-
-The middle of the alignment is always like this:
-AAAA
-RRRR
-
-For the part of that is before the middle and for the part that is after the middle,
-there are three possibilities each (making 3*3=9)
-
-A  and -  and  'nothing'
--      R
-
-Grouping by semantics of those alignments, we get the following three categories.
-
-
-1. The adapter covers or parts of it cover the entire read
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-a)
-AAAA
-RRRR
-
-b)
-AAAA
-RR--
-
-c)
-AAAA
---RR
-
-1d)
-AAAA
--RR-
-
-2. The adapter is at the end of the read
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-a)
----AAA
-RRRRRR
-
-b)
----AAAA
-RRRRR--
-
-3. The adapter is in the middle of the read
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
----AAA---
-RRRRRRRRR
-
-4. The adapter is in the beginning of the read
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-a)
-AAAA----
-RRRRRRRR
-
-b)
-AAAA----
---RRRRRR
-"""

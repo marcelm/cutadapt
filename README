@@ -294,3 +294,5 @@ To Do / Ideas
   * length histogram
   * document that case is relevant in the adapters
   * uppercase/lowercase
+  * refactor read_sequences (use classes)
+
