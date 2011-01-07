@@ -252,6 +252,19 @@ def fastafiletype(fname):
 			raise UnknownFileType("neither FASTQ nor FASTA")
 
 
+def write_read(desc, seq, qualities, outfile):
+	"""
+	Write read in either FASTA or FASTQ format
+	(depending on whether qualities is None or not) to outfile
+	"""
+	if qualities is None:
+		# FASTA
+		print('>%s\n%s' % (desc, seq), file=outfile)
+	else:
+		# FASTQ
+		print('@%s\n%s\n+\n%s' % (desc, seq, qualities), file=outfile)
+
+
 def readsolid(seqfile, qualityfile):
 	"""
 	Read sequences from a .csfasta and a .qual file.
@@ -304,6 +317,30 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 					yield (desc, seq, qualities)
 
 
+class ReadFilter(object):
+	"""Filter reads according to length and according to whether any adapter matches."""
+
+	def __init__(self, minimum_length, maximum_length, too_short_outfile, statistics):
+		self.minimum_length = minimum_length
+		self.maximum_length = maximum_length
+		self.too_short_outfile = too_short_outfile
+		self.statistics = statistics
+
+	def keep(self, desc, seq, qualities):
+		"""
+		Return whether to keep the given read.
+		"""
+		if len(seq) < self.minimum_length:
+			self.statistics.too_short += 1
+			if self.too_short_outfile is not None:
+				write_read(desc, seq, qualities, self.too_short_outfile)
+			return False
+		if len(seq) > self.maximum_length:
+			self.statistics.too_long += 1
+			return False
+		return True
+
+
 class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
@@ -326,25 +363,12 @@ class AdapterCutter(object):
 		trimmed is True when any adapter was found and trimmed.
 		"""
 		self.stats.n += 1
-		# In colorspace, the first character is the last nucleotide of the primer base
-		# and the second character encodes the transition from the primer base to the
-		# first real base of the read.
-		if self.options.trim_primer:
-			seq = seq[2:]
-			if qualities is not None:
-				qualities = qualities[1:]
-			initial = ''
-		elif self.options.colorspace:
-			initial = seq[0]
-			seq = seq[1:]
-		else:
-			initial = ''
 
-		any_adapter_matches = False
 		if __debug__:
 			old_length = len(seq)
 
 		# try (possibly more than once) to remove an adapter
+		any_adapter_matches = False
 		for t in xrange(self.options.times):
 			alignment, index = find_best_alignment(self.adapters, seq, self.options.error_rate, self.options.overlap)
 			if alignment is None:
@@ -362,9 +386,9 @@ class AdapterCutter(object):
 
 			if where == BACK or (astart == 0 and rstart > 0):
 				assert where == ANYWHERE or astart == 0
-				# The adapter is at the end of the read (case 2) or in the middle (case 3)
+				# The adapter is at the end of the read or within the read
 				if rstop < len(seq):
-					# The adapter is in the middle of the read (case 3)
+					# The adapter is within the read
 					if self.options.rest_file is not None:
 						print(seq[rstop:], file=self.options.rest_file)
 				self.stats.lengths_back[index][length] += 1
@@ -390,16 +414,8 @@ class AdapterCutter(object):
 		if __debug__:
 			# if an adapter was found, then the read should now be shorter
 			assert (not any_adapter_matches) or (len(seq) < old_length)
-		if any_adapter_matches:
+		if any_adapter_matches: # TODO move to filter class
 			self.stats.reads_changed += 1
-		if self.options.discard and any_adapter_matches:
-			return (None, None, None)
-		if len(seq) < self.options.minimum_length:
-			self.stats.too_short += 1
-			return (None, None, None)
-		if len(seq) > self.options.maximum_length:
-			self.stats.too_long += 1
-			return (None, None, None)
 
 		# other modifications to the sequence or its description
 		# change any length=XX that may appear in the read description (for 454)
@@ -416,7 +432,7 @@ class AdapterCutter(object):
 
 		if self.options.colorspace:
 			assert not qualities or len(seq) == len(qualities)
-		return (desc, initial + seq, qualities)
+		return (desc, seq, qualities, any_adapter_matches)
 
 
 def main():
@@ -446,10 +462,14 @@ def main():
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
-	group.add_option("-o", "--output", default=None,
-		help="The modified sequence gets written to this file. The format is FASTQ if qualities are available, FASTA otherwise. (default: standard output)")
-	group.add_option("-r", "--rest-file", default=None,
+	group.add_option("-o", "--output", default=None, metavar="FILE",
+		help="The modified sequences get written to this file. The format is FASTQ if qualities are available, FASTA otherwise. (default: standard output)")
+	group.add_option("-r", "--rest-file", default=None, metavar="FILE",
 		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
+	group.add_option("--too-short-output", default=None, metavar="FILE",
+		help="Write reads that are too short (according to length specified by -m) to FILE. (default: discard reads)")
+	group.add_option("--untrimmed-output", default=None, metavar="FILE",
+		help="Write reads that do not contain the adapter to FILE, instead of writing them to the regular output file. (default: output to same file as trimmed)")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
@@ -480,10 +500,21 @@ def main():
 	quality_filename = None
 	if len(args) == 2:
 		quality_filename = args[1]
-	if options.output is None:
-		outfile = sys.stdout
-	else:
-		outfile = xopen(options.output, 'w', is_closing=False)
+
+	# default output files (overwritten below)
+	trimmed_outfile = sys.stdout # reads with adapters go here
+	too_short_outfile = None # too short reads go here
+	#too_long_outfile = None # too long reads go here
+
+	if options.output is not None:
+		trimmed_outfile = xopen(options.output, 'w', is_closing=False)
+	untrimmed_outfile = trimmed_outfile # reads without adapters go here
+	if options.untrimmed_output is not None:
+		untrimmed_outfile = xopen(options.untrimmed_output, 'w', is_closing=False)
+	if options.too_short_output is not None:
+		too_short_outfile = xopen(options.too_short_output, 'w', is_closing=False)
+	#if options.too_long_output is not None:
+		#too_long_outfile = xopen(options.too_long_output, 'w', is_closing=False)
 
 	if options.maq:
 		options.colorspace = True
@@ -516,18 +547,28 @@ def main():
 		return 1
 
 	cutter = AdapterCutter(options, adapters)
+	readfilter = ReadFilter(options.minimum_length, options.maximum_length, too_short_outfile, cutter.stats) # TODO stats?
 	try:
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace)
-		for (desc, seq, qualities) in reader:
-			desc, seq, qualities = cutter.cut(desc, seq, qualities)
-			if seq is not None:
-				# write modified sequence in either FASTA or FASTQ format
-				if qualities is None: # TODO refactor and put into Fast(a|q)Writer class
-					# FASTA
-					print('>%s\n%s' % (desc, seq), file=outfile)
-				else:
-					# FASTQ
-					print('@%s\n%s\n+\n%s' % (desc, seq, qualities), file=outfile)
+		for desc, seq, qualities in reader:
+			# In colorspace, the first character is the last nucleotide of the primer base
+			# and the second character encodes the transition from the primer base to the
+			# first real base of the read.
+			if options.trim_primer:
+				seq = seq[2:]
+				if qualities is not None:
+					qualities = qualities[1:]
+				initial = ''
+			elif options.colorspace:
+				initial = seq[0]
+				seq = seq[1:]
+			else:
+				initial = ''
+
+			desc, seq, qualities, trimmed = cutter.cut(desc, seq, qualities)
+			if readfilter.keep(desc, seq, qualities):
+				seq = initial + seq
+				write_read(desc, seq, qualities, trimmed_outfile if trimmed else untrimmed_outfile)
 	except FormatError as e:
 		print(e, file=sys.stderr)
 		return 1
