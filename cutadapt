@@ -349,7 +349,10 @@ class AdapterCutter(object):
 		self.adapters = adapters
 		self.stats = Statistics(adapters)
 		# regular expression used to replace "length=..." strings in sequence descriptions
-		self.lengthregex = re.compile(r"\blength=[0-9]*\b")
+		if self.options.length_tag is not None:
+			self.lengthregex = re.compile(r"\b" + self.options.length_tag + r"[0-9]*\b")
+		else:
+			self.lengthregex = None
 
 	def cut(self, desc, seq, qualities):
 		"""
@@ -419,8 +422,8 @@ class AdapterCutter(object):
 
 		# other modifications to the sequence or its description
 		# change any length=XX that may appear in the read description (for 454)
-		if desc.find("length=") >= 0:
-			desc = self.lengthregex.sub("length=%d" % len(seq), desc)
+		if self.lengthregex is not None and desc.find(self.options.length_tag) >= 0:
+			desc = self.lengthregex.sub(self.options.length_tag + str(len(seq)), desc)
 
 		if self.options.strip_f3 and desc.endswith('_F3'):
 			desc = desc[:-3]
@@ -487,6 +490,12 @@ def main():
 		help="For color space: Strip the _F3 suffix of read names")
 	group.add_option("--maq", "--bwa", action='store_true', default=False,
 		help="MAQ/BWA-compatible color space output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
+	group.add_option("--length-tag", default=None, metavar="TAG",
+		help="Search for TAG followed by a decimal number in the name of the read"
+			"(description/comment field of the FASTA or FASTQ file). Replace the"
+			"decimal number with the correct length of the trimmed read."
+			"For example, use --length-comment 'length=' to search for fields"
+			"like 'length=123'.")
 	parser.add_option_group(group)
 
 	options, args = parser.parse_args()
