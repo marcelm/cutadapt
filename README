@@ -210,7 +210,9 @@ Changes
 
 v0.9
 ----
+* add --too-short-output and --untrimmed-output, based on patch by Paul Ryvkin (thanks!)
 * add --maximum-length parameter: discard reads longer than a specified length
+* group options by category in --help output
 
 v0.8
 ----
