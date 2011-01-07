@@ -213,6 +213,8 @@ v0.9
 * add --too-short-output and --untrimmed-output, based on patch by Paul Ryvkin (thanks!)
 * add --maximum-length parameter: discard reads longer than a specified length
 * group options by category in --help output
+* add --length-tag option. allows to fix read length in FASTA/Q comment lines
+  (e.g., 'length=123' becomes 'length=58' after trimming) (requested by Paul Ryvkin)
 
 v0.8
 ----
