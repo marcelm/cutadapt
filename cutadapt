@@ -111,6 +111,31 @@ def xopen(filename, mode='r', is_closing=True):
 		return open(filename, mode)
 
 
+def quality_trim_index(qualities, cutoff):
+	"""
+	Find the position at which to trim a low-quality end from a nucleotide sequence.
+
+	Qualities are assumed to be ASCII-encoded as chr(qual + 33).
+
+	>>> trim("", "", 10) TODO
+	with qualities based on bwa_trim_read
+
+	This is a Python version of the BWA function 'bwa_trim_read'
+	"""
+	s = 0
+	max_qual = 0
+	max_i = len(qualities)
+	for i in xrange(len(qualities)-1, -1, -1):
+		q = ord(qualities[i]) - 33
+		s += cutoff - q
+		if s < 0:
+			break
+		if s > max_qual:
+			max_qual = s
+			max_i = i
+	return max_i
+
+
 def print_histogram(d):
 	"""d -- a dictionary mapping values to their respective frequency"""
 	print("length", "count", sep="\t")
@@ -461,7 +486,10 @@ def main():
 	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
 		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
 	group.add_option("-M", "--maximum-length", type=int, default=sys.maxint, metavar="LENGTH",
-		help="Discard trimmed reads that are longer than LENGTH. Reads that are too long even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
+		help="Discard trimmed reads that are longer than LENGTH. "
+			"Reads that are too long even before adapter removal "
+			"are also discarded. In colorspace, an initial primer "
+			"is not counted.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
@@ -472,10 +500,19 @@ def main():
 	group.add_option("--too-short-output", default=None, metavar="FILE",
 		help="Write reads that are too short (according to length specified by -m) to FILE. (default: discard reads)")
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
-		help="Write reads that do not contain the adapter to FILE, instead of writing them to the regular output file. (default: output to same file as trimmed)")
+		help="Write reads that do not contain the adapter to FILE, instead "
+			"of writing them to the regular output file. (default: output "
+			"to same file as trimmed)")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
+	group.add_option("-q", "--quality-cutoff", type=int, default=0, metavar="CUTOFF",
+		help="Trim low-quality ends from reads before adapter removal. "
+			"The algorithm is the same as the one used by BWA "
+			"(Subtract CUTOFF from all qualities; "
+			"compute partial sums from all indices to the end of the "
+			"sequence; cut sequence at the index at which the sum "
+			"is minimal) (default: %default)")
 	group.add_option("-x", "--prefix", default='',
 		help="Add this prefix to read names")
 	group.add_option("-y", "--suffix", default='',
@@ -485,16 +522,17 @@ def main():
 	group.add_option("-d", "--double-encode", action='store_true', default=False,
 		help="When in color space, double-encode colors (map 0,1,2,3,4 to A,C,G,T,N).")
 	group.add_option("-t", "--trim-primer", action='store_true', default=False,
-		help="When in color space, trim primer base and the first color (which is the transition to the first nucleotide)")
+		help="When in color space, trim primer base and the first color "
+			"(which is the transition to the first nucleotide)")
 	group.add_option("--strip-f3", action='store_true', default=False,
 		help="For color space: Strip the _F3 suffix of read names")
 	group.add_option("--maq", "--bwa", action='store_true', default=False,
 		help="MAQ/BWA-compatible color space output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
 	group.add_option("--length-tag", default=None, metavar="TAG",
-		help="Search for TAG followed by a decimal number in the name of the read"
-			"(description/comment field of the FASTA or FASTQ file). Replace the"
-			"decimal number with the correct length of the trimmed read."
-			"For example, use --length-comment 'length=' to search for fields"
+		help="Search for TAG followed by a decimal number in the name of the read "
+			"(description/comment field of the FASTA or FASTQ file). Replace the "
+			"decimal number with the correct length of the trimmed read. "
+			"For example, use --length-comment 'length=' to search for fields "
 			"like 'length=123'.")
 	parser.add_option_group(group)
 
@@ -555,6 +593,8 @@ def main():
 		print("You need to provide at least one adapter sequence.", file=sys.stderr)
 		return 1
 
+	#total_bases = 0
+	#total_quality_trimmed = 0
 	cutter = AdapterCutter(options, adapters)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length, too_short_outfile, cutter.stats) # TODO stats?
 	try:
@@ -573,6 +613,13 @@ def main():
 				seq = seq[1:]
 			else:
 				initial = ''
+
+			#total_bases += len(qualities)
+			if options.quality_cutoff > 0:
+				index = quality_trim_index(qualities, options.quality_cutoff)
+				#total_quality_trimmed += len(qualities) - index
+				qualities = qualities[:index]
+				seq = seq[:index]
 
 			desc, seq, qualities, trimmed = cutter.cut(desc, seq, qualities)
 			if readfilter.keep(desc, seq, qualities):
