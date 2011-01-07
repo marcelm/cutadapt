@@ -269,94 +269,101 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 					yield rdesc, rseq, qualities
 
 
-# TODO refactor this into an AdapterCutter class
-def process_read(desc, seq, qualities, options, adapters, stats):
-	# In colorspace, the first character is the last nucleotide of the primer base
-	# and the second character encodes the transition from the primer base to the
-	# first real base of the read.
-	if options.trim_primer:
-		seq = seq[2:]
-		if qualities is not None:
-			qualities = qualities[1:]
-		initial = ''
-	elif options.colorspace:
-		initial = seq[0]
-		seq = seq[1:]
-	else:
-		initial = ''
+class AdapterCutter(object):
+	def __init__(self, options, adapters, stats):
+		self.options = options
+		self.adapters = adapters
+		self.stats = stats
+		self.stats.n = 0
 
-	any_adapter_matches = False
-
-	# try (possibly more than once) to remove an adapter
-	for t in xrange(options.times):
-		alignment, index = find_best_alignment(adapters, seq, options.error_rate, options.overlap)
-		if alignment is None:
-			# nothing found
-			break
-
-		(r1, r2, astart, astop, rstart, rstop, errors) = alignment
-		length = astop - astart
-		assert length > 0
-		assert errors/length <= options.error_rate
-		assert length - errors > 0
-
-		any_adapter_matches = True
-		where, adapter = adapters[index]
-
-		if where == BACK or (astart == 0 and rstart > 0):
-			assert where == ANYWHERE or astart == 0
-			# The adapter is at the end of the read (case 2) or in the middle (case 3)
-			if rstop < len(seq):
-				# The adapter is in the middle of the read (case 3)
-				if options.rest_file is not None:
-					print(seq[rstop:], file=options.rest_file)
-			stats.lengths_back[index][length] += 1
-
-			if options.colorspace:
-				# trim one more color if long enough
-				rstart = max(0, rstart - 1)
-			seq = seq[:rstart]
+	def process_read(self, desc, seq, qualities):
+		self.stats.n += 1
+		# In colorspace, the first character is the last nucleotide of the primer base
+		# and the second character encodes the transition from the primer base to the
+		# first real base of the read.
+		if self.options.trim_primer:
+			seq = seq[2:]
 			if qualities is not None:
-				qualities = qualities[:rstart]
-				assert len(qualities) == len(seq)
-		elif where == ANYWHERE:
-			# The adapter is in the beginning of the read (case 4)
-			assert rstart == 0
-			stats.lengths_front[index][length] += 1
-			# TODO What should we do in color space?
-			seq = seq[rstop:]
-			if qualities is not None:
-				qualities = qualities[rstop:]
+				qualities = qualities[1:]
+			initial = ''
+		elif self.options.colorspace:
+			initial = seq[0]
+			seq = seq[1:]
 		else:
-			assert False
+			initial = ''
 
-	if any_adapter_matches:
-		stats.reads_changed += 1
-	if options.discard and any_adapter_matches:
-		return (None, None, None)
-	if len(seq) < options.minimum_length:
-		stats.too_short += 1
-		return (None, None, None)
-	if len(seq) > options.maximum_length:
-		stats.too_long += 1
-		return (None, None, None)
+		any_adapter_matches = False
 
-	# other modifications to the sequence or its description
-	# change any length=XX that may appear in the read description (for 454)
-	if desc.find("length=") >= 0:
-		desc = lengthregex.sub("length=%d" % len(seq), desc)
+		# try (possibly more than once) to remove an adapter
+		for t in xrange(self.options.times):
+			alignment, index = find_best_alignment(self.adapters, seq, self.options.error_rate, self.options.overlap)
+			if alignment is None:
+				# nothing found
+				break
 
-	if options.strip_f3 and desc.endswith('_F3'):
-		desc = desc[:-3]
-	desc = options.prefix + desc + options.suffix
-	if options.double_encode:
-		# convert color space sequence to double-encoded colorspace (using
-		# characters ACGTN to represent colors)
-		seq = seq.translate(trans)
+			(r1, r2, astart, astop, rstart, rstop, errors) = alignment
+			length = astop - astart
+			assert length > 0
+			assert errors/length <= self.options.error_rate
+			assert length - errors > 0
 
-	if options.colorspace:
-		assert not qualities or len(seq) == len(qualities)
-	return (desc, initial + seq, qualities)
+			any_adapter_matches = True
+			where, adapter = self.adapters[index]
+
+			if where == BACK or (astart == 0 and rstart > 0):
+				assert where == ANYWHERE or astart == 0
+				# The adapter is at the end of the read (case 2) or in the middle (case 3)
+				if rstop < len(seq):
+					# The adapter is in the middle of the read (case 3)
+					if self.options.rest_file is not None:
+						print(seq[rstop:], file=self.options.rest_file)
+				self.stats.lengths_back[index][length] += 1
+
+				if self.options.colorspace:
+					# trim one more color if long enough
+					rstart = max(0, rstart - 1)
+				seq = seq[:rstart]
+				if qualities is not None:
+					qualities = qualities[:rstart]
+					assert len(qualities) == len(seq)
+			elif where == ANYWHERE:
+				# The adapter is in the beginning of the read (case 4)
+				assert rstart == 0
+				self.stats.lengths_front[index][length] += 1
+				# TODO What should we do in color space?
+				seq = seq[rstop:]
+				if qualities is not None:
+					qualities = qualities[rstop:]
+			else:
+				assert False
+
+		if any_adapter_matches:
+			self.stats.reads_changed += 1
+		if self.options.discard and any_adapter_matches:
+			return (None, None, None)
+		if len(seq) < self.options.minimum_length:
+			self.stats.too_short += 1
+			return (None, None, None)
+		if len(seq) > self.options.maximum_length:
+			self.stats.too_long += 1
+			return (None, None, None)
+
+		# other modifications to the sequence or its description
+		# change any length=XX that may appear in the read description (for 454)
+		if desc.find("length=") >= 0:
+			desc = lengthregex.sub("length=%d" % len(seq), desc)
+
+		if self.options.strip_f3 and desc.endswith('_F3'):
+			desc = desc[:-3]
+		desc = self.options.prefix + desc + self.options.suffix
+		if self.options.double_encode:
+			# convert color space sequence to double-encoded colorspace (using
+			# characters ACGTN to represent colors)
+			seq = seq.translate(trans)
+
+		if self.options.colorspace:
+			assert not qualities or len(seq) == len(qualities)
+		return (desc, initial + seq, qualities)
 
 
 def main():
@@ -469,14 +476,13 @@ def main():
 	lengthdiff = 0 if options.trim_primer else 1
 
 	# count the reads in which at least one adapter has been removed
-	n = 0
 	qualities = None
-	start_time = time.clock()
+	start_time = time.clock() # should this start earlier?
+	cutter = AdapterCutter(options, adapters, stats)
 	try:
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace)
 		for (desc, seq, qualities) in reader:
-			n += 1
-			desc, seq, qualities = process_read(desc, seq, qualities, options, adapters, stats)
+			desc, seq, qualities = cutter.process_read(desc, seq, qualities)
 			if seq is not None:
 				# write modified sequence in either FASTA or FASTQ format
 				if qualities is None:
@@ -488,9 +494,7 @@ def main():
 	except FormatError as e:
 		print(e, file=sys.stderr)
 		return 1
-
 	stats.time = time.clock()
-	stats.n = n
 	sys.stdout = sys.stderr
 	print_statistics(adapters, stats, options.error_rate)
 	sys.stdout = sys.__stdout__

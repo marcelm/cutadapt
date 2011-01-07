@@ -208,6 +208,10 @@ The -b parameter currently does not work with color space data.
 Changes
 =======
 
+v0.9
+----
+* add --maximum-length parameter: discard reads longer than a specified length
+
 v0.8
 ----
 * Change default behavior of searching for an adapter: The adapter is now assumed to
@@ -265,7 +269,7 @@ v0.1
 To Do / Ideas
 =============
 
-  * write test cases
+  * add test cases to version control
   * auto-detect FASTA/FASTQ input in STDIN
   * allow to give adapter in nucleotide space, but find it in color space
   * show average error rate
@@ -284,9 +288,9 @@ To Do / Ideas
   * run pylint, pychecker
   * print adapter fragments in statistics
   * allow adapter in lower case
-  * --maximum-length
   * --discard-uncut (discard sequences in which no adapter was found)
   * giving a qual file should enable color space
   * no. of trimmed nucleotides
   * length histogram
+  * document that case is relevant in the adapters
   * uppercase/lowercase
