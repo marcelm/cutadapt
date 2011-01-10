@@ -215,6 +215,10 @@ v0.9
 * group options by category in --help output
 * add --length-tag option. allows to fix read length in FASTA/Q comment lines
   (e.g., 'length=123' becomes 'length=58' after trimming) (requested by Paul Ryvkin)
+* add -q/--quality-cutoff option for trimming low-quality ends (uses the same algorithm
+  as BWA)
+* some refactoring
+* the filename '-' is now interpreted as standard in or standard output
 
 v0.8
 ----
