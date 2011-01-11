@@ -208,6 +208,13 @@ The -b parameter currently does not work with color space data.
 Changes
 =======
 
+v0.9.x
+------
+* Install a single 'libcutadapt' package instead of multiple modules.
+  This avoids cluttering the global namespace and should lead to less
+  problems with other Python modules. Thanks to Steve Lianoglou for
+  pointing this out to me!
+
 v0.9
 ----
 * add --too-short-output and --untrimmed-output, based on patch by Paul Ryvkin (thanks!)
