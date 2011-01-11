@@ -234,7 +234,7 @@ v0.8
 * Modify scoring scheme: Improves trimming (some reads that should have been
   trimmed were not). Increases no. of trimmed reads in one of our SOLiD data sets
   from 36.5 to 37.6%.
-* Speed improvements (>20% less runtime on my test data set).
+* Speed improvements (20% less runtime on my test data set).
 
 v0.7
 ----
