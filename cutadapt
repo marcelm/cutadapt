@@ -49,8 +49,6 @@ $ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq"""
 
 from __future__ import print_function, division
 
-__version__ = '0.9.1'
-
 import sys
 import re
 import gzip
@@ -63,6 +61,7 @@ from collections import defaultdict
 
 from libcutadapt import align
 from libcutadapt import fasta
+from libcutadapt import __version__
 
 # constants for the find_best_alignment function
 BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1

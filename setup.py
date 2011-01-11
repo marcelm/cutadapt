@@ -1,6 +1,8 @@
 from distutils.core import setup, Extension
 import sys
 
+from libcutadapt import __version__
+
 if sys.version_info < (2, 6):
 	print "At least Python 2.6 is required."
 	sys.exit(1)
@@ -9,7 +11,7 @@ module = Extension('libcutadapt.calign', sources = [ 'calignmodule.c' ])
 
 setup(
 	name = 'cutadapt',
-	version = '0.9.1',
+	version = __version__,
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@tu-dortmund.de',
 	url = 'http://code.google.com/p/cutadapt/',
