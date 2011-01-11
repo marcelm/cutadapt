@@ -5,18 +5,18 @@ if sys.version_info < (2, 6):
 	print "At least Python 2.6 is required."
 	sys.exit(1)
 
-module = Extension('calign', sources = [ 'calignmodule.c' ])
+module = Extension('libcutadapt.calign', sources = [ 'calignmodule.c' ])
 
 setup(
 	name = 'cutadapt',
-	version = '0.9',
+	version = '0.9.1',
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@tu-dortmund.de',
-	url = 'http://cutadapt.googlecode.com/',
+	url = 'http://code.google.com/p/cutadapt/',
 	description = 'trim adapters from high-throughput sequencing reads',
 	license = 'MIT',
 	ext_modules = [ module ],
-	py_modules = ['fasta', 'align'],
+	packages = ['libcutadapt'],
 	scripts = ['cutadapt'],
 	classifiers = [
 		"Development Status :: 5 - Production/Stable",
@@ -31,3 +31,11 @@ setup(
 		"Topic :: Scientific/Engineering :: Bio-Informatics"
 	]
 )
+
+# Aims for the package layout
+#
+# - The name of the program must be 'cutadapt'.
+# - It must be possible to run cutadapt without installing the package, preferably
+#   by typing ./cutadapt or something like ./scripts/cutadapt or ./bin/cutadapt.
+# - Use a separate package for the additional modules, don't clutter the global
+#   namespace.
