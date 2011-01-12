@@ -1,13 +1,13 @@
 from distutils.core import setup, Extension
 import sys
 
-from libcutadapt import __version__
+from lib.cutadapt import __version__
 
 if sys.version_info < (2, 6):
 	print "At least Python 2.6 is required."
 	sys.exit(1)
 
-module = Extension('libcutadapt.calign', sources = [ 'calignmodule.c' ])
+align_module = Extension('cutadapt.calign', sources = [ 'lib/cutadapt/calignmodule.c' ])
 
 setup(
 	name = 'cutadapt',
@@ -17,8 +17,9 @@ setup(
 	url = 'http://code.google.com/p/cutadapt/',
 	description = 'trim adapters from high-throughput sequencing reads',
 	license = 'MIT',
-	ext_modules = [ module ],
-	packages = ['libcutadapt'],
+	ext_modules = [align_module],
+	package_dir = {'': 'lib'},
+	packages = ['cutadapt'],
 	scripts = ['cutadapt'],
 	classifiers = [
 		"Development Status :: 5 - Production/Stable",
@@ -41,3 +42,6 @@ setup(
 #   by typing ./cutadapt or something like ./scripts/cutadapt or ./bin/cutadapt.
 # - Use a separate package for the additional modules, don't clutter the global
 #   namespace.
+# - Not too many nested directories.
+# - The main program should (mostly) be an example for how to use the package.
+

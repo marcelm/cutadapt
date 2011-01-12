@@ -53,15 +53,22 @@ import sys
 import re
 import gzip
 import time
+from os.path import dirname, join, isfile, realpath
 from string import maketrans
 from optparse import OptionParser, OptionGroup
 from itertools import izip
 from contextlib import closing
 from collections import defaultdict
 
-from libcutadapt import align
-from libcutadapt import fasta
-from libcutadapt import __version__
+# If running from within source directory,
+# add 'lib' to sys.path.
+_libdir = join(dirname(realpath(__file__)), 'lib')
+if isfile(join(_libdir, 'cutadapt', '__init__.py')):
+	sys.path.append(_libdir)
+
+from cutadapt import align
+from cutadapt import fasta
+from cutadapt import __version__
 
 # constants for the find_best_alignment function
 BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
