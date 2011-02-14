@@ -64,7 +64,7 @@ from collections import defaultdict
 # add 'lib' to sys.path.
 _libdir = join(dirname(realpath(__file__)), 'lib')
 if isfile(join(_libdir, 'cutadapt', '__init__.py')):
-	sys.path.append(_libdir)
+	sys.path.insert(0, _libdir)
 
 from cutadapt import align
 from cutadapt import fasta
