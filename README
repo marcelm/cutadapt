@@ -228,6 +228,8 @@ v0.9.x
   This avoids cluttering the global namespace and should lead to less
   problems with other Python modules. Thanks to Steve Lianoglou for
   pointing this out to me!
+* ignore case (ACGT vs acgt) when comparing the adapter with the read sequence
+
 
 v0.9
 ----
@@ -316,13 +318,10 @@ To Do / Ideas
   * make it easy_installable/pipable
   * run pylint, pychecker
   * print adapter fragments in statistics
-  * allow adapter in lower case
   * --discard-uncut (discard sequences in which no adapter was found)
   * giving a qual file should enable color space
   * no. of trimmed nucleotides
   * length histogram
-  * document that case is relevant in the adapters
-  * uppercase/lowercase
   * refactor read_sequences (use classes)
   * put write_read into a Fast(a|q)Writer class?
   * allow .txt input/output

@@ -194,7 +194,7 @@ class Statistics(object):
 
 			print("=" * 3, "Adapter", index+1, "=" * 3)
 			print()
-			print("Adapter '%s'," % adapter, "length %d," % len(adapter), "was trimmed", total, "times.")
+			print("Adapter '%s'," % adapter.upper(), "length %d," % len(adapter), "was trimmed", total, "times.")
 			if where == ANYWHERE:
 				print(total_front, "times, it overlapped the 5' end of a read")
 				print(total_back, "times, it overlapped the 3' end or was within the read")
@@ -229,7 +229,8 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	"""
 	Find the best matching adapter.
 
-	adapters -- List of adapter sequences
+	adapters -- List of tuples (where, adapter). 'where' is either BACK or
+	            ANYWHERE. The adapter itself is a string.
 	seq -- The sequence to which each adapter will be aligned
 	where -- Where in the sequence the adapter may be found.
 		One of BACK and FRONT_OR_BACK. For both,
@@ -377,8 +378,15 @@ class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
 	def __init__(self, options, adapters):
+		"""Initialize this cutter.
+		adapters --
+			List of tuples (where, adapter). 'where' is either BACK
+			or ANYWHERE, and adapter is the adapter as a string.
+			Adapters will be converted to uppercase before aligning
+			them.
+		"""
 		self.options = options
-		self.adapters = adapters
+		self.adapters = [ (where, adapter.upper()) for (where, adapter) in adapters ]
 		self.stats = Statistics(adapters)
 		# regular expression used to replace "length=..." strings in sequence descriptions
 		if self.options.length_tag is not None:
@@ -388,7 +396,8 @@ class AdapterCutter(object):
 
 	def cut(self, desc, seq, qualities):
 		"""
-		Cut adapters from a single read.
+		Cut adapters from a single read. The read will be converted to uppercase
+		before it is compared to the adapter sequences.
 
 		seq -- sequence of the read
 		desc -- description of the read
@@ -405,7 +414,7 @@ class AdapterCutter(object):
 		# try (possibly more than once) to remove an adapter
 		any_adapter_matches = False
 		for t in xrange(self.options.times):
-			alignment, index = find_best_alignment(self.adapters, seq, self.options.error_rate, self.options.overlap)
+			alignment, index = find_best_alignment(self.adapters, seq.upper(), self.options.error_rate, self.options.overlap)
 			if alignment is None:
 				# nothing found
 				break
