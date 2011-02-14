@@ -27,6 +27,7 @@ SCORE_MISMATCH = -1
 SCORE_DELETION = -2
 SCORE_INSERTION = SCORE_DELETION
 
+
 def _ansired(s):
 	return "\x1b[1;31m" + s + "\x1b[00m"
 
@@ -36,7 +37,7 @@ def _ansired(s):
 def pysemiglobalalign(s1, s2, print_table=False):
 	"""
 	Compute a semiglobal alignment of strings s1 and s2.
-	
+
 	Return a tuple (r1, r2, start1, stop1, start2, stop2, errors)
 	where r1 and r2 are sequences of the same length containing the alignment
 	(an INDEL is marked by '-').

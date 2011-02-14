@@ -65,7 +65,7 @@ mismatch -1\n\
 indel    -2\n\
 \n\
 Return a tuple (r1, r2, start1, stop1, start2, stop2, errors)\n\
-where r1 and r2 are sequences of the same length containing the alignment\n\
+where r1 and r2 are strings of the same length containing the alignment\n\
 (an INDEL is marked by '-').\n\
 \n\
 start1 is the position within r1 at which the part of s1, that is aligned, starts.\n\
@@ -178,7 +178,7 @@ py_globalalign(PyObject *self UNUSED, PyObject *args)
 	int best_i = m; // also: s1stop
 	int best_j = n; // also: s2stop
 	int best = columns[(n+1)*(m+1)-1].score;
-	
+
 	if (flags & STOP_WITHIN_SEQ2) {
 		// search also in last row
 		for (j = 0; j <= n; ++j) {
@@ -201,7 +201,7 @@ py_globalalign(PyObject *self UNUSED, PyObject *args)
 		}
 	}
 
-/*	
+/*
 	printf("s1: %s\ns2: %s\n", s1, s2);
 	printf("m: %d n: %d\n", m, n);
 	for (i = 0; i <= m; ++i) {
@@ -228,10 +228,10 @@ py_globalalign(PyObject *self UNUSED, PyObject *args)
 	// position where we found the maximum score
 
 	int errors = 0;
-	
+
 /*	printf("best_i: %d   best_j: %d\n", best_i, best_j);
 	printf("i: %d   j: %d\n", i, j);*/
-	
+
 	int gaps_are_errors; // if gaps are currently errors, this is 1, 0 otherwise
 	gaps_are_errors = (flags & STOP_WITHIN_SEQ2) ? 0 : 1;
 	if (i == best_i) { // we are in the last row

@@ -311,4 +311,6 @@ To Do / Ideas
   * uppercase/lowercase
   * refactor read_sequences (use classes)
   * put write_read into a Fast(a|q)Writer class?
+  * allow .txt input/output
+  * test on Windows
 
