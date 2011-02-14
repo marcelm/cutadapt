@@ -101,13 +101,14 @@ def xopen(filename, mode='r', is_closing=True):
 	files that have been compressed with gzip. If the filename ends with .gz,
 	the file is opened with gzip.open(). If it doesn't, the regular open()
 	is used. If the filename is '-', standard output (mode 'r') or input
-	(mode 'w') is returned.
+	(mode 'w') is returned. TODO disabled for now
 	closing -- whether to wrap the returned GzipFile with contextlib.closing
 		to make it usable in 'with' statements. Don't use when filename may be '-'.
 		(TODO look for a nicer solution)
 	"""
-	if filename == '-':
-		return sys.stdout if mode == 'r' else sys.stdin
+	# disabled for now: does not work
+	#if filename == '-':
+		#return sys.stdout if mode == 'r' else sys.stdin
 	if filename.endswith('.gz'):
 		if is_closing:
 			return closing(gzip.open(filename, mode))
@@ -512,7 +513,7 @@ def main():
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
-	group.add_option("-q", "--quality-cutoff", type=int, default=0, metavar="CUTOFF",
+	group.add_option("-q", "--quality-cutoff", type=int, default=None, metavar="CUTOFF",
 		help="Trim low-quality ends from reads before adapter removal. "
 			"The algorithm is the same as the one used by BWA "
 			"(Subtract CUTOFF from all qualities; "
@@ -621,7 +622,7 @@ def main():
 				initial = ''
 
 			#total_bases += len(qualities)
-			if options.quality_cutoff > 0:
+			if options.quality_cutoff is not None:
 				index = quality_trim_index(qualities, options.quality_cutoff)
 				#total_quality_trimmed += len(qualities) - index
 				qualities = qualities[:index]

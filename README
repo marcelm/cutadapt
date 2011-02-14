@@ -137,6 +137,20 @@ Cut an adapter from reads given in a FASTA file. Try to remove an adapter three 
 $ cutadapt -n 3 -a TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG input.fa > output.fa
 
 
+Quality Trimming
+----------------
+
+The '-q' (or --trim-qualities) parameter can be used to trim low-quality ends
+from reads before adapter removal. For this to work correctly, the quality
+values must be encoded as ascii(phred quality + 33). If they are encoded as
+ascii(phred quality + 64), you currently have to add 31 to the cutoff. For
+example, if you actually mean "-q 10", you have to write "-q 41".
+
+The trimming algorithm is the same as the one used by BWA. That is: Subtract
+the given cutoff from all qualities; compute partial sums from all indices to
+the end of the sequence; cut sequence at the index at which the sum is minimal.
+
+
 Adapters
 ========
 
@@ -313,4 +327,4 @@ To Do / Ideas
   * put write_read into a Fast(a|q)Writer class?
   * allow .txt input/output
   * test on Windows
-
+  * SRA color space FASTQ files include a quality for the initial nucleotide, this is not handled correctly
