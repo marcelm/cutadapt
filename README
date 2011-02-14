@@ -229,6 +229,8 @@ v0.9.x
   problems with other Python modules. Thanks to Steve Lianoglou for
   pointing this out to me!
 * ignore case (ACGT vs acgt) when comparing the adapter with the read sequence
+* .FASTA/.QUAL files (not necessarily color space) can now be read (some
+  454 software uses this format)
 
 
 v0.9
@@ -327,3 +329,4 @@ To Do / Ideas
   * allow .txt input/output
   * test on Windows
   * SRA color space FASTQ files include a quality for the initial nucleotide, this is not handled correctly
+  * comments in FASTA files

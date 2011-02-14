@@ -27,10 +27,11 @@ Reads a FASTA or FASTQ file, finds and removes adapters,
 and writes the changed sequence to standard output.
 When finished, statistics are printed to standard error.
 
-If two file names are given, they are assumed to be
-.csfasta and .qual files as produced by the SOLiD sequencer.
-(You still need to provide the -c option to correctly deal
-with color space.)
+If two file names are given, the first must be a .fasta or .csfasta
+file and the second must be a .qual file. This is the file format
+used by some 454 software and by the SOLiD sequencer.
+If you have color space data, you still need to provide the -c option
+to correctly deal with color space!
 
 If the name of any input or output file ends with '.gz', it is
 assumed to be gzip-compressed.
@@ -45,7 +46,9 @@ EXAMPLE
 
 Assuming your sequencing data is available as a FASTQ file, use this
 command line:
-$ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq"""
+$ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq
+
+See the README file for more help and examples."""
 
 from __future__ import print_function, division
 
@@ -56,7 +59,6 @@ import time
 from os.path import dirname, join, isfile, realpath
 from string import maketrans
 from optparse import OptionParser, OptionGroup
-from itertools import izip
 from contextlib import closing
 from collections import defaultdict
 
@@ -210,21 +212,6 @@ class Statistics(object):
 				print_histogram(self.lengths_back[index])
 
 
-def quality_to_ascii(quality_line, base=33):
-	"""
-	Convert a string containing qualities given as integer to a string of
-	ASCII-encoded qualities.
-
-	base -- ASCII code of quality zero (sensible values are 33 and 64).
-
-	>>> quality_to_ascii("17 4 29 18")
-	'2%>3'
-	"""
-	fields = map(int, quality_line.split())
-	qualities = ''.join(chr(q+base) for q in fields)
-	return qualities
-
-
 def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	"""
 	Find the best matching adapter.
@@ -298,24 +285,6 @@ def write_read(desc, seq, qualities, outfile):
 		print('@%s\n%s\n+\n%s' % (desc, seq, qualities), file=outfile)
 
 
-def readsolid(seqfile, qualityfile):
-	"""
-	Read sequences from a .csfasta and a .qual file.
-	Since this file format is used only by SOLiD, the data is assumed to be in color space.
-	"""
-	seq_iter = fasta.readfasta(seqfile)
-	quality_iter = fasta.readfasta(qualityfile)
-	for (qdesc, qseq), (rdesc, rseq) in izip(quality_iter, seq_iter):
-		if qdesc != rdesc:
-			raise FormatError("Descriptions in FASTA and quality file don't match (%s and %s)." % (rdesc, qdesc))
-		qualities = quality_to_ascii(qseq)
-		if len(rseq) == 0:
-			raise FormatError("When reading '%s', no sequence was found (at least the initial primer must appear)." % rdesc)
-		if len(qualities) != len(rseq) - 1:
-			raise FormatError("While reading '%s': expected to find %d quality values, but found %d." % (rdesc, len(rseq) - 1, len(qualities)))
-		yield rdesc, rseq, qualities
-
-
 def read_sequences(seqfilename, qualityfilename, colorspace):
 	"""
 	Read sequences and (if available) quality information from either:
@@ -341,12 +310,10 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 			for desc, seq in fasta.readfasta(seqfile):
 				yield (desc, seq, None)
 		else:
-			# read from .CSFASTA/.QUAL
-			if not colorspace:
-				raise ValueError(".csfasta/.qual file found, please specify -c") # TODO enable automatically
-			assert ftype == 'FASTA' and qualityfilename is not None and colorspace
+			# read from .(CS)FASTA/.QUAL
+			assert ftype == 'FASTA' and qualityfilename is not None
 			with xopen(qualityfilename) as qualityfile:
-				for desc, seq, qualities in readsolid(seqfile, qualityfile):
+				for desc, seq, qualities in fasta.readfastaqual(seqfile, qualityfile, colorspace):
 					yield (desc, seq, qualities)
 
 
@@ -548,7 +515,7 @@ def main():
 		help="Search for TAG followed by a decimal number in the name of the read "
 			"(description/comment field of the FASTA or FASTQ file). Replace the "
 			"decimal number with the correct length of the trimmed read. "
-			"For example, use --length-comment 'length=' to search for fields "
+			"For example, use --length-tag 'length=' to search for fields "
 			"like 'length=123'.")
 	parser.add_option_group(group)
 

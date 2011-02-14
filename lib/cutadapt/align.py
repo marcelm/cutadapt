@@ -222,8 +222,8 @@ def semiglobalalign(s1, s2):
 	return globalalign(s1, s2, SEMIGLOBAL)
 
 
-try:
-	from calign import globalalign
-except ImportError:
-	print("Warning: C implementation of alignment algorithm not available. Using slow Python version!", file=sys.stderr)
-	semiglobalalign = pysemiglobalalign
+#try:
+from calign import globalalign
+#except ImportError:
+	#print("Warning: C implementation of alignment algorithm not available. Using slow Python version!", file=sys.stderr)
+	#semiglobalalign = pysemiglobalalign
