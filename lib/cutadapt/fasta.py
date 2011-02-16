@@ -23,7 +23,7 @@ def readfastq(infile, colorspace=False):
 		elif i % 4 == 2:
 			assert line.startswith('+')
 		elif i % 4 == 3:
-			qualities = line[:-1]
+			qualities = line.rstrip("\n\r")
 			if len(qualities) + lengthdiff != len(sequence):
 				raise ValueError("Length of quality sequence and length of read do not match (%d+%d!=%d)" % (len(qualities), lengthdiff, len(sequence)))
 			yield (description, sequence, qualities)
