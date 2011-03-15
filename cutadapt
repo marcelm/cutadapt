@@ -86,11 +86,6 @@ class FormatError(Exception):
 	pass
 
 
-class UnknownFileType(Exception):
-	"""Raised by fastafiletype function if file type is unknown"""
-	pass
-
-
 class HelpfulOptionParser(OptionParser):
 	"""An OptionParser that prints full help on errors."""
 	def error(self, msg):
@@ -209,22 +204,6 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	return (best_alignment, best_index)
 
 
-def fastafiletype(fname):
-	"""
-	Determine file type of fname. Return the string FASTQ or FASTA or
-	raise an UnknownFileType exception.
-	"""
-	with xopen(fname) as f:
-		for line in f:
-			if line.startswith('#'):
-				continue
-			if line.startswith('@'):
-				return 'FASTQ'
-			if line.startswith('>'):
-				return 'FASTA'
-			raise UnknownFileType("neither FASTQ nor FASTA")
-
-
 def write_read(desc, seq, qualities, outfile):
 	"""
 	Write read in either FASTA or FASTQ format
@@ -250,7 +229,7 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 	qualities is None if no qualities are available.
 	qualities are ASCII-encoded (chr(quality) + 33).
 	"""
-	ftype = fastafiletype(seqfilename)
+	ftype = fasta.fastafiletype(seqfilename)
 
 	if ftype == 'FASTQ' and qualityfilename is not None:
 		raise ValueError("If a FASTQ file is given, no quality file can be provided.")

@@ -3,6 +3,7 @@
 This module provides routines for reading and writing FASTA and FASTQ files.
 """
 from itertools import izip
+from xopen import xopen
 
 def readfastq(infile, colorspace=False):
 	"""
@@ -127,3 +128,24 @@ def writefastq(outfile, sequences):
 	"""
 	for description, sequence, qualities in sequences:
 		outfile.write('@%s\n%s\n+\n%s\n' % (description, sequence, qualities))
+
+
+class UnknownFileType(Exception):
+	"""Raised by fastafiletype function if file type is unknown"""
+	pass
+
+
+def fastafiletype(fname):
+	"""
+	Determine file type of fname. Return the string FASTQ or FASTA or
+	raise an UnknownFileType exception.
+	"""
+	with xopen(fname) as f:
+		for line in f:
+			if line.startswith('#'):
+				continue
+			if line.startswith('@'):
+				return 'FASTQ'
+			if line.startswith('>'):
+				return 'FASTA'
+			raise UnknownFileType("neither FASTQ nor FASTA")
