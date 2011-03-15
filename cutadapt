@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2010 Marcel Martin <marcel.martin@tu-dortmund.de>
+# Copyright (c) 2010,2011 Marcel Martin <marcel.martin@tu-dortmund.de>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -70,6 +70,7 @@ if isfile(join(_libdir, 'cutadapt', '__init__.py')):
 
 from cutadapt import align, fasta
 from cutadapt.xopen import xopen
+from cutadapt.qualtrim import quality_trim_index
 from cutadapt import __version__
 
 # constants for the find_best_alignment function
@@ -95,31 +96,6 @@ class HelpfulOptionParser(OptionParser):
 	def error(self, msg):
 		self.print_help(sys.stderr)
 		self.exit(2, "\n%s: error: %s\n" % (self.get_prog_name(), msg))
-
-
-def quality_trim_index(qualities, cutoff):
-	"""
-	Find the position at which to trim a low-quality end from a nucleotide sequence.
-
-	Qualities are assumed to be ASCII-encoded as chr(qual + 33).
-
-	>>> trim("", "", 10) TODO
-	with qualities based on bwa_trim_read
-
-	This is a Python version of the BWA function 'bwa_trim_read'
-	"""
-	s = 0
-	max_qual = 0
-	max_i = len(qualities)
-	for i in xrange(len(qualities)-1, -1, -1):
-		q = ord(qualities[i]) - 33
-		s += cutoff - q
-		if s < 0:
-			break
-		if s > max_qual:
-			max_qual = s
-			max_i = i
-	return max_i
 
 
 def print_histogram(d):
