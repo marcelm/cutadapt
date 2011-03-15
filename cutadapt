@@ -510,7 +510,7 @@ def main():
 	group.add_option("--strip-f3", action='store_true', default=False,
 		help="For color space: Strip the _F3 suffix of read names")
 	group.add_option("--maq", "--bwa", action='store_true', default=False,
-		help="MAQ/BWA-compatible color space output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
+		help="MAQ- and BWA-compatible color space output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
 	group.add_option("--length-tag", default=None, metavar="TAG",
 		help="Search for TAG followed by a decimal number in the name of the read "
 			"(description/comment field of the FASTA or FASTQ file). Replace the "

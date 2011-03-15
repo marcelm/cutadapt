@@ -101,7 +101,7 @@ def _quality_to_ascii(qualities, base=33):
 
 def readfastaqual(seqfile, qualityfile, colorspace):
 	"""
-	Read sequences from a .(cs)fasta and a .qual file.
+	Iterate over sequences from a .(cs)fasta and a .qual file.
 	This file format is used by SOLiD (color space data) and some 454 software.
 	"""
 	lengthdiff = 1 if colorspace else 0
