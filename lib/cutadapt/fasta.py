@@ -4,6 +4,7 @@ This module provides routines for reading and writing FASTA and FASTQ files.
 """
 from itertools import izip
 from xopen import xopen
+import seqio
 
 def readfastq(infile, colorspace=False):
 	"""
@@ -86,19 +87,6 @@ def readqual(infile):
 		yield (comment, qualities)
 
 
-def _quality_to_ascii(qualities, base=33):
-	"""
-	Convert a list containing qualities given as integer to a string of
-	ASCII-encoded qualities.
-
-	base -- ASCII code of quality zero (sensible values are 33 and 64).
-
-	>>> _quality_to_ascii([17, 4, 29, 18])
-	'2%>3'
-	"""
-	qualities = ''.join(chr(q+base) for q in qualities)
-	return qualities
-
 
 def readfastaqual(seqfile, qualityfile, colorspace):
 	"""
@@ -106,12 +94,12 @@ def readfastaqual(seqfile, qualityfile, colorspace):
 	This file format is used by SOLiD (color space data) and some 454 software.
 	"""
 	lengthdiff = 1 if colorspace else 0
-	seq_iter = readfasta(seqfile)
+	seq_iter = seqio.FastaReader(seqfile)
 	quality_iter = readqual(qualityfile)
 	for (qdesc, qseq), (rdesc, rseq) in izip(quality_iter, seq_iter):
 		if qdesc != rdesc:
 			raise FormatError("Descriptions in FASTA and quality file don't match (%s and %s)." % (rdesc, qdesc))
-		qualities = _quality_to_ascii(qseq)
+		qualities = seqio._quality_to_ascii(qseq)
 		if len(rseq) < lengthdiff:
 			assert not colorspace
 			raise FormatError("When reading '%s', no sequence was found (at least the initial primer must appear)." % rdesc)
