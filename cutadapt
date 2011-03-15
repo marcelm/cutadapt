@@ -68,7 +68,7 @@ _libdir = join(dirname(realpath(__file__)), 'lib')
 if isfile(join(_libdir, 'cutadapt', '__init__.py')):
 	sys.path.insert(0, _libdir)
 
-from cutadapt import align, fasta
+from cutadapt import align, fasta, seqio
 from cutadapt.xopen import xopen
 from cutadapt.qualtrim import quality_trim_index
 from cutadapt import __version__
@@ -236,10 +236,10 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 
 	with xopen(seqfilename) as seqfile:
 		if ftype == 'FASTQ':
-			for desc, seq, qualities in fasta.readfastq(seqfile, colorspace=colorspace):
+			for desc, seq, qualities in seqio.FastqReader(seqfile, colorspace=colorspace):
 				yield (desc, seq, qualities)
 		elif ftype == 'FASTA' and qualityfilename is None:
-			for desc, seq in fasta.readfasta(seqfile):
+			for desc, seq, dummy in seqio.FastaReader(seqfile):
 				yield (desc, seq, None)
 		else:
 			# read from .(CS)FASTA/.QUAL
