@@ -224,13 +224,15 @@ Changes
 
 v0.9.x
 ------
-* Install a single 'libcutadapt' package instead of multiple modules.
-  This avoids cluttering the global namespace and should lead to less
+* Install a single 'cutadapt' Python package instead of multiple Python
+  modules. This avoids cluttering the global namespace and should lead to less
   problems with other Python modules. Thanks to Steve Lianoglou for
   pointing this out to me!
 * ignore case (ACGT vs acgt) when comparing the adapter with the read sequence
 * .FASTA/.QUAL files (not necessarily color space) can now be read (some
   454 software uses this format)
+* Move some functions into their own modules
+* lots of refactoring: replace the fasta module with a much nicer seqio module.
 
 
 v0.9

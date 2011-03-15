@@ -2,6 +2,7 @@
 __author__ = "Marcel Martin"
 
 from collections import namedtuple
+from itertools import izip
 from xopen import xopen
 from os.path import splitext
 
@@ -42,7 +43,7 @@ class UnknownFileType(Exception):
 	pass
 
 
-def SequenceReader(file):
+def SequenceReader(file, colorspace=False):
 	"""
 	Reader for FASTA and FASTQ files that autodetects the file format.
 	Returns either an instance of FastaReader or of FastqReader,
@@ -69,7 +70,7 @@ def SequenceReader(file):
 		if ext in ['.fasta', '.fa', '.fna', '.csfasta', '.csfa']:
 			return FastaReader(file)
 		elif ext in ['.fastq']:
-			return FastqReader(file)
+			return FastqReader(file, colorspace)
 		else:
 			raise UnknownFileType("Could not determine whether this is FASTA or FASTQ: file name extension %s not recognized" % ext)
 
@@ -83,7 +84,7 @@ def SequenceReader(file):
 		if line.startswith('>'):
 			return FastaReader(FileWithPrependedLine(file, line))
 		if line.startswith('@'):
-			return FastqReader(FileWithPrependedLine(file, line))
+			return FastqReader(FileWithPrependedLine(file, line), colorspace)
 	raise UnknownFileType("File is neither FASTQ nor FASTA.")
 
 
@@ -92,20 +93,27 @@ class FastaReader(object):
 	"""
 	Reader for FASTA files.
 	"""
-	def __init__(self, file, wholefile=False):
+	def __init__(self, file, wholefile=False, keep_linebreaks=False):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
 		If wholefile is True, then it is ok to read the entire file
 		into memory. This is faster when there are many newlines in
 		the file, but may obviously need a lot of memory.
+		keep_linebreaks -- whether to keep the newline characters in the sequence
 		"""
 		if isinstance(file, basestring):
-			file = xopen(file, "r")
+			file = xopen(file, "r", is_closing=False)
 		self.fp = file
 		self.wholefile = wholefile
+		self.keep_linebreaks = keep_linebreaks
+		assert not (wholefile and keep_linebreaks), "not supported"
 
 	def __iter__(self):
+		"""
+		Return instances of the Sequence class.
+		The qualities attribute is always None.
+		"""
 		return self._wholefile_iter() if self.wholefile else self._streaming_iter()
 
 	def _streaming_iter(self):
@@ -116,19 +124,20 @@ class FastaReader(object):
 		"""
 		name = None
 		seq = ""
+		appendchar = '\n' if self.keep_linebreaks else ''
 		for line in self.fp:
 			# strip() should also take care of DOS line breaks
 			line = line.strip()
 			if line and line[0] == ">":
 				if name is not None:
-					assert seq.find('\n') == -1
+					assert self.keep_linebreaks or seq.find('\n') == -1
 					yield Sequence(name, seq, None)
 				name = line[1:]
 				seq = ""
 			else:
-				seq += line
+				seq += line + appendchar
 		if name is not None:
-			assert seq.find('\n') == -1
+			assert self.keep_linebreaks or seq.find('\n') == -1
 			yield Sequence(name, seq, None)
 
 	def _wholefile_iter(self):
@@ -149,7 +158,7 @@ class FastaReader(object):
 
 	def __enter__(self):
 		if self.fp is None:
-			raise ValueError("I/O operation on closed FastaReader object")
+			raise ValueError("I/O operation on closed FastaReader")
 		return self
 
 	def __exit__(self, *args):
@@ -169,7 +178,7 @@ class FastqReader(object):
 		n quality values. When this is True, there must be n+1 characters in the sequence and n quality values.
 		"""
 		if isinstance(file, basestring):
-			file = xopen(file, "r")
+			file = xopen(file, "r", is_closing=False)
 		self.fp = file
 		self.colorspace = colorspace
 
@@ -195,11 +204,66 @@ class FastqReader(object):
 
 	def __enter__(self):
 		if self.fp is None:
-			raise ValueError("I/O operation on closed FastqReader object")
+			raise ValueError("I/O operation on closed FastqReader")
 		return self
 
 	def __exit__(self, *args):
 		self.fp.close()
+
+
+def _quality_to_ascii(qualities, base=33):
+	"""
+	Convert a list containing qualities given as integer to a string of
+	ASCII-encoded qualities.
+
+	base -- ASCII code of quality zero (sensible values are 33 and 64).
+
+	>>> _quality_to_ascii([17, 4, 29, 18])
+	'2%>3'
+	"""
+	qualities = ''.join(chr(q+base) for q in qualities)
+	return qualities
+
+
+class FastaQualReader(object):
+	"""
+	Reader for reads that are stored in .(CS)FASTA and .QUAL files.
+	"""
+	def __init__(self, fastafile, qualfile, colorspace=False):
+		"""
+		fastafile and qualfile are filenames file-like objects.
+		If file is a filename, then .gz files are supported.
+
+		colorspace -- Usually (when this is False), there must be n characters in the sequence and
+		n quality values. When this is True, there must be n+1 characters in the sequence and n quality values.
+		"""
+		self.fastareader = FastaReader(fastafile)
+		self.qualreader = FastaReader(qualfile, keep_linebreaks=True)
+		self.colorspace = colorspace
+
+	def __iter__(self):
+		"""
+		Return tuples: (name, sequence, qualities).
+		qualities is a string and it contains the qualities encoded as ascii(qual+33).
+		"""
+		lengthdiff = 1 if self.colorspace else 0
+		for fastaread, qualread in izip(self.fastareader, self.qualreader):
+			qualities = _quality_to_ascii(map(int, qualread.sequence.split()))
+			assert fastaread.name == qualread.name
+			if len(qualities) + lengthdiff != len(fastaread.sequence):
+				raise ValueError("Length of quality sequence and length of read do not match (%d+%d!=%d)" % (
+					len(qualities), lengthdiff, len(fastaread.sequence)))
+			yield Sequence(fastaread.name, fastaread.sequence, qualities)
+
+	def __enter__(self):
+		if self.fastafile is None:
+			raise ValueError("I/O operation on closed FastaQualReader")
+		return self
+
+	def __exit__(self, *args):
+		self.fastareader.close()
+		self.qualreader.close()
+
 
 ################################################
 
@@ -251,18 +315,3 @@ def writefastq(f, seqlist):
 
 
 
-def readfastaq(name, colorspace=False):
-	"""
-	Read a FASTA or FASTQ file. The file type is recognized automatically.
-	Return tuples (description, sequence, qualities).
-	All elements of the tuple are strings (the qualities are not decoded).
-	If a FASTA file was detected, qualities is always None.
-	"""
-	if fastafiletype(name) == 'FASTQ':
-		with open(name) as fastqfile:
-			for desc, seq, qual in readfastq(fastqfile, colorspace):
-				yield desc, seq, qual
-	else:
-		with open(name) as fastafile:
-			for desc, seq in readfasta(fastafile):
-				yield desc, seq, None

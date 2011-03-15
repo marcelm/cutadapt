@@ -68,7 +68,7 @@ _libdir = join(dirname(realpath(__file__)), 'lib')
 if isfile(join(_libdir, 'cutadapt', '__init__.py')):
 	sys.path.insert(0, _libdir)
 
-from cutadapt import align, fasta, seqio
+from cutadapt import align, seqio
 from cutadapt.xopen import xopen
 from cutadapt.qualtrim import quality_trim_index
 from cutadapt import __version__
@@ -229,24 +229,15 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 	qualities is None if no qualities are available.
 	qualities are ASCII-encoded (chr(quality) + 33).
 	"""
-	ftype = fasta.fastafiletype(seqfilename)
+	#if ftype == 'FASTQ' and qualityfilename is not None:
+		#raise ValueError("If a FASTQ file is given, no quality file can be provided.")
 
-	if ftype == 'FASTQ' and qualityfilename is not None:
-		raise ValueError("If a FASTQ file is given, no quality file can be provided.")
-
-	with xopen(seqfilename) as seqfile:
-		if ftype == 'FASTQ':
-			for desc, seq, qualities in seqio.FastqReader(seqfile, colorspace=colorspace):
-				yield (desc, seq, qualities)
-		elif ftype == 'FASTA' and qualityfilename is None:
-			for desc, seq, dummy in seqio.FastaReader(seqfile):
-				yield (desc, seq, None)
-		else:
-			# read from .(CS)FASTA/.QUAL
-			assert ftype == 'FASTA' and qualityfilename is not None
-			with xopen(qualityfilename) as qualityfile:
-				for desc, seq, qualities in fasta.readfastaqual(seqfile, qualityfile, colorspace):
-					yield (desc, seq, qualities)
+	if qualityfilename is not None:
+		# read from .(CS)FASTA/.QUAL
+		return seqio.FastaQualReader(seqfilename, qualityfilename, colorspace)
+	else:
+		# read from FASTA or FASTQ (autodetected)
+		return seqio.SequenceReader(seqfilename, colorspace)
 
 
 class ReadFilter(object):
