@@ -222,7 +222,7 @@ The -b parameter currently does not work with color space data.
 Changes
 =======
 
-v0.9.x
+v0.9.2
 ------
 * Install a single 'cutadapt' Python package instead of multiple Python
   modules. This avoids cluttering the global namespace and should lead to less
@@ -233,7 +233,8 @@ v0.9.x
   454 software uses this format)
 * Move some functions into their own modules
 * lots of refactoring: replace the fasta module with a much nicer seqio module.
-
+* allow to input FASTA/FASTQ on standard input (also FASTA/FASTQ is
+  autodetected)
 
 v0.9
 ----
@@ -305,10 +306,8 @@ To Do / Ideas
 =============
 
   * add test cases to version control
-  * auto-detect FASTA/FASTQ input in STDIN
   * allow to give adapter in nucleotide space, but find it in color space
   * show average error rate
-  * allow stuff like: -e 2/17
   * show table of length vs. max errors
   * In color space and probably also for Illumina data, gapped alignment
     is not necessary
@@ -316,10 +315,8 @@ To Do / Ideas
   * use str.format instead of %
   * allow to change scores at runtime (perhaps using command-line parameters)
   * multi-threading
-  * Python 2.5 compatibility
   * --progress
   * refactor
-  * make it easy_installable/pipable
   * run pylint, pychecker
   * print adapter fragments in statistics
   * --discard-uncut (discard sequences in which no adapter was found)
@@ -331,4 +328,3 @@ To Do / Ideas
   * allow .txt input/output
   * test on Windows
   * SRA color space FASTQ files include a quality for the initial nucleotide, this is not handled correctly
-  * comments in FASTA files
