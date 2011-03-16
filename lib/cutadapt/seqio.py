@@ -5,6 +5,7 @@ from collections import namedtuple
 from itertools import izip
 from xopen import xopen
 from os.path import splitext
+import sys
 
 Sequence = namedtuple("Sequence", "name sequence qualities")
 
@@ -103,7 +104,7 @@ class FastaReader(object):
 		keep_linebreaks -- whether to keep the newline characters in the sequence
 		"""
 		if isinstance(file, basestring):
-			file = xopen(file, "r", is_closing=False)
+			file = xopen(file, "r")
 		self.fp = file
 		self.wholefile = wholefile
 		self.keep_linebreaks = keep_linebreaks
@@ -178,7 +179,7 @@ class FastqReader(object):
 		n quality values. When this is True, there must be n+1 characters in the sequence and n quality values.
 		"""
 		if isinstance(file, basestring):
-			file = xopen(file, "r", is_closing=False)
+			file = xopen(file, "r")
 		self.fp = file
 		self.colorspace = colorspace
 

@@ -460,14 +460,14 @@ def main():
 	#too_long_outfile = None # too long reads go here
 
 	if options.output is not None:
-		trimmed_outfile = xopen(options.output, 'w', is_closing=False)
+		trimmed_outfile = xopen(options.output, 'w')
 	untrimmed_outfile = trimmed_outfile # reads without adapters go here
 	if options.untrimmed_output is not None:
-		untrimmed_outfile = xopen(options.untrimmed_output, 'w', is_closing=False)
+		untrimmed_outfile = xopen(options.untrimmed_output, 'w')
 	if options.too_short_output is not None:
-		too_short_outfile = xopen(options.too_short_output, 'w', is_closing=False)
+		too_short_outfile = xopen(options.too_short_output, 'w')
 	#if options.too_long_output is not None:
-		#too_long_outfile = xopen(options.too_long_output, 'w', is_closing=False)
+		#too_long_outfile = xopen(options.too_long_output, 'w')
 
 	if options.maq:
 		options.colorspace = True
@@ -485,7 +485,7 @@ def main():
 		parser.error("The maximum error rate must be between 0 and 1.")
 
 	if options.rest_file is not None:
-		options.rest_file = xopen(options.rest_file, 'w', is_closing=False)
+		options.rest_file = xopen(options.rest_file, 'w')
 
 	adapters = []
 	if options.adapters:
