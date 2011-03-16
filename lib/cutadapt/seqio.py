@@ -59,7 +59,9 @@ def SequenceReader(file, colorspace=False):
 	type determined from the content.
 	"""
 	name = None
-	if isinstance(file, basestring):
+	if file == "-":
+		file = sys.stdin
+	elif isinstance(file, basestring):
 		name = file
 	elif hasattr(file, "name"):
 		name = file.name
