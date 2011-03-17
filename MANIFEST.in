@@ -1,1 +1,2 @@
-include calign.so
+include lib/cutadapt/calign.so
+include lib/__init__.py
