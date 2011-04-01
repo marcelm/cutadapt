@@ -79,10 +79,6 @@ $ cutadapt -a AACCGGTT input.fastq > output.fastq
 The adapter sequence is given with -a option. Replace
 AACCGGTT with your actual adapter sequence.
 
-Multiple adapters can be provided using -a more than once.
-The program will then search for all given adapters and remove
-the one that matches best.
-
 input.fastq is a file with reads. The result will be written
 to standard output. Use redirection with '>' (or cutadapt's -o
 option) to write the output to a file.
@@ -135,6 +131,16 @@ Cut an adapter from reads given in a FASTA file. Try to remove an adapter three 
 (this is usually not needed), use the default error rate of 10%, write result to output.fa:
 
 $ cutadapt -n 3 -a TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG input.fa > output.fa
+
+
+Multiple adapters
+-----------------
+
+Multiple adapters can be provided by using the -a or -b parameter more than once.
+The program will then search for all given adapters and remove
+the one that matches best.
+
+$ cutadapt -b TGAGACACGCA -b AGGCACACAGGG input.fastq > output.fastq
 
 
 Quality Trimming
