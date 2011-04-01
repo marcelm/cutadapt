@@ -84,6 +84,12 @@ ANYWHERE = align.SEMIGLOBAL
 # for double-encoding colorspace sequences
 DOUBLE_ENCODE_TRANS = maketrans(b'0123.', b'ACGTN')
 
+# for setting negative quality values to zero
+if sys.version_info[0] < 3:
+	ZERO_CAP_TRANS = maketrans(''.join(map(chr, range(33))), chr(33) * 33)
+else:
+	ZERO_CAP_TRANS = maketrans(bytes(range(33)), b'\x21' * 33)
+
 
 class FormatError(Exception):
 	"""Exception raised for parse errors in the input files"""
@@ -373,6 +379,10 @@ class AdapterCutter(object):
 		return (desc, seq, qualities, any_adapter_matches)
 
 
+def zero_cap(qualities):
+	return qualities.translate(ZERO_CAP_TRANS)
+
+
 def main():
 	"""Main function that evaluates command-line parameters and contains the main loop over all reads."""
 	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
@@ -437,13 +447,16 @@ def main():
 	group.add_option("--strip-f3", action='store_true', default=False,
 		help="For color space: Strip the _F3 suffix of read names")
 	group.add_option("--maq", "--bwa", action='store_true', default=False,
-		help="MAQ- and BWA-compatible color space output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
+		help="MAQ- and BWA-compatible color space output. This enables -c, -d, -t, --strip-f3, -y '/1' and -z.")
 	group.add_option("--length-tag", default=None, metavar="TAG",
 		help="Search for TAG followed by a decimal number in the name of the read "
 			"(description/comment field of the FASTA or FASTQ file). Replace the "
 			"decimal number with the correct length of the trimmed read. "
 			"For example, use --length-tag 'length=' to search for fields "
 			"like 'length=123'.")
+	group.add_option("--zero-cap", "-z", action='store_true', default=False,
+		help="Change negative quality values to zero (workaround to avoid segmentation faults in BWA)")
+
 	parser.add_option_group(group)
 
 	options, args = parser.parse_args()
@@ -479,6 +492,7 @@ def main():
 		options.trim_primer = True
 		options.strip_f3 = True
 		options.suffix = "/1"
+		options.zero_cap = True
 	if options.trim_primer and not options.colorspace:
 		parser.error("Trimming the primer makes only sense in color space.")
 	if options.double_encode and not options.colorspace:
@@ -532,6 +546,9 @@ def main():
 				seq = seq[:index]
 
 			desc, seq, qualities, trimmed = cutter.cut(desc, seq, qualities)
+			if options.zero_cap:
+				qualities = zero_cap(qualities)
+
 			if readfilter.keep(desc, seq, qualities):
 				seq = initial + seq
 				write_read(desc, seq, qualities, trimmed_outfile if trimmed else untrimmed_outfile)

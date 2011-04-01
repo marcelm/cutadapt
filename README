@@ -231,6 +231,14 @@ The -b parameter currently does not work with color space data.
 Changes
 =======
 
+
+v0.9.4
+------
+* now compatible with Python 3
+* Add the --zero-cap option, which changes negative quality values to zero.
+  This is a workaround to avoid segmentation faults in BWA. The option is now
+  enabled by default when --bwa/--maq is used.
+
 v0.9.2
 ------
 * Install a single 'cutadapt' Python package instead of multiple Python
