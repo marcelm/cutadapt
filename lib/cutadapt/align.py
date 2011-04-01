@@ -223,7 +223,7 @@ def semiglobalalign(s1, s2):
 
 
 #try:
-from calign import globalalign
+from cutadapt.calign import globalalign
 #except ImportError:
 	#print("Warning: C implementation of alignment algorithm not available. Using slow Python version!", file=sys.stderr)
 	#semiglobalalign = pysemiglobalalign

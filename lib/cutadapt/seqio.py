@@ -2,8 +2,12 @@
 __author__ = "Marcel Martin"
 
 from collections import namedtuple
-from itertools import izip
-from xopen import xopen
+import sys
+if sys.version_info[0] < 3:
+	from itertools import izip as zip
+else:
+	basestring = str
+from cutadapt.xopen import xopen
 from os.path import splitext
 import sys
 
@@ -250,7 +254,7 @@ class FastaQualReader(object):
 		qualities is a string and it contains the qualities encoded as ascii(qual+33).
 		"""
 		lengthdiff = 1 if self.colorspace else 0
-		for fastaread, qualread in izip(self.fastareader, self.qualreader):
+		for fastaread, qualread in zip(self.fastareader, self.qualreader):
 			qualities = _quality_to_ascii(map(int, qualread.sequence.split()))
 			assert fastaread.name == qualread.name
 			if len(qualities) + lengthdiff != len(fastaread.sequence):

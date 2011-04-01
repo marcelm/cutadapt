@@ -57,7 +57,11 @@ import re
 import gzip
 import time
 from os.path import dirname, join, isfile, realpath
-from string import maketrans
+if sys.version_info[0] < 3:
+	from string import maketrans
+else:
+	maketrans = bytes.maketrans
+	xrange = range
 from optparse import OptionParser, OptionGroup
 from contextlib import closing
 from collections import defaultdict
@@ -78,7 +82,7 @@ BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
 ANYWHERE = align.SEMIGLOBAL
 
 # for double-encoding colorspace sequences
-DOUBLE_ENCODE_TRANS = maketrans('0123.', 'ACGTN')
+DOUBLE_ENCODE_TRANS = maketrans(b'0123.', b'ACGTN')
 
 
 class FormatError(Exception):
@@ -391,7 +395,7 @@ def main():
 		help="Discard reads that contain the adapter instead of trimming them. Also use -O in order to avoid throwing away too many randomly matching reads!")
 	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
 		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
-	group.add_option("-M", "--maximum-length", type=int, default=sys.maxint, metavar="LENGTH",
+	group.add_option("-M", "--maximum-length", type=int, default=sys.maxsize, metavar="LENGTH",
 		help="Discard trimmed reads that are longer than LENGTH. "
 			"Reads that are too long even before adapter removal "
 			"are also discarded. In colorspace, an initial primer "

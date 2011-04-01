@@ -5,6 +5,11 @@ import gzip
 
 __author__ = 'Marcel Martin'
 
+import sys
+if sys.version_info[0] >= 3:
+	basestring = str
+	from codecs import getreader, getwriter
+
 
 def xopen(filename, mode='r'):
 	"""
@@ -18,6 +23,12 @@ def xopen(filename, mode='r'):
 	if filename == '-':
 		return sys.stdout if 'r' in mode else sys.stdin
 	if filename.endswith('.gz'):
-		return gzip.open(filename, mode)
+		if sys.version_info[0] < 3:
+			return gzip.open(filename, mode)
+		else:
+			if 'r' in mode:
+				return getreader('ascii')(gzip.open(filename, mode))
+			else:
+				return getwriter('ascii')(gzip.open(filename, mode))
 	else:
 		return open(filename, mode)

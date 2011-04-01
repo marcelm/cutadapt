@@ -1,6 +1,10 @@
 """
 Quality trimming.
 """
+import sys
+if sys.version_info[0] >= 3:
+	xrange = range
+
 
 def quality_trim_index(qualities, cutoff):
 	"""

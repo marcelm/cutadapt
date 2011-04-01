@@ -310,12 +310,46 @@ py_globalalign(PyObject *self UNUSED, PyObject *args)
 /* module initialization */
 
 static PyMethodDef methods[] = {
-	{ "globalalign", py_globalalign, METH_VARARGS, globalalign__doc__ },
-	{NULL, NULL, 0, NULL} /* Sentinel */
+	{"globalalign", (PyCFunction)py_globalalign, METH_VARARGS, globalalign__doc__},
+	{NULL, NULL}
 };
 
-PyMODINIT_FUNC
+#if PY_MAJOR_VERSION >= 3
+
+static struct PyModuleDef moduledef = {
+	PyModuleDef_HEAD_INIT,
+	"calign",
+	NULL, // module docstring
+	-1,   // additional memory (-1 if not needed)
+	methods,
+	NULL,
+	NULL, // GC traversal function
+	NULL, // GC clear function
+	NULL
+};
+
+#define INITERROR return NULL
+
+PyObject *
+PyInit_calign(void)
+
+#else
+#define INITERROR return
+
+void
 initcalign(void)
+#endif
 {
-    (void) Py_InitModule("calign", methods);
+#if PY_MAJOR_VERSION >= 3
+	PyObject *module = PyModule_Create(&moduledef);
+#else
+	PyObject *module = Py_InitModule("calign", methods);
+#endif
+
+	if (module == NULL)
+		INITERROR;
+
+#if PY_MAJOR_VERSION >= 3
+	return module;
+#endif
 }

@@ -4,7 +4,7 @@ import sys
 from lib.cutadapt import __version__
 
 if sys.version_info < (2, 6):
-	print "At least Python 2.6 is required."
+	sys.stdout.write("At least Python 2.6 is required.\n")
 	sys.exit(1)
 
 align_module = Extension('cutadapt.calign', sources = [ 'lib/cutadapt/calignmodule.c' ])
@@ -29,7 +29,7 @@ setup(
 		"Natural Language :: English",
 		"Programming Language :: Python :: 2.6",
 		"Programming Language :: Python :: 2.7",
-		#"Programming Language :: Python :: 3",
+		"Programming Language :: Python :: 3",
 		#"Operating System :: POSIX",
 		"Topic :: Scientific/Engineering :: Bio-Informatics"
 	]
