@@ -253,16 +253,19 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 class ReadFilter(object):
 	"""Filter reads according to length and according to whether any adapter matches."""
 
-	def __init__(self, minimum_length, maximum_length, too_short_outfile, statistics):
+	def __init__(self, minimum_length, maximum_length, too_short_outfile, discard_trimmed, statistics):
 		self.minimum_length = minimum_length
 		self.maximum_length = maximum_length
 		self.too_short_outfile = too_short_outfile
 		self.statistics = statistics
+		self.discard_trimmed = discard_trimmed
 
-	def keep(self, desc, seq, qualities):
+	def keep(self, desc, seq, qualities, trimmed):
 		"""
 		Return whether to keep the given read.
 		"""
+		if self.discard_trimmed and trimmed:
+			return False
 		if len(seq) < self.minimum_length:
 			self.statistics.too_short += 1
 			if self.too_short_outfile is not None:
@@ -401,7 +404,7 @@ def main():
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options for filtering of processed reads")
-	group.add_option("--discard", "--discard-trimmed", action='store_true', default=False,
+	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
 		help="Discard reads that contain the adapter instead of trimming them. Also use -O in order to avoid throwing away too many randomly matching reads!")
 	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
 		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
@@ -520,7 +523,8 @@ def main():
 	#total_bases = 0
 	#total_quality_trimmed = 0
 	cutter = AdapterCutter(options, adapters)
-	readfilter = ReadFilter(options.minimum_length, options.maximum_length, too_short_outfile, cutter.stats) # TODO stats?
+	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
+		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
 	try:
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace)
 		for desc, seq, qualities in reader:
@@ -549,7 +553,7 @@ def main():
 			if options.zero_cap:
 				qualities = zero_cap(qualities)
 
-			if readfilter.keep(desc, seq, qualities):
+			if readfilter.keep(desc, seq, qualities, trimmed):
 				seq = initial + seq
 				write_read(desc, seq, qualities, trimmed_outfile if trimmed else untrimmed_outfile)
 	except FormatError as e:
