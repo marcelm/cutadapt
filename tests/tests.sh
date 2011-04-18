@@ -1,6 +1,6 @@
 #!/bin/bash
 # Test cases for cutadapt. Run this script within the tests/ directory.
-set -ex
+set -e
 
 # path to the script to test
 CA="../cutadapt"
@@ -18,6 +18,7 @@ function test_cutadapt() {
 	else
 		second=""
 	fi
+	echo "Running $CA $1 data/$3 ${second}"
 	if ! $CA $1 "data/$3" ${second} > tmp.fastaq 2> tmp.log; then
 		cat tmp.log
 		exit 1
