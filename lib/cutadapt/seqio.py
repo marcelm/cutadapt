@@ -14,6 +14,13 @@ import sys
 Sequence = namedtuple("Sequence", "name sequence qualities")
 
 
+class FormatError(Exception):
+	"""
+	Raised when an input file (FASTA or FASTQ) is malformatted.
+	"""
+	pass
+
+
 class FileWithPrependedLine(object):
 	"""
 	A file-like object that allows to "prepend" a single
@@ -188,6 +195,7 @@ class FastqReader(object):
 			file = xopen(file, "r")
 		self.fp = file
 		self.colorspace = colorspace
+		self.twoheaders = False
 
 	def __iter__(self):
 		"""
@@ -202,7 +210,16 @@ class FastqReader(object):
 			elif i % 4 == 1:
 				sequence = line.strip()
 			elif i % 4 == 2:
-				assert line.startswith('+')
+				line = line.strip()
+				if not line.startswith('+'):
+					raise FormatError("at line {}, expected a line starting with '@'".format(i+1))
+				if len(line) > 1:
+					self.twoheaders = True
+					if not line[1:] == name:
+						raise FormatError(
+							"At line {}: Two sequence descriptions are given in "
+							"the FASTQ file, but they don't match "
+							"('{}' != '{}')".format(i+1, name, line.rstrip()[1:]))
 			elif i % 4 == 3:
 				qualities = line.rstrip("\n\r")
 				if len(qualities) + lengthdiff != len(sequence):
@@ -313,12 +330,14 @@ def writefasta(f, seqlist, linelength=None):
 		for name, seq in seqlist:
 			f.write('>%s\n%s\n' % (name, seq))
 
-def writefastq(f, seqlist):
+
+def writefastq(f, seqlist, twoheaders=False):
 	"""
 	seqlist must contain (description, sequence, qualities) tuples
+
+	If twoheaders is True, the sequence name (description) is also written
+	after the "+" character.
 	"""
 	for description, sequence, qualities in seqlist:
-		f.write('@%s\n%s\n+\n%s\n' % (description, sequence, qualities))
-
-
-
+		tmp = description if twoheaders else ''
+		f.write('@%s\n%s\n+%s\n%s\n' % (description, sequence, tmp, qualities))
