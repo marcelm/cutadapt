@@ -205,14 +205,15 @@ class FastqReader(object):
 		lengthdiff = 1 if self.colorspace else 0
 		for i, line in enumerate(self.fp):
 			if i % 4 == 0:
-				assert line[0] == '@'
+				if not line.startswith('@'):
+					raise FormatError("at line {}, expected a line starting with '+'".format(i+1))
 				name = line.strip()[1:]
 			elif i % 4 == 1:
 				sequence = line.strip()
 			elif i % 4 == 2:
 				line = line.strip()
 				if not line.startswith('+'):
-					raise FormatError("at line {}, expected a line starting with '@'".format(i+1))
+					raise FormatError("at line {}, expected a line starting with '+'".format(i+1))
 				if len(line) > 1:
 					self.twoheaders = True
 					if not line[1:] == name:

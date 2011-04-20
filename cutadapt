@@ -562,7 +562,7 @@ def main():
 				seq = initial + seq
 				write_read(desc, seq, qualities, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
 	except seqio.FormatError as e:
-		print(e, file=sys.stderr)
+		print("Error:", e, file=sys.stderr)
 		return 1
 	sys.stdout = sys.stderr
 	cutter.stats.print_statistics(options.error_rate)
