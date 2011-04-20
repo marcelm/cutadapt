@@ -29,12 +29,12 @@ function test_cutadapt() {
 	rm tmp.fastaq tmp.log
 }
 
-test_cutadapt "-e 0.12 -b TTAGACATATCTCCGTCG" small.fastq small.fastq
+test_cutadapt "-b TTAGACATATCTCCGTCG" small.fastq small.fastq
 
 # lower case adapter
-test_cutadapt "-e 0.12 -b ttagacatatctccgtcg" lowercase.fastq small.fastq
+test_cutadapt "-b ttagacatatctccgtcg" lowercase.fastq small.fastq
 
 # test --discard
-test_cutadapt "-e 0.12 -b TTAGACATATCTCCGTCG --discard" discard.fastq small.fastq
+test_cutadapt "-b TTAGACATATCTCCGTCG --discard" discard.fastq small.fastq
 
 echo "Tests passed"
