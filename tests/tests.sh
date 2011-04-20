@@ -37,4 +37,7 @@ test_cutadapt "-b ttagacatatctccgtcg" lowercase.fastq small.fastq
 # test --discard
 test_cutadapt "-b TTAGACATATCTCCGTCG --discard" discard.fastq small.fastq
 
+# test if sequence name after the "+" is retained
+test_cutadapt "-e 0.12 -b TTAGACATATCTCCGTCG" plus.fastq plus.fastq
+
 echo "Tests passed"
