@@ -227,7 +227,7 @@ def write_read(desc, seq, qualities, outfile, twoheaders=False):
 		print('@%s\n%s\n+%s\n%s' % (desc, seq, tmp, qualities), file=outfile)
 
 
-def read_sequences(seqfilename, qualityfilename, colorspace):
+def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 	"""
 	Read sequences and (if available) quality information from either:
 	* seqfilename in FASTA format (qualityfilename must be None)
@@ -246,8 +246,8 @@ def read_sequences(seqfilename, qualityfilename, colorspace):
 		# read from .(CS)FASTA/.QUAL
 		return seqio.FastaQualReader(seqfilename, qualityfilename, colorspace)
 	else:
-		# read from FASTA or FASTQ (autodetected)
-		return seqio.SequenceReader(seqfilename, colorspace)
+		# read from FASTA or FASTQ
+		return seqio.SequenceReader(seqfilename, colorspace, fileformat)
 
 
 class ReadFilter(object):
@@ -390,6 +390,10 @@ def main():
 	"""Main function that evaluates command-line parameters and contains the main loop over all reads."""
 	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
 
+	parser.add_option("-f", "--format", default=None,
+		help="Input file format; can be either 'fasta' or 'fastq'. "
+		"Ignored when reading csfasta/qual files (default: auto-detect from file name extension).")
+
 	group = OptionGroup(parser, "Options that influence how the adapters are found")
 	group.add_option("-a", "--adapter", action="append", dest="adapters",
 		help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed. If multiple -a or -b options are given, only the best matching adapter is trimmed.")
@@ -474,6 +478,13 @@ def main():
 	if len(args) == 2:
 		quality_filename = args[1]
 
+	if options.format is not None and options.format.lower() not in ['fasta', 'fastq']:
+		parser.error("The input file format must be either 'fasta' or 'fastq' (not '{}').".format(options.format))
+
+	# TODO should this really be an error?
+	if options.format is not None and quality_filename is not None:
+		parser.error("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
+
 	# default output files (overwritten below)
 	trimmed_outfile = sys.stdout # reads with adapters go here
 	too_short_outfile = None # too short reads go here
@@ -527,7 +538,7 @@ def main():
 		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
 	try:
 		twoheaders = None
-		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace)
+		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
 		for desc, seq, qualities in reader:
 			# In colorspace, the first character is the last nucleotide of the primer base
 			# and the second character encodes the transition from the primer base to the

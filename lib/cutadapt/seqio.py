@@ -55,11 +55,14 @@ class UnknownFileType(Exception):
 	pass
 
 
-def SequenceReader(file, colorspace=False):
+def SequenceReader(file, colorspace=False, fileformat=None):
 	"""
 	Reader for FASTA and FASTQ files that autodetects the file format.
 	Returns either an instance of FastaReader or of FastqReader,
 	depending on file type.
+
+	The autodetection can be skipped by setting fileformat to the string
+	'fasta' or 'fastq'
 
 	file is a filename or a file-like object.
 	If file is a filename, then .gz files are supported.
@@ -69,6 +72,15 @@ def SequenceReader(file, colorspace=False):
 	from standard input), then the file is read and the file
 	type determined from the content.
 	"""
+	if fileformat is not None:
+		fileformat = fileformat.lower()
+		if fileformat == 'fasta':
+			return FastaReader(file)
+		elif fileformat == 'fastq':
+			return FastqReader(file)
+		else:
+			raise UnknownFileType("File format {} is unknown (expected 'fasta' or 'fastq').".format(fileformat))
+
 	name = None
 	if file == "-":
 		file = sys.stdin
@@ -86,7 +98,7 @@ def SequenceReader(file, colorspace=False):
 		elif ext in ['.fastq']:
 			return FastqReader(file, colorspace)
 		else:
-			raise UnknownFileType("Could not determine whether this is FASTA or FASTQ: file name extension %s not recognized" % ext)
+			raise UnknownFileType("Could not determine whether this is FASTA or FASTQ: file name extension {} not recognized".format(ext))
 
 	# No name available.
 	# Assume that 'file' is an open file
