@@ -240,6 +240,9 @@ v0.9.4
   enabled by default when --bwa/--maq is used.
 * Some unit tests added. Run them with cd tests && ./tests.sh .
 * Fix issue 16: --discard-trimmed did not work.
+* Allow to override auto-detection of input file format with the new -f/--format
+  parameter. This mostly fixes issue 12.
+* Don't break when input file is empty.
 
 v0.9.2
 ------
@@ -344,3 +347,5 @@ To Do / Ideas
   * allow .txt input/output
   * test on Windows
   * SRA color space FASTQ files include a quality for the initial nucleotide, this is not handled correctly
+  * check whether input is FASTQ although -f fasta is given
+

@@ -31,6 +31,9 @@ function test_cutadapt() {
 
 test_cutadapt "-b TTAGACATATCTCCGTCG" small.fastq small.fastq
 
+# empty input
+test_cutadapt "-a TTAGACATATCTCCGTCG" empty.fastq empty.fastq
+
 # lower case adapter
 test_cutadapt "-b ttagacatatctccgtcg" lowercase.fastq small.fastq
 

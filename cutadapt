@@ -135,11 +135,13 @@ class Statistics(object):
 		print("Command line parameters:", " ".join(sys.argv[1:]))
 		print("Maximum error rate: %.2f%%" % (error_rate * 100.))
 		print("   Processed reads:", self.n)
-		print("     Trimmed reads:", self.reads_changed, "(%5.1f%%)" % (100. * self.reads_changed / self.n))
-		print("   Too short reads:", self.too_short, "(%5.1f%% of processed reads)" % (100. * self.too_short / self.n))
-		print("    Too long reads:", self.too_long, "(%5.1f%% of processed reads)" % (100. * self.too_long / self.n))
+		if self.n > 0:
+			print("     Trimmed reads:", self.reads_changed, "(%5.1f%%)" % (100. * self.reads_changed / self.n))
+			print("   Too short reads:", self.too_short, "(%5.1f%% of processed reads)" % (100. * self.too_short / self.n))
+			print("    Too long reads:", self.too_long, "(%5.1f%% of processed reads)" % (100. * self.too_long / self.n))
 		print("        Total time: %9.2f s" % self.time)
-		print("     Time per read: %9.2f ms" % (1000. * self.time / self.n))
+		if self.n > 0:
+			print("     Time per read: %9.2f ms" % (1000. * self.time / self.n))
 		print()
 		for index, (where, adapter) in enumerate(self.adapters):
 			total_front = sum(self.lengths_front[index].values())
@@ -163,6 +165,8 @@ class Statistics(object):
 				print()
 				print("Histogram of adapter lengths")
 				print_histogram(self.lengths_back[index])
+		if self.n == 0:
+			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
 
 
 def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
@@ -578,6 +582,7 @@ def main():
 	sys.stdout = sys.stderr
 	cutter.stats.print_statistics(options.error_rate)
 	sys.stdout = sys.__stdout__
+
 	return 0
 
 

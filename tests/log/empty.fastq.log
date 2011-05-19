@@ -1,0 +1,11 @@
+Maximum error rate: 10.00%
+   Processed reads: 0
+
+=== Adapter 1 ===
+
+Adapter 'TTAGACATATCTCCGTCG', length 18, was trimmed 0 times.
+
+Histogram of adapter lengths
+length	count
+
+No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.
