@@ -41,6 +41,6 @@ test_cutadapt "-b TTAGACATATCTCCGTCG --discard" discard.fastq small.fastq
 test_cutadapt "-e 0.12 -b TTAGACATATCTCCGTCG" plus.fastq plus.fastq
 
 # test the -f/--format parameter
-test_cutadapt "-f fasta -b TTAGACATATCTCCGTCG" small.fastq small.myownextension
+test_cutadapt "-f fastq -b TTAGACATATCTCCGTCG" small.fastq small.myownextension
 
 echo "Tests passed"
