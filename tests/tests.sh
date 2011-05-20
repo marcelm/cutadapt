@@ -58,4 +58,7 @@ test_cutadapt "-c -m 5 -a 330201030313112312 --too-short-output tooshort.tmp.fa"
 diff -u data/tooshort.fa tooshort.tmp.fa
 rm tooshort.tmp.fa
 
+# test -M/--maximum-length
+test_cutadapt "-c -M 5 -a 330201030313112312" maxlen.fa maxlen.fa
+
 echo "Tests passed"
