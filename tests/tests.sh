@@ -61,4 +61,9 @@ rm tooshort.tmp.fa
 # test -M/--maximum-length
 test_cutadapt "-c -M 5 -a 330201030313112312" maxlen.fa maxlen.fa
 
+# test 454 data; test -n and --length-tag
+test_cutadapt "-n 3 -e 0.1 --length-tag length=
+	-b TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG
+	-b TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA" 454.fa 454.fa
+
 echo "Tests passed"
