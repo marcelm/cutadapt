@@ -50,4 +50,12 @@ test_cutadapt "-e 0.12 -b TTAGACATATCTCCGTCG" plus.fastq plus.fastq
 # test the -f/--format parameter
 test_cutadapt "-f fastq -b TTAGACATATCTCCGTCG" small.fastq small.myownextension
 
+# test -m/--minimum-length
+test_cutadapt "-c -m 5 -a 330201030313112312" minlen.fa minlen.fa
+
+# test --too-short-output
+test_cutadapt "-c -m 5 -a 330201030313112312 --too-short-output tooshort.tmp.fa" minlen.fa minlen.fa
+diff -u data/tooshort.fa tooshort.tmp.fa
+rm tooshort.tmp.fa
+
 echo "Tests passed"
