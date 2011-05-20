@@ -185,9 +185,10 @@ The program is sufficiently fast for my purposes, but speedups should be simple 
 Partial adapter matches
 -----------------------
 
-Cutadapt correctly deals with partial adapter matches. As an example, suppose
-your adapter sequence is "ADAPTER" (specified via the -a or --adapter
-command-line parameter). If you have these input sequences:
+Cutadapt correctly deals with partial adapter matches, and also with any trailing
+sequences after the adapter. As an example, suppose your adapter sequence is
+"ADAPTER" (specified via the -a or --adapter command-line parameter).
+If you have these input sequences:
 
 MYSEQUENCEADAPTER
 MYSEQUENCEADAP
@@ -238,7 +239,7 @@ v0.9.4
 * Add the --zero-cap option, which changes negative quality values to zero.
   This is a workaround to avoid segmentation faults in BWA. The option is now
   enabled by default when --bwa/--maq is used.
-* Some unit tests added. Run them with cd tests && ./tests.sh .
+* Lots of unit tests added. Run them with cd tests && ./tests.sh .
 * Fix issue 16: --discard-trimmed did not work.
 * Allow to override auto-detection of input file format with the new -f/--format
   parameter. This mostly fixes issue 12.
