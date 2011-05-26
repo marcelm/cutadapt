@@ -66,4 +66,10 @@ test_cutadapt "-n 3 -e 0.1 --length-tag length=
 	-b TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG
 	-b TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA" 454.fa 454.fa
 
+# test -O/--overlap with -a (-c omitted on purpose)
+test_cutadapt "-O 10 -a 330201030313112312" overlapa.fa overlapa.fa
+
+# test -O/--overlap with -b
+test_cutadapt "-O 10 -b TTAGACATATCTCCGTCG" overlapb.fa overlapb.fa
+
 echo "Tests passed"
