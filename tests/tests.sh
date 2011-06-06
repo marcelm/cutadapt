@@ -40,6 +40,7 @@ test_cutadapt "-b ttagacatatctccgtcg" lowercase.fastq small.fastq
 # test -r/--rest-file
 test_cutadapt "-b ADAPTER -r rest.tmp" rest.fa rest.fa
 diff -u rest.tmp data/rest.txt
+rm rest.tmp
 
 # test --discard
 test_cutadapt "-b TTAGACATATCTCCGTCG --discard" discard.fastq small.fastq
