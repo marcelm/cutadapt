@@ -19,7 +19,7 @@ function test_cutadapt() {
 		second=""
 	fi
 	echo "Running $CA $1 data/$3 ${second}"
-	if ! $CA $1 "data/$3" ${second} > tmp.fastaq 2> tmp.log; then
+	if ! $CA $1 "data/$3" -o tmp.fastaq ${second} > tmp.log; then
 		cat tmp.log
 		exit 1
 	fi

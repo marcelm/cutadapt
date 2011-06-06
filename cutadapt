@@ -425,7 +425,8 @@ def main():
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
 	group.add_option("-o", "--output", default=None, metavar="FILE",
-		help="The modified sequences get written to this file. The format is FASTQ if qualities are available, FASTA otherwise. (default: standard output)")
+		help="Write the modified sequences to this file instead of standard output and send the summary report to standard output. "
+		     "The format is FASTQ if qualities are available, FASTA otherwise. (default: standard output)")
 	group.add_option("-r", "--rest-file", default=None, metavar="FILE",
 		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
 	group.add_option("--too-short-output", default=None, metavar="FILE",
@@ -579,7 +580,8 @@ def main():
 	except seqio.FormatError as e:
 		print("Error:", e, file=sys.stderr)
 		return 1
-	sys.stdout = sys.stderr
+	if options.output is None:
+		sys.stdout = sys.stderr
 	cutter.stats.print_statistics(options.error_rate)
 	sys.stdout = sys.__stdout__
 
