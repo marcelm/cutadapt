@@ -21,7 +21,7 @@ def xopen(filename, mode='r'):
 	"""
 	assert isinstance(filename, basestring)
 	if filename == '-':
-		return sys.stdout if 'r' in mode else sys.stdin
+		return sys.stdin if 'r' in mode else sys.stdout
 	if filename.endswith('.gz'):
 		if sys.version_info[0] < 3:
 			return gzip.open(filename, mode)
