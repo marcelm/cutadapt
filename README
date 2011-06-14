@@ -232,6 +232,10 @@ The -b parameter currently does not work with color space data.
 Changes
 =======
 
+v0.9.5
+------
+* Fix issue 20: Make report go to standard output when -o/--output is specified.
+* Recognize .fq as an extension for FASTQ files
 
 v0.9.4
 ------
@@ -349,4 +353,5 @@ To Do / Ideas
   * test on Windows
   * SRA color space FASTQ files include a quality for the initial nucleotide, this is not handled correctly
   * check whether input is FASTQ although -f fasta is given
+  * close on StopIteration
 
