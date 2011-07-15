@@ -73,4 +73,7 @@ test_cutadapt "-O 10 -a 330201030313112312" overlapa.fa overlapa.fa
 # test -O/--overlap with -b
 test_cutadapt "-O 10 -b TTAGACATATCTCCGTCG" overlapb.fa overlapb.fa
 
+# test -q with low qualities
+test_cutadapt "-q 10 -a XXXXXX" lowqual.fastq lowqual.fastq
+
 echo "Tests passed"
