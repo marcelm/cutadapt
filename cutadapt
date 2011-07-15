@@ -399,7 +399,7 @@ def main():
 		"Ignored when reading csfasta/qual files (default: auto-detect from file name extension).")
 
 	group = OptionGroup(parser, "Options that influence how the adapters are found")
-	group.add_option("-a", "--adapter", action="append", dest="adapters",
+	group.add_option("-a", "--adapter", action="append", metavar="ADAPTER", dest="adapters",
 		help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed. If multiple -a or -b options are given, only the best matching adapter is trimmed.")
 	group.add_option("-b", "--anywhere", action="append", metavar="ADAPTER",
 		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a or -b options are given, only the best matching adapter is trimmed.")
