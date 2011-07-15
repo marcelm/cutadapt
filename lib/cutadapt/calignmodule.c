@@ -37,7 +37,7 @@ enum FLAG {
 
 // insertion means: inserted into seq1 (does not appear in seq2)
 #define SCORE_MATCH 1
-#define SCORE_MISMATCH -1
+#define SCORE_MISMATCH -2
 #define SCORE_DELETION -2
 #define SCORE_INSERTION -2
 
