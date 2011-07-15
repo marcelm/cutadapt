@@ -182,6 +182,8 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	max_error_rate -- Maximum allowed error rate. The error rate is
 		the number of errors in the alignment divided by the length
 		of the part of the alignment that matches the adapter.
+	minimum_overlap -- Minimum length of the part of the alignment
+		that matches the adapter.
 
 	Return tuple (best_alignment, best_index).
 
