@@ -37,43 +37,46 @@ test_cutadapt "-a TTAGACATATCTCCGTCG" empty.fastq empty.fastq
 # lower case adapter
 test_cutadapt "-b ttagacatatctccgtcg" lowercase.fastq small.fastq
 
-# test -r/--rest-file
+# -r/--rest-file
 test_cutadapt "-b ADAPTER -r rest.tmp" rest.fa rest.fa
 diff -u rest.tmp data/rest.txt
 rm rest.tmp
 
-# test --discard
+# --discard
 test_cutadapt "-b TTAGACATATCTCCGTCG --discard" discard.fastq small.fastq
 
 # test if sequence name after the "+" is retained
 test_cutadapt "-e 0.12 -b TTAGACATATCTCCGTCG" plus.fastq plus.fastq
 
-# test the -f/--format parameter
+# the -f/--format parameter
 test_cutadapt "-f fastq -b TTAGACATATCTCCGTCG" small.fastq small.myownextension
 
-# test -m/--minimum-length
+# -m/--minimum-length
 test_cutadapt "-c -m 5 -a 330201030313112312" minlen.fa minlen.fa
 
-# test --too-short-output
+# --too-short-output
 test_cutadapt "-c -m 5 -a 330201030313112312 --too-short-output tooshort.tmp.fa" minlen.fa minlen.fa
 diff -u data/tooshort.fa tooshort.tmp.fa
 rm tooshort.tmp.fa
 
-# test -M/--maximum-length
+# -M/--maximum-length
 test_cutadapt "-c -M 5 -a 330201030313112312" maxlen.fa maxlen.fa
 
-# test 454 data; test -n and --length-tag
+# 454 data; -n and --length-tag
 test_cutadapt "-n 3 -e 0.1 --length-tag length=
 	-b TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG
 	-b TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA" 454.fa 454.fa
 
-# test -O/--overlap with -a (-c omitted on purpose)
+# -O/--overlap with -a (-c omitted on purpose)
 test_cutadapt "-O 10 -a 330201030313112312" overlapa.fa overlapa.fa
 
-# test -O/--overlap with -b
+# -O/--overlap with -b
 test_cutadapt "-O 10 -b TTAGACATATCTCCGTCG" overlapb.fa overlapb.fa
 
-# test -q with low qualities
+# -q with low qualities
 test_cutadapt "-q 10 -a XXXXXX" lowqual.fastq lowqual.fastq
+
+# poly-A tails
+test_cutadapt "-m 24 -O 10 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" polya.fasta polya.fasta
 
 echo "Tests passed"
