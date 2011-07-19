@@ -12,7 +12,7 @@ import sys
 # This is equivalent to saying that in the alignment,
 # gaps in the beginning of seq2 are free.
 #
-# The other flags have a similar meaning.
+# The other flags have an equivalent meaning.
 START_WITHIN_SEQ1 = 1
 START_WITHIN_SEQ2 = 2
 STOP_WITHIN_SEQ1 = 4
@@ -43,7 +43,7 @@ def pysemiglobalalign(s1, s2, print_table=False):
 	(an INDEL is marked by '-').
 
 	start1 is the position within r1 at which the part of s1, that is aligned, starts.
-	start2 is the position within r1 at which the part of s1, that is aligned, ends.
+	stop2 is the position within r1 at which the part of s1, that is aligned, ends.
 	The same holds for start2, stop2.
 
 	It is always the case that at least one of start1 and start2 is zero.
@@ -214,16 +214,8 @@ def pysemiglobalalign(s1, s2, print_table=False):
 	return (r1, r2, start1, stop1, start2, stop2, errors)
 
 
-def semiglobalalign(s1, s2):
-	"""
-	Computes an end-gap free alignment (also called free-shift alignment) of
-	strings s1 and s2.
-	"""
-	return globalalign(s1, s2, SEMIGLOBAL)
-
-
 #try:
-from cutadapt.calign import globalalign
+from cutadapt.calign import globalalign, globalalign_locate
 #except ImportError:
 	#print("Warning: C implementation of alignment algorithm not available. Using slow Python version!", file=sys.stderr)
 	#semiglobalalign = pysemiglobalalign
