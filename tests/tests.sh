@@ -29,6 +29,8 @@ function test_cutadapt() {
 	rm tmp.fastaq tmp.log
 }
 
+test_cutadapt "-b ADAPTER" example.fa example.fa
+
 test_cutadapt "-b TTAGACATATCTCCGTCG" small.fastq small.fastq
 
 # empty input
