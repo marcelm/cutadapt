@@ -236,6 +236,7 @@ v0.9.5
 ------
 * Fix issue 20: Make report go to standard output when -o/--output is specified.
 * Recognize .fq as an extension for FASTQ files
+* many more unit tests
 
 v0.9.4
 ------

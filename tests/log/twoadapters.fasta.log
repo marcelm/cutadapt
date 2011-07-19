@@ -1,0 +1,34 @@
+Maximum error rate: 10.00%
+   Processed reads: 2
+     Trimmed reads: 2 (100.0%)
+   Too short reads: 0 (  0.0% of processed reads)
+    Too long reads: 0 (  0.0% of processed reads)
+
+=== Adapter 1 ===
+
+Adapter 'CTCGAGAATTCTGGATCCTC', length 20, was trimmed 2 times.
+2 times, it overlapped the 5' end of a read
+0 times, it overlapped the 3' end or was within the read
+
+Histogram of adapter lengths (5')
+length	count
+7	1
+20	1
+
+
+Histogram of adapter lengths (3' or within)
+length	count
+
+=== Adapter 2 ===
+
+Adapter 'GAGGATCCAGAATTCTCGAGTT', length 22, was trimmed 0 times.
+0 times, it overlapped the 5' end of a read
+0 times, it overlapped the 3' end or was within the read
+
+Histogram of adapter lengths (5')
+length	count
+
+
+Histogram of adapter lengths (3' or within)
+length	count
+

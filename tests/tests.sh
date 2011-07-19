@@ -79,6 +79,9 @@ test_cutadapt "-O 10 -b TTAGACATATCTCCGTCG" overlapb.fa overlapb.fa
 # -q with low qualities
 test_cutadapt "-q 10 -a XXXXXX" lowqual.fastq lowqual.fastq
 
+# two adapters
+test_cutadapt "-b CTCGAGAATTCTGGATCCTC -b GAGGATCCAGAATTCTCGAGTT" twoadapters.fasta twoadapters.fasta
+
 # poly-A tails
 test_cutadapt "-m 24 -O 10 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" polya.fasta polya.fasta
 
