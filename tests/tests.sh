@@ -93,4 +93,7 @@ test_cutadapt "-c -e 0.12 -a 330201030313112312 -x abc: --strip-f3" solidbfast.f
 # poly-A tails
 test_cutadapt "-m 24 -O 10 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" polya.fasta polya.fasta
 
+# some reads properly trimmed since cutadapt 0.9.5
+test_cutadapt "-c -e 0.122 -a 330201030313112312" solid.fasta solid.fasta
+
 echo "Tests passed"
