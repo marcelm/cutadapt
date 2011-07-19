@@ -5,15 +5,11 @@ import sys
 uncompressed = "tests/data/simple.fasta"
 compressed = "tests/data/compressed.fastq.gz"
 
-if sys.version_info[0] < 3:
-	def test_xopen():
-		for name in [compressed, uncompressed]:
-			f = xopen(name)
-			assert not f.closed
-			f.close()
-			assert f.closed
+def test_xopen():
+	f = xopen(uncompressed)
+	assert f.readline() == '# a comment\n'
+	f.close()
 
-			with xopen(name) as f:
-				assert not f.closed
-				data = f.read()
-			assert f.closed
+	f = xopen(compressed)
+	assert f.readline() == '@first_sequence\n'
+	f.close()
