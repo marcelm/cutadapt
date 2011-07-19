@@ -34,6 +34,9 @@ test_cutadapt "-b TTAGACATATCTCCGTCG" small.fastq small.fastq
 # empty input
 test_cutadapt "-a TTAGACATATCTCCGTCG" empty.fastq empty.fastq
 
+# DOS/Windows newlines
+test_cutadapt "-e 0.12 -b TTAGACATATCTCCGTCG" dos.fastq dos.fastq
+
 # lower case adapter
 test_cutadapt "-b ttagacatatctccgtcg" lowercase.fastq small.fastq
 
