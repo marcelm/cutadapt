@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010 Marcel Martin <marcel.martin@tu-dortmund.de>
+Copyright (c) 2010,2011 Marcel Martin <marcel.martin@tu-dortmund.de>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,8 @@ enum FLAG {
 	START_WITHIN_SEQ1 = 1,
 	START_WITHIN_SEQ2 = 2,
 	STOP_WITHIN_SEQ1 = 4,
-	STOP_WITHIN_SEQ2 = 8
+	STOP_WITHIN_SEQ2 = 8,
+	SEMIGLOBAL = 15
 };
 
 // insertion means: inserted into seq1 (does not appear in seq2)
@@ -54,7 +55,7 @@ static void reverse_string(char* s, int len) {
 // TODO fix docstring!
 
 PyDoc_STRVAR(globalalign__doc__,
-"globalalign(string1, string2) -> (r1, r2, start1, stop1, start2, stop2, errors)\n\n\
+"globalalign(string1, string2, flags=0) -> (r1, r2, start1, stop1, start2, stop2, errors)\n\n\
 \n\
 Compute an end-gap free alignment (also called free-shift alignment or\n\
 semiglobal alignment) of strings s1 and s2.\n\
@@ -307,10 +308,210 @@ py_globalalign(PyObject *self UNUSED, PyObject *args)
 	return o;
 }
 
+#define DELETION_COST 1
+#define INSERTION_COST 1
+#define MISMATCH_COST 1
+#define MATCH_COST 0
+
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
+
+PyDoc_STRVAR(globalalign_locate__doc__,
+"globalalign_locate(string1, string2, max_error_rate, flags=SEMIGLOBAL) -> (start1, stop1, start2, stop2, errors)\n\n\
+\n\
+Locate one string within another by computing an optimal semiglobal alignment between string1 and string2.\n\
+\n\
+The alignment uses unit costs, which means that mismatches, insertions and deletions are\n\
+counted as one error.\n\
+\n\
+The alignment is semiglobal, which means that an arbitrary number of characters in the beginning and end of\n\
+string1 and in the beginning and end of string2 may be skipped at no cost. These\n\
+skipped parts are described with two interval (start1, stop1), (start2, stop2).\n\
+For example, the semiglobal alignment of SISSI and MISSISSIPPI looks like this:\n\
+\n\
+---SISSI---\n\
+MISSISSIPPI\n\
+\n\
+start1, stop1 = 0, 5\n\
+start2, stop2 = 3, 8\n\
+(with zero errors)\n\
+\n\
+The aligned parts are string1[start1:stop1] and string2[start2:stop2].\n\
+\n\
+The alignment itself is not returned, only the tuple\n\
+(start1, stop1, start2, stop2, errors), where the first four fields have the\n\
+meaning as described and errors is the number of errors in the alignment.\n\
+\n\
+The error_rate is: errors / length where length is (stop1 - start1).\n\
+\n\
+(TODO length is computed on string1 only! It could also be min(stop1-start1, stop2-start2).)\n\
+\n\
+An optimal alignment fulfills all of these criteria:\n\
+- error_rate <= max_error_rate\n\
+- Among those alignments with error_rate <= max_error_rate, the alignment contains\n\
+  a maximal number of matches (there is no alignment with more matches).\n\
+- If there are multiple alignments with the same no. of matches, then one that\n\
+  has minimal no. of errors is chosen.\n\
+\n\
+It is always the case that at least one of start1 and start2 is zero.\n\
+\n\
+The flags parameter allows to compute semiglobal alignments in which initial\n\
+or trailing gaps in one of the strings are penalized.\n");
+
+static PyObject *
+py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
+{
+	const char *s1;
+	const char *s2;
+	int m, n;
+	int flags = SEMIGLOBAL;
+	double error_rate;
+
+	if (!PyArg_ParseTuple(args, "s#s#d|i", &s1, &m, &s2, &n, &error_rate, &flags))
+		return NULL;
+
+	/*
+	DP Matrix:
+	           s2 (j)
+	        ----------> n
+	       |
+	s1 (i) |
+	       |
+	       V
+	       m
+	*/
+
+	// structure for a DP matrix entry
+	typedef struct {
+		int cost;
+		int matches; // no. of matches in this alignment
+		int origin; // where the alignment originated: negative for positions within seq1, positive for pos. within seq2
+	} Entry;
+
+	// only a single column of the DP matrix is stored
+	Entry* column;
+	column = (Entry*)malloc((m+1)*sizeof(Entry));
+	if (column == NULL)
+		return NULL;
+
+	int i, j, best_i, best_j, best_cost, best_matches, best_origin;
+
+	//initialize first column
+	for (i = 0; i <= m; ++i) {
+		column[i].matches = 0;
+		column[i].cost = (flags & START_WITHIN_SEQ1) ? 0 : i * DELETION_COST;
+		column[i].origin = (flags & START_WITHIN_SEQ1) ? -i : 0;
+	}
+
+	best_i = m;
+	best_j = 0;
+	best_cost = column[m].cost;
+	best_matches = 0;
+	best_origin = column[m].origin;
+
+	// iterate over columns
+	for (j = 1; j <= n; ++j) {
+		// remember first entry
+		Entry tmp_entry = column[0];
+
+		// fill in first entry in this column
+		if (flags & START_WITHIN_SEQ2) {
+			column[0].cost = 0;
+			column[0].origin = j;
+			column[0].matches = 0;
+		} else {
+			column[0].cost = j * INSERTION_COST;
+			column[0].origin = 0;
+			column[0].matches = 0;
+		}
+		for (i = 1; i <= m; ++i) {
+			int match = (s1[i-1] == s2[j-1]);
+			int cost_diag = tmp_entry.cost + (match ? MATCH_COST : MISMATCH_COST);
+			int cost_deletion = column[i].cost + DELETION_COST;
+			int cost_insertion = column[i-1].cost + INSERTION_COST;
+
+			int origin, cost, matches;
+			if (cost_diag <= cost_deletion && cost_diag <= cost_insertion) {
+				// MATCH or MISMATCH
+				cost = cost_diag;
+				origin = tmp_entry.origin;
+				matches = tmp_entry.matches + match;
+			} else if (cost_insertion <= cost_deletion) {
+				// INSERTION
+				cost = cost_insertion;
+				origin = column[i-1].origin;
+				matches = column[i-1].matches;
+			} else {
+				// DELETION
+				cost = cost_deletion;
+				origin = column[i].origin;
+				matches = column[i].matches;
+			}
+
+			// remember current cell for next iteration
+			tmp_entry = column[i];
+
+			column[i].cost = cost;
+			column[i].origin = origin;
+			column[i].matches = matches;
+		}
+		// column finished
+
+		// if requested, find best match in last row
+		if (flags & STOP_WITHIN_SEQ2) {
+			// length of the aligned part of string1
+			int length = m + min(column[m].origin, 0);
+			int cost = column[m].cost;
+			int matches = column[m].matches;
+			if (cost <= length * error_rate && (matches > best_matches || (matches == best_matches && cost <= best_cost))) {
+				// update
+				best_matches = matches;
+				best_cost = cost;
+				best_origin = column[m].origin;
+				best_i = m;
+				best_j = j;
+			}
+		}
+	}
+
+	if (flags & STOP_WITHIN_SEQ1) {
+		// search in last column
+		for (i = 0; i <= m; ++i) {
+			int length = i + min(column[i].origin, 0);
+			int cost = column[i].cost;
+			int matches = column[i].matches;
+			if (cost <= length * error_rate && (matches > best_matches || (matches == best_matches && cost <= best_cost))) {
+				// update best
+				best_matches = matches;
+				best_cost = cost;
+				best_origin = column[i].origin;
+				best_i = i;
+				best_j = n;
+			}
+		}
+	}
+
+	free(column);
+	int start1, start2;
+	if (best_origin >= 0) {
+		start1 = 0;
+		start2 = best_origin;
+	} else {
+		start1 = -best_origin;
+		start2 = 0;
+	}
+
+	// return (start1, stop1, start2, stop2, errors)
+	PyObject* o = Py_BuildValue("iiiiii", start1, best_i, start2, best_j, best_matches, best_cost);
+	return o;
+}
+
 /* module initialization */
 
 static PyMethodDef methods[] = {
 	{"globalalign", (PyCFunction)py_globalalign, METH_VARARGS, globalalign__doc__},
+	{"globalalign_locate", (PyCFunction)py_globalalign_locate, METH_VARARGS, globalalign_locate__doc__},
 	{NULL, NULL}
 };
 
