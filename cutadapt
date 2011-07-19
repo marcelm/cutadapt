@@ -190,29 +190,28 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	best_alignment is an alignment as returned by semiglobalalign.
 	best_index is the index of the best adapter into the adapters list.
 	"""
-	best_score = 0
-	best_alignment = None
+	best_result = None
+	best_matches = 0
 	best_index = None
 	for index, (where, adapter) in enumerate(adapters):
 		# try to find an exact match first
 		pos = seq.find(adapter)
 		if pos >= 0:
-			alignment = (None, None, 0, len(adapter), pos, pos + len(adapter), 0)
+			result = (0, len(adapter), pos, pos + len(adapter), len(adapter), 0)
 		else:
-			alignment = align.globalalign(adapter, seq, where)
-		(r1, r2, astart, astop, rstart, rstop, errors) = alignment
+			result = align.globalalign_locate(adapter, seq, max_error_rate, where)
+		(astart, astop, rstart, rstop, matches, errors) = result
 		length = astop - astart
-		if length < minimum_overlap or errors/length > max_error_rate:
+		assert length == 0 or errors / length <= max_error_rate
+		if length < minimum_overlap:
 			continue
 
-		# the length of the matching part of the adapter minus errors
-		# determines which adapter fits best
-		score = length - errors
-		if score > best_score:
-			best_alignment = alignment
-			best_score = score
+		# the no. of matches determines which adapter fits best
+		if matches > best_matches:
+			best_result = result
+			best_matches = matches
 			best_index = index
-	return (best_alignment, best_index)
+	return (best_result, best_index)
 
 
 def write_read(desc, seq, qualities, outfile, twoheaders=False):
@@ -328,7 +327,7 @@ class AdapterCutter(object):
 				# nothing found
 				break
 
-			(r1, r2, astart, astop, rstart, rstop, errors) = alignment
+			(astart, astop, rstart, rstop, matches, errors) = alignment
 			length = astop - astart
 			assert length > 0
 			assert errors/length <= self.options.error_rate
