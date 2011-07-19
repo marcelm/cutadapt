@@ -82,6 +82,12 @@ test_cutadapt "-q 10 -a XXXXXX" lowqual.fastq lowqual.fastq
 # two adapters
 test_cutadapt "-b CTCGAGAATTCTGGATCCTC -b GAGGATCCAGAATTCTCGAGTT" twoadapters.fasta twoadapters.fasta
 
+# MAQ-compatible output
+test_cutadapt "-c -e 0.12 -a 330201030313112312 -x 552: --maq" solidmaq.fastq solid.csfasta solid.qual
+
+# BFAST-compatible output
+test_cutadapt "-c -e 0.12 -a 330201030313112312 -x abc: --strip-f3" solidbfast.fastq solid.csfasta solid.qual
+
 # poly-A tails
 test_cutadapt "-m 24 -O 10 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" polya.fasta polya.fasta
 
