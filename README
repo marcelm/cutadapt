@@ -238,8 +238,11 @@ v0.9.5
   specified.
 * Recognize .fq as an extension for FSTQ files
 * many more unit tests
-* The alignment algorithm has changed. Previously, finding an adapter would
-  work as follows:
+* The alignment algorithm has changed. It will now find some adapters that
+  previously were missed. Note that this will produce different output than
+  older cutadapt versions!
+
+  Before this change, finding an adapter would work as follows:
   - Find an alignment between adapter and read -- longer alignments are
     better.
   - If the number of errors in the alignment (divided by length) is above the 
