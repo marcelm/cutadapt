@@ -234,9 +234,20 @@ Changes
 
 v0.9.5
 ------
-* Fix issue 20: Make report go to standard output when -o/--output is specified.
-* Recognize .fq as an extension for FASTQ files
+* Fix issue 20: Make the report go to standard output when -o/--output is
+  specified.
+* Recognize .fq as an extension for FSTQ files
 * many more unit tests
+* The alignment algorithm has changed. Previously, finding an adapter would
+  work as follows:
+  - Find an alignment between adapter and read -- longer alignments are
+    better.
+  - If the number of errors in the alignment (divided by length) is above the 
+    maximum error rate, report the adapter as not being found.
+  Sometimes, the long alignment that is found had too many errors, but a
+  shorter alignment would not. The adapter was then incorrectly seen as "not
+  found". The new alignment algorithm checks the error rate while aligning and only
+  reports alignments that do not have too many errors.
 
 v0.9.4
 ------
