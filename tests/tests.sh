@@ -53,6 +53,9 @@ test_cutadapt "-b TTAGACATATCTCCGTCG --discard" discard.fastq small.fastq
 # test if sequence name after the "+" is retained
 test_cutadapt "-e 0.12 -b TTAGACATATCTCCGTCG" plus.fastq plus.fastq
 
+# automatic recognition of "_sequence.txt.gz" extension
+test_cutadapt "-b TTAGACATATCTCCGTCG" s_1_sequence.txt s_1_sequence.txt.gz
+
 # the -f/--format parameter
 test_cutadapt "-f fastq -b TTAGACATATCTCCGTCG" small.fastq small.myownextension
 

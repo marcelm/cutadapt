@@ -95,7 +95,7 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 		ext = ext.lower()
 		if ext in ['.fasta', '.fa', '.fna', '.csfasta', '.csfa']:
 			return FastaReader(file)
-		elif ext in ['.fastq', '.fq']:
+		elif ext in ['.fastq', '.fq'] or (ext == '.txt' and name.endswith('_sequence')):
 			return FastqReader(file, colorspace)
 		else:
 			raise UnknownFileType("Could not determine whether this is FASTA or FASTQ: file name extension {} not recognized".format(ext))
