@@ -71,6 +71,14 @@ Then simply run the script from where it is, similar to this:
 $ /home/username/downloads/cutadapt-0.x/cutadapt --help
 
 
+Galaxy
+======
+
+If you want to use cutadapt within the web-based Galaxy platform
+(http://galaxy.psu.edu/), please see the README file in the galaxy/ subfolder.
+Galaxy support was contributed by Lance Parsons.
+
+
 How to use, examples
 ====================
 
@@ -232,6 +240,15 @@ The -b parameter currently does not work with color space data.
 Changes
 =======
 
+v1.0
+----
+* Due to cutadapt being published in EMBnet.journal, I found it appropriate
+  to call this release version 1.0. Please see
+  http://journal.embnet.org/index.php/embnetjournal/article/view/200 for the
+  article and I would be glad if you cite it.
+* Add Galaxy support, contributed by Lance Parsons.
+
+
 v0.9.5
 ------
 * Fix issue 20: Make the report go to standard output when -o/--output is
@@ -245,7 +262,7 @@ v0.9.5
   Before this change, finding an adapter would work as follows:
   - Find an alignment between adapter and read -- longer alignments are
     better.
-  - If the number of errors in the alignment (divided by length) is above the 
+  - If the number of errors in the alignment (divided by length) is above the
     maximum error rate, report the adapter as not being found.
   Sometimes, the long alignment that is found had too many errors, but a
   shorter alignment would not. The adapter was then incorrectly seen as "not
