@@ -1,0 +1,232 @@
+<tool id="cutadapt" name="Cutadapt" version="0.9.5.a">
+	<description>Remove adapter sequences from Fastq/Fasta</description>
+	<requirements>
+		<requirement type="python-module">cutadapt</requirement>
+	</requirements>
+
+	<command>cutadapt
+		#if $input.extension.startswith( "fastq"):
+		--format=fastq
+		#else
+		--format=$input.extension
+		#end if 
+		#for $a in $adapters
+		--adapter='${a.adapter_source.adapter}'
+		#end for
+		#for $aa in $anywhere_adapters
+		--anywhere='${aa.anywhere_adapter_source.anywhere_adapter}'
+		#end for
+		--error-rate=$error_rate
+		--times=$count
+		--overlap=$overlap
+		#if str($min) != '0':
+		--minimum-length=$min
+		#end if
+		#if str($max) != '0':
+		--maximum-length=$max
+		#end if
+		#if str($quality_cutoff) != '0':
+		--quality-cutoff=$quality_cutoff
+		#end if
+		$discard
+		--output='$output' 
+		#if str( $output_params.output_type ) == "additional":
+			#if $output_params.rest_file:
+			--rest-file=$rest_output
+			#end if
+			#if $output_params.too_short_file:
+			--too-short-output=$too_short_output
+			#end if
+			#if $output_params.untrimmed_file:
+			--untrimmed-output=$untrimmed_output
+			#end if
+		#end if
+		'$input'
+		> $report
+	</command>
+	<inputs>
+		<param format="fastqsanger, fasta" name="input" type="data" optional="false" label="Fastq file to trim" length="100"/>
+
+		<repeat name="adapters" title="3' Adapters">
+			<conditional name="adapter_source">
+				<param name="adapter_source_list" type="select" label="Source" >
+					<option value="prebuilt" selected="true">Standard (select from the list below)</option>
+					<option value="user">Enter custom sequence</option>
+				</param>
+
+				<when value="user">
+					<param name="adapter" size="30" label="Enter custom 3' adapter sequence" type="text" value="AATTGGCC" help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed. If multiple adapters are specified, only the best matching adapter is trimmed."/>
+				</when>
+
+				<when value="prebuilt">
+					<param name="adapter" type="select" label="Choose 3' adapter" help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed. If multiple adapters are specified, only the best matching adapter is trimmed.">
+						<options from_file="fastx_clipper_sequences.txt">
+							<column name="name" index="1"/>
+							<column name="value" index="0"/>
+						</options>
+					</param> 
+				</when>
+			</conditional>
+		</repeat>
+
+		<repeat name="anywhere_adapters" title="5' or 3' (Anywhere) Adapters" help="Sequence of an adapter that was ligated to the 5' or 3' end.  If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a or -b options are given, only the best matching adapter is trimmed.">
+			<conditional name="anywhere_adapter_source">
+				<param name="anywhere_adapter_source_list" type="select" label="Source">
+					<option value="prebuilt" selected="true">Standard (select from the list below)</option>
+					<option value="user">Enter custom sequence</option>
+				</param>
+
+				<when value="user">
+					<param name="anywhere_adapter" size="30" label="Enter custom 5' or 3' adapter sequence" type="text" value="AATTGGCC" help="Sequence of an adapter that was ligated to the 5' or 3' end.  If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a or -b options are given, only the best matching adapter is trimmed."/>
+				</when>
+				<when value="prebuilt">
+					<param name="anywhere_adapter" type="select" label="Choose 5' or 3' adapter" help="Sequence of an adapter that was ligated to the 5' or 3' end.  If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a or -b options are given, only the best matching adapter is trimmed.">
+						<options from_file="fastx_clipper_sequences.txt">
+							<column name="name" index="1"/>
+							<column name="value" index="0"/>
+						</options>
+					</param> 
+				</when>
+			</conditional>
+		</repeat>
+
+		<param name="error_rate" type="float" min="0" max="1" value="0.1" label="Maximum error rate" help="Maximum allowed error rate (no. of errors divided by the length of the matching region)." />
+		<param name="count" type="integer" min="1" value="1" label="Match times" help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times." />
+		<param name="overlap" type="integer" min="1" value="3" label="Minimum overlap length" help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than LENGTH, the read is not modified." />
+		<param name="discard" type="boolean" value="false" truevalue="--discard" falsevalue="" label="Discard Trimmed Reads" help="Discard reads that contain the adapter instead of trimming them. Use the 'Minimum overlap length' option in order to avoid throwing away too many randomly matching reads!" />
+		<param name="min" type="integer" min="0" optional="true" value="0" label="Minimum length" help="Discard trimmed reads that are shorter than LENGTH.  Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted. Value of 0 means no minimum length." />
+		<param name="max" type="integer" min="0" optional="true" value="0" label="Maximum length" help="Discard trimmed reads that are longer than LENGTH.  Reads that are too long even before adapter removal are also discarded. In colorspace, an initial primer is not counted. Value of 0 means no maximum length." />
+		<param name="quality_cutoff" type="integer" min="0" optional="true" value="0" label="Quality cutoff" help="Trim low-quality ends from reads before adapter removal. The algorithm is the same as the one used by BWA (Subtract CUTOFF from all qualities; compute partial sums from all indices to the end of the sequence; cut sequence at the index at which the sum is minimal). Value of 0 means no quality trimming." />
+	        <conditional name="output_params">
+			<param name="output_type" type="select" label="Additional output options" help="By default all reads will be put in the same file.  However, reads with adapters matching in the middle, unmatched reads, and too-short reads can be saved in separate files.">
+				<option value="default">Default</option>
+				<option value="additional">Additional output files</option>
+			</param>
+			<when value="default" />
+			<when value="additional">
+				<param name="rest_file" type="boolean" value="false" label="Rest of Read" help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file."/>
+				<param name="too_short_file" type="boolean" value="false" label="Too Short Reads" help="Write reads that are too short (according to minimum length specified) to a file. (default: discard reads)"/>
+				<param name="untrimmed_file" type="boolean" value="false" label="Untrimmed Reads" help="Write reads that do not contain the adapter to a separate file, instead of writing them to the regular output file.  (default: output to same file as trimmed)"/>
+			</when>
+		</conditional>
+	</inputs>
+	<outputs>
+		<data format="txt" name="report" label="${tool.name} on ${on_string} (Report)" />
+		<data format="input" name="output" metadata_source="input"/>
+		<data format="input" name="rest_output" metadata_source="input" label="${tool.name} on ${on_string} (Rest of Reads)" >
+			<filter>(output_params['output_type'] == "additional")</filter>
+			<filter>(output_params['rest_file'] is True)</filter>
+		</data>
+		<data format="input" name="too_short_output" metadata_source="input" label="${tool.name} on ${on_string} (Too Short Reads)" >
+			<filter>(output_params['output_type'] == "additional")</filter>
+			<filter>(output_params['too_short_file'] is True)</filter>
+		</data>
+		<data format="input" name="untrimmed_output" metadata_source="input" label="${tool.name} on ${on_string} (Untrimmed Reads)" >
+			<filter>(output_params['output_type'] == "additional")</filter>
+			<filter>(output_params['untrimmed_file'] is True)</filter>
+		</data>
+	</outputs>
+
+	<tests>
+		<test>
+			<param name="input" value="cutadapt_small.fastq" ftype="fastqsanger"/>
+			<param name="adapter_source_list" value="user"/>
+			<param name="adapter" value=""/>
+			<param name="anywhere_adapter_source_list" value="user"/>
+			<param name="anywhere_adapter" value="TTAGACATATCTCCGTCG"/>
+			<param name="output_type" value="default"/>
+			<output name="output" file="cutadapt_small.out"/>
+		</test>
+		<test>
+			<param name="input" value="cutadapt_small.fastq" ftype="fastqsanger"/>
+			<param name="adapter_source_list" value="user"/>
+			<param name="adapter" value="TTAGACATATCTCCGTCG"/>
+			<param name="anywhere_adapter_source_list" value="user"/>
+			<param name="anywhere_adapter" value=""/>
+			<param name="discard" value="true"/>
+			<param name="output_type" value="default"/>
+			<output name="output" file="cutadapt_discard.out"/>
+		</test>
+		<test>
+			<param name="input" value="cutadapt_rest.fa" ftype="fasta"/>
+			<param name="adapter_source_list" value="user"/>
+			<param name="adapter" value="ADAPTER"/>
+			<param name="anywhere_adapter_source_list" value="user"/>
+			<param name="anywhere_adapter" value=""/>
+			<param name="output_type" value="additional"/>
+			<param name="rest_file" value="true"/>
+			<output name="output" file="cutadapt_rest.out"/>
+			<output name="rest_output" file="cutadapt_rest2.out"/>
+		</test>
+	</tests>
+
+	<help>
+This tool removes adapter sequences from DNA high-throughput
+sequencing data. This is usually necessary when the read length of the
+machine is longer than the molecule that is sequenced, such as in
+microRNA data.
+
+The tool is based on the opensource cutadapt_ tool.
+
+-----
+
+**Algorithm**
+
+cutadapt uses a simple semi-global alignment algorithm, without any special optimizations.
+For speed, the algorithm is implemented as a Python extension module in calignmodule.c.
+
+
+**Partial adapter matches**
+
+Cutadapt correctly deals with partial adapter matches. As an example, suppose
+your adapter sequence is "ADAPTER" (specified via 3' Adapters parameter).
+If you have these input sequences:
+
+::
+
+	MYSEQUENCEADAPTER
+	MYSEQUENCEADAP
+	MYSEQUENCEADAPTERSOMETHINGELSE
+
+All of them will be trimmed to "MYSEQUENCE". If the sequence starts with an
+adapter, like this:
+
+::
+
+	ADAPTERSOMETHING
+
+It will be empty after trimming.
+
+When the allowed error rate is sufficiently high, errors in
+the adapter sequence are allowed. For example, ADABTER (1 mismatch), ADAPTR (1 deletion),
+and ADAPPTER (1 insertion) will all be recognized if the error rate is set to 0.15.
+
+
+**Allowing adapters anywhere**
+
+Cutadapt assumes that any adapter specified via the *3` Adapters* parameter
+was ligated to the 3' end of the sequence. This is the correct assumption for
+at least the SOLiD and Illumina small RNA protocols and probably others.
+
+If, on the other hand, your adapter can also be ligated to the 5' end (on
+purpose or by accident), you should tell cutadapt so by using the *5' or 3' (Anywhere)
+Adapters* parameter. It will then use a different alignment algorithm and
+correctly trim adapters that appear in the beginning of a read. An adapter
+specified this way will also be found if it appears only partially in the
+beginning of a read. For example, these sequences
+
+::
+
+	ADAPTERMYSEQUENCE
+	PTERMYSEQUENCE
+
+will be trimmed to "MYSEQUENCE". Note that the regular algorithm would trim
+the first read to an empty sequence.
+
+This parameter currently does not work with color space data.
+
+
+.. _cutadapt: http://code.google.com/p/cutadapt/
+	</help>
+
+</tool>

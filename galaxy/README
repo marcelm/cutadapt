@@ -1,0 +1,24 @@
+Galaxy tool definition for cutadapt (http://code.google.com/p/cutadapt/)
+
+Installation
+------------
+
+1 - Install the cutadapt package and make sure it is in path for Galaxy
+2 - Copy cutadapt.xml to $GALAXY_HOME/tools/cutadapt
+3 - Add the tool to the $GALAXY_HOME/tool_conf.xml tool-registry file
+
+Optional steps to setup and run Galaxy functional tests
+
+4 - Copy test-data/* to $GALAXY_HOME/test-data/
+5 - Set GALAXY_TEST_TOOL_CONF environment variable to a tool_conf.xml file that
+    contains the tools you want to test. (e.g. 'tool_conf.xml')
+6 - $GALAXY_HOME/run_functional_tests.sh -id cutadapt 
+    See the Galaxy Wiki for more information: http://wiki.g2.bx.psu.edu/
+
+
+Limitations
+-----------
+
+Colorspace data support is not implemented
+Prefix and Suffix to read names not implemented
+Length-tag addition to read name not implemented
