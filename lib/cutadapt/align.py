@@ -18,6 +18,8 @@ START_WITHIN_SEQ2 = 2
 STOP_WITHIN_SEQ1 = 4
 STOP_WITHIN_SEQ2 = 8
 
+GLOBAL = 0
+
 # Use this to get regular semiglobal alignment
 # (all gaps in the beginning or end are free)
 SEMIGLOBAL = START_WITHIN_SEQ1 | START_WITHIN_SEQ2 | STOP_WITHIN_SEQ1 | STOP_WITHIN_SEQ2
