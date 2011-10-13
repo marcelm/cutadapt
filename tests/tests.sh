@@ -99,4 +99,7 @@ test_cutadapt "-m 24 -O 10 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" polya.fasta p
 # some reads properly trimmed since cutadapt 0.9.5
 test_cutadapt "-c -e 0.122 -a 330201030313112312" solid.fasta solid.fasta
 
+# compressed gz file with multiple blocks (created by concatenating two .gz files)
+test_cutadapt "-b TTAGACATATCTCCGTCG" small.fastq multiblock.fastq.gz
+
 echo "Tests passed"
