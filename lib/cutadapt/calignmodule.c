@@ -318,7 +318,7 @@ py_globalalign(PyObject *self UNUSED, PyObject *args)
 
 
 PyDoc_STRVAR(globalalign_locate__doc__,
-"globalalign_locate(string1, string2, max_error_rate, flags=SEMIGLOBAL) -> (start1, stop1, start2, stop2, errors)\n\n\
+"globalalign_locate(string1, string2, max_error_rate, flags=SEMIGLOBAL) -> (start1, stop1, start2, stop2, matches, errors)\n\n\
 \n\
 Locate one string within another by computing an optimal semiglobal alignment between string1 and string2.\n\
 \n\
@@ -340,12 +340,13 @@ start2, stop2 = 3, 8\n\
 The aligned parts are string1[start1:stop1] and string2[start2:stop2].\n\
 \n\
 The alignment itself is not returned, only the tuple\n\
-(start1, stop1, start2, stop2, errors), where the first four fields have the\n\
-meaning as described and errors is the number of errors in the alignment.\n\
+(start1, stop1, start2, stop2, matches, errors), where the first four fields have the\n\
+meaning as described, matches is the number of matches and errors is the number of \n\
+errors in the alignment.\n\
 \n\
 The error_rate is: errors / length where length is (stop1 - start1).\n\
 \n\
-(TODO length is computed on string1 only! It could also be min(stop1-start1, stop2-start2).)\n\
+(TODO length is computed on string1 only! It could also be min(or max)(stop1-start1, stop2-start2).)\n\
 \n\
 An optimal alignment fulfills all of these criteria:\n\
 - error_rate <= max_error_rate\n\
@@ -357,7 +358,7 @@ An optimal alignment fulfills all of these criteria:\n\
 It is always the case that at least one of start1 and start2 is zero.\n\
 \n\
 The flags parameter allows to compute semiglobal alignments in which initial\n\
-or trailing gaps in one of the strings are penalized.\n");
+or trailing gaps in only one of the strings are penalized.\n");
 
 static PyObject *
 py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
@@ -502,7 +503,7 @@ py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
 		start2 = 0;
 	}
 
-	// return (start1, stop1, start2, stop2, errors)
+	// return (start1, stop1, start2, stop2, matches, errors)
 	PyObject* o = Py_BuildValue("iiiiii", start1, best_i, start2, best_j, best_matches, best_cost);
 	return o;
 }
