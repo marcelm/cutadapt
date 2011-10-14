@@ -1,3 +1,4 @@
+from nose.tools import raises
 from cutadapt import seqio
 import io
 
@@ -20,6 +21,12 @@ def test_fastqreader():
 	with seqio.FastqReader("tests/data/simple.fastq") as f:
 		reads = list(f)
 	assert reads == simple_fastq
+
+
+@raises(seqio.FormatError)
+def test_fastq_wrongformat():
+	with seqio.FastqReader("tests/data/withplus.fastq") as f:
+		reads = list(f)
 
 
 def test_sequence_reader():
