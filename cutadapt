@@ -214,7 +214,7 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 	return (best_result, best_index)
 
 
-def write_read(desc, seq, qualities, outfile, twoheaders=False):
+def write_read(read, outfile, twoheaders=False):
 	"""
 	Write read in either FASTA or FASTQ format
 	(depending on whether qualities is None or not) to outfile
@@ -223,13 +223,13 @@ def write_read(desc, seq, qualities, outfile, twoheaders=False):
 	(description) is also written after the "+" character in the third line.
 
 	"""
-	if qualities is None:
+	if read.qualities is None:
 		# FASTA
-		print('>%s\n%s' % (desc, seq), file=outfile)
+		print('>%s\n%s' % (read.name, read.sequence), file=outfile)
 	else:
 		# FASTQ
-		tmp = desc if twoheaders else ''
-		print('@%s\n%s\n+%s\n%s' % (desc, seq, tmp, qualities), file=outfile)
+		tmp = read.name if twoheaders else ''
+		print('@%s\n%s\n+%s\n%s' % (read.name, read.sequence, tmp, read.qualities), file=outfile)
 
 
 def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
@@ -265,18 +265,18 @@ class ReadFilter(object):
 		self.statistics = statistics
 		self.discard_trimmed = discard_trimmed
 
-	def keep(self, desc, seq, qualities, trimmed):
+	def keep(self, read, trimmed):
 		"""
 		Return whether to keep the given read.
 		"""
 		if self.discard_trimmed and trimmed:
 			return False
-		if len(seq) < self.minimum_length:
+		if len(read.sequence) < self.minimum_length:
 			self.statistics.too_short += 1
 			if self.too_short_outfile is not None:
-				write_read(desc, seq, qualities, self.too_short_outfile)
+				write_read(read, self.too_short_outfile)
 			return False
-		if len(seq) > self.maximum_length:
+		if len(read.sequence) > self.maximum_length:
 			self.statistics.too_long += 1
 			return False
 		return True
@@ -302,7 +302,7 @@ class AdapterCutter(object):
 		else:
 			self.lengthregex = None
 
-	def cut(self, desc, seq, qualities):
+	def cut(self, read):
 		"""
 		Cut adapters from a single read. The read will be converted to uppercase
 		before it is compared to the adapter sequences.
@@ -317,7 +317,9 @@ class AdapterCutter(object):
 		self.stats.n += 1
 
 		if __debug__:
-			old_length = len(seq)
+			old_length = len(read.sequence)
+
+		desc, seq, qualities = read.name, read.sequence, read.qualities # TODO
 
 		# try (possibly more than once) to remove an adapter
 		any_adapter_matches = False
@@ -384,7 +386,19 @@ class AdapterCutter(object):
 
 		if self.options.colorspace:
 			assert not qualities or len(seq) == len(qualities)
-		return (desc, seq, qualities, any_adapter_matches)
+		return (seqio.Sequence(desc, seq, qualities), any_adapter_matches)
+
+
+#class QualityTrimmer:
+	#"""Pipeline step that trims qualities"""
+	#def __init__(self, cutoff):
+		#self.cutoff = cutoff
+
+	#def process(self, read):
+		#index = quality_trim_index(qualities, options.quality_cutoff)
+		##total_quality_trimmed += len(qualities) - index
+		#qualities = qualities[:index]
+		#seq = seq[:index]
 
 
 def zero_cap(qualities):
@@ -539,45 +553,46 @@ def main():
 
 	#total_bases = 0
 	#total_quality_trimmed = 0
+	
+	
 	cutter = AdapterCutter(options, adapters)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
 	try:
 		twoheaders = None
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
-		for desc, seq, qualities in reader:
+		for read in reader:
 			# In colorspace, the first character is the last nucleotide of the primer base
 			# and the second character encodes the transition from the primer base to the
 			# first real base of the read.
 			if options.trim_primer:
-				seq = seq[2:]
-				if qualities is not None:
-					qualities = qualities[1:]
+				read.sequence = read.sequence[2:]
+				if read.qualities is not None: # TODO
+					read.qualities = read.qualities[1:]
 				initial = ''
 			elif options.colorspace:
-				initial = seq[0]
-				seq = seq[1:]
+				initial = read.sequence[0]
+				read.sequence = read.sequence[1:]
 			else:
 				initial = ''
 
 			#total_bases += len(qualities)
 			if options.quality_cutoff is not None:
-				index = quality_trim_index(qualities, options.quality_cutoff)
-				#total_quality_trimmed += len(qualities) - index
-				qualities = qualities[:index]
-				seq = seq[:index]
+				index = quality_trim_index(read.qualities, options.quality_cutoff)
+				read.qualities = read.qualities[:index]
+				read.sequence = read.sequence[:index]
 
-			desc, seq, qualities, trimmed = cutter.cut(desc, seq, qualities)
+			read, trimmed = cutter.cut(read)
 			if options.zero_cap:
-				qualities = zero_cap(qualities)
+				read.qualities = zero_cap(read.qualities)
 			if twoheaders is None:
 				try:
 					twoheaders = reader.twoheaders
 				except AttributeError:
 					twoheaders = False
-			if readfilter.keep(desc, seq, qualities, trimmed):
-				seq = initial + seq
-				write_read(desc, seq, qualities, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
+			if readfilter.keep(read, trimmed):
+				read.sequence = initial + read.sequence
+				write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
 	except seqio.FormatError as e:
 		print("Error:", e, file=sys.stderr)
 		return 1

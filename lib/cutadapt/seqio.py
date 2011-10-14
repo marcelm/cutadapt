@@ -11,7 +11,15 @@ from cutadapt.xopen import xopen
 from os.path import splitext
 import sys
 
-Sequence = namedtuple("Sequence", "name sequence qualities")
+class Sequence:
+	"""	qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
+
+	def __init__(self, name, sequence, qualities):
+		self.name = name
+		self.sequence = sequence
+		self.qualities = qualities
+	
+	#= namedtuple("Sequence", "name sequence qualities")
 
 
 class FormatError(Exception):
@@ -280,8 +288,7 @@ class FastaQualReader(object):
 
 	def __iter__(self):
 		"""
-		Return tuples: (name, sequence, qualities).
-		qualities is a string and it contains the qualities encoded as ascii(qual+33).
+		Yield Sequence objects.
 		"""
 		lengthdiff = 1 if self.colorspace else 0
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
