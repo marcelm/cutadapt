@@ -349,7 +349,7 @@ class ZeroCapper:
 class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
-	def __init__(self, options, adapters):
+	def __init__(self, times, error_rate, overlap, rest_file, colorspace, adapters):
 		"""Initialize this cutter.
 		adapters --
 			List of tuples (where, adapter). 'where' is either BACK
@@ -357,7 +357,11 @@ class AdapterCutter(object):
 			Adapters will be converted to uppercase before aligning
 			them.
 		"""
-		self.options = options
+		self.times = times
+		self.error_rate = error_rate
+		self.overlap = overlap
+		self.rest_file = rest_file
+		self.colorspace = colorspace
 		self.adapters = [ (where, adapter.upper()) for (where, adapter) in adapters ]
 		self.stats = Statistics(adapters)
 
@@ -380,8 +384,8 @@ class AdapterCutter(object):
 
 		# try (possibly more than once) to remove an adapter
 		any_adapter_matches = False
-		for t in xrange(self.options.times):
-			alignment, index = find_best_alignment(self.adapters, read.sequence.upper(), self.options.error_rate, self.options.overlap)
+		for t in xrange(self.times):
+			alignment, index = find_best_alignment(self.adapters, read.sequence.upper(), self.error_rate, self.overlap)
 			if alignment is None:
 				# nothing found
 				break
@@ -389,7 +393,7 @@ class AdapterCutter(object):
 			(astart, astop, rstart, rstop, matches, errors) = alignment
 			length = astop - astart
 			assert length > 0
-			assert errors / length <= self.options.error_rate
+			assert errors / length <= self.error_rate
 			assert length - errors > 0
 
 			any_adapter_matches = True
@@ -400,11 +404,11 @@ class AdapterCutter(object):
 				# The adapter is at the end of the read or within the read
 				if rstop < len(read.sequence):
 					# The adapter is within the read
-					if self.options.rest_file is not None:
-						print(read.sequence[rstop:], file=self.options.rest_file)
+					if self.rest_file is not None:
+						print(read.sequence[rstop:], file=self.rest_file)
 				self.stats.lengths_back[index][length] += 1
 
-				if self.options.colorspace:
+				if self.colorspace:
 					# trim one more color if long enough
 					rstart = max(0, rstart - 1)
 				read = read[:rstart]
@@ -413,20 +417,15 @@ class AdapterCutter(object):
 				assert rstart == 0
 				self.stats.lengths_front[index][length] += 1
 				# TODO What should we do in color space?
-				
 				read = read[rstop:]
 			else:
 				assert False
 
-		if __debug__:
-			# if an adapter was found, then the read should now be shorter
-			assert (not any_adapter_matches) or (len(read.sequence) < old_length)
+		# if an adapter was found, then the read should now be shorter
+		assert (not any_adapter_matches) or (len(read.sequence) < old_length)
 		if any_adapter_matches: # TODO move to filter class
 			self.stats.reads_changed += 1
 
-
-		if self.options.colorspace:
-			assert not read.qualities or len(read.sequence) == len(read.qualities)
 		return (read, any_adapter_matches)
 
 
@@ -607,7 +606,7 @@ def main():
 	if options.zero_cap:
 		modifiers.append(ZeroCapper())
 
-	cutter = AdapterCutter(options, adapters)
+	cutter = AdapterCutter(options.times, options.error_rate, options.overlap, options.rest_file, options.colorspace, adapters)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
 	try:
@@ -628,6 +627,7 @@ def main():
 			else:
 				initial = ''
 
+			
 			#total_bases += len(qualities)
 			if options.quality_cutoff is not None:
 				index = quality_trim_index(read.qualities, options.quality_cutoff)
