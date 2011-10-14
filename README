@@ -247,7 +247,10 @@ v1.0
   http://journal.embnet.org/index.php/embnetjournal/article/view/200 for the
   article and I would be glad if you cite it.
 * Add Galaxy support, contributed by Lance Parsons.
-
+* Patch by James Casbon: Allow N wildcards in read or adapter or both.
+  Wildcard matching of 'N's in the adapter is always done. If 'N's within reads
+  should also match without counting as error, this needs to be explicitly
+  requested via --match-read-wildcards.
 
 v0.9.5
 ------

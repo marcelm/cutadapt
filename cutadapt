@@ -167,7 +167,7 @@ class Statistics(object):
 			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
 
 
-def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
+def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap, match_read_wildcard):
 	"""
 	Find the best matching adapter.
 
@@ -197,7 +197,10 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap):
 		if pos >= 0:
 			result = (0, len(adapter), pos, pos + len(adapter), len(adapter), 0)
 		else:
-			result = align.globalalign_locate(adapter, seq, max_error_rate, where)
+			n_mode = align.ALLOW_WILDCARD_SEQ2 if match_read_wildcard else 0
+			if 'N' in adapter:
+				n_mode = n_mode | align.ALLOW_WILDCARD_SEQ1
+			result = align.globalalign_locate(adapter, seq, max_error_rate, where, n_mode)
 		(astart, astop, rstart, rstop, matches, errors) = result
 		length = astop - astart
 		assert length == 0 or errors / length <= max_error_rate
@@ -349,7 +352,8 @@ class ZeroCapper:
 class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
-	def __init__(self, times, error_rate, overlap, rest_file, colorspace, adapters):
+	def __init__(self, times, error_rate, overlap, rest_file, colorspace, adapters,
+					match_read_wildcards, wildcard_file):
 		"""Initialize this cutter.
 		adapters --
 			List of tuples (where, adapter). 'where' is either BACK
@@ -364,6 +368,8 @@ class AdapterCutter(object):
 		self.colorspace = colorspace
 		self.adapters = [ (where, adapter.upper()) for (where, adapter) in adapters ]
 		self.stats = Statistics(adapters)
+		self.match_read_wildcards = match_read_wildcards
+		self.wildcard_file = wildcard_file
 
 	def cut(self, read):
 		"""
@@ -385,7 +391,8 @@ class AdapterCutter(object):
 		# try (possibly more than once) to remove an adapter
 		any_adapter_matches = False
 		for t in xrange(self.times):
-			alignment, index = find_best_alignment(self.adapters, read.sequence.upper(), self.error_rate, self.overlap)
+			alignment, index = find_best_alignment(self.adapters, read.sequence.upper(),
+				self.error_rate, self.overlap, self.match_read_wildcards)
 			if alignment is None:
 				# nothing found
 				break
@@ -411,15 +418,23 @@ class AdapterCutter(object):
 				if self.colorspace:
 					# trim one more color if long enough
 					rstart = max(0, rstart - 1)
-				read = read[:rstart]
+				trimmed, read = read[rstart:], read[:rstart]
 			elif where == ANYWHERE:
 				# The adapter is in the beginning of the read (case 4)
 				assert rstart == 0
+
 				self.stats.lengths_front[index][length] += 1
 				# TODO What should we do in color space?
-				read = read[rstop:]
+				trimmed, read = read[:rstop], read[rstop:]
 			else:
 				assert False
+
+			if trimmed and self.wildcard_file is not None:
+				seq_match = trimmed.sequence
+				adap_match = self.adapters[index][1]
+				wildcards = [seq_match[i] for i in range(astart,astop)
+								if adap_match[i]=='N']
+				print(''.join(wildcards), trimmed.name, file=self.wildcard_file)
 
 		# if an adapter was found, then the read should now be shorter
 		assert (not any_adapter_matches) or (len(read.sequence) < old_length)
@@ -464,6 +479,8 @@ def main():
 		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
 	group.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
 		help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than LENGTH, the read is not modified (default: %default).")
+	group.add_option("--match-read-wildcards", action="store_true", default=False,
+		help="Allow 'N's in the read as matches to the adapter (default: %default).")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options for filtering of processed reads")
@@ -484,6 +501,9 @@ def main():
 		     "The format is FASTQ if qualities are available, FASTA otherwise. (default: standard output)")
 	group.add_option("-r", "--rest-file", default=None, metavar="FILE",
 		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
+	group.add_option("--wildcard-file", default=None, metavar="FILE",
+		help="When the adapter has wildcard bases ('N's) write adapter bases matching wildcard "
+		     "positions to FILE.  Use - for standard output.")
 	group.add_option("--too-short-output", default=None, metavar="FILE",
 		help="Write reads that are too short (according to length specified by -m) to FILE. (default: discard reads)")
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
@@ -578,12 +598,16 @@ def main():
 
 	if options.rest_file is not None:
 		options.rest_file = xopen(options.rest_file, 'w')
+	if options.wildcard_file is not None:
+		options.wildcard_file = xopen(options.wildcard_file, 'w')
 
 	adapters = []
 	if options.adapters:
 		adapters = [ (BACK, adapter) for adapter in options.adapters ]
 	if options.anywhere:
 		adapters += [ (ANYWHERE, adapter) for adapter in options.anywhere ]
+
+
 	del options.adapters
 	del options.anywhere
 
@@ -606,7 +630,8 @@ def main():
 	if options.zero_cap:
 		modifiers.append(ZeroCapper())
 
-	cutter = AdapterCutter(options.times, options.error_rate, options.overlap, options.rest_file, options.colorspace, adapters)
+	cutter = AdapterCutter(options.times, options.error_rate, options.overlap, options.rest_file,
+				options.colorspace, adapters, options.match_read_wildcards, options.wildcard_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
 	try:

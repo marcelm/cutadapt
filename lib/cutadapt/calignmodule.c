@@ -33,7 +33,9 @@ enum FLAG {
 	START_WITHIN_SEQ2 = 2,
 	STOP_WITHIN_SEQ1 = 4,
 	STOP_WITHIN_SEQ2 = 8,
-	SEMIGLOBAL = 15
+	SEMIGLOBAL = 15,
+	ALLOW_WILDCARD_SEQ1 = 1,
+	ALLOW_WILDCARD_SEQ2 = 2,
 };
 
 // insertion means: inserted into seq1 (does not appear in seq2)
@@ -368,8 +370,9 @@ py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
 	int m, n;
 	int flags = SEMIGLOBAL;
 	double error_rate;
+	int degenerate = 0;
 
-	if (!PyArg_ParseTuple(args, "s#s#d|i", &s1, &m, &s2, &n, &error_rate, &flags))
+	if (!PyArg_ParseTuple(args, "s#s#d|ii", &s1, &m, &s2, &n, &error_rate, &flags, &degenerate))
 		return NULL;
 
 	/*
@@ -427,7 +430,9 @@ py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
 			column[0].matches = 0;
 		}
 		for (i = 1; i <= m; ++i) {
-			int match = (s1[i-1] == s2[j-1]);
+			int match = (s1[i-1] == s2[j-1])
+						|| ((degenerate & ALLOW_WILDCARD_SEQ1) && (s1[i-1] == 'N'))
+						|| ((degenerate & ALLOW_WILDCARD_SEQ2) && (s2[j-1] == 'N'));
 			int cost_diag = tmp_entry.cost + (match ? MATCH_COST : MISMATCH_COST);
 			int cost_deletion = column[i].cost + DELETION_COST;
 			int cost_insertion = column[i-1].cost + INSERTION_COST;

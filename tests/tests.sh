@@ -26,7 +26,8 @@ function test_cutadapt() {
 	sed -i '/Total time/d;/Time per read/d;/cutadapt version/d;/^Command line /d' tmp.log
 	diff -u cut/$2 tmp.fastaq
 	diff -u tmp.log log/$2.log
-	rm tmp.fastaq tmp.log
+	rm tmp.fastaq tmp.log 
+	#tmp.log0
 }
 
 test_cutadapt "-b ADAPTER" example.fa example.fa
@@ -110,5 +111,12 @@ test_cutadapt "-b TTAGACATATCTCCGTCG" small.fastq multiblock.fastq.gz
 
 # -y/--suffix parameter, combined with _F3
 test_cutadapt "-c -e 0.12 -a 330201030313112312 -y _my_suffix --strip-f3" suffix.fastq solid.csfasta solid.qual
+
+# test read wildcards
+test_cutadapt "--match-read-wildcards -b ACGTACGT" wildcard.fa wildcard.fa
+
+# test adapter wildcards
+test_cutadapt "--wildcard-file - -b ACGTNNNACGT" wildcard_adapter.fa wildcard_adapter.fa
+
 
 echo "Tests passed"
