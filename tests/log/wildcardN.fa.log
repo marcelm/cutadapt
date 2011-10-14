@@ -1,0 +1,14 @@
+Maximum error rate: 0.00%
+   Processed reads: 3
+     Trimmed reads: 2 ( 66.7%)
+   Too short reads: 0 (  0.0% of processed reads)
+    Too long reads: 0 (  0.0% of processed reads)
+
+=== Adapter 1 ===
+
+Adapter 'GGGGGGG', length 7, was trimmed 2 times.
+
+Histogram of adapter lengths
+length	count
+7	2
+

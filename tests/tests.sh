@@ -26,7 +26,7 @@ function test_cutadapt() {
 	sed -i '/Total time/d;/Time per read/d;/cutadapt version/d;/^Command line /d' tmp.log
 	diff -u cut/$2 tmp.fastaq
 	diff -u tmp.log log/$2.log
-	rm tmp.fastaq tmp.log 
+	rm tmp.fastaq tmp.log
 	#tmp.log0
 }
 
@@ -118,5 +118,7 @@ test_cutadapt "--match-read-wildcards -b ACGTACGT" wildcard.fa wildcard.fa
 # test adapter wildcards
 test_cutadapt "--wildcard-file - -b ACGTNNNACGT" wildcard_adapter.fa wildcard_adapter.fa
 
+# test 'N' wildcard matching with no allowed errors=
+test_cutadapt "-e 0 -a GGGGGGG --match-read-wildcards" wildcardN.fa wildcardN.fa
 
 echo "Tests passed"
