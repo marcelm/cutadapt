@@ -81,8 +81,6 @@ from cutadapt import __version__
 BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
 ANYWHERE = align.SEMIGLOBAL
 
-# for double-encoding colorspace sequences
-DOUBLE_ENCODE_TRANS = maketrans(b'0123.', b'ACGTN')
 
 # for setting negative quality values to zero
 if sys.version_info[0] < 3:
@@ -297,6 +295,47 @@ class LengthTagModifier:
 		return read
 
 
+class SuffixRemover:
+	"""
+	Remove any suffix from read names.
+	"""
+	def __init__(self, suffix):
+		self.suffix = suffix
+	
+	def apply(self, read):
+		read = read[:]
+		if read.name.endswith(self.suffix):
+			read.name = read.name[:-3]
+		return read
+
+
+class PrefixSuffixAdder:
+	"""
+	Add a suffix and a prefix to read names
+	"""
+	def __init__(self, prefix, suffix):
+		self.prefix = prefix
+		self.suffix = suffix
+	
+	def apply(self, read):
+		read = read[:]
+		read.name = self.prefix + read.name + self.suffix
+		return read
+
+
+class DoubleEncoder:
+	"""
+	Double-encode colorspace reads, using characters ACGTN to represent colors.
+	"""
+	def __init__(self):
+		self.DOUBLE_ENCODE_TRANS = maketrans(b'0123.', b'ACGTN')
+
+	def apply(self, read):
+		read = read[:]
+		read.sequence = read.sequence.translate(self.DOUBLE_ENCODE_TRANS)
+		return read
+
+
 class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
@@ -321,7 +360,7 @@ class AdapterCutter(object):
 		desc -- description of the read
 		qualities -- quality values of the read
 
-		Return a tuple (seq, desc, qualities, trimmed) with the modified read.
+		Return a tuple (read, trimmed) with the modified read.
 		trimmed is True when any adapter was found and trimmed.
 		"""
 		self.stats.n += 1
@@ -375,13 +414,6 @@ class AdapterCutter(object):
 		if any_adapter_matches: # TODO move to filter class
 			self.stats.reads_changed += 1
 
-		if self.options.strip_f3 and read.name.endswith('_F3'):
-			read.name = read.name[:-3]
-		read.name = self.options.prefix + read.name + self.options.suffix
-		if self.options.double_encode:
-			# convert color space sequence to double-encoded colorspace (using
-			# characters ACGTN to represent colors)
-			read.sequence = read.sequence.translate(DOUBLE_ENCODE_TRANS)
 
 		if self.options.colorspace:
 			assert not read.qualities or len(read.sequence) == len(read.qualities)
@@ -519,7 +551,6 @@ def main():
 	#if options.too_long_output is not None:
 		#too_long_outfile = xopen(options.too_long_output, 'w')
 
-
 	if options.maq:
 		options.colorspace = True
 		options.double_encode = True
@@ -557,6 +588,12 @@ def main():
 	modifiers = []
 	if options.length_tag:
 		modifiers.append(LengthTagModifier(options.length_tag))
+	if options.strip_f3:
+		modifiers.append(SuffixRemover('_F3'))
+	if options.prefix or options.suffix:
+		modifiers.append(PrefixSuffixAdder(options.prefix, options.suffix))
+	if options.double_encode:
+		modifiers.append(DoubleEncoder())
 
 	cutter = AdapterCutter(options, adapters)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
