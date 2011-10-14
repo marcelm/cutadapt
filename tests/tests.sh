@@ -102,4 +102,7 @@ test_cutadapt "-c -e 0.122 -a 330201030313112312" solid.fasta solid.fasta
 # compressed gz file with multiple blocks (created by concatenating two .gz files)
 test_cutadapt "-b TTAGACATATCTCCGTCG" small.fastq multiblock.fastq.gz
 
+# -y/--suffix parameter, combined with _F3
+test_cutadapt "-c -e 0.12 -a 330201030313112312 -y _my_suffix --strip-f3" suffix.fastq solid.csfasta solid.qual
+
 echo "Tests passed"
