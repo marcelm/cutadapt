@@ -336,6 +336,16 @@ class DoubleEncoder:
 		return read
 
 
+class ZeroCapper:
+	"""
+	Change negative quality values of a read to zero
+	"""
+	def apply(self, read):
+		read = read[:]
+		read.qualities = zero_cap(read.qualities)
+		return read
+
+
 class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
@@ -594,6 +604,8 @@ def main():
 		modifiers.append(PrefixSuffixAdder(options.prefix, options.suffix))
 	if options.double_encode:
 		modifiers.append(DoubleEncoder())
+	if options.zero_cap:
+		modifiers.append(ZeroCapper())
 
 	cutter = AdapterCutter(options, adapters)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
@@ -624,8 +636,6 @@ def main():
 			read, trimmed = cutter.cut(read)
 			for modifier in modifiers:
 				read = modifier.apply(read)
-			if options.zero_cap:
-				read.qualities = zero_cap(read.qualities)
 			if twoheaders is None:
 				try:
 					twoheaders = reader.twoheaders
