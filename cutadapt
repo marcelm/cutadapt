@@ -539,7 +539,7 @@ def main():
 		quality_filename = args[1]
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq']:
-		parser.error("The input file format must be either 'fasta' or 'fastq' (not '{}').".format(options.format))
+		parser.error("The input file format must be either 'fasta' or 'fastq' (not '{0}').".format(options.format))
 
 	# TODO should this really be an error?
 	if options.format is not None and quality_filename is not None:

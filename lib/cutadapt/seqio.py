@@ -88,7 +88,7 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 		elif fileformat == 'fastq':
 			return FastqReader(file)
 		else:
-			raise UnknownFileType("File format {} is unknown (expected 'fasta' or 'fastq').".format(fileformat))
+			raise UnknownFileType("File format {0} is unknown (expected 'fasta' or 'fastq').".format(fileformat))
 
 	name = None
 	if file == "-":
@@ -107,7 +107,7 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 		elif ext in ['.fastq', '.fq'] or (ext == '.txt' and name.endswith('_sequence')):
 			return FastqReader(file, colorspace)
 		else:
-			raise UnknownFileType("Could not determine whether this is FASTA or FASTQ: file name extension {} not recognized".format(ext))
+			raise UnknownFileType("Could not determine whether this is FASTA or FASTQ: file name extension {0} not recognized".format(ext))
 
 	# No name available.
 	# Assume that 'file' is an open file
@@ -227,21 +227,21 @@ class FastqReader(object):
 		for i, line in enumerate(self.fp):
 			if i % 4 == 0:
 				if not line.startswith('@'):
-					raise FormatError("at line {}, expected a line starting with '+'".format(i+1))
+					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
 				name = line.strip()[1:]
 			elif i % 4 == 1:
 				sequence = line.strip()
 			elif i % 4 == 2:
 				line = line.strip()
 				if not line.startswith('+'):
-					raise FormatError("at line {}, expected a line starting with '+'".format(i+1))
+					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
 				if len(line) > 1:
 					self.twoheaders = True
 					if not line[1:] == name:
 						raise FormatError(
-							"At line {}: Two sequence descriptions are given in "
+							"At line {0}: Two sequence descriptions are given in "
 							"the FASTQ file, but they don't match "
-							"('{}' != '{}')".format(i+1, name, line.rstrip()[1:]))
+							"('{1}' != '{2}')".format(i+1, name, line.rstrip()[1:]))
 			elif i % 4 == 3:
 				qualities = line.rstrip("\n\r")
 				if len(qualities) + lengthdiff != len(sequence):
