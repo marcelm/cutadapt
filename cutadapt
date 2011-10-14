@@ -282,6 +282,21 @@ class ReadFilter(object):
 		return True
 
 
+class LengthTagModifier:
+	"""
+	Replace "length=..." strings in read names.
+	"""
+	def __init__(self, length_tag):
+		self.regex = re.compile(r"\b" + length_tag + r"[0-9]*\b")
+		self.length_tag = length_tag
+
+	def apply(self, read):
+		read = read[:]
+		if read.name.find(self.length_tag) >= 0:
+			read.name = self.regex.sub(self.length_tag + str(len(read.sequence)), read.name)
+		return read
+
+
 class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
@@ -296,11 +311,6 @@ class AdapterCutter(object):
 		self.options = options
 		self.adapters = [ (where, adapter.upper()) for (where, adapter) in adapters ]
 		self.stats = Statistics(adapters)
-		# regular expression used to replace "length=..." strings in sequence descriptions
-		if self.options.length_tag is not None:
-			self.lengthregex = re.compile(r"\b" + self.options.length_tag + r"[0-9]*\b")
-		else:
-			self.lengthregex = None
 
 	def cut(self, read):
 		"""
@@ -364,11 +374,6 @@ class AdapterCutter(object):
 			assert (not any_adapter_matches) or (len(read.sequence) < old_length)
 		if any_adapter_matches: # TODO move to filter class
 			self.stats.reads_changed += 1
-
-		# other modifications to the sequence or its description
-		# change any length=XX that may appear in the read description (for 454)
-		if self.lengthregex is not None and read.name.find(self.options.length_tag) >= 0:
-			read.name = self.lengthregex.sub(self.options.length_tag + str(len(read.sequence)), read.name)
 
 		if self.options.strip_f3 and read.name.endswith('_F3'):
 			read.name = read.name[:-3]
@@ -514,6 +519,7 @@ def main():
 	#if options.too_long_output is not None:
 		#too_long_outfile = xopen(options.too_long_output, 'w')
 
+
 	if options.maq:
 		options.colorspace = True
 		options.double_encode = True
@@ -547,7 +553,11 @@ def main():
 
 	#total_bases = 0
 	#total_quality_trimmed = 0
-	
+
+	modifiers = []
+	if options.length_tag:
+		modifiers.append(LengthTagModifier(options.length_tag))
+
 	cutter = AdapterCutter(options, adapters)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
@@ -575,6 +585,8 @@ def main():
 				read = read[:index]
 
 			read, trimmed = cutter.cut(read)
+			for modifier in modifiers:
+				read = modifier.apply(read)
 			if options.zero_cap:
 				read.qualities = zero_cap(read.qualities)
 			if twoheaders is None:
