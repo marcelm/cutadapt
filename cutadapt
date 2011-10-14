@@ -319,12 +319,10 @@ class AdapterCutter(object):
 		if __debug__:
 			old_length = len(read.sequence)
 
-		desc, seq, qualities = read.name, read.sequence, read.qualities # TODO
-
 		# try (possibly more than once) to remove an adapter
 		any_adapter_matches = False
 		for t in xrange(self.options.times):
-			alignment, index = find_best_alignment(self.adapters, seq.upper(), self.options.error_rate, self.options.overlap)
+			alignment, index = find_best_alignment(self.adapters, read.sequence.upper(), self.options.error_rate, self.options.overlap)
 			if alignment is None:
 				# nothing found
 				break
@@ -332,7 +330,7 @@ class AdapterCutter(object):
 			(astart, astop, rstart, rstop, matches, errors) = alignment
 			length = astop - astart
 			assert length > 0
-			assert errors/length <= self.options.error_rate
+			assert errors / length <= self.options.error_rate
 			assert length - errors > 0
 
 			any_adapter_matches = True
@@ -341,52 +339,48 @@ class AdapterCutter(object):
 			if where == BACK or (astart == 0 and rstart > 0):
 				assert where == ANYWHERE or astart == 0
 				# The adapter is at the end of the read or within the read
-				if rstop < len(seq):
+				if rstop < len(read.sequence):
 					# The adapter is within the read
 					if self.options.rest_file is not None:
-						print(seq[rstop:], file=self.options.rest_file)
+						print(read.sequence[rstop:], file=self.options.rest_file)
 				self.stats.lengths_back[index][length] += 1
 
 				if self.options.colorspace:
 					# trim one more color if long enough
 					rstart = max(0, rstart - 1)
-				seq = seq[:rstart]
-				if qualities is not None:
-					qualities = qualities[:rstart]
-					assert len(qualities) == len(seq)
+				read = read[:rstart]
 			elif where == ANYWHERE:
 				# The adapter is in the beginning of the read (case 4)
 				assert rstart == 0
 				self.stats.lengths_front[index][length] += 1
 				# TODO What should we do in color space?
-				seq = seq[rstop:]
-				if qualities is not None:
-					qualities = qualities[rstop:]
+				
+				read = read[rstop:]
 			else:
 				assert False
 
 		if __debug__:
 			# if an adapter was found, then the read should now be shorter
-			assert (not any_adapter_matches) or (len(seq) < old_length)
+			assert (not any_adapter_matches) or (len(read.sequence) < old_length)
 		if any_adapter_matches: # TODO move to filter class
 			self.stats.reads_changed += 1
 
 		# other modifications to the sequence or its description
 		# change any length=XX that may appear in the read description (for 454)
-		if self.lengthregex is not None and desc.find(self.options.length_tag) >= 0:
-			desc = self.lengthregex.sub(self.options.length_tag + str(len(seq)), desc)
+		if self.lengthregex is not None and read.name.find(self.options.length_tag) >= 0:
+			read.name = self.lengthregex.sub(self.options.length_tag + str(len(read.sequence)), read.name)
 
-		if self.options.strip_f3 and desc.endswith('_F3'):
-			desc = desc[:-3]
-		desc = self.options.prefix + desc + self.options.suffix
+		if self.options.strip_f3 and read.name.endswith('_F3'):
+			read.name = read.name[:-3]
+		read.name = self.options.prefix + read.name + self.options.suffix
 		if self.options.double_encode:
 			# convert color space sequence to double-encoded colorspace (using
 			# characters ACGTN to represent colors)
-			seq = seq.translate(DOUBLE_ENCODE_TRANS)
+			read.sequence = read.sequence.translate(DOUBLE_ENCODE_TRANS)
 
 		if self.options.colorspace:
-			assert not qualities or len(seq) == len(qualities)
-		return (seqio.Sequence(desc, seq, qualities), any_adapter_matches)
+			assert not read.qualities or len(read.sequence) == len(read.qualities)
+		return (read, any_adapter_matches)
 
 
 #class QualityTrimmer:
@@ -554,7 +548,6 @@ def main():
 	#total_bases = 0
 	#total_quality_trimmed = 0
 	
-	
 	cutter = AdapterCutter(options, adapters)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
@@ -579,8 +572,7 @@ def main():
 			#total_bases += len(qualities)
 			if options.quality_cutoff is not None:
 				index = quality_trim_index(read.qualities, options.quality_cutoff)
-				read.qualities = read.qualities[:index]
-				read.sequence = read.sequence[:index]
+				read = read[:index]
 
 			read, trimmed = cutter.cut(read)
 			if options.zero_cap:

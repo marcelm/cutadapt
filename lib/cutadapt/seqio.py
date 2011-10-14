@@ -18,8 +18,9 @@ class Sequence:
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
-	
-	#= namedtuple("Sequence", "name sequence qualities")
+
+	def __getitem__(self, key):
+		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None)
 
 
 class FormatError(Exception):
