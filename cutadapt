@@ -27,6 +27,9 @@ Reads a FASTA or FASTQ file, finds and removes adapters,
 and writes the changed sequence to standard output.
 When finished, statistics are printed to standard error.
 
+Use a dash "-" as file name to read from standard input
+(FASTA/FASTQ is autodetected).
+
 If two file names are given, the first must be a .fasta or .csfasta
 file and the second must be a .qual file. This is the file format
 used by some 454 software and by the SOLiD sequencer.
