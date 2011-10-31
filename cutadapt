@@ -80,8 +80,10 @@ from cutadapt.xopen import xopen
 from cutadapt.qualtrim import quality_trim_index
 from cutadapt import __version__
 
-# constants for the find_best_alignment function
+# Constants for the find_best_alignment function.
+# The function is called with SEQ1 as the adapter, SEQ2 as the read.
 BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
+FRONT = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.START_WITHIN_SEQ1
 ANYWHERE = align.SEMIGLOBAL
 
 
@@ -148,7 +150,7 @@ class Statistics(object):
 			total_front = sum(self.lengths_front[index].values())
 			total_back = sum(self.lengths_back[index].values())
 			total = total_front + total_back
-			assert where == ANYWHERE or (where == BACK and total_front == 0)
+			assert where == ANYWHERE or (where == BACK and total_front == 0) or (where == FRONT and total_back == 0)
 
 			print("=" * 3, "Adapter", index+1, "=" * 3)
 			print()
@@ -162,10 +164,16 @@ class Statistics(object):
 				print()
 				print("Histogram of adapter lengths (3' or within)")
 				print_histogram(self.lengths_back[index])
+			elif where == FRONT:
+				print()
+				print("Histogram of adapter lengths")
+				print_histogram(self.lengths_front[index])
 			else:
+				assert where == BACK
 				print()
 				print("Histogram of adapter lengths")
 				print_histogram(self.lengths_back[index])
+
 		if self.n == 0:
 			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
 
@@ -178,13 +186,15 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap, match_re
 	            ANYWHERE. The adapter itself is a string.
 	seq -- The sequence to which each adapter will be aligned
 	where -- Where in the sequence the adapter may be found.
-		One of BACK and FRONT_OR_BACK. For both,
+		One of the FRONT, BACK and ANYWHERE constants. For all,
 		the adapter will also be found if it is in the middle.
 	max_error_rate -- Maximum allowed error rate. The error rate is
 		the number of errors in the alignment divided by the length
 		of the part of the alignment that matches the adapter.
 	minimum_overlap -- Minimum length of the part of the alignment
 		that matches the adapter.
+	match_read_wildcard -- Whether wildcards ('N' characters) in the read
+		are matches (at zero cost).
 
 	Return tuple (best_alignment, best_index).
 
@@ -409,7 +419,7 @@ class AdapterCutter(object):
 			any_adapter_matches = True
 			where = self.adapters[index][0]
 
-			if where == BACK or (astart == 0 and rstart > 0):
+			if where == BACK or (where == ANYWHERE and astart == 0 and rstart > 0):
 				assert where == ANYWHERE or astart == 0
 				# The adapter is at the end of the read or within the read
 				if rstop < len(read.sequence):
@@ -422,9 +432,9 @@ class AdapterCutter(object):
 					# trim one more color if long enough
 					rstart = max(0, rstart - 1)
 				trimmed, read = read[rstart:], read[:rstart]
-			elif where == ANYWHERE:
-				# The adapter is in the beginning of the read (case 4)
-				assert rstart == 0
+			elif where == FRONT or where == ANYWHERE:
+				# The adapter is in the beginning of the read
+				assert where == FRONT or rstart == 0
 
 				self.stats.lengths_front[index][length] += 1
 				# TODO What should we do in color space?
@@ -435,8 +445,8 @@ class AdapterCutter(object):
 			if trimmed and self.wildcard_file is not None:
 				seq_match = trimmed.sequence
 				adap_match = self.adapters[index][1]
-				wildcards = [seq_match[i] for i in range(astart,astop)
-								if adap_match[i]=='N']
+				wildcards = [seq_match[i] for i in range(astart, astop)
+								if adap_match[i] == 'N']
 				print(''.join(wildcards), trimmed.name, file=self.wildcard_file)
 
 		# if an adapter was found, then the read should now be shorter
@@ -473,9 +483,11 @@ def main():
 
 	group = OptionGroup(parser, "Options that influence how the adapters are found")
 	group.add_option("-a", "--adapter", action="append", metavar="ADAPTER", dest="adapters",
-		help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed. If multiple -a or -b options are given, only the best matching adapter is trimmed.")
+		help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed. If multiple -a, -b or -g options are given, only the best matching adapter is trimmed.")
 	group.add_option("-b", "--anywhere", action="append", metavar="ADAPTER",
-		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a or -b options are given, only the best matching adapter is trimmed.")
+		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a, -b or -g options are given, only the best matching adapter is trimmed.")
+	group.add_option("-g", "--front", action="append", metavar="ADAPTER",
+		help="Sequence of an adapter that was ligated to the 5' end. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a, -b or -g options are given, only the best matching adapter is trimmed.")
 	group.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
@@ -547,7 +559,6 @@ def main():
 			"like 'length=123'.")
 	group.add_option("--zero-cap", "-z", action='store_true', default=False,
 		help="Change negative quality values to zero (workaround to avoid segmentation faults in BWA)")
-
 	parser.add_option_group(group)
 
 	options, args = parser.parse_args()
@@ -595,8 +606,8 @@ def main():
 		parser.error("Trimming the primer makes only sense in color space.")
 	if options.double_encode and not options.colorspace:
 		parser.error("Double-encoding makes only sense in color space.")
-	if options.anywhere and options.colorspace:
-		parser.error("Using --anywhere with color space reads is currently not supported  (if you think this may be useful, contact the author).")
+	if (options.anywhere or options.front) and options.colorspace:
+		parser.error("Using --anywhere or --front with color space reads is currently not supported  (if you think this may be useful, contact the author).")
 	if not (0 <= options.error_rate <= 1.):
 		parser.error("The maximum error rate must be between 0 and 1.")
 
@@ -610,10 +621,13 @@ def main():
 		adapters = [ (BACK, adapter) for adapter in options.adapters ]
 	if options.anywhere:
 		adapters += [ (ANYWHERE, adapter) for adapter in options.anywhere ]
+	if options.front:
+		adapters += [ (FRONT, adapter) for adapter in options.front ]
 
-
+	# make sure these aren't used by accident
 	del options.adapters
 	del options.anywhere
+	del options.front
 
 	if not adapters:
 		print("You need to provide at least one adapter sequence.", file=sys.stderr)

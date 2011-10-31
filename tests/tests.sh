@@ -121,4 +121,7 @@ test_cutadapt "--wildcard-file - -b ACGTNNNACGT" wildcard_adapter.fa wildcard_ad
 # test 'N' wildcard matching with no allowed errors=
 test_cutadapt "-e 0 -a GGGGGGG --match-read-wildcards" wildcardN.fa wildcardN.fa
 
+# test adapter in front
+test_cutadapt "--front ADAPTER" examplefront.fa example.fa
+
 echo "Tests passed"
