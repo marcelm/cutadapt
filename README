@@ -242,6 +242,8 @@ Changes
 
 v1.0
 ----
+* Allow to specify that adapters were ligated to the 5' end of reads. This change
+  is based on a patch contributed by James Casbon.
 * Due to cutadapt being published in EMBnet.journal, I found it appropriate
   to call this release version 1.0. Please see
   http://journal.embnet.org/index.php/embnetjournal/article/view/200 for the
