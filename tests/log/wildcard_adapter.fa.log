@@ -1,0 +1,22 @@
+AAA 1
+GGG 2
+Maximum error rate: 10.00%
+   Processed reads: 3
+     Trimmed reads: 2 ( 66.7%)
+   Too short reads: 0 (  0.0% of processed reads)
+    Too long reads: 0 (  0.0% of processed reads)
+
+=== Adapter 1 ===
+
+Adapter 'ACGTNNNACGT', length 11, was trimmed 2 times.
+2 times, it overlapped the 5' end of a read
+0 times, it overlapped the 3' end or was within the read
+
+Histogram of adapter lengths (5')
+length	count
+11	2
+
+
+Histogram of adapter lengths (3' or within)
+length	count
+
