@@ -481,7 +481,8 @@ def main():
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
 		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
 	group.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
-		help="Minimum overlap length. If the overlap between the adapter and the sequence is shorter than LENGTH, the read is not modified (default: %default).")
+		help="Minimum overlap length. If the overlap between the read and the adapter is shorter than LENGTH, the read is not modified."
+			"This reduces the no. of bases trimmed purely due to short random adapter matches (default: %default).")
 	group.add_option("--match-read-wildcards", action="store_true", default=False,
 		help="Allow 'N's in the read as matches to the adapter (default: %default).")
 	parser.add_option_group(group)
