@@ -87,13 +87,6 @@ FRONT = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.START_WITHIN_SE
 ANYWHERE = align.SEMIGLOBAL
 
 
-# for setting negative quality values to zero
-if sys.version_info[0] < 3:
-	ZERO_CAP_TRANS = maketrans(''.join(map(chr, range(33))), chr(33) * 33)
-else:
-	ZERO_CAP_TRANS = maketrans(bytes(range(33)), b'\x21' * 33)
-
-
 class HelpfulOptionParser(OptionParser):
 	"""An OptionParser that prints full help on errors."""
 	def error(self, msg):
@@ -356,9 +349,15 @@ class ZeroCapper:
 	"""
 	Change negative quality values of a read to zero
 	"""
+	def __init__(self):
+		if sys.version_info[0] < 3:
+			self.ZERO_CAP_TRANS = maketrans(''.join(map(chr, range(33))), chr(33) * 33)
+		else:
+			self.ZERO_CAP_TRANS = maketrans(bytes(range(33)), b'\x21' * 33)
+
 	def apply(self, read):
 		read = read[:]
-		read.qualities = zero_cap(read.qualities)
+		read.qualities = read.qualities.translate(self.ZERO_CAP_TRANS)
 		return read
 
 
@@ -468,9 +467,6 @@ class AdapterCutter(object):
 		#qualities = qualities[:index]
 		#seq = seq[:index]
 
-
-def zero_cap(qualities):
-	return qualities.translate(ZERO_CAP_TRANS)
 
 
 def main():

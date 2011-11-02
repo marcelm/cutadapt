@@ -11,8 +11,9 @@ from cutadapt.xopen import xopen
 from os.path import splitext
 import sys
 
+
 class Sequence:
-	"""	qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
+	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
 	def __init__(self, name, sequence, qualities):
 		self.name = name
