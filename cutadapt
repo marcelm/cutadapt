@@ -532,6 +532,9 @@ def main():
 			"compute partial sums from all indices to the end of the "
 			"sequence; cut sequence at the index at which the sum "
 			"is minimal) (default: %default)")
+	group.add_option("--quality-base", type=int, default=33,
+		help="Assume that quality values are encoded as ascii(quality + QUALITY_BASE). The default (33) is usually correct, "
+		     "except for reads produced by some versions of the Illumina pipeline, where this should be set to 64. (default: %default)")
 	group.add_option("-x", "--prefix", default='',
 		help="Add this prefix to read names")
 	group.add_option("-y", "--suffix", default='',
@@ -669,7 +672,7 @@ def main():
 
 			#total_bases += len(qualities)
 			if options.quality_cutoff is not None:
-				index = quality_trim_index(read.qualities, options.quality_cutoff)
+				index = quality_trim_index(read.qualities, options.quality_cutoff, options.quality_base)
 				read = read[:index]
 
 			read, trimmed = cutter.cut(read)

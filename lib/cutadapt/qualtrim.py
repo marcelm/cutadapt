@@ -6,11 +6,11 @@ if sys.version_info[0] >= 3:
 	xrange = range
 
 
-def quality_trim_index(qualities, cutoff):
+def quality_trim_index(qualities, cutoff, base=33):
 	"""
 	Find the position at which to trim a low-quality end from a nucleotide sequence.
 
-	Qualities are assumed to be ASCII-encoded as chr(qual + 33).
+	Qualities are assumed to be ASCII-encoded as chr(qual + base).
 
 	>>> trim("", "", 10) TODO
 	with qualities based on bwa_trim_read
@@ -25,7 +25,7 @@ def quality_trim_index(qualities, cutoff):
 	max_qual = 0
 	max_i = len(qualities)
 	for i in xrange(len(qualities)-1, -1, -1):
-		q = ord(qualities[i]) - 33
+		q = ord(qualities[i]) - base
 		s += cutoff - q
 		if s < 0:
 			break

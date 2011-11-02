@@ -242,6 +242,9 @@ Changes
 
 v1.0
 ----
+* ASCII-encoded quality values were assumed to be encoded as ascii(quality+33).
+  With the new parameter --quality-base, this can be changed to ascii(quality+64),
+  as used in some versions of the Illumina pipeline. (Fixes issue 7.)
 * Allow to specify that adapters were ligated to the 5' end of reads. This change
   is based on a patch contributed by James Casbon.
 * Due to cutadapt being published in EMBnet.journal, I found it appropriate
