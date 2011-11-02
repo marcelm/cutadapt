@@ -85,6 +85,9 @@ test_cutadapt "-O 10 -b TTAGACATATCTCCGTCG" overlapb.fa overlapb.fa
 # -q with low qualities
 test_cutadapt "-q 10 -a XXXXXX" lowqual.fastq lowqual.fastq
 
+# -q with low qualities, using ascii(quality+64) encoding
+test_cutadapt "-q 10 --quality-base 64 -a XXXXXX" illumina64.fastq illumina64.fastq
+
 # two adapters
 test_cutadapt "-b CTCGAGAATTCTGGATCCTC -b GAGGATCCAGAATTCTCGAGTT" twoadapters.fasta twoadapters.fasta
 
