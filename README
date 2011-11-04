@@ -261,7 +261,7 @@ v0.9.5
 ------
 * Fix issue 20: Make the report go to standard output when -o/--output is
   specified.
-* Recognize .fq as an extension for FSTQ files
+* Recognize .fq as an extension for FASTQ files
 * many more unit tests
 * The alignment algorithm has changed. It will now find some adapters that
   previously were missed. Note that this will produce different output than
