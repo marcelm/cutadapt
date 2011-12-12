@@ -526,6 +526,9 @@ def main():
 			"This reduces the no. of bases trimmed purely due to short random adapter matches (default: %default).")
 	group.add_option("--match-read-wildcards", action="store_true", default=False,
 		help="Allow 'N's in the read as matches to the adapter (default: %default).")
+	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
+		default=True, dest='match_adapter_wildcards',
+		help="Do not treat 'N' in the adapter sequence as wildcards. This is needed when you want to search for literal 'N' characters.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options for filtering of processed reads")
@@ -654,7 +657,8 @@ def main():
 		if adapter_list:
 			for seq in adapter_list:
 				adapters.append(Adapter(seq, where, options.error_rate,
-					options.overlap, options.match_read_wildcards))
+					options.overlap, options.match_read_wildcards,
+					options.match_adapter_wildcards))
 
 	append_adapters(options.adapters, BACK)
 	append_adapters(options.anywhere, ANYWHERE)

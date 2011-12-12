@@ -127,8 +127,9 @@ test_cutadapt "-e 0 -a GGGGGGG --match-read-wildcards" wildcardN.fa wildcardN.fa
 # test adapter in front
 test_cutadapt "--front ADAPTER" examplefront.fa example.fa
 
-test_cutadapt "-W -e 0.2 -a NNNNNNNNNNNNNN" trimN3.fasta trimN3.fasta
+# test matching literal 'N's
+test_cutadapt "-N -e 0.2 -a NNNNNNNNNNNNNN" trimN3.fasta trimN3.fasta
 
-test_cutadapt "-W -O 1 -g NNNNNNNNNNNNNN" trimN5.fasta trimN5.fasta
+test_cutadapt "-N -O 1 -g NNNNNNNNNNNNNN" trimN5.fasta trimN5.fasta
 
 echo "Tests passed"
