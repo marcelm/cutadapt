@@ -231,36 +231,6 @@ class Adapter(object):
 		return result
 
 
-# TODO move to AdapterCutter class
-def find_best_alignment(adapters, seq):
-	"""
-	Find the best matching adapter.
-
-	adapters -- List of Adapter objects
-	seq -- The sequence to which each adapter will be aligned
-
-	Return tuple (best_alignment, best_index).
-
-	best_alignment is an alignment as returned by semiglobalalign.
-	best_index is the index of the best adapter into the adapters list.
-	"""
-	best_match = None
-	best_matches = 0
-	best_index = None
-	for index, adapter in enumerate(adapters):
-		match = adapter.match(seq)
-		if match is None:
-			continue
-		(astart, astop, rstart, rstop, matches, errors) = match
-
-		# the no. of matches determines which adapter fits best
-		if matches > best_matches:
-			best_match = match
-			best_matches = matches
-			best_index = index
-	return (best_match, best_index)
-
-
 def write_read(read, outfile, twoheaders=False):
 	"""
 	Write read in either FASTA or FASTQ format
@@ -420,6 +390,34 @@ class AdapterCutter(object):
 		self.stats = Statistics(self.adapters)
 		self.wildcard_file = wildcard_file
 
+	def _best_match(self, seq):
+		"""
+		Find the best matching adapter.
+
+		adapters -- List of Adapter objects
+		seq -- The sequence to which each adapter will be aligned
+
+		Return tuple (best_alignment, best_index).
+
+		best_alignment is an alignment as returned by semiglobalalign.
+		best_index is the index of the best adapter into the adapters list.
+		"""
+		best_match = None
+		best_matches = 0
+		best_index = None
+		for index, adapter in enumerate(self.adapters):
+			match = adapter.match(seq)
+			if match is None:
+				continue
+			(astart, astop, rstart, rstop, matches, errors) = match
+
+			# the no. of matches determines which adapter fits best
+			if matches > best_matches:
+				best_match = match
+				best_matches = matches
+				best_index = index
+		return (best_match, best_index)
+
 	def cut(self, read):
 		"""
 		Cut adapters from a single read. The read will be converted to uppercase
@@ -440,7 +438,7 @@ class AdapterCutter(object):
 		# try (possibly more than once) to remove an adapter
 		any_adapter_matches = False
 		for t in xrange(self.times):
-			alignment, index = find_best_alignment(self.adapters, read.sequence.upper())
+			alignment, index = self._best_match(read.sequence.upper())
 			if alignment is None:
 				# nothing found
 				break
