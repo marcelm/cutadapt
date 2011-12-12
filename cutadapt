@@ -139,15 +139,16 @@ class Statistics(object):
 		if self.n > 0:
 			print("     Time per read: %9.2f ms" % (1000. * self.time / self.n))
 		print()
-		for index, (where, adapter) in enumerate(self.adapters):
+		for index, adapter in enumerate(self.adapters):
 			total_front = sum(self.lengths_front[index].values())
 			total_back = sum(self.lengths_back[index].values())
 			total = total_front + total_back
+			where = adapter.where
 			assert where == ANYWHERE or (where == BACK and total_front == 0) or (where == FRONT and total_back == 0)
 
 			print("=" * 3, "Adapter", index+1, "=" * 3)
 			print()
-			print("Adapter '%s'," % adapter.upper(), "length %d," % len(adapter), "was trimmed", total, "times.")
+			print("Adapter '%s'," % adapter.sequence, "length %d," % len(adapter.sequence), "was trimmed", total, "times.")
 			if where == ANYWHERE:
 				print(total_front, "times, it overlapped the 5' end of a read")
 				print(total_back, "times, it overlapped the 3' end or was within the read")
@@ -171,12 +172,23 @@ class Statistics(object):
 			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
 
 
+class Adapter(object):
+	"""An adapter knows where it should be within the read and how to interpret
+	wildcard characters.
+
+	where --  One of the BACK, FRONT or ANYWHERE constants.
+	sequence - a string. Will be converted to uppercase.
+	"""
+	def __init__(self, sequence, where):
+		self.sequence = sequence.upper()
+		self.where = where
+
+
 def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap, match_read_wildcard):
 	"""
 	Find the best matching adapter.
 
-	adapters -- List of tuples (where, adapter). 'where' is either BACK or
-	            ANYWHERE. The adapter itself is a string.
+	adapters -- List of Adapter objects
 	seq -- The sequence to which each adapter will be aligned
 	where -- Where in the sequence the adapter may be found.
 		One of the FRONT, BACK and ANYWHERE constants. For all,
@@ -197,16 +209,16 @@ def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap, match_re
 	best_result = None
 	best_matches = 0
 	best_index = None
-	for index, (where, adapter) in enumerate(adapters):
+	for index, adapter in enumerate(adapters):
 		# try to find an exact match first
-		pos = seq.find(adapter)
+		pos = seq.find(adapter.sequence)
 		if pos >= 0:
-			result = (0, len(adapter), pos, pos + len(adapter), len(adapter), 0)
+			result = (0, len(adapter.sequence), pos, pos + len(adapter.sequence), len(adapter.sequence), 0)
 		else:
 			n_mode = align.ALLOW_WILDCARD_SEQ2 if match_read_wildcard else 0
-			if 'N' in adapter:
+			if 'N' in adapter.sequence:
 				n_mode = n_mode | align.ALLOW_WILDCARD_SEQ1
-			result = align.globalalign_locate(adapter, seq, max_error_rate, where, n_mode)
+			result = align.globalalign_locate(adapter.sequence, seq, max_error_rate, adapter.where, n_mode)
 		(astart, astop, rstart, rstop, matches, errors) = result
 		length = astop - astart
 		assert length == 0 or errors / length <= max_error_rate
@@ -378,8 +390,8 @@ class AdapterCutter(object):
 		self.overlap = overlap
 		self.rest_file = rest_file
 		self.colorspace = colorspace
-		self.adapters = [ (where, adapter.upper()) for (where, adapter) in adapters ]
-		self.stats = Statistics(adapters)
+		self.adapters = [ Adapter(adapter, where) for (where, adapter) in adapters ]
+		self.stats = Statistics(self.adapters)
 		self.match_read_wildcards = match_read_wildcards
 		self.wildcard_file = wildcard_file
 
@@ -416,7 +428,7 @@ class AdapterCutter(object):
 			assert length - errors > 0
 
 			any_adapter_matches = True
-			where = self.adapters[index][0]
+			where = self.adapters[index].where
 
 			if where == BACK or (where == ANYWHERE and astart == 0 and rstart > 0):
 				assert where == ANYWHERE or astart == 0
@@ -443,9 +455,9 @@ class AdapterCutter(object):
 
 			if trimmed and self.wildcard_file is not None:
 				seq_match = trimmed.sequence
-				adap_match = self.adapters[index][1]
-				wildcards = [seq_match[i] for i in range(astart, astop)
-								if adap_match[i] == 'N']
+				adap_match = self.adapters[index].sequence
+				wildcards = [ seq_match[i] for i in range(astart, astop)
+								if adap_match[i] == 'N' ]
 				print(''.join(wildcards), trimmed.name, file=self.wildcard_file)
 
 		# if an adapter was found, then the read should now be shorter
