@@ -218,8 +218,4 @@ def pysemiglobalalign(s1, s2, print_table=False):
 	return (r1, r2, start1, stop1, start2, stop2, errors)
 
 
-#try:
-from cutadapt.calign import globalalign, globalalign_locate
-#except ImportError:
-	#print("Warning: C implementation of alignment algorithm not available. Using slow Python version!", file=sys.stderr)
-	#semiglobalalign = pysemiglobalalign
+from cutadapt.calign import globalalign_locate
