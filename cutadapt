@@ -499,12 +499,12 @@ def main():
 	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
 		help="Discard reads that contain the adapter instead of trimming them. Also use -O in order to avoid throwing away too many randomly matching reads!")
 	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
-		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted.")
+		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted (default: 0).")
 	group.add_option("-M", "--maximum-length", type=int, default=sys.maxsize, metavar="LENGTH",
 		help="Discard trimmed reads that are longer than LENGTH. "
 			"Reads that are too long even before adapter removal "
 			"are also discarded. In colorspace, an initial primer "
-			"is not counted.")
+			"is not counted (default: no limit).")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
