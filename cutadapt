@@ -173,64 +173,92 @@ class Statistics(object):
 
 
 class Adapter(object):
-	"""An adapter knows where it should be within the read and how to interpret
+	"""An adapter knows how to match itself to a read.
+	In particular, it knows where it should be within the read and how to interpret
 	wildcard characters.
 
 	where --  One of the BACK, FRONT or ANYWHERE constants.
-	sequence - a string. Will be converted to uppercase.
+		If the adapter is located in the middle of the read,
+		the constant influences which part of the read gets removed.
+
+	sequence - A string. Will be converted to uppercase.
+
+	max_error_rate -- Maximum allowed error rate. The error rate is
+		the number of errors in the alignment divided by the length
+		of the part of the alignment that matches the adapter.
+
+	minimum_overlap -- Minimum length of the part of the alignment
+		that matches the adapter.
+
+	match_read_wildcards -- Whether wildcards ('N' characters) in the read
+		are matches (at zero cost).
+
+	match_adapter_wildcards -- Whether wildcards in the adapter are allowed
+		to match any character in the read (at zero cost).
 	"""
-	def __init__(self, sequence, where):
+	def __init__(self, sequence, where, max_error_rate, min_overlap,
+			match_read_wildcards, match_adapter_wildcards=True):
 		self.sequence = sequence.upper()
 		self.where = where
+		self.max_error_rate = max_error_rate
+		self.min_overlap = min_overlap
+		self.wildcard_flags = 0
+		if match_read_wildcards:
+			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
+		if match_adapter_wildcards and 'N' in self.sequence:
+			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ1
+
+	def match(self, read):
+		"""
+		Try to match this adapter to the given read.
+
+		The result is a tuple as returned by globalalign_locate.
+		Return None if the minimum overlap length is not met.
+		"""
+		# try to find an exact match first
+		# TODO do not do this when wildcards are allowed!
+		pos = read.find(self.sequence)
+		if pos >= 0:
+			result = (0, len(self.sequence), pos, pos + len(self.sequence), len(self.sequence), 0)
+		else:
+			result = align.globalalign_locate(self.sequence, read,
+				self.max_error_rate, self.where, self.wildcard_flags)
+		(astart, astop, rstart, rstop, matches, errors) = result
+		length = astop - astart
+		assert length == 0 or errors / length <= self.max_error_rate
+		if length < self.min_overlap:
+			return None
+		return result
 
 
-def find_best_alignment(adapters, seq, max_error_rate, minimum_overlap, match_read_wildcard):
+# TODO move to AdapterCutter class
+def find_best_alignment(adapters, seq):
 	"""
 	Find the best matching adapter.
 
 	adapters -- List of Adapter objects
 	seq -- The sequence to which each adapter will be aligned
-	where -- Where in the sequence the adapter may be found.
-		One of the FRONT, BACK and ANYWHERE constants. For all,
-		the adapter will also be found if it is in the middle.
-	max_error_rate -- Maximum allowed error rate. The error rate is
-		the number of errors in the alignment divided by the length
-		of the part of the alignment that matches the adapter.
-	minimum_overlap -- Minimum length of the part of the alignment
-		that matches the adapter.
-	match_read_wildcard -- Whether wildcards ('N' characters) in the read
-		are matches (at zero cost).
 
 	Return tuple (best_alignment, best_index).
 
 	best_alignment is an alignment as returned by semiglobalalign.
 	best_index is the index of the best adapter into the adapters list.
 	"""
-	best_result = None
+	best_match = None
 	best_matches = 0
 	best_index = None
 	for index, adapter in enumerate(adapters):
-		# try to find an exact match first
-		pos = seq.find(adapter.sequence)
-		if pos >= 0:
-			result = (0, len(adapter.sequence), pos, pos + len(adapter.sequence), len(adapter.sequence), 0)
-		else:
-			n_mode = align.ALLOW_WILDCARD_SEQ2 if match_read_wildcard else 0
-			if 'N' in adapter.sequence:
-				n_mode = n_mode | align.ALLOW_WILDCARD_SEQ1
-			result = align.globalalign_locate(adapter.sequence, seq, max_error_rate, adapter.where, n_mode)
-		(astart, astop, rstart, rstop, matches, errors) = result
-		length = astop - astart
-		assert length == 0 or errors / length <= max_error_rate
-		if length < minimum_overlap:
+		match = adapter.match(seq)
+		if match is None:
 			continue
+		(astart, astop, rstart, rstop, matches, errors) = match
 
 		# the no. of matches determines which adapter fits best
 		if matches > best_matches:
-			best_result = result
+			best_match = match
 			best_matches = matches
 			best_index = index
-	return (best_result, best_index)
+	return (best_match, best_index)
 
 
 def write_read(read, outfile, twoheaders=False):
@@ -386,13 +414,10 @@ class AdapterCutter(object):
 			them.
 		"""
 		self.times = times
-		self.error_rate = error_rate
-		self.overlap = overlap
 		self.rest_file = rest_file
 		self.colorspace = colorspace
-		self.adapters = [ Adapter(adapter, where) for (where, adapter) in adapters ]
+		self.adapters = [ Adapter(adapter, where, error_rate, overlap, match_read_wildcards) for (where, adapter) in adapters ]
 		self.stats = Statistics(self.adapters)
-		self.match_read_wildcards = match_read_wildcards
 		self.wildcard_file = wildcard_file
 
 	def cut(self, read):
@@ -415,8 +440,7 @@ class AdapterCutter(object):
 		# try (possibly more than once) to remove an adapter
 		any_adapter_matches = False
 		for t in xrange(self.times):
-			alignment, index = find_best_alignment(self.adapters, read.sequence.upper(),
-				self.error_rate, self.overlap, self.match_read_wildcards)
+			alignment, index = find_best_alignment(self.adapters, read.sequence.upper())
 			if alignment is None:
 				# nothing found
 				break
@@ -424,7 +448,7 @@ class AdapterCutter(object):
 			(astart, astop, rstart, rstop, matches, errors) = alignment
 			length = astop - astart
 			assert length > 0
-			assert errors / length <= self.error_rate
+			assert errors / length <= self.adapters[index].max_error_rate
 			assert length - errors > 0
 
 			any_adapter_matches = True
