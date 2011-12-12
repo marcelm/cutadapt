@@ -374,8 +374,7 @@ class ZeroCapper:
 class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
-	def __init__(self, times, error_rate, overlap, rest_file, colorspace, adapters,
-					match_read_wildcards, wildcard_file):
+	def __init__(self, adapters, times, rest_file, colorspace, wildcard_file):
 		"""Initialize this cutter.
 		adapters --
 			List of tuples (where, adapter). 'where' is either BACK
@@ -386,7 +385,7 @@ class AdapterCutter(object):
 		self.times = times
 		self.rest_file = rest_file
 		self.colorspace = colorspace
-		self.adapters = [ Adapter(adapter, where, error_rate, overlap, match_read_wildcards) for (where, adapter) in adapters ]
+		self.adapters = adapters
 		self.stats = Statistics(self.adapters)
 		self.wildcard_file = wildcard_file
 
@@ -650,12 +649,16 @@ def main():
 		options.wildcard_file = xopen(options.wildcard_file, 'w')
 
 	adapters = []
-	if options.adapters:
-		adapters = [ (BACK, adapter) for adapter in options.adapters ]
-	if options.anywhere:
-		adapters += [ (ANYWHERE, adapter) for adapter in options.anywhere ]
-	if options.front:
-		adapters += [ (FRONT, adapter) for adapter in options.front ]
+
+	def append_adapters(adapter_list, where):
+		if adapter_list:
+			for seq in adapter_list:
+				adapters.append(Adapter(seq, where, options.error_rate,
+					options.overlap, options.match_read_wildcards))
+
+	append_adapters(options.adapters, BACK)
+	append_adapters(options.anywhere, ANYWHERE)
+	append_adapters(options.front, FRONT)
 
 	# make sure these aren't used by accident
 	del options.adapters
@@ -681,8 +684,8 @@ def main():
 	if options.zero_cap:
 		modifiers.append(ZeroCapper())
 
-	cutter = AdapterCutter(options.times, options.error_rate, options.overlap, options.rest_file,
-				options.colorspace, adapters, options.match_read_wildcards, options.wildcard_file)
+	cutter = AdapterCutter(adapters, options.times, options.rest_file,
+				options.colorspace, options.wildcard_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
 	try:
