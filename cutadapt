@@ -487,7 +487,7 @@ def main():
 	group.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
-		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times.")
+		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times (default: %default).")
 	group.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
 		help="Minimum overlap length. If the overlap between the read and the adapter is shorter than LENGTH, the read is not modified."
 			"This reduces the no. of bases trimmed purely due to short random adapter matches (default: %default).")
