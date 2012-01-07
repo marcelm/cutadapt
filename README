@@ -240,6 +240,10 @@ The -b parameter currently does not work with color space data.
 Changes
 =======
 
+v1.1
+----
+* Add the "-N" option, which allows 'N' characters within adapters to match literally.
+
 v1.0
 ----
 * ASCII-encoded quality values were assumed to be encoded as ascii(quality+33).
