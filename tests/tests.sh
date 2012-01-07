@@ -43,6 +43,9 @@ test_cutadapt "-e 0.12 -b TTAGACATATCTCCGTCG" dos.fastq dos.fastq
 # lower case adapter
 test_cutadapt "-b ttagacatatctccgtcg" lowercase.fastq small.fastq
 
+# color space
+test_cutadapt "-c -e 0.122 -a 330201030313112312" solid.fastq solid.fastq
+
 # -r/--rest-file
 test_cutadapt "-b ADAPTER -r rest.tmp" rest.fa rest.fa
 diff -u rest.tmp data/rest.txt
