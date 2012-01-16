@@ -1,7 +1,6 @@
 # coding: utf-8
 __author__ = "Marcel Martin"
 
-from collections import namedtuple
 import sys
 if sys.version_info[0] < 3:
 	from itertools import izip as zip
