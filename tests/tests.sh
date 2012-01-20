@@ -51,6 +51,10 @@ test_cutadapt "-b ADAPTER -r rest.tmp" rest.fa rest.fa
 diff -u rest.tmp data/rest.txt
 rm rest.tmp
 
+test_cutadapt "-g ADAPTER -r rest.tmp" restfront.fa rest.fa
+diff -u rest.tmp data/restfront.txt
+rm rest.tmp
+
 # --discard
 test_cutadapt "-b TTAGACATATCTCCGTCG --discard" discard.fastq small.fastq
 

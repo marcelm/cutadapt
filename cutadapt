@@ -252,9 +252,8 @@ class Adapter(object):
 		assert not self.colorspace
 		self.lengths_front[match.astop - match.astart] += 1
 		# TODO: length of removed sequence: self.lengths_front[match.rstop] += 1
-		# TODO write to rest_file
-		if self.rest_file:
-			assert False
+		if match.rstart > 0 and self.rest_file:
+			print(read.sequence[:match.rstart], file=self.rest_file)
 		
 		if self.wildcard_file:
 			trimmed = read[:match.rstop]
@@ -264,10 +263,9 @@ class Adapter(object):
 
 	def remove_back(self, read, match):
 		# The adapter is at the end of the read or within the read
-		if match.rstop < len(read):
+		if match.rstop < len(read) and self.rest_file:
 			# The adapter is within the read
-			if self.rest_file:
-				print(read.sequence[match.rstop:], file=self.rest_file)
+			print(read.sequence[match.rstop:], file=self.rest_file)
 		self.lengths_back[match.astop - match.astart] += 1
 		# TODO use this for length of removed sequence: self.lengths_back[len(read) - match.rstart] += 1
 
