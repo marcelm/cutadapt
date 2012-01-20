@@ -195,7 +195,8 @@ class Adapter(object):
 		to match any character in the read (at zero cost).
 	"""
 	def __init__(self, sequence, where, max_error_rate, min_overlap,
-			match_read_wildcards, colorspace, match_adapter_wildcards=True, wildcard_file=None):
+			match_read_wildcards, colorspace, match_adapter_wildcards=True, 
+			wildcard_file=None, rest_file=None):
 		self.sequence = sequence.upper()
 		self.where = where
 		self.max_error_rate = max_error_rate
@@ -212,10 +213,11 @@ class Adapter(object):
 			ANYWHERE: self.remove_anywhere
 		}
 		self.remove = removers[where]
+		self.wildcard_file = wildcard_file
+		self.rest_file = rest_file
 		# statistics about length of removed sequences
 		self.lengths_front = defaultdict(int)
 		self.lengths_back = defaultdict(int)
-		self.wildcard_file = wildcard_file
 
 	def match(self, read):
 		"""
@@ -239,18 +241,20 @@ class Adapter(object):
 			return None
 		return match
 
-	def remove_anywhere(self, read, match, rest_file, wildcard_file):
+	def remove_anywhere(self, read, match):
 		assert self.where == ANYWHERE # TODO remove
 		if match.astart == 0 and match.rstart > 0:
-			return self.remove_back(read, match, rest_file)
+			return self.remove_back(read, match)
 		else:
-			return self.remove_front(read, match, rest_file)
+			return self.remove_front(read, match)
 
-	def remove_front(self, read, match, rest_file):
+	def remove_front(self, read, match):
 		assert not self.colorspace
 		self.lengths_front[match.astop - match.astart] += 1
 		# TODO: length of removed sequence: self.lengths_front[match.rstop] += 1
 		# TODO write to rest_file
+		if self.rest_file:
+			assert False
 		
 		if self.wildcard_file:
 			trimmed = read[:match.rstop]
@@ -258,11 +262,11 @@ class Adapter(object):
 		read = read[match.rstop:]
 		return read
 
-	def remove_back(self, read, match, rest_file):
+	def remove_back(self, read, match):
 		# The adapter is at the end of the read or within the read
 		if match.rstop < len(read):
 			# The adapter is within the read
-			if rest_file:
+			if self.rest_file:
 				print(read.sequence[match.rstop:], file=self.rest_file)
 		self.lengths_back[match.astop - match.astart] += 1
 		# TODO use this for length of removed sequence: self.lengths_back[len(read) - match.rstart] += 1
@@ -489,7 +493,7 @@ class AdapterCutter(object):
 				assert length - match.errors > 0
 
 			any_adapter_matches = True
-			read = match.adapter.remove(read, match, self.rest_file, self.wildcard_file)
+			read = match.adapter.remove(read, match)
 
 			#if where == BACK or (where == ANYWHERE and astart == 0 and rstart > 0):
 				#assert where == ANYWHERE or astart == 0
@@ -693,7 +697,8 @@ def main():
 					options.overlap, options.match_read_wildcards,
 					options.colorspace, 
 					options.match_adapter_wildcards,
-					options.wildcard_file))
+					options.wildcard_file,
+					options.rest_file))
 
 	append_adapters(options.adapters, BACK)
 	append_adapters(options.anywhere, ANYWHERE)
