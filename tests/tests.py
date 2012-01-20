@@ -1,3 +1,7 @@
+# TODO
+# test --untrimmed-output
+# test with the --output option
+
 from __future__ import print_function, division
 import os
 import imp
@@ -7,6 +11,9 @@ import imp
 # - symlinks
 # - move code into modules, make cutadapt a simple wrapper
 ca = imp.load_source('ca', 'cutadapt')
+
+# with a symlink:
+#import main as ca
 
 
 def dpath(path):
