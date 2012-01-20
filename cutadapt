@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2010,2011 Marcel Martin <marcel.martin@tu-dortmund.de>
+# Copyright (c) 2010,2011,2012 Marcel Martin <marcel.martin@tu-dortmund.de>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -181,7 +181,7 @@ class Adapter(object):
 		If the adapter is located in the middle of the read,
 		the constant influences which part of the read gets removed.
 
-	sequence - A string. Will be converted to uppercase.
+	sequence -- The adapter sequence as string. Will be converted to uppercase.
 
 	max_error_rate -- Maximum allowed error rate. The error rate is
 		the number of errors in the alignment divided by the length
@@ -238,7 +238,6 @@ def write_read(read, outfile, twoheaders=False):
 
 	If twoheaders is True and the output is FASTQ, then the sequence name
 	(description) is also written after the "+" character in the third line.
-
 	"""
 	if read.qualities is None:
 		# FASTA
@@ -324,7 +323,7 @@ class SuffixRemover:
 	def apply(self, read):
 		read = read[:]
 		if read.name.endswith(self.suffix):
-			read.name = read.name[:-3]
+			read.name = read.name[:-len(self.suffix)]
 		return read
 
 
@@ -359,11 +358,12 @@ class ZeroCapper:
 	"""
 	Change negative quality values of a read to zero
 	"""
-	def __init__(self):
+	def __init__(self, quality_base=33):
+		qb = quality_base
 		if sys.version_info[0] < 3:
-			self.ZERO_CAP_TRANS = maketrans(''.join(map(chr, range(33))), chr(33) * 33)
+			self.ZERO_CAP_TRANS = maketrans(''.join(map(chr, range(qb))), chr(qb) * qb)
 		else:
-			self.ZERO_CAP_TRANS = maketrans(bytes(range(33)), b'\x21' * 33)
+			self.ZERO_CAP_TRANS = maketrans(bytes(range(qb)), bytes([qb] * qb))
 
 	def apply(self, read):
 		read = read[:]
@@ -376,11 +376,7 @@ class AdapterCutter(object):
 
 	def __init__(self, adapters, times, rest_file, colorspace, wildcard_file):
 		"""Initialize this cutter.
-		adapters --
-			List of tuples (where, adapter). 'where' is either BACK
-			or ANYWHERE, and adapter is the adapter as a string.
-			Adapters will be converted to uppercase before aligning
-			them.
+		adapters -- list of Adapter objects
 		"""
 		self.times = times
 		self.rest_file = rest_file
@@ -393,7 +389,6 @@ class AdapterCutter(object):
 		"""
 		Find the best matching adapter.
 
-		adapters -- List of Adapter objects
 		seq -- The sequence to which each adapter will be aligned
 
 		Return tuple (best_alignment, best_index).
@@ -422,9 +417,7 @@ class AdapterCutter(object):
 		Cut adapters from a single read. The read will be converted to uppercase
 		before it is compared to the adapter sequences.
 
-		seq -- sequence of the read
-		desc -- description of the read
-		qualities -- quality values of the read
+		read -- a seqio.Sequence object
 
 		Return a tuple (read, trimmed) with the modified read.
 		trimmed is True when any adapter was found and trimmed.
@@ -434,7 +427,7 @@ class AdapterCutter(object):
 		if __debug__:
 			old_length = len(read.sequence)
 
-		# try (possibly more than once) to remove an adapter
+		# try at most self.times times to remove an adapter
 		any_adapter_matches = False
 		for t in xrange(self.times):
 			alignment, index = self._best_match(read.sequence.upper())
@@ -686,7 +679,7 @@ def main():
 	if options.double_encode:
 		modifiers.append(DoubleEncoder())
 	if options.zero_cap:
-		modifiers.append(ZeroCapper())
+		modifiers.append(ZeroCapper(quality_base=options.quality_base))
 
 	cutter = AdapterCutter(adapters, options.times, options.rest_file,
 				options.colorspace, options.wildcard_file)
