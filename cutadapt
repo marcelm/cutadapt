@@ -156,7 +156,8 @@ class Statistics(object):
 		if self.n > 0:
 			print("     Trimmed reads:", self.reads_changed, "(%5.1f%%)" % (100. * self.reads_changed / self.n))
 			print("   Total basepairs: {0:12} ({1:.1F} Mbp)".format(self.total_bp, self.total_bp/1E6))
-			print(" Trimmed basepairs: {0:12} ({1:.1F} Mbp) ({2:.2%} of total)".format(trimmed_bp, trimmed_bp/1E6, float(trimmed_bp)/self.total_bp))
+			s = " ({0:.2%} of total)".format(float(trimmed_bp)/self.total_bp) if self.total_bp > 0 else ''
+			print(" Trimmed basepairs: {0:12} ({1:.1F} Mbp){2}".format(trimmed_bp, trimmed_bp/1E6, s))
 			print("   Too short reads:", self.too_short, "(%5.1f%% of processed reads)" % (100. * self.too_short / self.n))
 			print("    Too long reads:", self.too_long, "(%5.1f%% of processed reads)" % (100. * self.too_long / self.n))
 		print("        Total time: %9.2f s" % self.time)
