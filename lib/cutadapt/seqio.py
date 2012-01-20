@@ -22,6 +22,8 @@ class Sequence:
 	def __getitem__(self, key):
 		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None)
 
+	def __len__(self):
+		return len(self.sequence)
 
 class FormatError(Exception):
 	"""
