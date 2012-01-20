@@ -94,11 +94,31 @@ class HelpfulOptionParser(OptionParser):
 		self.exit(2, "\n%s: error: %s\n" % (self.get_prog_name(), msg))
 
 
-def print_histogram(d):
-	"""d -- a dictionary mapping values to their respective frequency"""
-	print("length", "count", sep="\t")
-	for key in sorted(d):
-		print(key, d[key], sep="\t")
+def print_histogram(d, alen, n, error_rate):
+	"""
+	Print a histogram. Also, print the no. of reads expected to be
+	trimmed by chance (assuming a uniform distribution of nucleotides in the reads).
+	d -- a dictionary mapping values to their respective frequency
+	alen -- adapter length
+	n -- total no. of reads.
+	"""
+	# TODO do use sth. better than uniform distribution of nucleotids
+	print("length", "count", "expected", sep="\t")
+	maxlen = int(alen * (error_rate + 1.))
+	h = []
+	index = None
+	for seqlen in sorted(d):
+		estimated = n*0.25**min(seqlen, alen)
+		if index is None and seqlen >= maxlen:
+			index = len(h)
+		h.append( (seqlen, d[seqlen], estimated) )
+
+	for seqlen, count, est in h[:index]:
+		print(seqlen, count, "{0:.1F}".format(est), sep="\t")
+	if index is not None:
+		rest_count = sum(count for (__,count,__) in h[index:])
+		rest_est = sum(est for (__,__,est) in h[index:])
+		print(">={0}".format(h[index][0]), rest_count, "{:.1F}".format(rest_est), sep="\t")
 	print()
 
 
@@ -110,6 +130,7 @@ class Statistics(object):
 		self.too_short = 0
 		self.too_long = 0
 		self.n = 0
+		self.total_bp = 0
 		self._start_time = time.clock()
 		self.time = None
 		self.adapters = adapters
@@ -126,8 +147,16 @@ class Statistics(object):
 		print("Command line parameters:", " ".join(sys.argv[1:]))
 		print("Maximum error rate: %.2f%%" % (error_rate * 100.))
 		print("   Processed reads:", self.n)
+
+		trimmed_bp = 0
+		for adapter in self.adapters:
+			for d in (adapter.lengths_front, adapter.lengths_back):
+				trimmed_bp += sum( seqlen*count for (seqlen, count) in d.items() )
+
 		if self.n > 0:
 			print("     Trimmed reads:", self.reads_changed, "(%5.1f%%)" % (100. * self.reads_changed / self.n))
+			print("   Total basepairs: {0:12} ({1:.1F} Mbp)".format(self.total_bp, self.total_bp/1E6))
+			print(" Trimmed basepairs: {0:12} ({1:.1F} Mbp) ({2:.2%} of total)".format(trimmed_bp, trimmed_bp/1E6, float(trimmed_bp)/self.total_bp))
 			print("   Too short reads:", self.too_short, "(%5.1f%% of processed reads)" % (100. * self.too_short / self.n))
 			print("    Too long reads:", self.too_long, "(%5.1f%% of processed reads)" % (100. * self.too_long / self.n))
 		print("        Total time: %9.2f s" % self.time)
@@ -148,20 +177,20 @@ class Statistics(object):
 				print(total_front, "times, it overlapped the 5' end of a read")
 				print(total_back, "times, it overlapped the 3' end or was within the read")
 				print()
-				print("Histogram of adapter lengths (5')")
-				print_histogram(adapter.lengths_front)
+				print("Lengths of removed sequences (5')")
+				print_histogram(adapter.lengths_front, len(adapter), self.n, error_rate)
 				print()
-				print("Histogram of adapter lengths (3' or within)")
-				print_histogram(adapter.lengths_back)
+				print("Lengths of removed sequences (3' or within)")
+				print_histogram(adapter.lengths_back, len(adapter), self.n, error_rate)
 			elif where == FRONT:
 				print()
-				print("Histogram of adapter lengths")
-				print_histogram(adapter.lengths_front)
+				print("Lengths of removed sequences")
+				print_histogram(adapter.lengths_front, len(adapter), self.n, error_rate)
 			else:
 				assert where == BACK
 				print()
-				print("Histogram of adapter lengths")
-				print_histogram(adapter.lengths_back)
+				print("Lengths of removed sequences")
+				print_histogram(adapter.lengths_back, len(adapter), self.n, error_rate)
 
 		if self.n == 0:
 			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
@@ -195,7 +224,7 @@ class Adapter(object):
 		to match any character in the read (at zero cost).
 	"""
 	def __init__(self, sequence, where, max_error_rate, min_overlap,
-			match_read_wildcards, colorspace, match_adapter_wildcards=True, 
+			match_read_wildcards, colorspace, match_adapter_wildcards=True,
 			wildcard_file=None, rest_file=None):
 		self.sequence = sequence.upper()
 		self.where = where
@@ -208,8 +237,8 @@ class Adapter(object):
 		if match_adapter_wildcards and 'N' in self.sequence:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ1
 		removers = {
-			FRONT: self.remove_front, 
-			BACK: self.remove_back, 
+			FRONT: self.remove_front,
+			BACK: self.remove_back,
 			ANYWHERE: self.remove_anywhere
 		}
 		self.remove = removers[where]
@@ -242,7 +271,6 @@ class Adapter(object):
 		return match
 
 	def remove_anywhere(self, read, match):
-		assert self.where == ANYWHERE # TODO remove
 		if match.astart == 0 and match.rstart > 0:
 			return self.remove_back(read, match)
 		else:
@@ -250,11 +278,10 @@ class Adapter(object):
 
 	def remove_front(self, read, match):
 		assert not self.colorspace
-		self.lengths_front[match.astop - match.astart] += 1
-		# TODO: length of removed sequence: self.lengths_front[match.rstop] += 1
+		self.lengths_front[match.rstop] += 1
 		if match.rstart > 0 and self.rest_file:
 			print(read.sequence[:match.rstart], file=self.rest_file)
-		
+
 		if self.wildcard_file:
 			trimmed = read[:match.rstop]
 			self.write_wildcard_file(trimmed, match)
@@ -266,8 +293,7 @@ class Adapter(object):
 		if match.rstop < len(read) and self.rest_file:
 			# The adapter is within the read
 			print(read.sequence[match.rstop:], file=self.rest_file)
-		self.lengths_back[match.astop - match.astart] += 1
-		# TODO use this for length of removed sequence: self.lengths_back[len(read) - match.rstart] += 1
+		self.lengths_back[len(read) - match.rstart] += 1
 
 		rstart = match.rstart
 		if self.colorspace:
@@ -286,6 +312,9 @@ class Adapter(object):
 		wildcards = [ seq_match[i] for i in range(match.astart, match.astop)
 						if adap_match[i] == 'N' ]
 		print(''.join(wildcards), trimmed.name, file=self.wildcard_file)
+
+	def __len__(self):
+		return len(self.sequence)
 
 
 def write_read(read, outfile, twoheaders=False):
@@ -472,6 +501,7 @@ class AdapterCutter(object):
 		trimmed is True when any adapter was found and trimmed.
 		"""
 		self.stats.n += 1
+		self.stats.total_bp += len(read.sequence)
 
 		if __debug__:
 			old_length = len(read.sequence)
@@ -520,7 +550,7 @@ class AdapterCutter(object):
 		assert (not any_adapter_matches) or (len(read.sequence) < old_length)
 		if any_adapter_matches: # trimmed: # TODO move to filter class
 			self.stats.reads_changed += 1
-		
+
 		return (read, any_adapter_matches)
 
 
@@ -693,7 +723,7 @@ def main(cmdlineargs=None):
 			for seq in adapter_list:
 				adapters.append(Adapter(seq, where, options.error_rate,
 					options.overlap, options.match_read_wildcards,
-					options.colorspace, 
+					options.colorspace,
 					options.match_adapter_wildcards,
 					options.wildcard_file,
 					options.rest_file))
