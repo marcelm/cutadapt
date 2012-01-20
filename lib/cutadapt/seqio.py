@@ -11,19 +11,45 @@ from os.path import splitext
 import sys
 
 
+def _shorten(s, n=20):
+	"""Shorten string s to at most n characters, appending "..." if necessary."""
+	if s is None:
+		return None
+	if len(s) > n:
+		s = s[:n-3] + '...'
+	return s
+
+
 class Sequence:
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
 	def __init__(self, name, sequence, qualities):
+		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
 
 	def __getitem__(self, key):
+		"""slicing"""
 		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None)
+
+	def __repr__(self):
+		qstr = ''
+		if self.qualities is not None:
+			qstr = '\', qualities="{0}"'.format(_shorten(self.qualities))
+		return 'Sequence(name="{0}", sequence="{1}"{2})'.format(_shorten(self.name), _shorten(self.sequence), qstr)
 
 	def __len__(self):
 		return len(self.sequence)
+
+	def __eq__(self, other):
+		return self.name == other.name and \
+			self.sequence == other.sequence and \
+			self.qualities == other.qualities
+
+	def __ne__(self, other):
+		return not self.__eq__(other)
+
 
 class FormatError(Exception):
 	"""
@@ -311,56 +337,3 @@ class FastaQualReader(object):
 		self.fastareader.close()
 		self.qualreader.close()
 
-
-################################################
-
-# use this with str.translate to convert encoded quality values from
-# ascii(phred_quality + 64) to ascii(phred_quality + 33)
-translate_64_to_33 = ''.join(chr(max(c-64+33,0)) for c in range(256))
-
-
-# benchmarks for the following two functions (reading in chr1 and printing its size):
-# the strange timings of the first function are always reproducible on my machine
-#readfasta 247249719 2.03
-#readfasta 247249719 30.98
-#readfasta 247249719 2.01
-#readfasta 247249719 30.92
-#readfasta 247249719 2.05
-#
-#readfasta2 247249719 2.13
-#readfasta2 247249719 2.11
-#readfasta2 247249719 2.13
-#readfasta2 247249719 2.11
-#readfasta2 247249719 2.13
-
-def writefasta(f, seqlist, linelength=None):
-	"""
-	Print out a FASTA-formatted file from data given in seqlist.
-
-	seqlist -- iterable over (name, sequence) tuples
-	f -- output file
-	linelength -- If this isn't None, wrap lines after linelength characters.
-	"""
-	if linelength is not None:
-		for name, seq in seqlist:
-			f.write('>')
-			f.write(name)
-			f.write('\n')
-			for i in xrange(0, len(seq), linelength):
-				f.write(seq[i:i+linelength])
-				f.write('\n')
-	else:
-		for name, seq in seqlist:
-			f.write('>%s\n%s\n' % (name, seq))
-
-
-def writefastq(f, seqlist, twoheaders=False):
-	"""
-	seqlist must contain (description, sequence, qualities) tuples
-
-	If twoheaders is True, the sequence name (description) is also written
-	after the "+" character.
-	"""
-	for description, sequence, qualities in seqlist:
-		tmp = description if twoheaders else ''
-		f.write('@%s\n%s\n+%s\n%s\n' % (description, sequence, tmp, qualities))

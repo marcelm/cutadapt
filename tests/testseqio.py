@@ -4,11 +4,11 @@ import io
 
 # files tests/data/simple.fast{q,a}
 simple_fastq = [
-	("first_sequence", "SEQUENCE1", ":6;;8<=:<"),
-	("second_sequence", "SEQUENCE2", "83<??:(61")
+	seqio.Sequence("first_sequence", "SEQUENCE1", ":6;;8<=:<"),
+	seqio.Sequence("second_sequence", "SEQUENCE2", "83<??:(61")
 	]
 
-simple_fasta = [ (x[0], x[1], None) for x in simple_fastq ]
+simple_fasta = [ seqio.Sequence(x.name, x.sequence, None) for x in simple_fastq ]
 
 
 def test_fastareader():
