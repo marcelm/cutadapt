@@ -19,7 +19,7 @@ def datapath(path):
 
 
 def diff(path1, path2):
-	assert os.system("diff -u {} {}".format(path1, path2)) == 0
+	assert os.system("diff -u {0} {1}".format(path1, path2)) == 0
 
 
 def run(params, expected, inpath, inpath2=None):
@@ -29,7 +29,7 @@ def run(params, expected, inpath, inpath2=None):
 	params += [ datapath(inpath) ]
 	if inpath2:
 		params += [ datapath(inpath2) ]
-		
+
 	ca.main(params)
 	# TODO redirect standard output
 	ret = os.system('diff -u ' + dpath(os.path.join('cut', expected)) + ' ' + dpath('tmp.fastaq'))
