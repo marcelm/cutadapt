@@ -67,7 +67,7 @@ else:
 	xrange = range
 from optparse import OptionParser, OptionGroup
 from contextlib import closing
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 # If running from within source directory,
 # add 'lib' to sys.path.
@@ -112,12 +112,7 @@ class Statistics(object):
 		self.n = 0
 		self._start_time = time.clock()
 		self.time = None
-		self.lengths_front = []
-		self.lengths_back = []
 		self.adapters = adapters
-		for a in adapters:
-			self.lengths_front.append(defaultdict(int))
-			self.lengths_back.append(defaultdict(int))
 
 	def stop_clock(self):
 		"""Stop the timer that was automatically started when the class was instantiated."""
@@ -140,8 +135,8 @@ class Statistics(object):
 			print("     Time per read: %9.2f ms" % (1000. * self.time / self.n))
 		print()
 		for index, adapter in enumerate(self.adapters):
-			total_front = sum(self.lengths_front[index].values())
-			total_back = sum(self.lengths_back[index].values())
+			total_front = sum(adapter.lengths_front.values())
+			total_back = sum(adapter.lengths_back.values())
 			total = total_front + total_back
 			where = adapter.where
 			assert where == ANYWHERE or (where == BACK and total_front == 0) or (where == FRONT and total_back == 0)
@@ -154,22 +149,25 @@ class Statistics(object):
 				print(total_back, "times, it overlapped the 3' end or was within the read")
 				print()
 				print("Histogram of adapter lengths (5')")
-				print_histogram(self.lengths_front[index])
+				print_histogram(adapter.lengths_front)
 				print()
 				print("Histogram of adapter lengths (3' or within)")
-				print_histogram(self.lengths_back[index])
+				print_histogram(adapter.lengths_back)
 			elif where == FRONT:
 				print()
 				print("Histogram of adapter lengths")
-				print_histogram(self.lengths_front[index])
+				print_histogram(adapter.lengths_front)
 			else:
 				assert where == BACK
 				print()
 				print("Histogram of adapter lengths")
-				print_histogram(self.lengths_back[index])
+				print_histogram(adapter.lengths_back)
 
 		if self.n == 0:
 			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
+
+
+AdapterMatch = namedtuple('AdapterMatch', ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'adapter'])
 
 
 class Adapter(object):
@@ -197,16 +195,27 @@ class Adapter(object):
 		to match any character in the read (at zero cost).
 	"""
 	def __init__(self, sequence, where, max_error_rate, min_overlap,
-			match_read_wildcards, match_adapter_wildcards=True):
+			match_read_wildcards, colorspace, match_adapter_wildcards=True, wildcard_file=None):
 		self.sequence = sequence.upper()
 		self.where = where
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
 		self.wildcard_flags = 0
+		self.colorspace = colorspace
 		if match_read_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
 		if match_adapter_wildcards and 'N' in self.sequence:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ1
+		removers = {
+			FRONT: self.remove_front, 
+			BACK: self.remove_back, 
+			ANYWHERE: self.remove_anywhere
+		}
+		self.remove = removers[where]
+		# statistics about length of removed sequences
+		self.lengths_front = defaultdict(int)
+		self.lengths_back = defaultdict(int)
+		self.wildcard_file = wildcard_file
 
 	def match(self, read):
 		"""
@@ -219,16 +228,62 @@ class Adapter(object):
 		# TODO do not do this when wildcards are allowed!
 		pos = read.find(self.sequence)
 		if pos >= 0:
-			result = (0, len(self.sequence), pos, pos + len(self.sequence), len(self.sequence), 0)
+			match = AdapterMatch(0, len(self.sequence), pos, pos + len(self.sequence), len(self.sequence), 0, self)
 		else:
-			result = align.globalalign_locate(self.sequence, read,
+			alignment = align.globalalign_locate(self.sequence, read,
 				self.max_error_rate, self.where, self.wildcard_flags)
-		(astart, astop, rstart, rstop, matches, errors) = result
-		length = astop - astart
-		assert length == 0 or errors / length <= self.max_error_rate
+			match = AdapterMatch(*(alignment + (self,)))
+		length = match.astop - match.astart
+		assert length == 0 or match.errors / length <= self.max_error_rate
 		if length < self.min_overlap:
 			return None
-		return result
+		return match
+
+	def remove_anywhere(self, read, match, rest_file, wildcard_file):
+		assert self.where == ANYWHERE # TODO remove
+		if match.astart == 0 and match.rstart > 0:
+			return self.remove_back(read, match, rest_file)
+		else:
+			return self.remove_front(read, match, rest_file)
+
+	def remove_front(self, read, match, rest_file):
+		assert not self.colorspace
+		self.lengths_front[match.astop - match.astart] += 1
+		# TODO: length of removed sequence: self.lengths_front[match.rstop] += 1
+		# TODO write to rest_file
+		
+		if self.wildcard_file:
+			trimmed = read[:match.rstop]
+			self.write_wildcard_file(trimmed, match)
+		read = read[match.rstop:]
+		return read
+
+	def remove_back(self, read, match, rest_file):
+		# The adapter is at the end of the read or within the read
+		if match.rstop < len(read):
+			# The adapter is within the read
+			if rest_file:
+				print(read.sequence[match.rstop:], file=self.rest_file)
+		self.lengths_back[match.astop - match.astart] += 1
+		# TODO use this for length of removed sequence: self.lengths_back[len(read) - match.rstart] += 1
+
+		rstart = match.rstart
+		if self.colorspace:
+			# trim one more color if long enough
+			rstart = max(0, match.rstart - 1)
+		if self.wildcard_file:
+			trimmed = read[rstart:]
+			self.write_wildcard_file(trimmed, match)
+		read = read[:rstart]
+		return read
+
+	def write_wildcard_file(self, trimmed, match):
+		# TODO if self.wildcard_file is not None ...
+		seq_match = trimmed.sequence
+		adap_match = self.sequence
+		wildcards = [ seq_match[i] for i in range(match.astart, match.astop)
+						if adap_match[i] == 'N' ]
+		print(''.join(wildcards), trimmed.name, file=self.wildcard_file)
 
 
 def write_read(read, outfile, twoheaders=False):
@@ -391,26 +446,18 @@ class AdapterCutter(object):
 
 		seq -- The sequence to which each adapter will be aligned
 
-		Return tuple (best_alignment, best_index).
-
-		best_alignment is an alignment as returned by semiglobalalign.
-		best_index is the index of the best adapter into the adapters list.
+		Return an AdapterMach object or None if there are no matches.
 		"""
-		best_match = None
-		best_matches = 0
-		best_index = None
-		for index, adapter in enumerate(self.adapters):
+		best = None
+		for adapter in self.adapters:
 			match = adapter.match(seq)
 			if match is None:
 				continue
-			(astart, astop, rstart, rstop, matches, errors) = match
 
 			# the no. of matches determines which adapter fits best
-			if matches > best_matches:
-				best_match = match
-				best_matches = matches
-				best_index = index
-		return (best_match, best_index)
+			if best is None or match.matches > best.matches:
+				best = match
+		return best
 
 	def cut(self, read):
 		"""
@@ -430,55 +477,48 @@ class AdapterCutter(object):
 		# try at most self.times times to remove an adapter
 		any_adapter_matches = False
 		for t in xrange(self.times):
-			alignment, index = self._best_match(read.sequence.upper())
-			if alignment is None:
+			match = self._best_match(read.sequence.upper())
+			if match is None:
 				# nothing found
 				break
 
-			(astart, astop, rstart, rstop, matches, errors) = alignment
-			length = astop - astart
-			assert length > 0
-			assert errors / length <= self.adapters[index].max_error_rate
-			assert length - errors > 0
+			if __debug__:
+				length = match.astop - match.astart
+				assert length > 0
+				assert match.errors / length <= match.adapter.max_error_rate
+				assert length - match.errors > 0
 
 			any_adapter_matches = True
-			where = self.adapters[index].where
+			read = match.adapter.remove(read, match, self.rest_file, self.wildcard_file)
 
-			if where == BACK or (where == ANYWHERE and astart == 0 and rstart > 0):
-				assert where == ANYWHERE or astart == 0
-				# The adapter is at the end of the read or within the read
-				if rstop < len(read.sequence):
-					# The adapter is within the read
-					if self.rest_file is not None:
-						print(read.sequence[rstop:], file=self.rest_file)
-				self.stats.lengths_back[index][length] += 1
+			#if where == BACK or (where == ANYWHERE and astart == 0 and rstart > 0):
+				#assert where == ANYWHERE or astart == 0
+				## The adapter is at the end of the read or within the read
+				#if rstop < len(read.sequence):
+					## The adapter is within the read
+					#if self.rest_file is not None:
+						#print(read.sequence[rstop:], file=self.rest_file)
+				#self.stats.lengths_back[index][length] += 1
 
-				if self.colorspace:
-					# trim one more color if long enough
-					rstart = max(0, rstart - 1)
-				trimmed, read = read[rstart:], read[:rstart]
-			elif where == FRONT or where == ANYWHERE:
-				# The adapter is in the beginning of the read
-				assert where == FRONT or rstart == 0
+				#if self.colorspace:
+					## trim one more color if long enough
+					#rstart = max(0, rstart - 1)
+				#trimmed, read = read[rstart:], read[:rstart]
+			#elif where == FRONT or where == ANYWHERE:
+				## The adapter is in the beginning of the read
+				#assert where == FRONT or rstart == 0
 
-				self.stats.lengths_front[index][length] += 1
-				# TODO What should we do in color space?
-				trimmed, read = read[:rstop], read[rstop:]
-			else:
-				assert False
-
-			if trimmed and self.wildcard_file is not None:
-				seq_match = trimmed.sequence
-				adap_match = self.adapters[index].sequence
-				wildcards = [ seq_match[i] for i in range(astart, astop)
-								if adap_match[i] == 'N' ]
-				print(''.join(wildcards), trimmed.name, file=self.wildcard_file)
+				#self.stats.lengths_front[index][length] += 1
+				## TODO What should we do in color space?
+				#trimmed, read = read[:rstop], read[rstop:]
+			#else:
+				#assert False
 
 		# if an adapter was found, then the read should now be shorter
 		assert (not any_adapter_matches) or (len(read.sequence) < old_length)
-		if any_adapter_matches: # TODO move to filter class
+		if any_adapter_matches: # trimmed: # TODO move to filter class
 			self.stats.reads_changed += 1
-
+		
 		return (read, any_adapter_matches)
 
 
@@ -651,7 +691,9 @@ def main():
 			for seq in adapter_list:
 				adapters.append(Adapter(seq, where, options.error_rate,
 					options.overlap, options.match_read_wildcards,
-					options.match_adapter_wildcards))
+					options.colorspace, 
+					options.match_adapter_wildcards,
+					options.wildcard_file))
 
 	append_adapters(options.adapters, BACK)
 	append_adapters(options.anywhere, ANYWHERE)
