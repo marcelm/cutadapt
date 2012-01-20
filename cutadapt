@@ -537,7 +537,7 @@ class AdapterCutter(object):
 
 
 
-def main():
+def main(cmdlineargs=None):
 	"""Main function that evaluates command-line parameters and contains the main loop over all reads."""
 	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
 
@@ -631,7 +631,7 @@ def main():
 		help="Change negative quality values to zero (workaround to avoid segmentation faults in BWA)")
 	parser.add_option_group(group)
 
-	options, args = parser.parse_args()
+	options, args = parser.parse_args(args=cmdlineargs)
 
 	if len(args) == 0:
 		parser.error("At least one parameter needed: name of a FASTA or FASTQ file.")
@@ -747,7 +747,6 @@ def main():
 				read.sequence = read.sequence[1:]
 			else:
 				initial = ''
-
 
 			#total_bases += len(qualities)
 			if options.quality_cutoff is not None:
