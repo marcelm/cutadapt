@@ -220,19 +220,35 @@ Allowing adapters anywhere
 Cutadapt assumes that any adapter specified via the -a (or --adapter) parameter
 was ligated to the 3' end of the sequence. This is the correct assumption for
 at least the SOLiD and Illumina small RNA protocols and probably others.
+The assumption is enforced by the alignment algorithm, which only finds the adapter
+when its starting position is within the read. In other words, the 5' base of
+the adapter must appear within the read. The adapter and all bases following
+it are remved.
 
 If, on the other hand, your adapter can also be ligated to the 5' end (on
 purpose or by accident), you should tell cutadapt so by using the -b (or
---anywhere) parameter. It will then use a different alignment algorithm and
-correctly trim adapters that appear in the beginning of a read. An adapter
-specified via -b will also be found if it appears only partially in the
-beginning of a read. For example, these sequences
-
-ADAPTERMYSEQUENCE
+--anywhere) parameter. It will then use a slightly different alignment algorithm
+(so-called semiglobal alignment), which allows any type of overlap between the
+adapter and the sequence. In particular, the adapter may appear only partially
+in the beginning of the read, like this:
 PTERMYSEQUENCE
 
-will be trimmed to "MYSEQUENCE". Note that the regular algorithm would trim
-the first read to an empty sequence.
+The decision which part of the read to remove is made as follows: If there is at
+least one base before the found adapter, then the adapter is considered to be
+a 3' adapter and the adapter itself and everything following it is removed.
+Otherwise, the adapter is considered to be a 5' adapter and it is removed from
+the read.
+
+Here are some examples, which may make this clearer (left: read, right: trimmed
+read):
+
+MYSEQUENCEADAPTER -> MYSEQUENCE (3' adapter)
+MADAPTER -> M (3' adapter)
+ADAPTERMYSEQUENCE -> MYSEQUENCE (5' adapter)
+PTERMYSEQUENCE -> MYSEQUENCE (5' adapter)
+
+The regular algorithm (-a) would trim the first two examples in the same way,
+but trim the third to an empty sequence and trim the fourth not at all.
 
 The -b parameter currently does not work with color space data.
 
