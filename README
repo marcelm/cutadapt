@@ -22,7 +22,7 @@ License
 
 (This is the MIT license.)
 
-Copyright (c) 2010,2011 Marcel Martin <marcel.martin@tu-dortmund.de>
+Copyright (c) 2010,2011,2012 Marcel Martin <marcel.martin@tu-dortmund.de>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,7 @@ Dependencies
 ============
 
 cutadapt needs Python 2.6 or later, including Python 3 (tested with
-Python 3.1.2). For installation from sources, a C compiler needs to be
+Python 3.1.2 and 3.2.2). For installation from sources, a C compiler needs to be
 installed. The program has been developed and tested on Ubuntu and OpenSuSE.
 
 
@@ -68,7 +68,7 @@ Build the C extension module:
 $ python setup.py build_ext -i
 
 Then simply run the script from where it is, similar to this:
-$ /home/username/downloads/cutadapt-0.x/cutadapt --help
+$ /home/username/downloads/cutadapt-1.x/cutadapt --help
 
 
 Galaxy
@@ -147,11 +147,12 @@ $ cutadapt -n 3 -a TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG input.fa > output
 Multiple adapters
 -----------------
 
-Multiple adapters can be provided by using the -a or -b parameter more than once.
-The program will then search for all given adapters and remove
-the one that matches best.
+As many adapters as desired can be given to the program by using the -a, -b or -g
+in any combination, for example, five -a adapters and two -g adapters. All
+adapters will be searched for, but only the best matching one will be trimmed
+from each read (but see the --times option).
 
-$ cutadapt -b TGAGACACGCA -b AGGCACACAGGG input.fastq > output.fastq
+$ cutadapt -b TGAGACACGCA -g AGGCACACAGGG input.fastq > output.fastq
 
 
 Quality Trimming
@@ -399,7 +400,7 @@ To Do / Ideas
     is not necessary
   * bzip2 support
   * use str.format instead of %
-  * allow to change scores at runtime (perhaps using command-line parameters)
+  * allow to change scores at runtime (using command-line parameters)
   * multi-threading
   * --progress
   * run pylint, pychecker
@@ -414,4 +415,5 @@ To Do / Ideas
   * SRA color space FASTQ files include a quality for the initial nucleotide, this is not handled correctly
   * check whether input is FASTQ although -f fasta is given
   * close on StopIteration
+  * search for adapters in the order in which they are given on the command line
 

@@ -40,7 +40,7 @@ If the name of any input or output file ends with '.gz', it is
 assumed to be gzip-compressed.
 
 If you want to search for the reverse complement of an adapter, you must
-provide an additional adapter sequence using two '-a' parameters.
+provide an additional adapter sequence using two -a, -b or -g parameters.
 
 If the input sequences are in color space, the adapter must
 also be provided in color space (using a string of digits 0123).
@@ -576,13 +576,18 @@ def main(cmdlineargs=None):
 		help="Input file format; can be either 'fasta' or 'fastq'. "
 		"Ignored when reading csfasta/qual files (default: auto-detect from file name extension).")
 
-	group = OptionGroup(parser, "Options that influence how the adapters are found")
+	group = OptionGroup(parser, "Options that influence how the adapters are found",
+		description="Each of the following three parameters (-a, -b, -g) can be used " +\
+			"multiple times and in any combination to search for an entire set of " + \
+			"adapters of possibly different types. All of the "+\
+			"given adapters will be searched for in each read, but only the best "+\
+			"matching one will be trimmed (but see the --times option).")
 	group.add_option("-a", "--adapter", action="append", metavar="ADAPTER", dest="adapters",
-		help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed. If multiple -a, -b or -g options are given, only the best matching adapter is trimmed.")
+		help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed.")
 	group.add_option("-b", "--anywhere", action="append", metavar="ADAPTER",
-		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a, -b or -g options are given, only the best matching adapter is trimmed.")
+		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept.")
 	group.add_option("-g", "--front", action="append", metavar="ADAPTER",
-		help="Sequence of an adapter that was ligated to the 5' end. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept. If multiple -a, -b or -g options are given, only the best matching adapter is trimmed.")
+		help="Sequence of an adapter that was ligated to the 5' end. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept.")
 	group.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
