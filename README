@@ -47,8 +47,9 @@ Dependencies
 ============
 
 cutadapt needs Python 2.6 or later, including Python 3 (tested with
-Python 3.1.2 and 3.2.2). For installation from sources, a C compiler needs to be
-installed. The program has been developed and tested on Ubuntu and OpenSuSE.
+Python 3.1.2 and 3.2.2). Using Python 2.7 is recommended since it works fastest.
+For installation from sources, a C compiler needs to be installed. The program
+has been developed and tested on Ubuntu and OpenSuSE.
 
 
 Installation
@@ -260,6 +261,7 @@ Changes
 v1.1
 ----
 * Add the "-N" option, which allows 'N' characters within adapters to match literally.
+* Improve speed approx. 25% when reading from .gz files and using Python 2.7.
 
 v1.0
 ----
