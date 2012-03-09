@@ -1,6 +1,11 @@
 from nose.tools import raises
 from cutadapt import seqio
-import io
+import sys
+
+if sys.version_info[:2] == (2,7):
+	from StringIO import StringIO
+else:
+	from io import StringIO
 
 # files tests/data/simple.fast{q,a}
 simple_fastq = [
@@ -44,11 +49,11 @@ def test_sequence_reader():
 	assert reads == simple_fastq
 
 	# make the name attribute unavailable
-	f = io.StringIO(open("tests/data/simple.fastq").read())
+	f = StringIO(open("tests/data/simple.fastq").read())
 	reads = list(seqio.SequenceReader(f))
 	assert reads == simple_fastq
 
-	f = io.StringIO(open("tests/data/simple.fasta").read())
+	f = StringIO(open("tests/data/simple.fasta").read())
 	reads = list(seqio.SequenceReader(f))
 	assert reads == simple_fasta
 
