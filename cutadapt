@@ -118,7 +118,7 @@ def print_histogram(d, alen, n, error_rate):
 	if index is not None:
 		rest_count = sum(count for (__,count,__) in h[index:])
 		rest_est = sum(est for (__,__,est) in h[index:])
-		print(">={0}".format(h[index][0]), rest_count, "{:.1F}".format(rest_est), sep="\t")
+		print(">={0}".format(h[index][0]), rest_count, "{0:.1F}".format(rest_est), sep="\t")
 	print()
 
 
