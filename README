@@ -255,13 +255,35 @@ but trim the third to an empty sequence and trim the fourth not at all.
 The -b parameter currently does not work with color space data.
 
 
+Using a "configuration file"
+============================
+
+Cutadapt currently does not support using a configuration file in which, for
+example, a list of adapters can be specified. If you have many adapters that
+you want to seach for and want to avoid typing all of them on the command line,
+then you can use so-called "command substitution" of your Unix shell. With
+Bash, this works as follows.
+
+First, create a configuration file cutadapt.conf that contains lines like
+this:
+-a AACCGGTT
+-a GTAATAACCGGTT
+-e 0.05
+The file may contain line breaks (they will be replaced by spaces).
+
+Then run cutadapt like this:
+cutadapt $(<cutadapt.conf) input.fastq > output.fastq
+
+The Bash shell will replace the $(<...) with the content of the given file.
+
+
 Changes
 =======
 
 v1.1
 ----
 * Add the "-N" option, which allows 'N' characters within adapters to match literally.
-* Improve speed approx. 25% when reading from .gz files and using Python 2.7.
+* Speedup of approx. 25% when reading from .gz files and using Python 2.7.
 
 v1.0
 ----
