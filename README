@@ -216,6 +216,24 @@ the adapter sequence are allowed. For example, ADABTER (1 mismatch), ADAPTR (1 d
 and ADAPPTER (1 insertion) will all be recognized if the error rate is set to 0.15.
 
 
+Anchoring 5' adapters
+---------------------
+
+If you specify an adapter with the -g (--front) parameter, the adapter may
+overlap the beginning of the read or occur anywhere within it. If it appears
+within the read, the sequence that precedes it will also be trimmed in addition
+to the adapter. For example, with '-g ADAPTER', these sequences:
+
+HELLOADAPTERTHERE
+APTERTHERE
+
+will both be trimmed to 'THERE'. To avoid this, you can prefix the adapter with the
+character '^'. This will restrict the search that the adapter must be a prefix
+of the read. With '-g ^ADAPTER', only reads like this will be trimmed:
+
+ADAPTERHELLO
+
+
 Allowing adapters anywhere
 --------------------------
 
@@ -282,6 +300,8 @@ Changes
 
 v1.1
 ----
+* Allow to "anchor" 5' adapters (-g), forcing them to be a prefix of the read.
+  To use this, add the special character '^' to the beginning of the adapter sequence.
 * Add the "-N" option, which allows 'N' characters within adapters to match literally.
 * Speedup of approx. 25% when reading from .gz files and using Python 2.7.
 

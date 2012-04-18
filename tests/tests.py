@@ -195,3 +195,6 @@ def test_literal_N():
 
 def test_literal_N2():
 	run("-N -O 1 -g NNNNNNNNNNNNNN", "trimN5.fasta", "trimN5.fasta")
+
+def test_anchored_front():
+	run("-g ^FRONTADAPT", "anchored.fasta", "anchored.fasta")

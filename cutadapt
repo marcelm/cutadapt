@@ -84,6 +84,7 @@ from cutadapt import __version__
 # The function is called with SEQ1 as the adapter, SEQ2 as the read.
 BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
 FRONT = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.START_WITHIN_SEQ1
+PREFIX = align.STOP_WITHIN_SEQ2
 ANYWHERE = align.SEMIGLOBAL
 
 
@@ -169,7 +170,7 @@ class Statistics(object):
 			total_back = sum(adapter.lengths_back.values())
 			total = total_front + total_back
 			where = adapter.where
-			assert where == ANYWHERE or (where == BACK and total_front == 0) or (where == FRONT and total_back == 0)
+			assert where == ANYWHERE or (where == BACK and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
 
 			print("=" * 3, "Adapter", index+1, "=" * 3)
 			print()
@@ -183,7 +184,7 @@ class Statistics(object):
 				print()
 				print("Lengths of removed sequences (3' or within)")
 				print_histogram(adapter.lengths_back, len(adapter), self.n, error_rate)
-			elif where == FRONT:
+			elif where in (FRONT, PREFIX):
 				print()
 				print("Lengths of removed sequences")
 				print_histogram(adapter.lengths_front, len(adapter), self.n, error_rate)
@@ -239,6 +240,7 @@ class Adapter(object):
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ1
 		removers = {
 			FRONT: self.remove_front,
+			PREFIX: self.remove_front,
 			BACK: self.remove_back,
 			ANYWHERE: self.remove_anywhere
 		}
@@ -249,6 +251,10 @@ class Adapter(object):
 		self.lengths_front = defaultdict(int)
 		self.lengths_back = defaultdict(int)
 
+	def __repr__(self):
+		return 'Adapter(sequence="{0}", where={1})'.format(self.sequence, self.where)
+
+
 	def match(self, read):
 		"""
 		Try to match this adapter to the given read.
@@ -258,7 +264,10 @@ class Adapter(object):
 		"""
 		# try to find an exact match first
 		# TODO do not do this when wildcards are allowed!
-		pos = read.find(self.sequence)
+		if self.where == PREFIX:
+			pos = 0 if read.startswith(self.sequence) else -1
+		else:
+			pos = read.find(self.sequence)
 		if pos >= 0:
 			match = AdapterMatch(0, len(self.sequence), pos, pos + len(self.sequence), len(self.sequence), 0, self)
 		else:
@@ -266,8 +275,7 @@ class Adapter(object):
 				self.max_error_rate, self.where, self.wildcard_flags)
 			match = AdapterMatch(*(alignment + (self,)))
 		length = match.astop - match.astart
-		assert length == 0 or match.errors / length <= self.max_error_rate
-		if length < self.min_overlap:
+		if length < self.min_overlap or match.errors / length > self.max_error_rate:
 			return None
 		return match
 
@@ -582,12 +590,18 @@ def main(cmdlineargs=None):
 			"adapters of possibly different types. All of the "+\
 			"given adapters will be searched for in each read, but only the best "+\
 			"matching one will be trimmed (but see the --times option).")
-	group.add_option("-a", "--adapter", action="append", metavar="ADAPTER", dest="adapters",
+	group.add_option("-a", "--adapter", action="append", metavar="ADAPTER", dest="adapters", default=[],
 		help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed.")
-	group.add_option("-b", "--anywhere", action="append", metavar="ADAPTER",
+	group.add_option("-b", "--anywhere", action="append", metavar="ADAPTER", default=[],
 		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept.")
-	group.add_option("-g", "--front", action="append", metavar="ADAPTER",
-		help="Sequence of an adapter that was ligated to the 5' end. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept.")
+	group.add_option("-g", "--front", action="append", metavar="ADAPTER", default=[],
+		help="""Sequence of an adapter that was ligated to the 5' end. If the
+		adapter sequence starts with the character '^', the adapter is
+		'anchored'. An anchored adapter must appear in its entirety at the
+		5' end of the read (it is a prefix of the read). A non-anchored adapter may
+		appear partially at the 5' end, or it may occur within the read. If it is
+		found within a read, the sequence preceding the adapter is also trimmed.
+		In all cases the adapter itself is trimmed.""")
 	group.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
@@ -716,6 +730,8 @@ def main(cmdlineargs=None):
 		parser.error("Using --anywhere or --front with color space reads is currently not supported  (if you think this may be useful, contact the author).")
 	if not (0 <= options.error_rate <= 1.):
 		parser.error("The maximum error rate must be between 0 and 1.")
+	if options.overlap < 1:
+		parser.error("The overlap must be at least 1.")
 
 	if options.rest_file is not None:
 		options.rest_file = xopen(options.rest_file, 'w')
@@ -725,18 +741,22 @@ def main(cmdlineargs=None):
 	adapters = []
 
 	def append_adapters(adapter_list, where):
-		if adapter_list:
-			for seq in adapter_list:
-				adapters.append(Adapter(seq, where, options.error_rate,
-					options.overlap, options.match_read_wildcards,
-					options.colorspace,
-					options.match_adapter_wildcards,
-					options.wildcard_file,
-					options.rest_file))
+		for seq in adapter_list:
+			w = where
+			if w == FRONT and seq.startswith('^'):
+				seq = seq[1:]
+				w = PREFIX
+			adapters.append(Adapter(seq, w, options.error_rate,
+				options.overlap, options.match_read_wildcards,
+				options.colorspace,
+				options.match_adapter_wildcards,
+				options.wildcard_file,
+				options.rest_file))
 
 	append_adapters(options.adapters, BACK)
 	append_adapters(options.anywhere, ANYWHERE)
 	append_adapters(options.front, FRONT)
+
 
 	# make sure these aren't used by accident
 	del options.adapters
