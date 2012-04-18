@@ -65,11 +65,18 @@ $ python setup.py install
 Use without installation
 ========================
 
-Build the C extension module:
+Build the C extension module (you can try to skip this step -- a compiled
+version of the module is already included):
+
 $ python setup.py build_ext -i
 
 Then simply run the script from where it is, similar to this:
 $ /home/username/downloads/cutadapt-1.x/cutadapt --help
+
+If you get any errors, first try to explicitly request a specific Python
+version by running cutadapt like this:
+
+python2.6 /home/.../cutadapt-1.x/cutadapt --help
 
 
 Galaxy
