@@ -311,6 +311,7 @@ v1.1
   To use this, add the special character '^' to the beginning of the adapter sequence.
 * Add the "-N" option, which allows 'N' characters within adapters to match literally.
 * Speedup of approx. 25% when reading from .gz files and using Python 2.7.
+* Allow to only trim qualities when no adapter is given on the command-line.
 
 v1.0
 ----
