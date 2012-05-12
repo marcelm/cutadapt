@@ -37,10 +37,9 @@ def run(params, expected, inpath, inpath2=None):
 	if inpath2:
 		params += [ datapath(inpath2) ]
 
-	ca.main(params)
+	assert ca.main(params) == 0
 	# TODO redirect standard output
-	ret = os.system('diff -u ' + dpath(os.path.join('cut', expected)) + ' ' + dpath('tmp.fastaq'))
-	assert ret == 0
+	diff(dpath(os.path.join('cut', expected)), dpath('tmp.fastaq'))
 	# TODO diff log files
 	#echo "Running $CA $1 data/$3 ${second}"
 	#if ! $CA $1 "data/$3" -o tmp.fastaq ${second} > tmp.log; then
@@ -144,6 +143,10 @@ def test_qualtrim():
 def test_qualbase():
 	'''-q with low qualities, using ascii(quality+64) encoding'''
 	run("-q 10 --quality-base 64 -a XXXXXX", "illumina64.fastq", "illumina64.fastq")
+
+def test_quality_trim_only():
+	'''only trim qualities, do not remove adapters'''
+	run("-q 10 --quality-base 64", "illumina64.fastq", "illumina64.fastq")
 
 def test_twoadapters():
 	'''two adapters'''
