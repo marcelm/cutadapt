@@ -13,7 +13,9 @@ written in C, that implements the alignment algorithm.
 Project homepage
 ================
 
-See http://code.google.com/p/cutadapt/
+See http://code.google.com/p/cutadapt/ . Please use the Google code issue
+tracker for bug reports and feature requests.
+
 
 
 License
@@ -21,7 +23,7 @@ License
 
 (This is the MIT license.)
 
-Copyright (c) 2010,2011,2012 Marcel Martin <marcel.martin@tu-dortmund.de>
+Copyright (c) 2010, 2011, 2012 Marcel Martin <marcel.martin@tu-dortmund.de>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -139,7 +141,7 @@ names:
 
     cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq solid.csfasta solid.qual > output.fastq
 
-Instead of redirecting standard output with ">", the "-o" option can be used:
+Instead of redirecting standard output with `>`, the `-o` option can be used:
 
     cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq -o output.fastq solid.csfasta solid.qual
 
@@ -185,10 +187,10 @@ Adapters
 ========
 
 These are some 454 adapters:
-A1:   5'- TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA
-A2:   5'- TGAGACAGGGAGGGAACAGATGGGACACGCAGGGATGAGATGGA
-B1:   5'- CCTATCCCCTGTGTGCCTTGCCTATCCCCTGTTGCGTGTCTCA
-B2:   5'- TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG
+A1:   5'- TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA  
+A2:   5'- TGAGACAGGGAGGGAACAGATGGGACACGCAGGGATGAGATGGA  
+B1:   5'- CCTATCCCCTGTGTGCCTTGCCTATCCCCTGTTGCGTGTCTCA  
+B2:   5'- TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG  
 
 This is an AB SOLiD adapter (in color space) used in the SREK protocol:
 330201030313112312
@@ -222,9 +224,9 @@ adapter, like this:
 
 It will be empty after trimming.
 
-When the allowed error rate is sufficiently high (set with parameter -e), errors in
-the adapter sequence are allowed. For example, ADABTER (1 mismatch), ADAPTR (1 deletion),
-and ADAPPTER (1 insertion) will all be recognized if the error rate is set to 0.15.
+When the allowed error rate is sufficiently high (set with parameter `-e`), errors in
+the adapter sequence are allowed. For example, `ADABTER` (1 mismatch), `ADAPTR` (1 deletion),
+and `ADAPPTER` (1 insertion) will all be recognized if the error rate is set to 0.15.
 
 
 Anchoring 5' adapters
@@ -239,7 +241,7 @@ to the adapter. For example, with `-g ADAPTER`, these sequences:
     APTERTHERE
 
 will both be trimmed to `THERE`. To avoid this, you can prefix the adapter with the
-character `^`. This will restrict the search that the adapter must be a prefix
+character `^`. This will restrict the search, forcing the adapter to be a prefix
 of the read. With `-g ^ADAPTER`, only reads like this will be trimmed:
 
     ADAPTERHELLO
@@ -385,15 +387,15 @@ v0.9.2
 
 v0.9
 ----
-* add --too-short-output and --untrimmed-output, based on patch by Paul Ryvkin (thanks!)
-* add --maximum-length parameter: discard reads longer than a specified length
-* group options by category in --help output
-* add --length-tag option. allows to fix read length in FASTA/Q comment lines
-  (e.g., 'length=123' becomes 'length=58' after trimming) (requested by Paul Ryvkin)
-* add -q/--quality-cutoff option for trimming low-quality ends (uses the same algorithm
+ * add `--too-short-output` and `--untrimmed-output`, based on patch by Paul Ryvkin (thanks!)
+ * add `--maximum-length` parameter: discard reads longer than a specified length
+ * group options by category in `--help` output
+ * add `--length-tag` option. allows to fix read length in FASTA/Q comment lines
+  (e.g., `length=123` becomes `length=58` after trimming) (requested by Paul Ryvkin)
+ * add `-q`/`--quality-cutoff` option for trimming low-quality ends (uses the same algorithm
   as BWA)
-* some refactoring
-* the filename '-' is now interpreted as standard in or standard output
+ * some refactoring
+ * the filename `-` is now interpreted as standard in or standard output
 
 v0.8
 ----
@@ -458,13 +460,13 @@ To Do / Ideas
   * In color space and probably also for Illumina data, gapped alignment
     is not necessary
   * bzip2 support
-  * use str.format instead of %
+  * use `str.format` instead of `%`
   * allow to change scores at runtime (using command-line parameters)
   * multi-threading
-  * --progress
+  * `--progress`
   * run pylint, pychecker
   * print adapter fragments in statistics
-  * --discard-uncut (discard sequences in which no adapter was found)
+  * `--discard-uncut` (discard sequences in which no adapter was found)
   * no. of trimmed nucleotides
   * length histogram
   * refactor read_sequences (use classes)
