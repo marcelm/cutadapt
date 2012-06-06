@@ -1,4 +1,3 @@
-========
 cutadapt
 ========
 
@@ -58,8 +57,8 @@ Installation
 Replace "python" with "python3" in the following lines to install the Python 3
 version.
 
-$ python setup.py build
-$ python setup.py install
+    python setup.py build
+    python setup.py install
 
 
 Use without installation
@@ -68,15 +67,16 @@ Use without installation
 Build the C extension module (you can try to skip this step -- a compiled
 version of the module is already included):
 
-$ python setup.py build_ext -i
+    python setup.py build_ext -i
 
 Then simply run the script from where it is, similar to this:
-$ /home/username/downloads/cutadapt-1.x/cutadapt --help
+
+    /home/username/downloads/cutadapt-1.x/cutadapt --help
 
 If you get any errors, first try to explicitly request a specific Python
 version by running cutadapt like this:
 
-python2.6 /home/.../cutadapt-1.x/cutadapt --help
+    python2.6 /home/.../cutadapt-1.x/cutadapt --help
 
 
 Galaxy
@@ -91,19 +91,21 @@ How to use, examples
 ====================
 
 Please also see the command-line help:
-$ cutadapt --help
+    cutadapt --help
 
 The basic command-line for cutadapt looks like this:
-$ cutadapt -a AACCGGTT input.fastq > output.fastq
-The adapter sequence is given with -a option. Replace
+
+    cutadapt -a AACCGGTT input.fastq > output.fastq
+
+The adapter sequence is given with `-a` option. Replace
 AACCGGTT with your actual adapter sequence.
 
 input.fastq is a file with reads. The result will be written
-to standard output. Use redirection with '>' (or cutadapt's -o
+to standard output. Use redirection with `>` (or cutadapt's `-o`
 option) to write the output to a file.
 
 By default, the output file contains all reads, even those
-that did not contain an adapter. (See also the --discard option.)
+that did not contain an adapter. (See also the `--discard` option.)
 
 
 Illumina data
@@ -111,20 +113,23 @@ Illumina data
 
 Assuming your sequencing data is available as a FASTQ file, use this
 command line:
-$ cutadapt -a ADAPTER-SEQUENCE input.fastq > output.fastq
+
+    cutadapt -a ADAPTER-SEQUENCE input.fastq > output.fastq
 
 gz-compressed input is supported:
-$ cutadapt -a ADAPTER-SEQUENCE input.fastq.gz > output.fastq
+
+    cutadapt -a ADAPTER-SEQUENCE input.fastq.gz > output.fastq
 
 gz-compressed output is also supported, but the -o parameter (output file) needs
 to be used (gzip compression is auto-detected by looking at the file name):
-$ cutadapt -a ADAPTER-SEQUENCE -o output.fastq.gz input.fastq.gz
+
+    cutadapt -a ADAPTER-SEQUENCE -o output.fastq.gz input.fastq.gz
 
 
 SOLiD data
 ----------
 
-With color space data, the option -c must be used and also the adapter must
+With color space data, the option `-c` must be used and also the adapter must
 be given in color space.
 
 Cut an adapter from SOLiD data given in solid.csfasta and solid.qual.
@@ -132,15 +137,15 @@ Produce MAQ- and BWA-compatible output, allow 12% errors, write the
 resulting FASTQ file to output.fastq. Add the prefix "abc:" to the read
 names:
 
-$ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq solid.csfasta solid.qual > output.fastq
+    cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq solid.csfasta solid.qual > output.fastq
 
 Instead of redirecting standard output with ">", the "-o" option can be used:
 
-$ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq -o output.fastq solid.csfasta solid.qual
+    cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq -o output.fastq solid.csfasta solid.qual
 
 Do the same, but produce BFAST-compatible output and strip the _F3 suffix from read names:
 
-$ cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
+    cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
 
 
 FASTA file
@@ -149,28 +154,27 @@ FASTA file
 Cut an adapter from reads given in a FASTA file. Try to remove an adapter three times
 (this is usually not needed), use the default error rate of 10%, write result to output.fa:
 
-$ cutadapt -n 3 -a TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG input.fa > output.fa
+    cutadapt -n 3 -a TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG input.fa > output.fa
 
 
 Multiple adapters
 -----------------
 
-As many adapters as desired can be given to the program by using the -a, -b or -g
-in any combination, for example, five -a adapters and two -g adapters. All
+As many adapters as desired can be given to the program by using the `-a`, `-b` or `-g`
+in any combination, for example, five `-a` adapters and two `-g` adapters. All
 adapters will be searched for, but only the best matching one will be trimmed
-from each read (but see the --times option).
+from each read (but see the `--times` option).
 
-$ cutadapt -b TGAGACACGCA -g AGGCACACAGGG input.fastq > output.fastq
+    cutadapt -b TGAGACACGCA -g AGGCACACAGGG input.fastq > output.fastq
 
 
 Quality Trimming
 ----------------
 
-The '-q' (or --trim-qualities) parameter can be used to trim low-quality ends
+The `-q` (or `--trim-qualities`) parameter can be used to trim low-quality ends
 from reads before adapter removal. For this to work correctly, the quality
 values must be encoded as ascii(phred quality + 33). If they are encoded as
-ascii(phred quality + 64), you currently have to add 31 to the cutoff. For
-example, if you actually mean "-q 10", you have to write "-q 41".
+ascii(phred quality + 64), you need to add `--quality-base=64` to the command line.
 
 The trimming algorithm is the same as the one used by BWA. That is: Subtract
 the given cutoff from all qualities; compute partial sums from all indices to
@@ -194,7 +198,7 @@ Algorithm
 =========
 
 cutadapt uses a simple semi-global alignment algorithm, without any special optimizations.
-For speed, the algorithm is implemented as a Python extension module in calignmodule.c.
+For speed, the algorithm is implemented as a Python extension module in `calignmodule.c`.
 
 The program is sufficiently fast for my purposes, but speedups should be simple to achieve.
 
@@ -204,17 +208,17 @@ Partial adapter matches
 
 Cutadapt correctly deals with partial adapter matches, and also with any trailing
 sequences after the adapter. As an example, suppose your adapter sequence is
-"ADAPTER" (specified via the -a or --adapter command-line parameter).
+"ADAPTER" (specified via the `-a` or `--adapter` command-line parameter).
 If you have these input sequences:
 
-MYSEQUENCEADAPTER
-MYSEQUENCEADAP
-MYSEQUENCEADAPTERSOMETHINGELSE
+    MYSEQUENCEADAPTER
+    MYSEQUENCEADAP
+    MYSEQUENCEADAPTERSOMETHINGELSE
 
 All of them will be trimmed to "MYSEQUENCE". If the sequence starts with an
 adapter, like this:
 
-ADAPTERSOMETHING
+    ADAPTERSOMETHING
 
 It will be empty after trimming.
 
@@ -226,25 +230,25 @@ and ADAPPTER (1 insertion) will all be recognized if the error rate is set to 0.
 Anchoring 5' adapters
 ---------------------
 
-If you specify an adapter with the -g (--front) parameter, the adapter may
+If you specify an adapter with the `-g` (`--front`) parameter, the adapter may
 overlap the beginning of the read or occur anywhere within it. If it appears
 within the read, the sequence that precedes it will also be trimmed in addition
-to the adapter. For example, with '-g ADAPTER', these sequences:
+to the adapter. For example, with `-g ADAPTER`, these sequences:
 
-HELLOADAPTERTHERE
-APTERTHERE
+    HELLOADAPTERTHERE
+    APTERTHERE
 
-will both be trimmed to 'THERE'. To avoid this, you can prefix the adapter with the
-character '^'. This will restrict the search that the adapter must be a prefix
-of the read. With '-g ^ADAPTER', only reads like this will be trimmed:
+will both be trimmed to `THERE`. To avoid this, you can prefix the adapter with the
+character `^`. This will restrict the search that the adapter must be a prefix
+of the read. With `-g ^ADAPTER`, only reads like this will be trimmed:
 
-ADAPTERHELLO
+    ADAPTERHELLO
 
 
 Allowing adapters anywhere
 --------------------------
 
-Cutadapt assumes that any adapter specified via the -a (or --adapter) parameter
+Cutadapt assumes that any adapter specified via the `-a` (or `--adapter`) parameter
 was ligated to the 3' end of the sequence. This is the correct assumption for
 at least the SOLiD and Illumina small RNA protocols and probably others.
 The assumption is enforced by the alignment algorithm, which only finds the adapter
@@ -253,12 +257,13 @@ the adapter must appear within the read. The adapter and all bases following
 it are remved.
 
 If, on the other hand, your adapter can also be ligated to the 5' end (on
-purpose or by accident), you should tell cutadapt so by using the -b (or
---anywhere) parameter. It will then use a slightly different alignment algorithm
+purpose or by accident), you should tell cutadapt so by using the `-b` (or
+`--anywhere`) parameter. It will then use a slightly different alignment algorithm
 (so-called semiglobal alignment), which allows any type of overlap between the
 adapter and the sequence. In particular, the adapter may appear only partially
 in the beginning of the read, like this:
-PTERMYSEQUENCE
+
+    PTERMYSEQUENCE
 
 The decision which part of the read to remove is made as follows: If there is at
 least one base before the found adapter, then the adapter is considered to be
@@ -269,15 +274,15 @@ the read.
 Here are some examples, which may make this clearer (left: read, right: trimmed
 read):
 
-MYSEQUENCEADAPTER -> MYSEQUENCE (3' adapter)
-MADAPTER -> M (3' adapter)
-ADAPTERMYSEQUENCE -> MYSEQUENCE (5' adapter)
-PTERMYSEQUENCE -> MYSEQUENCE (5' adapter)
+    MYSEQUENCEADAPTER -> MYSEQUENCE (3' adapter)
+    MADAPTER -> M (3' adapter)
+    ADAPTERMYSEQUENCE -> MYSEQUENCE (5' adapter)
+    PTERMYSEQUENCE -> MYSEQUENCE (5' adapter)
 
-The regular algorithm (-a) would trim the first two examples in the same way,
+The regular algorithm (`-a`) would trim the first two examples in the same way,
 but trim the third to an empty sequence and trim the fourth not at all.
 
-The -b parameter currently does not work with color space data.
+The `-b` parameter currently does not work with color space data.
 
 
 Using a "configuration file"
@@ -291,15 +296,17 @@ Bash, this works as follows.
 
 First, create a configuration file cutadapt.conf that contains lines like
 this:
--a AACCGGTT
--a GTAATAACCGGTT
--e 0.05
+
+    -a AACCGGTT
+    -a GTAATAACCGGTT
+    -e 0.05
 The file may contain line breaks (they will be replaced by spaces).
 
 Then run cutadapt like this:
-cutadapt $(<cutadapt.conf) input.fastq > output.fastq
 
-The Bash shell will replace the $(<...) with the content of the given file.
+    cutadapt $(<cutadapt.conf) input.fastq > output.fastq
+
+The Bash shell will replace the `$(<...)` with the content of the given file.
 
 
 Changes
@@ -307,8 +314,8 @@ Changes
 
 v1.1
 ----
-* Allow to "anchor" 5' adapters (-g), forcing them to be a prefix of the read.
-  To use this, add the special character '^' to the beginning of the adapter sequence.
+* Allow to "anchor" 5' adapters (`-g`), forcing them to be a prefix of the read.
+  To use this, add the special character `^` to the beginning of the adapter sequence.
 * Add the "-N" option, which allows 'N' characters within adapters to match literally.
 * Speedup of approx. 25% when reading from .gz files and using Python 2.7.
 * Allow to only trim qualities when no adapter is given on the command-line.
@@ -316,7 +323,7 @@ v1.1
 v1.0
 ----
 * ASCII-encoded quality values were assumed to be encoded as ascii(quality+33).
-  With the new parameter --quality-base, this can be changed to ascii(quality+64),
+  With the new parameter `--quality-base`, this can be changed to ascii(quality+64),
   as used in some versions of the Illumina pipeline. (Fixes issue 7.)
 * Allow to specify that adapters were ligated to the 5' end of reads. This change
   is based on a patch contributed by James Casbon.
@@ -332,7 +339,7 @@ v1.0
 
 v0.9.5
 ------
-* Fix issue 20: Make the report go to standard output when -o/--output is
+* Fix issue 20: Make the report go to standard output when `-o`/`--output` is
   specified.
 * Recognize .fq as an extension for FASTQ files
 * many more unit tests
@@ -353,12 +360,12 @@ v0.9.5
 v0.9.4
 ------
 * now compatible with Python 3
-* Add the --zero-cap option, which changes negative quality values to zero.
+* Add the `--zero-cap` option, which changes negative quality values to zero.
   This is a workaround to avoid segmentation faults in BWA. The option is now
-  enabled by default when --bwa/--maq is used.
-* Lots of unit tests added. Run them with cd tests && ./tests.sh .
-* Fix issue 16: --discard-trimmed did not work.
-* Allow to override auto-detection of input file format with the new -f/--format
+  enabled by default when `--bwa`/`--maq` is used.
+* Lots of unit tests added. Run them with `cd tests && ./tests.sh` .
+* Fix issue 16: `--discard-trimmed` did not work.
+* Allow to override auto-detection of input file format with the new `-f`/`--format`
   parameter. This mostly fixes issue 12.
 * Don't break when input file is empty.
 
@@ -395,7 +402,7 @@ v0.8
   for at least the SOLiD small RNA protocol (SREK) and also for the Illumina protocol.
   To get the old behavior, which uses a heuristic to determine whether the adapter was
   ligated to the 5' or 3' end and then trimmed the read accordingly, use the new
-  -b (--anywhere) option.
+  `-b` (`--anywhere`) option.
 * Clear up how the statistics after processing all reads are printed.
 * Fix incorrect statistics. Adapters starting at pos. 0 were correctly trimmed,
   but not counted.
@@ -408,7 +415,7 @@ v0.7
 ----
 * Useful exit codes
 * Better error reporting when malformed files are encountered
-* Add --minimum-length parameter for discarding reads that are shorter than
+* Add `--minimum-length` parameter for discarding reads that are shorter than
   a specified length after trimming.
 * Generalize the alignment function a bit. This is preparation for
   supporting adapters that are specific to either the 5' or 3' end.
