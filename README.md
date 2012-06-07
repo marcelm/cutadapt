@@ -323,6 +323,7 @@ v1.1
 * Allow to only trim qualities when no adapter is given on the command-line.
 * Add a patch by James Casbon:
     * include read names (ids) in rest file
+* Use nosetest for testing. To run, install nose and run "nosetests".
 
 v1.0
 ----

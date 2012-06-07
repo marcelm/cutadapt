@@ -12,9 +12,6 @@ import imp
 # - move code into modules, make cutadapt a simple wrapper
 ca = imp.load_source('ca', 'cutadapt')
 
-# with a symlink:
-#import main as ca
-
 
 def dpath(path):
 	"""get path to a data file (relative to the directory this
