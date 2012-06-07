@@ -133,10 +133,13 @@ class Statistics(object):
 		"""Stop the timer that was automatically started when the class was instantiated."""
 		self.time = time.clock() - self._start_time
 
-	def print_statistics(self, error_rate):
-		"""Print summary to stdout"""
+	def print_statistics(self, error_rate, file=None):
+		"""Print summary to file"""
 		if self.time is None:
 			self.stop_clock()
+		old_stdout = sys.stdout
+		if file is not None:
+			sys.stdout = file
 		print("cutadapt version", __version__)
 		print("Command line parameters:", " ".join(sys.argv[1:]))
 		print("Maximum error rate: %.2f%%" % (error_rate * 100.))
@@ -189,7 +192,7 @@ class Statistics(object):
 
 		if self.n == 0:
 			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
-
+		sys.stdout = old_stdout
 
 AdapterMatch = namedtuple('AdapterMatch', ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'adapter'])
 
@@ -816,14 +819,13 @@ def main(cmdlineargs=None):
 	except seqio.FormatError as e:
 		print("Error:", e, file=sys.stderr)
 		return 1
-	if options.output is None:
-		sys.stdout = sys.stderr
 	if options.rest_file is not None:
 		options.rest_file.close()
 	if options.wildcard_file is not None:
 		options.wildcard_file.close()
-	cutter.stats.print_statistics(options.error_rate)
-	sys.stdout = sys.__stdout__
+	# send statistics to stderr if result was sent to stdout
+	stat_file = sys.stderr if options.output is None else None
+	cutter.stats.print_statistics(options.error_rate, file=stat_file)
 
 	return 0
 
