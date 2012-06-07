@@ -1,16 +1,9 @@
 # TODO
 # test --untrimmed-output
 # test with the --output option
-
 from __future__ import print_function, division
 import os
-import imp
-
-# import cutadapt although it does not have a .py extension.
-# better solution:
-# - symlinks
-# - move code into modules, make cutadapt a simple wrapper
-ca = imp.load_source('ca', 'cutadapt')
+from cutadapt.scripts import cutadapt
 
 
 def dpath(path):
@@ -34,7 +27,7 @@ def run(params, expected, inpath, inpath2=None):
 	if inpath2:
 		params += [ datapath(inpath2) ]
 
-	assert ca.main(params) == 0
+	assert cutadapt.main(params) == 0
 	# TODO redirect standard output
 	diff(dpath(os.path.join('cut', expected)), dpath('tmp.fastaq'))
 	# TODO diff log files

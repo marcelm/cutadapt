@@ -69,16 +69,9 @@ from optparse import OptionParser, OptionGroup
 from contextlib import closing
 from collections import defaultdict, namedtuple
 
-# If running from within source directory,
-# add 'lib' to sys.path.
-_libdir = join(dirname(realpath(__file__)), 'lib')
-if isfile(join(_libdir, 'cutadapt', '__init__.py')):
-	sys.path.insert(0, _libdir)
-
-from cutadapt import align, seqio
-from cutadapt.xopen import xopen
-from cutadapt.qualtrim import quality_trim_index
-from cutadapt import __version__
+from .. import align, seqio, __version__
+from ..xopen import xopen
+from ..qualtrim import quality_trim_index
 
 # Constants for the find_best_alignment function.
 # The function is called with SEQ1 as the adapter, SEQ2 as the read.

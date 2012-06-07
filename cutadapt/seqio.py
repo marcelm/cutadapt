@@ -6,7 +6,7 @@ if sys.version_info[0] < 3:
 	from itertools import izip as zip
 else:
 	basestring = str
-from cutadapt.xopen import xopen
+from .xopen import xopen
 from os.path import splitext
 import sys
 

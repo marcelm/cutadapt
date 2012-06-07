@@ -1,6 +1,7 @@
-include lib/cutadapt/calign.so
-include lib/__init__.py
-graft tests/
+include cutadapt/calign.so
+include bin/_preamble.py
+include README.md
+graft tests
 exclude tests/*.tmp
 exclude tests/.gitignore
-graft galaxy/
+graft galaxy

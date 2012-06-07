@@ -17,7 +17,6 @@ See http://code.google.com/p/cutadapt/ . Please use the Google code issue
 tracker for bug reports and feature requests.
 
 
-
 License
 =======
 
@@ -73,12 +72,12 @@ version of the module is already included):
 
 Then simply run the script from where it is, similar to this:
 
-    /home/username/downloads/cutadapt-1.x/cutadapt --help
+    bin/cutadapt --help
 
 If you get any errors, first try to explicitly request a specific Python
 version by running cutadapt like this:
 
-    python2.6 /home/.../cutadapt-1.x/cutadapt --help
+    python2.6 bin/cutadapt --help
 
 
 Galaxy
@@ -324,6 +323,8 @@ v1.1
 * Add a patch by James Casbon:
     * include read names (ids) in rest file
 * Use nosetest for testing. To run, install nose and run "nosetests".
+* When using cutadapt without installing it, you now need to run `bin/cutadapt` due to
+  a new directory layout.
 
 v1.0
 ----
