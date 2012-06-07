@@ -321,6 +321,8 @@ v1.1
 * Add the "-N" option, which allows 'N' characters within adapters to match literally.
 * Speedup of approx. 25% when reading from .gz files and using Python 2.7.
 * Allow to only trim qualities when no adapter is given on the command-line.
+* Add a patch by James Casbon:
+    * include read names (ids) in rest file
 
 v1.0
 ----
