@@ -1,6 +1,7 @@
 # TODO
 # test --untrimmed-output
 # test with the --output option
+# test reading from standard input
 from __future__ import print_function, division
 import os
 from cutadapt.scripts import cutadapt
@@ -117,7 +118,6 @@ def test_length_tag():
 		"-b TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG "\
 		"-b TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA", '454.fa', '454.fa')
 
-
 def test_overlap_a():
 	'''-O/--overlap with -a (-c omitted on purpose)'''
 	run("-O 10 -a 330201030313112312", "overlapa.fa", "overlapa.fa")
@@ -171,8 +171,16 @@ def test_read_wildcard():
 	run("--match-read-wildcards -b ACGTACGT", "wildcard.fa", "wildcard.fa")
 
 def test_adapter_wildcard():
-	'''test wildcards in adapter'''
-	run("--wildcard-file - -b ACGTNNNACGT", "wildcard_adapter.fa", "wildcard_adapter.fa")
+	'''wildcards in adapter'''
+	wildcardtmp = dpath("wildcardtmp.txt")
+	for adapter_type, expected in (("-a", "wildcard_adapter.fa"), 
+		("-b", "wildcard_adapter_anywhere.fa")):
+		run("--wildcard-file {0} {1} ACGTNNNACGT".format(wildcardtmp, adapter_type), 
+			expected, "wildcard_adapter.fa")
+		lines = open(wildcardtmp).readlines()
+		lines = [ line.strip() for line in lines ]
+		assert lines == ['AAA 1', 'GGG 2', 'CCC 3b', 'TTT 4b']
+		os.remove(wildcardtmp)
 
 def test_wildcard_N():
 	'''test 'N' wildcard matching with no allowed errors='''
@@ -191,3 +199,6 @@ def test_literal_N2():
 
 def test_anchored_front():
 	run("-g ^FRONTADAPT", "anchored.fasta", "anchored.fasta")
+
+def test_solid():
+	run("-c -e 0.122 -a 330201030313112312", "solid.fastq", "solid.fastq")

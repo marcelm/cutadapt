@@ -820,6 +820,8 @@ def main(cmdlineargs=None):
 		sys.stdout = sys.stderr
 	if options.rest_file is not None:
 		options.rest_file.close()
+	if options.wildcard_file is not None:
+		options.wildcard_file.close()
 	cutter.stats.print_statistics(options.error_rate)
 	sys.stdout = sys.__stdout__
 

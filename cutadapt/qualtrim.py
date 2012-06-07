@@ -12,9 +12,6 @@ def quality_trim_index(qualities, cutoff, base=33):
 
 	Qualities are assumed to be ASCII-encoded as chr(qual + base).
 
-	>>> trim("", "", 10) TODO
-	with qualities based on bwa_trim_read
-
 	The algorithm is the same as the one used by BWA within the function
 	'bwa_trim_read':
 	- Subtract the cutoff value from all qualities.
@@ -24,7 +21,7 @@ def quality_trim_index(qualities, cutoff, base=33):
 	s = 0
 	max_qual = 0
 	max_i = len(qualities)
-	for i in xrange(len(qualities)-1, -1, -1):
+	for i in reversed(xrange(len(qualities))):
 		q = ord(qualities[i]) - base
 		s += cutoff - q
 		if s < 0:
