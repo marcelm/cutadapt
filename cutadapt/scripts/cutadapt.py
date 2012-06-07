@@ -738,6 +738,7 @@ def main(cmdlineargs=None):
 
 	def append_adapters(adapter_list, where):
 		for seq in adapter_list:
+			seq = seq.strip()
 			w = where
 			if w == FRONT and seq.startswith('^'):
 				seq = seq[1:]
