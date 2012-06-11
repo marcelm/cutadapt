@@ -688,6 +688,8 @@ def main(cmdlineargs=None):
 	quality_filename = None
 	if len(args) == 2:
 		quality_filename = args[1]
+	if input_filename.endswith('.qual') and quality_filename.endswith('fasta'):
+		parser.error("FASTA and QUAL file given, but the FASTA file must be first.")
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq']:
 		parser.error("The input file format must be either 'fasta' or 'fastq' (not '{0}').".format(options.format))
