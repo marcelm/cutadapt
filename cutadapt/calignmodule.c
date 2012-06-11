@@ -144,12 +144,18 @@ py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
 	best_matches = 0;
 	best_origin = column[m].origin;
 
+	// maximum no. of errors
+	int k = error_rate * m;
+	int last = k + 1;
+	if (flags & START_WITHIN_SEQ1) {
+		last = m;
+	}
 	// iterate over columns
 	for (j = 1; j <= n; ++j) {
 		// remember first entry
 		Entry tmp_entry = column[0];
 
-		// fill in first entry in this column
+		// fill in first entry in this column TODO move out of loop
 		if (flags & START_WITHIN_SEQ2) {
 			column[0].cost = 0;
 			column[0].origin = j;
@@ -159,7 +165,7 @@ py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
 			column[0].origin = 0;
 			column[0].matches = 0;
 		}
-		for (i = 1; i <= m; ++i) {
+		for (i = 1; i <= last; ++i) {
 			int match = (s1[i-1] == s2[j-1])
 						|| ((degenerate & ALLOW_WILDCARD_SEQ1) && (s1[i-1] == 'N'))
 						|| ((degenerate & ALLOW_WILDCARD_SEQ2) && (s2[j-1] == 'N'));
@@ -191,28 +197,37 @@ py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
 			column[i].cost = cost;
 			column[i].origin = origin;
 			column[i].matches = matches;
+			
+		}
+		while (column[last].cost > k) {
+			last--;
+		}
+		if (last < m) {
+			last++;
+		} else {
+			// found
+			// if requested, find best match in last row
+			if (flags & STOP_WITHIN_SEQ2) {
+				// length of the aligned part of string1
+				int length = m + min(column[m].origin, 0);
+				int cost = column[m].cost;
+				int matches = column[m].matches;
+				if (cost <= length * error_rate && (matches > best_matches || (matches == best_matches && cost <= best_cost))) {
+					// update
+					best_matches = matches;
+					best_cost = cost;
+					best_origin = column[m].origin;
+					best_i = m;
+					best_j = j;
+				}
+			}
+			
 		}
 		// column finished
-
-		// if requested, find best match in last row
-		if (flags & STOP_WITHIN_SEQ2) {
-			// length of the aligned part of string1
-			int length = m + min(column[m].origin, 0);
-			int cost = column[m].cost;
-			int matches = column[m].matches;
-			if (cost <= length * error_rate && (matches > best_matches || (matches == best_matches && cost <= best_cost))) {
-				// update
-				best_matches = matches;
-				best_cost = cost;
-				best_origin = column[m].origin;
-				best_i = m;
-				best_j = j;
-			}
-		}
 	}
 
 	if (flags & STOP_WITHIN_SEQ1) {
-		// search in last column
+		// search in last column // TODO last?
 		for (i = 0; i <= m; ++i) {
 			int length = i + min(column[i].origin, 0);
 			int cost = column[i].cost;
