@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # kate: word-wrap off;
 #
-# Copyright (c) 2010,2011,2012 Marcel Martin <marcel.martin@tu-dortmund.de>
+# Copyright (c) 2010-2012 Marcel Martin <marcel.martin@tu-dortmund.de>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -41,10 +41,11 @@ If the name of any input or output file ends with '.gz', it is
 assumed to be gzip-compressed.
 
 If you want to search for the reverse complement of an adapter, you must
-provide an additional adapter sequence using two -a, -b or -g parameters.
+provide an additional adapter sequence using another -a, -b or -g parameter.
 
-If the input sequences are in color space, the adapter must
-also be provided in color space (using a string of digits 0123).
+If the input sequences are in color space, the adapter
+can be given in either color space (as a string of digits 0, 1, 2, 3) or in
+nucleotide space.
 
 EXAMPLE
 
@@ -288,15 +289,18 @@ class Adapter(object):
 			return self.remove_front(read, match)
 
 	def remove_front(self, read, match):
-		assert not self.colorspace
 		self.lengths_front[match.rstop] += 1
 		if match.rstart > 0 and self.rest_file:
 			print(read.sequence[:match.rstart], read.name, file=self.rest_file)
 
+		rstop = match.rstop
+		if self.colorspace:
+			# trim one more color
+			rstop = min(rstop + 1, len(read))
 		if self.wildcard_file:
-			trimmed = read[:match.rstop]
+			trimmed = read[:rstop]
 			self.write_wildcard_file(trimmed, match)
-		read = read[match.rstop:]
+		read = read[rstop:]
 		return read
 
 	def remove_back(self, read, match):
@@ -730,8 +734,10 @@ def main(cmdlineargs=None):
 		parser.error("Trimming the primer makes only sense in color space.")
 	if options.double_encode and not options.colorspace:
 		parser.error("Double-encoding makes only sense in color space.")
-	if (options.anywhere or options.front) and options.colorspace:
-		parser.error("Using --anywhere or --front with color space reads is currently not supported  (if you think this may be useful, contact the author).")
+	if options.colorspace and options.front and not options.trim_primer:
+		parser.error("Currently, when you want to trim a 5' adapter in colorspace, you must also specify the --trim-primer option")
+	if options.anywhere and options.colorspace:
+		parser.error("Using --anywhere with color space reads is currently not supported  (if you think this may be useful, contact the author).")
 	if not (0 <= options.error_rate <= 1.):
 		parser.error("The maximum error rate must be between 0 and 1.")
 	if options.overlap < 1:

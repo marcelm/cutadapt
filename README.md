@@ -326,6 +326,7 @@ v1.1
 * When using cutadapt without installing it, you now need to run `bin/cutadapt` due to
   a new directory layout.
 * Allow to give a colorspace adapter in basespace (gets automatically converted).
+* Allow to search for 5' adapters (those specified with `-g`) in colorspace.
 
 v1.0
 ----

@@ -206,3 +206,7 @@ def test_solid():
 def test_solid_basespace_adapter():
 	'''colorspace adapter given in basespace'''
 	run("-c -e 0.122 -a CGCCTTGGCCGTACAGCAG", "solid.fastq", "solid.fastq")
+
+def test_solid5p():
+	'''test 5' colorspace adapter'''
+	run("-c -e 0.0 --trim-primer -g CCGGAGGTCAGCTCGCTATA", "solid5p.fasta", "solid5p.fasta")
