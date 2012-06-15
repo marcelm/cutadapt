@@ -325,6 +325,7 @@ v1.1
 * Use nosetest for testing. To run, install nose and run "nosetests".
 * When using cutadapt without installing it, you now need to run `bin/cutadapt` due to
   a new directory layout.
+* Allow to give a colorspace adapter in basespace (gets automatically converted).
 
 v1.0
 ----
@@ -458,7 +459,6 @@ v0.1
 To Do / Ideas
 =============
 
-  * allow to give adapter in nucleotide space, but find it in color space
   * show average error rate
   * show table of length vs. max errors
   * In color space and probably also for Illumina data, gapped alignment

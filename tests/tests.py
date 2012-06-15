@@ -202,3 +202,7 @@ def test_anchored_front():
 
 def test_solid():
 	run("-c -e 0.122 -a 330201030313112312", "solid.fastq", "solid.fastq")
+
+def test_solid_basespace_adapter():
+	'''colorspace adapter given in basespace'''
+	run("-c -e 0.122 -a CGCCTTGGCCGTACAGCAG", "solid.fastq", "solid.fastq")

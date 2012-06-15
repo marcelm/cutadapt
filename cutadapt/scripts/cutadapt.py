@@ -72,6 +72,7 @@ from contextlib import closing
 from collections import defaultdict, namedtuple
 
 from .. import align, seqio, __version__
+from ..colorspace import encode as colorspace_encode
 from ..xopen import xopen
 from ..qualtrim import quality_trim_index
 
@@ -232,6 +233,9 @@ class Adapter(object):
 		self.min_overlap = min_overlap
 		self.wildcard_flags = 0
 		self.colorspace = colorspace
+		if self.colorspace and set(self.sequence) <= set('ACGT'):
+			# adapter was given in basespace
+			self.sequence = colorspace_encode(self.sequence)[1:]
 		if match_read_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
 		if match_adapter_wildcards and 'N' in self.sequence:
