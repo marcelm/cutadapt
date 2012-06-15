@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# kate: word-wrap off;
 #
 # Copyright (c) 2010,2011,2012 Marcel Martin <marcel.martin@tu-dortmund.de>
 #
@@ -59,6 +60,7 @@ import sys
 import re
 import gzip
 import time
+import errno
 from os.path import dirname, join, isfile, realpath
 if sys.version_info[0] < 3:
 	from string import maketrans
@@ -818,7 +820,12 @@ def main(cmdlineargs=None):
 					twoheaders = False
 			if readfilter.keep(read, trimmed):
 				read.sequence = initial + read.sequence
-				write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
+				try:
+					write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
+				except IOError as e:
+					if e.errno == errno.EPIPE:
+						return 1
+					raise
 	except seqio.FormatError as e:
 		print("Error:", e, file=sys.stderr)
 		return 1
