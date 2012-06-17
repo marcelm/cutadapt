@@ -210,3 +210,7 @@ def test_solid_basespace_adapter():
 def test_solid5p():
 	'''test 5' colorspace adapter'''
 	run("-c -e 0.0 --trim-primer -g CCGGAGGTCAGCTCGCTATA", "solid5p.fasta", "solid5p.fasta")
+
+def test_solid5p_prefix():
+	'''test anchored 5' colorspace adapter'''
+	run("-c -e 0.0 --trim-primer -g ^CCGGAGGTCAGCTCGCTATA", "solid5p-anchored.fasta", "solid5p.fasta")
