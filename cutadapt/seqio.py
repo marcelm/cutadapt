@@ -114,9 +114,11 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 		if fileformat == 'fasta':
 			return FastaReader(file)
 		elif fileformat == 'fastq':
-			return FastqReader(file)
+			return FastqReader(file, colorspace)
+		elif fileformat == 'sra-fastq' and colorspace:
+			return FastqReader(file, colorspace, skip_color=1)
 		else:
-			raise UnknownFileType("File format {0} is unknown (expected 'fasta' or 'fastq').".format(fileformat))
+			raise UnknownFileType("File format {0} is unknown (expected 'sra-fastq' (only for colorspace), 'fasta' or 'fastq').".format(fileformat))
 
 	name = None
 	if file == "-":
@@ -232,7 +234,7 @@ class FastqReader(object):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
-	def __init__(self, file, colorspace=False):
+	def __init__(self, file, colorspace=False, skip_color=0):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
@@ -244,6 +246,7 @@ class FastqReader(object):
 			file = xopen(file, "r")
 		self.fp = file
 		self.colorspace = colorspace
+		self.skip_color = skip_color
 		self.twoheaders = False
 
 	def __iter__(self):
@@ -269,9 +272,10 @@ class FastqReader(object):
 						raise FormatError(
 							"At line {0}: Two sequence descriptions are given in "
 							"the FASTQ file, but they don't match "
-							"('{1}' != '{2}')".format(i+1, name, line.rstrip()[1:]))
+							"('{1}' != '{2}')"
+							" perhaps you should try the 'sra-fastq' format?".format(i+1, name, line.rstrip()[1:]))
 			elif i % 4 == 3:
-				qualities = line.rstrip("\n\r")
+				qualities = line.rstrip("\n\r")[self.skip_color:]
 				if len(qualities) + lengthdiff != len(sequence):
 					raise ValueError("Length of quality sequence and length of read do not match (%d+%d!=%d)" % (len(qualities), lengthdiff, len(sequence)))
 				yield Sequence(name, sequence, qualities)

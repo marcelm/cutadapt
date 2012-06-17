@@ -587,7 +587,7 @@ def main(cmdlineargs=None):
 	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
 
 	parser.add_option("-f", "--format", default=None,
-		help="Input file format; can be either 'fasta' or 'fastq'. "
+		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 		"Ignored when reading csfasta/qual files (default: auto-detect from file name extension).")
 
 	group = OptionGroup(parser, "Options that influence how the adapters are found",
@@ -701,8 +701,8 @@ def main(cmdlineargs=None):
 	if input_filename.endswith('.qual') and quality_filename.endswith('fasta'):
 		parser.error("FASTA and QUAL file given, but the FASTA file must be first.")
 
-	if options.format is not None and options.format.lower() not in ['fasta', 'fastq']:
-		parser.error("The input file format must be either 'fasta' or 'fastq' (not '{0}').".format(options.format))
+	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
+		parser.error("The input file format must be either 'fasta', 'fastq' or 'sra-fastq' (not '{0}').".format(options.format))
 
 	# TODO should this really be an error?
 	if options.format is not None and quality_filename is not None:

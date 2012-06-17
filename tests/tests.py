@@ -215,3 +215,7 @@ def test_solid5p():
 def test_solid5p_prefix():
 	'''test anchored 5' colorspace adapter'''
 	run("-c -e 0.0 --trim-primer -g ^CCGGAGGTCAGCTCGCTATA", "solid5p-anchored.fasta", "solid5p.fasta")
+
+def test_sra_fastq():
+	'''test SRA-formatted colorspace FASTQ'''
+	run("-c -e 0.1 --format sra-fastq -a CGCCTTGGCCGTACAGCAG", "sra.fastq", "sra.fastq")

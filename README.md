@@ -331,6 +331,8 @@ v1.1
 * Allow to search for 5' adapters (those specified with `-g`) in colorspace.
 * Speed up the alignment by a factor of at least 3 by using Ukkonen's algorithm.
   The total runtime decreases by about 30% in the tested cases.
+* allow to deal with colorspace FASTQ files from the SRA that contain a fake 
+  additional quality in the beginning (use --format sra-fastq)
 
 v1.0
 ----
@@ -482,7 +484,6 @@ To Do / Ideas
   * put write_read into a Fast(a|q)Writer class?
   * allow .txt input/output
   * test on Windows
-  * SRA color space FASTQ files include a quality for the initial nucleotide, this is not handled correctly
   * check whether input is FASTQ although -f fasta is given
   * close on StopIteration
   * search for adapters in the order in which they are given on the command line
