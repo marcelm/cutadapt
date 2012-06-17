@@ -22,7 +22,7 @@ License
 
 (This is the MIT license.)
 
-Copyright (c) 2010, 2011, 2012 Marcel Martin <marcel.martin@tu-dortmund.de>
+Copyright (c) 2010-2012 Marcel Martin <marcel.martin@tu-dortmund.de>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -77,7 +77,7 @@ Then simply run the script from where it is, similar to this:
 If you get any errors, first try to explicitly request a specific Python
 version by running cutadapt like this:
 
-    python2.6 bin/cutadapt --help
+    python2.7 bin/cutadapt --help
 
 
 Galaxy
@@ -130,23 +130,25 @@ to be used (gzip compression is auto-detected by looking at the file name):
 SOLiD data
 ----------
 
-With color space data, the option `-c` must be used and also the adapter must
-be given in color space.
+With color space data, the option `-c` must be used. The adapter can be given either
+either as a string of colors or as a sequence of nucleotides, which will be 
+automatically converted.
 
-Cut an adapter from SOLiD data given in solid.csfasta and solid.qual.
-Produce MAQ- and BWA-compatible output, allow 12% errors, write the
-resulting FASTQ file to output.fastq. Add the prefix "abc:" to the read
+For example, to cut an adapter from SOLiD data given in solid.csfasta and solid.qual,
+to produce MAQ- and BWA-compatible output, allow 10% errors, write the
+resulting FASTQ file to output.fastq and to the prefix "abc:" to the read
 names:
 
-    cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq solid.csfasta solid.qual > output.fastq
+    cutadapt -c -e 0.10 -a CGCCTTGGCCGTACAGCAG -x abc: --maq solid.csfasta solid.qual > output.fastq
 
-Instead of redirecting standard output with `>`, the `-o` option can be used:
+Instead of redirecting standard output with `>`, the `-o` option can be used. This 
+also shows that you can give the adapter in color space:
 
-    cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --maq -o output.fastq solid.csfasta solid.qual
+    cutadapt -c -e 0.10 -a 330201030313112312 -x abc: --maq -o output.fastq solid.csfasta solid.qual
 
-Do the same, but produce BFAST-compatible output and strip the _F3 suffix from read names:
+This does the same, but produces BFAST-compatible output and strips the _F3 suffix from read names:
 
-    cutadapt -c -e 0.12 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
+    cutadapt -c -e 0.10 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
 
 
 FASTA file
@@ -327,6 +329,8 @@ v1.1
   a new directory layout.
 * Allow to give a colorspace adapter in basespace (gets automatically converted).
 * Allow to search for 5' adapters (those specified with `-g`) in colorspace.
+* Speed up the alignment by a factor of at least 3 by using Ukkonen's algorithm.
+  The total runtime decreases by about 30% in the tested cases.
 
 v1.0
 ----
