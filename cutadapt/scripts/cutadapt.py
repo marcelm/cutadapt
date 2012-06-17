@@ -601,13 +601,13 @@ def main(cmdlineargs=None):
 	group.add_option("-b", "--anywhere", action="append", metavar="ADAPTER", default=[],
 		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept.")
 	group.add_option("-g", "--front", action="append", metavar="ADAPTER", default=[],
-		help="""Sequence of an adapter that was ligated to the 5' end. If the
-		adapter sequence starts with the character '^', the adapter is
-		'anchored'. An anchored adapter must appear in its entirety at the
-		5' end of the read (it is a prefix of the read). A non-anchored adapter may
-		appear partially at the 5' end, or it may occur within the read. If it is
-		found within a read, the sequence preceding the adapter is also trimmed.
-		In all cases the adapter itself is trimmed.""")
+		help="Sequence of an adapter that was ligated to the 5' end. If the " + \
+		"adapter sequence starts with the character '^', the adapter is " + \
+		"'anchored'. An anchored adapter must appear in its entirety at the " + \
+		"5' end of the read (it is a prefix of the read). A non-anchored adapter may " + \
+		"appear partially at the 5' end, or it may occur within the read. If it is " + \
+		"found within a read, the sequence preceding the adapter is also trimmed. " + \
+		"In all cases the adapter itself is trimmed.")
 	group.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
