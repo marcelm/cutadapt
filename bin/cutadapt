@@ -4,7 +4,7 @@ import sys
 try:
 	import _preamble
 except ImportError:
-	sys.exc_clear()
+	pass
 
 from cutadapt.scripts import cutadapt
 cutadapt.main()
