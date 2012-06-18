@@ -31,6 +31,7 @@ def run(params, expected, inpath, inpath2=None):
 	assert cutadapt.main(params) == 0
 	# TODO redirect standard output
 	diff(dpath(os.path.join('cut', expected)), dpath('tmp.fastaq'))
+	os.remove(dpath('tmp.fastaq'))
 	# TODO diff log files
 	#echo "Running $CA $1 data/$3 ${second}"
 	#if ! $CA $1 "data/$3" -o tmp.fastaq ${second} > tmp.log; then
@@ -40,7 +41,6 @@ def run(params, expected, inpath, inpath2=None):
 	#sed -i '/Total time/d;/Time per read/d;/cutadapt version/d;/^Command line /d' tmp.log
 	#diff -u cut/$2 tmp.fastaq
 	#diff -u tmp.log log/$2.log
-	#rm tmp.fastaq tmp.log
 
 
 def test_example():
@@ -222,4 +222,6 @@ def test_sra_fastq():
 
 def test_issue_46():
 	'''issue 46 - IndexError with --wildcard-file'''
-	run("--anywhere=AACGTN --wildcard-file=tmp.wildcard.txt", "issue46.fasta", "issue46.fasta")
+	wildcardtmp = dpath("wildcardtmp.txt")
+	run("--anywhere=AACGTN --wildcard-file={0}".format(wildcardtmp), "issue46.fasta", "issue46.fasta")
+	os.remove(wildcardtmp)
