@@ -660,6 +660,8 @@ def main(cmdlineargs=None):
 		help="Add this prefix to read names")
 	group.add_option("-y", "--suffix", default='',
 		help="Add this suffix to read names")
+	group.add_option("--strip-suffix", action='append', default=[],
+		help="Remove this suffix from read names if present. Can be given multiple times.")
 	group.add_option("-c", "--colorspace", action='store_true', default=False,
 		help="Colorspace mode: Also trim the color that is adjacent to the found adapter.")
 	group.add_option("-d", "--double-encode", action='store_true', default=False,
@@ -721,7 +723,7 @@ def main(cmdlineargs=None):
 		options.colorspace = True
 		options.double_encode = True
 		options.trim_primer = True
-		options.strip_f3 = True
+		options.strip_suffix.append('_F3')
 		options.suffix = "/1"
 		options.zero_cap = True
 	if options.trim_primer and not options.colorspace:
@@ -779,7 +781,9 @@ def main(cmdlineargs=None):
 	if options.length_tag:
 		modifiers.append(LengthTagModifier(options.length_tag))
 	if options.strip_f3:
-		modifiers.append(SuffixRemover('_F3'))
+		options.strip_suffix.append('_F3')
+	for suffix in options.strip_suffix:
+		modifiers.append(SuffixRemover(suffix))
 	if options.prefix or options.suffix:
 		modifiers.append(PrefixSuffixAdder(options.prefix, options.suffix))
 	if options.double_encode:

@@ -225,3 +225,6 @@ def test_issue_46():
 	wildcardtmp = dpath("wildcardtmp.txt")
 	run("--anywhere=AACGTN --wildcard-file={0}".format(wildcardtmp), "issue46.fasta", "issue46.fasta")
 	os.remove(wildcardtmp)
+
+def test_strip_suffix():
+	run("--strip-suffix _sequence -a XXXXXXX", "stripped.fasta", "simple.fasta")
