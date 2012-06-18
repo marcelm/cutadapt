@@ -183,7 +183,7 @@ def test_adapter_wildcard():
 		os.remove(wildcardtmp)
 
 def test_wildcard_N():
-	'''test 'N' wildcard matching with no allowed errors='''
+	'''test 'N' wildcard matching with no allowed errors'''
 	run("-e 0 -a GGGGGGG --match-read-wildcards", "wildcardN.fa", "wildcardN.fa")
 
 def test_adapter_front():
@@ -219,3 +219,7 @@ def test_solid5p_prefix():
 def test_sra_fastq():
 	'''test SRA-formatted colorspace FASTQ'''
 	run("-c -e 0.1 --format sra-fastq -a CGCCTTGGCCGTACAGCAG", "sra.fastq", "sra.fastq")
+
+def test_issue_46():
+	'''issue 46 - IndexError with --wildcard-file'''
+	run("--anywhere=AACGTN --wildcard-file=tmp.wildcard.txt", "issue46.fasta", "issue46.fasta")

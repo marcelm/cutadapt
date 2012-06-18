@@ -292,14 +292,12 @@ class Adapter(object):
 		self.lengths_front[match.rstop] += 1
 		if match.rstart > 0 and self.rest_file:
 			print(read.sequence[:match.rstart], read.name, file=self.rest_file)
-
+		if self.wildcard_file:
+			self.write_wildcard_file(read, match)
 		rstop = match.rstop
 		if self.colorspace:
 			# trim one more color
 			rstop = min(rstop + 1, len(read))
-		if self.wildcard_file:
-			trimmed = read[:rstop]
-			self.write_wildcard_file(trimmed, match)
 		read = read[rstop:]
 		return read
 
@@ -309,24 +307,20 @@ class Adapter(object):
 			# The adapter is within the read
 			print(read.sequence[match.rstop:], read.name, file=self.rest_file)
 		self.lengths_back[len(read) - match.rstart] += 1
+		if self.wildcard_file:
+			self.write_wildcard_file(read, match)
 
 		rstart = match.rstart
 		if self.colorspace:
 			# trim one more color if long enough
 			rstart = max(0, match.rstart - 1)
-		if self.wildcard_file:
-			trimmed = read[rstart:]
-			self.write_wildcard_file(trimmed, match)
 		read = read[:rstart]
 		return read
 
-	def write_wildcard_file(self, trimmed, match):
-		# TODO if self.wildcard_file is not None ...
-		seq_match = trimmed.sequence
-		adap_match = self.sequence
-		wildcards = [ seq_match[i] for i in range(match.astart, match.astop)
-						if adap_match[i] == 'N' ]
-		print(''.join(wildcards), trimmed.name, file=self.wildcard_file)
+	def write_wildcard_file(self, read, match):
+		wildcards = [ read.sequence[match.rstart + i] for i in range(match.astop - match.astart)
+			if self.sequence[match.astart + i] == 'N' ]
+		print(''.join(wildcards), read.name, file=self.wildcard_file)
 
 	def __len__(self):
 		return len(self.sequence)
