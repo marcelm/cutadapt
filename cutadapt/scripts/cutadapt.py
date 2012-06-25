@@ -639,7 +639,7 @@ def main(cmdlineargs=None):
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
-	group.add_option("-q", "--quality-cutoff", type=int, default=None, metavar="CUTOFF",
+	group.add_option("-q", "--quality-cutoff", type=int, default=0, metavar="CUTOFF",
 		help="Trim low-quality ends from reads before adapter removal. "
 			"The algorithm is the same as the one used by BWA "
 			"(Subtract CUTOFF from all qualities; "
@@ -763,7 +763,7 @@ def main(cmdlineargs=None):
 	del options.anywhere
 	del options.front
 
-	if not adapters and options.quality_cutoff is None:
+	if not adapters and options.quality_cutoff == 0:
 		print("You need to provide at least one adapter sequence.", file=sys.stderr)
 		return 1
 
@@ -807,7 +807,7 @@ def main(cmdlineargs=None):
 				initial = ''
 
 			#total_bases += len(qualities)
-			if options.quality_cutoff is not None:
+			if options.quality_cutoff > 0:
 				index = quality_trim_index(read.qualities, options.quality_cutoff, options.quality_base)
 				read = read[:index]
 
