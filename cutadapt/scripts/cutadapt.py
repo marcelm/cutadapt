@@ -648,6 +648,9 @@ def main(cmdlineargs=None):
         help="Write reads that do not contain the adapter to FILE, instead "
             "of writing them to the regular output file. (default: output "
             "to same file as trimmed)")
+    group.add_option('-p', "--paired-output", default=None, metavar="FILE",
+        help="Write reads from the paired end input to FILE. ")
+
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Additional modifications to the reads")
@@ -697,8 +700,16 @@ def main(cmdlineargs=None):
 
     input_filename = args[0]
     quality_filename = None
+    pe_filename = None
+
     if len(args) == 2:
-        quality_filename = args[1]
+        if args[1].endswith('.qual'):
+            quality_filename = args[1]
+        else:
+            pe_filename = args[1]
+            if not options.paired_output:
+                parser.error('you must use --paired-output when trimming paired end reads')
+
     if input_filename.endswith('.qual') and quality_filename.endswith('fasta'):
         parser.error("FASTA and QUAL file given, but the FASTA file must be first.")
 
@@ -721,6 +732,8 @@ def main(cmdlineargs=None):
         untrimmed_outfile = xopen(options.untrimmed_output, 'w')
     if options.too_short_output is not None:
         too_short_outfile = xopen(options.too_short_output, 'w')
+    if options.paired_output:
+        pe_outfile = xopen(options.paired_output, 'w')
     #if options.too_long_output is not None:
         #too_long_outfile = xopen(options.too_long_output, 'w')
 
@@ -803,10 +816,20 @@ def main(cmdlineargs=None):
     try:
         twoheaders = None
         reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
+        if pe_filename:
+            pe_reader = read_sequences(pe_filename, None, colorspace=options.colorspace, fileformat=options.format)
+            pe_reader = iter(pe_reader)
+            pe_read = None
+        else:
+            pe_reader = None
+            pe_read = None
+
         for read in reader:
             # In colorspace, the first character is the last nucleotide of the primer base
             # and the second character encodes the transition from the primer base to the
             # first real base of the read.
+            if pe_reader:
+                pe_read = pe_reader.next()
             if options.trim_primer:
                 read.sequence = read.sequence[2:]
                 if read.qualities is not None: # TODO
@@ -835,6 +858,8 @@ def main(cmdlineargs=None):
                 read.sequence = initial + read.sequence
                 try:
                     write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
+                    if pe_read:
+                        write_read(pe_read, pe_outfile)
                 except IOError as e:
                     if e.errno == errno.EPIPE:
                         return 1
