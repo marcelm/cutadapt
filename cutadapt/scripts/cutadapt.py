@@ -92,31 +92,24 @@ class HelpfulOptionParser(OptionParser):
 		self.exit(2, "\n%s: error: %s\n" % (self.get_prog_name(), msg))
 
 
-def print_histogram(d, alen, n, error_rate):
+def print_histogram(d, adapter_length, n, error_rate):
 	"""
 	Print a histogram. Also, print the no. of reads expected to be
 	trimmed by chance (assuming a uniform distribution of nucleotides in the reads).
-	d -- a dictionary mapping values to their respective frequency
-	alen -- adapter length
+	d -- a dictionary mapping lengths of trimmed sequences to their respective frequency
+	adapter_length -- adapter length
 	n -- total no. of reads.
 	"""
-	# TODO do use sth. better than uniform distribution of nucleotids
 	print("length", "count", "expected", sep="\t")
-	maxlen = int(alen * (error_rate + 1.))
 	h = []
-	index = None
-	for seqlen in sorted(d):
-		estimated = n*0.25**min(seqlen, alen)
-		if index is None and seqlen >= maxlen:
-			index = len(h)
-		h.append( (seqlen, d[seqlen], estimated) )
+	for length in sorted(d):
+		# when length surpasses adapter_length, the
+		# probability does not increase anymore
+		estimated = n * 0.25 ** min(length, adapter_length)
+		h.append( (length, d[length], estimated) )
 
-	for seqlen, count, est in h[:index]:
-		print(seqlen, count, "{0:.1F}".format(est), sep="\t")
-	if index is not None:
-		rest_count = sum(count for (__,count,__) in h[index:])
-		rest_est = sum(est for (__,__,est) in h[index:])
-		print(">={0}".format(h[index][0]), rest_count, "{0:.1F}".format(rest_est), sep="\t")
+	for length, count, estimate in h:
+		print(length, count, "{0:.1F}".format(estimate), sep="\t")
 	print()
 
 
