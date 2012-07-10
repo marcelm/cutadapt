@@ -61,12 +61,14 @@ version.
     python setup.py build
     python setup.py install
 
+If you get an error about a missing "Python.h" file, then make sure that 
+the python-dev package is installed (or python3-dev for Python 3).
 
 Use without installation
 ========================
 
 Build the C extension module (you can try to skip this step -- a compiled
-version of the module is already included):
+version of the module for Linux x86 is already included):
 
     python setup.py build_ext -i
 
