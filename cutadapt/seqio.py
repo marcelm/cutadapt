@@ -324,8 +324,18 @@ class FastaQualReader(object):
 		Yield Sequence objects.
 		"""
 		lengthdiff = 1 if self.colorspace else 0
+		# conversion dictionary: maps strings to the appropriate ASCII-encoded character
+		conv = dict()
+		if sys.version > '3':
+			for i in range(-5, 256 - 33):
+				conv[str(i)] = chr(i + 33)
+			q2a = lambda x: ''.join(x)
+		else:
+			for i in range(-5, 256 - 33):
+				conv[str(i)] = chr(i + 33)
+			q2a = bytearray
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
-			qualities = _quality_to_ascii(map(int, qualread.sequence.split()))
+			qualities = q2a([conv[value] for value in qualread.sequence.split()])
 			assert fastaread.name == qualread.name
 			if len(qualities) + lengthdiff != len(fastaread.sequence):
 				raise ValueError("Length of quality sequence and length of read do not match (%d+%d!=%d)" % (

@@ -317,6 +317,10 @@ The Bash shell will replace the `$(<...)` with the content of the given file.
 Changes
 =======
 
+v1.2
+----
+* At least 25% faster processing of .csfasta/.qual files due to faster parser.
+
 v1.1
 ----
 * Allow to "anchor" 5' adapters (`-g`), forcing them to be a prefix of the read.
