@@ -462,13 +462,12 @@ class ZeroCapper:
 class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
-	def __init__(self, adapters, times, rest_file, colorspace, wildcard_file):
+	def __init__(self, adapters, times, rest_file, wildcard_file):
 		"""Initialize this cutter.
 		adapters -- list of Adapter objects
 		"""
 		self.times = times
 		self.rest_file = rest_file
-		self.colorspace = colorspace
 		self.adapters = adapters
 		self.stats = Statistics(self.adapters)
 		self.wildcard_file = wildcard_file
@@ -785,7 +784,7 @@ def main(cmdlineargs=None):
 		modifiers.append(ZeroCapper(quality_base=options.quality_base))
 
 	cutter = AdapterCutter(adapters, options.times, options.rest_file,
-				options.colorspace, options.wildcard_file)
+				options.wildcard_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
 	try:
