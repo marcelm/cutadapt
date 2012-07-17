@@ -191,7 +191,8 @@ class Statistics(object):
 			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
 		sys.stdout = old_stdout
 
-AdapterMatch = namedtuple('AdapterMatch', ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'adapter'])
+
+AdapterMatch = namedtuple('AdapterMatch', ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'adapter', 'read'])
 
 
 class Adapter(object):
@@ -199,7 +200,7 @@ class Adapter(object):
 	In particular, it knows where it should be within the read and how to interpret
 	wildcard characters.
 
-	where --  One of the BACK, FRONT or ANYWHERE constants.
+	where --  One of the BACK, FRONT, PREFIX or ANYWHERE constants.
 		If the adapter is located in the middle of the read,
 		the constant influences which part of the read gets removed.
 
@@ -220,7 +221,7 @@ class Adapter(object):
 	"""
 	def __init__(self, sequence, where, max_error_rate, min_overlap,
 			match_read_wildcards, colorspace, match_adapter_wildcards=True,
-			wildcard_file=None, rest_file=None):
+			rest_file=None):
 		self.sequence = sequence.upper()
 		self.where = where
 		self.max_error_rate = max_error_rate
@@ -241,7 +242,6 @@ class Adapter(object):
 			ANYWHERE: self.remove_anywhere
 		}
 		self.remove = removers[where]
-		self.wildcard_file = wildcard_file
 		self.rest_file = rest_file
 		# statistics about length of removed sequences
 		self.lengths_front = defaultdict(int)
@@ -253,24 +253,27 @@ class Adapter(object):
 
 	def match(self, read):
 		"""
-		Try to match this adapter to the given read.
+		Try to match this adapter to the given read and return an AdapterMatch instance.
 
-		The result is a tuple as returned by globalalign_locate.
-		Return None if the minimum overlap length is not met.
+		Return None if the minimum overlap length is not met or the error rate is too high.
 		"""
 		# try to find an exact match first
 		# TODO do not do this when wildcards are allowed!
+		read_seq = read.sequence.upper()
 		if self.where == PREFIX:
-			pos = 0 if read.startswith(self.sequence) else -1
+			pos = 0 if read_seq.startswith(self.sequence) else -1
 		else:
-			pos = read.find(self.sequence)
+			pos = read_seq.find(self.sequence)
 		if pos >= 0:
-			match = AdapterMatch(0, len(self.sequence), pos, pos + len(self.sequence), len(self.sequence), 0, self)
+			match = AdapterMatch(0, len(self.sequence), pos, pos + len(self.sequence), len(self.sequence), 0, self, read)
 		else:
-			alignment = align.globalalign_locate(self.sequence, read,
+			alignment = align.globalalign_locate(self.sequence, read_seq,
 				self.max_error_rate, self.where, self.wildcard_flags)
-			match = AdapterMatch(*(alignment + (self,)))
+			match = AdapterMatch(*(alignment + (self, read)))
 		length = match.astop - match.astart
+		# TODO globalalign_locate should be modified to allow the following
+		# assertion.
+		# assert length == 0 or match.errors / length <= self.max_error_rate
 		if length < self.min_overlap or match.errors / length > self.max_error_rate:
 			return None
 		return match
@@ -285,8 +288,6 @@ class Adapter(object):
 		self.lengths_front[match.rstop] += 1
 		if match.rstart > 0 and self.rest_file:
 			print(read.sequence[:match.rstart], read.name, file=self.rest_file)
-		if self.wildcard_file:
-			self.write_wildcard_file(read, match)
 		rstop = match.rstop
 		if self.colorspace:
 			# trim one more color
@@ -300,9 +301,6 @@ class Adapter(object):
 			# The adapter is within the read
 			print(read.sequence[match.rstop:], read.name, file=self.rest_file)
 		self.lengths_back[len(read) - match.rstart] += 1
-		if self.wildcard_file:
-			self.write_wildcard_file(read, match)
-
 		rstart = match.rstart
 		if self.colorspace:
 			# trim one more color if long enough
@@ -310,13 +308,17 @@ class Adapter(object):
 		read = read[:rstart]
 		return read
 
-	def write_wildcard_file(self, read, match):
-		wildcards = [ read.sequence[match.rstart + i] for i in range(match.astop - match.astart)
-			if self.sequence[match.astart + i] == 'N' ]
-		print(''.join(wildcards), read.name, file=self.wildcard_file)
-
 	def __len__(self):
 		return len(self.sequence)
+
+
+def matched_wildcards(match, wildcard_char='N'):
+	"""
+	TODO doc TODO could be an AdapterMatch method
+	"""
+	wildcards = [ match.read.sequence[match.rstart + i] for i in range(match.astop - match.astart)
+		if match.adapter.sequence[match.astart + i] == wildcard_char ]
+	return ''.join(wildcards)
 
 
 def write_read(read, outfile, twoheaders=False):
@@ -472,17 +474,17 @@ class AdapterCutter(object):
 		self.stats = Statistics(self.adapters)
 		self.wildcard_file = wildcard_file
 
-	def _best_match(self, seq):
+	def _best_match(self, read):
 		"""
 		Find the best matching adapter.
 
-		seq -- The sequence to which each adapter will be aligned
+		read -- The read to which each adapter will be aligned
 
 		Return an AdapterMach object or None if there are no matches.
 		"""
 		best = None
 		for adapter in self.adapters:
-			match = adapter.match(seq)
+			match = adapter.match(read)
 			if match is None:
 				continue
 
@@ -510,7 +512,7 @@ class AdapterCutter(object):
 		# try at most self.times times to remove an adapter
 		any_adapter_matches = False
 		for t in xrange(self.times):
-			match = self._best_match(read.sequence.upper())
+			match = self._best_match(read)
 			if match is None:
 				# nothing found
 				break
@@ -522,6 +524,8 @@ class AdapterCutter(object):
 				assert length - match.errors > 0
 
 			any_adapter_matches = True
+			if self.wildcard_file:
+				print(matched_wildcards(match), read.name, file=self.wildcard_file)
 			read = match.adapter.remove(read, match)
 
 		# if an adapter was found, then the read should now be shorter
@@ -722,12 +726,12 @@ def main(cmdlineargs=None):
 			if w == FRONT and seq.startswith('^'):
 				seq = seq[1:]
 				w = PREFIX
-			adapters.append(Adapter(seq, w, options.error_rate,
+			adapter = Adapter(seq, w, options.error_rate,
 				options.overlap, options.match_read_wildcards,
 				options.colorspace,
 				options.match_adapter_wildcards,
-				options.wildcard_file,
-				options.rest_file))
+				options.rest_file)
+			adapters.append(adapter)
 
 	append_adapters(options.adapters, BACK)
 	append_adapters(options.anywhere, ANYWHERE)
