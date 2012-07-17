@@ -196,7 +196,8 @@ AdapterMatch = namedtuple('AdapterMatch', ['astart', 'astop', 'rstart', 'rstop',
 
 
 class Adapter(object):
-	"""An adapter knows how to match itself to a read.
+	"""
+	An adapter knows how to match itself to a read.
 	In particular, it knows where it should be within the read and how to interpret
 	wildcard characters.
 
@@ -220,17 +221,13 @@ class Adapter(object):
 		to match any character in the read (at zero cost).
 	"""
 	def __init__(self, sequence, where, max_error_rate, min_overlap,
-			match_read_wildcards, colorspace, match_adapter_wildcards=True,
-			rest_file=None):
+			match_read_wildcards, match_adapter_wildcards,
+			rest_file):
 		self.sequence = sequence.upper()
 		self.where = where
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
 		self.wildcard_flags = 0
-		self.colorspace = colorspace
-		if self.colorspace and set(self.sequence) <= set('ACGT'):
-			# adapter was given in basespace
-			self.sequence = colorspace_encode(self.sequence)[1:]
 		if match_read_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
 		if match_adapter_wildcards and 'N' in self.sequence:
@@ -288,12 +285,7 @@ class Adapter(object):
 		self.lengths_front[match.rstop] += 1
 		if match.rstart > 0 and self.rest_file:
 			print(read.sequence[:match.rstart], read.name, file=self.rest_file)
-		rstop = match.rstop
-		if self.colorspace:
-			# trim one more color
-			rstop = min(rstop + 1, len(read))
-		read = read[rstop:]
-		return read
+		return read[match.rstop:]
 
 	def remove_back(self, read, match):
 		# The adapter is at the end of the read or within the read
@@ -301,15 +293,36 @@ class Adapter(object):
 			# The adapter is within the read
 			print(read.sequence[match.rstop:], read.name, file=self.rest_file)
 		self.lengths_back[len(read) - match.rstart] += 1
-		rstart = match.rstart
-		if self.colorspace:
-			# trim one more color if long enough
-			rstart = max(0, match.rstart - 1)
-		read = read[:rstart]
-		return read
+		return read[:match.rstart]
 
 	def __len__(self):
 		return len(self.sequence)
+
+
+class ColorspaceAdapter(Adapter):
+	def __init__(self, *args):
+		super(ColorspaceAdapter, self).__init__(*args)
+		if set(self.sequence) <= set('ACGT'):
+			# adapter was given in basespace
+			#self.nucleotide_sequence = self.sequence
+			self.sequence = colorspace_encode(self.sequence)[1:]
+	
+	def remove_front(self, read, match):
+		read = Adapter.remove_front(self, read, match)
+		if len(read) > 0:
+			read = read[1:]
+		# trim one more color
+		#rstop = min(rstop + 1, len(read))
+		return read
+
+	def remove_back(self, read, match):
+		read = Adapter.remove_back(self, read, match)
+		if len(read) > 0:
+			read = read[:-1]
+			# TODO previously, this was just an index operation
+			# trim one more color if long enough
+			#rstart = max(0, match.rstart - 1)
+		return read
 
 
 def matched_wildcards(match, wildcard_char='N'):
@@ -719,6 +732,7 @@ def main(cmdlineargs=None):
 
 	adapters = []
 
+	ADAPTER_CLASS = ColorspaceAdapter if options.colorspace else Adapter
 	def append_adapters(adapter_list, where):
 		for seq in adapter_list:
 			seq = seq.strip()
@@ -726,9 +740,8 @@ def main(cmdlineargs=None):
 			if w == FRONT and seq.startswith('^'):
 				seq = seq[1:]
 				w = PREFIX
-			adapter = Adapter(seq, w, options.error_rate,
+			adapter = ADAPTER_CLASS(seq, w, options.error_rate,
 				options.overlap, options.match_read_wildcards,
-				options.colorspace,
 				options.match_adapter_wildcards,
 				options.rest_file)
 			adapters.append(adapter)
