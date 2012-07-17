@@ -480,15 +480,16 @@ class ZeroCapper:
 class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
-	def __init__(self, adapters, times, rest_file, wildcard_file):
+	def __init__(self, adapters, times, rest_file, wildcard_file, info_file):
 		"""Initialize this cutter.
 		adapters -- list of Adapter objects
 		"""
+		self.adapters = adapters
 		self.times = times
 		self.rest_file = rest_file
-		self.adapters = adapters
-		self.stats = Statistics(self.adapters)
+		self.info_file = info_file
 		self.wildcard_file = wildcard_file
+		self.stats = Statistics(self.adapters)
 
 	def _best_match(self, read):
 		"""
@@ -508,6 +509,16 @@ class AdapterCutter(object):
 			if best is None or match.matches > best.matches:
 				best = match
 		return best
+
+	def _write_info(self, read, match):
+		"""write one line to the info file"""
+		if not self.info_file:
+			return
+		seq = read.sequence
+		if match is None:
+			print(read.name, -1, seq, sep='\t', file=self.info_file)
+		else:
+			print(read.name, match.errors, seq[0:match.rstart], seq[match.rstart:match.rstop], seq[match.rstop:], sep='\t', file=self.info_file)
 
 	def cut(self, read):
 		"""
@@ -529,6 +540,7 @@ class AdapterCutter(object):
 		any_adapter_matches = False
 		for t in xrange(self.times):
 			match = self._best_match(read)
+			self._write_info(read, match)
 			if match is None:
 				# nothing found
 				break
@@ -542,6 +554,7 @@ class AdapterCutter(object):
 			any_adapter_matches = True
 			if self.wildcard_file:
 				print(matched_wildcards(match), read.name, file=self.wildcard_file)
+
 			read = match.adapter.remove(read, match)
 
 		# if an adapter was found, then the read should now be shorter
@@ -621,6 +634,9 @@ def main(cmdlineargs=None):
 	group.add_option("-o", "--output", default=None, metavar="FILE",
 		help="Write the modified sequences to this file instead of standard output and send the summary report to standard output. "
 		     "The format is FASTQ if qualities are available, FASTA otherwise. (default: standard output)")
+	group.add_option("--info-file", metavar="FILE",
+		help="Write information about each read and its adapter matches into FILE. "
+			"Currently experimental: Expect the file format to change!")
 	group.add_option("-r", "--rest-file", default=None, metavar="FILE",
 		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
 	group.add_option("--wildcard-file", default=None, metavar="FILE",
@@ -730,6 +746,8 @@ def main(cmdlineargs=None):
 
 	if options.rest_file is not None:
 		options.rest_file = xopen(options.rest_file, 'w')
+	if options.info_file is not None:
+		options.info_file = xopen(options.info_file, 'w')
 	if options.wildcard_file is not None:
 		options.wildcard_file = xopen(options.wildcard_file, 'w')
 
@@ -781,7 +799,7 @@ def main(cmdlineargs=None):
 		modifiers.append(ZeroCapper(quality_base=options.quality_base))
 
 	cutter = AdapterCutter(adapters, options.times, options.rest_file,
-				options.wildcard_file)
+				options.wildcard_file, options.info_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
 	try:
@@ -830,6 +848,8 @@ def main(cmdlineargs=None):
 		options.rest_file.close()
 	if options.wildcard_file is not None:
 		options.wildcard_file.close()
+	if options.info_file is not None:
+		options.info_file.close()
 	# send statistics to stderr if result was sent to stdout
 	stat_file = sys.stderr if options.output is None else None
 	cutter.stats.print_statistics(options.error_rate, file=stat_file)
