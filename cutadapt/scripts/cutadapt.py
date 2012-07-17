@@ -524,29 +524,6 @@ class AdapterCutter(object):
 			any_adapter_matches = True
 			read = match.adapter.remove(read, match)
 
-			#if where == BACK or (where == ANYWHERE and astart == 0 and rstart > 0):
-				#assert where == ANYWHERE or astart == 0
-				## The adapter is at the end of the read or within the read
-				#if rstop < len(read.sequence):
-					## The adapter is within the read
-					#if self.rest_file is not None:
-						#print(read.sequence[rstop:], file=self.rest_file)
-				#self.stats.lengths_back[index][length] += 1
-
-				#if self.colorspace:
-					## trim one more color if long enough
-					#rstart = max(0, rstart - 1)
-				#trimmed, read = read[rstart:], read[:rstart]
-			#elif where == FRONT or where == ANYWHERE:
-				## The adapter is in the beginning of the read
-				#assert where == FRONT or rstart == 0
-
-				#self.stats.lengths_front[index][length] += 1
-				## TODO What should we do in color space?
-				#trimmed, read = read[:rstop], read[rstop:]
-			#else:
-				#assert False
-
 		# if an adapter was found, then the read should now be shorter
 		assert (not any_adapter_matches) or (len(read.sequence) < old_length)
 		if any_adapter_matches: # trimmed: # TODO move to filter class
