@@ -245,8 +245,7 @@ class Adapter(object):
 		self.lengths_back = defaultdict(int)
 
 	def __repr__(self):
-		return 'Adapter(sequence="{0}", where={1})'.format(self.sequence, self.where)
-
+		return '<Adapter(sequence="{0}", where={1})>'.format(self.sequence, self.where)
 
 	def match(self, read):
 		"""
@@ -283,17 +282,19 @@ class Adapter(object):
 
 	def remove_front(self, read, match):
 		self.lengths_front[match.rstop] += 1
-		if match.rstart > 0 and self.rest_file:
-			print(read.sequence[:match.rstart], read.name, file=self.rest_file)
+		self._write_rest(read.sequence[:match.rstart], read)
 		return read[match.rstop:]
 
 	def remove_back(self, read, match):
 		# The adapter is at the end of the read or within the read
-		if match.rstop < len(read) and self.rest_file:
-			# The adapter is within the read
-			print(read.sequence[match.rstop:], read.name, file=self.rest_file)
+		self._write_rest(read.sequence[match.rstop:], read)
 		self.lengths_back[len(read) - match.rstart] += 1
 		return read[:match.rstart]
+
+	def _write_rest(self, rest, read):
+		if len(rest) > 0 and self.rest_file:
+			# The adapter is within the read
+			print(rest, read.name, file=self.rest_file)
 
 	def __len__(self):
 		return len(self.sequence)
@@ -306,23 +307,25 @@ class ColorspaceAdapter(Adapter):
 			# adapter was given in basespace
 			#self.nucleotide_sequence = self.sequence
 			self.sequence = colorspace_encode(self.sequence)[1:]
-	
+
 	def remove_front(self, read, match):
 		read = Adapter.remove_front(self, read, match)
-		if len(read) > 0:
-			read = read[1:]
+		read = read[1:]
 		# trim one more color
 		#rstop = min(rstop + 1, len(read))
 		return read
 
 	def remove_back(self, read, match):
 		read = Adapter.remove_back(self, read, match)
-		if len(read) > 0:
-			read = read[:-1]
-			# TODO previously, this was just an index operation
-			# trim one more color if long enough
-			#rstart = max(0, match.rstart - 1)
+		read = read[:-1]
+		# TODO avoid the copy (previously, this was just an index operation)
+		# trim one more color if long enough
+		#rstart = max(0, match.rstart - 1)
 		return read
+
+	def __repr__(self):
+		return '<ColorspaceAdapter(sequence="{0}", where={1})>'.format(self.sequence, self.where)
+
 
 
 def matched_wildcards(match, wildcard_char='N'):
