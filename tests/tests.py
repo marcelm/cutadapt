@@ -107,6 +107,13 @@ def test_too_short():
 	os.remove('tooshort.tmp.fa')
 
 
+def test_too_short_no_primer():
+	'''--too-short-output and --trim-primer'''
+	run("-c -m 5 -a 330201030313112312 --trim-primer --too-short-output tooshort.tmp.fa", "minlen.noprimer.fa", "minlen.fa")
+	diff(datapath('tooshort.noprimer.fa'), "tooshort.tmp.fa")
+	os.remove('tooshort.tmp.fa')
+
+
 def test_maximum_length():
 	'''-M/--maximum-length'''
 	run("-c -M 5 -a 330201030313112312", "maxlen.fa", "maxlen.fa")

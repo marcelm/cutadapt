@@ -409,12 +409,13 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 class ReadFilter(object):
 	"""Filter reads according to length and according to whether any adapter matches."""
 
-	def __init__(self, minimum_length, maximum_length, too_short_outfile, discard_trimmed, statistics):
+	def __init__(self, minimum_length, maximum_length, too_short_outfile, discard_trimmed, statistics, trim_primer):
 		self.minimum_length = minimum_length
 		self.maximum_length = maximum_length
 		self.too_short_outfile = too_short_outfile
 		self.statistics = statistics
 		self.discard_trimmed = discard_trimmed
+		self.trim_primer = trim_primer
 
 	def keep(self, read, trimmed):
 		"""
@@ -425,6 +426,9 @@ class ReadFilter(object):
 		if len(read.sequence) < self.minimum_length:
 			self.statistics.too_short += 1
 			if self.too_short_outfile is not None:
+				if self.trim_primer: # TODO refactor
+					read = read[1:]
+					read.primer = ''
 				write_read(read, self.too_short_outfile)
 			return False
 		if len(read.sequence) > self.maximum_length:
@@ -828,7 +832,7 @@ def main(cmdlineargs=None):
 	cutter = AdapterCutter(adapters, options.times, options.rest_file,
 				options.wildcard_file, options.info_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
-		too_short_outfile, options.discard_trimmed, cutter.stats) # TODO stats?
+		too_short_outfile, options.discard_trimmed, cutter.stats, options.trim_primer) # TODO stats?
 	try:
 		twoheaders = None
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
