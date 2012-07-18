@@ -850,12 +850,11 @@ def main(cmdlineargs=None):
 					twoheaders = reader.twoheaders
 				except AttributeError:
 					twoheaders = False
-			if not readfilter.keep(read, trimmed):
-				continue
-			#read.sequence = initial + read.sequence
 			if options.trim_primer:
 				read = read[1:]
 				read.primer = ''
+			if not readfilter.keep(read, trimmed):
+				continue
 			try:
 				write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
 			except IOError as e:
