@@ -72,8 +72,7 @@ from optparse import OptionParser, OptionGroup
 from contextlib import closing
 from collections import defaultdict, namedtuple
 
-from .. import align, seqio, __version__
-from ..colorspace import encode as colorspace_encode
+from .. import align, seqio, colorspace, __version__
 from ..xopen import xopen
 from ..qualtrim import quality_trim_index
 
@@ -263,6 +262,7 @@ class Adapter(object):
 		if pos >= 0:
 			match = AdapterMatch(0, len(self.sequence), pos, pos + len(self.sequence), len(self.sequence), 0, self, read)
 		else:
+			# try approximate matching
 			alignment = align.globalalign_locate(self.sequence, read_seq,
 				self.max_error_rate, self.where, self.wildcard_flags)
 			match = AdapterMatch(*(alignment + (self, read)))
@@ -305,27 +305,52 @@ class ColorspaceAdapter(Adapter):
 		super(ColorspaceAdapter, self).__init__(*args)
 		if set(self.sequence) <= set('ACGT'):
 			# adapter was given in basespace
-			#self.nucleotide_sequence = self.sequence
-			self.sequence = colorspace_encode(self.sequence)[1:]
+			self.nucleotide_sequence = self.sequence
+			self.sequence = colorspace.encode(self.sequence)[1:]
+
+	def match(self, read):
+		if self.where != PREFIX:
+			return super(ColorspaceAdapter, self).match(read)
+		# create artificial adapter that includes a first color that encodes the
+		# transition from primer base into adapter
+		asequence = colorspace.ENCODE[read.primer + self.nucleotide_sequence[0]] + self.sequence
+		pos = 0 if read.sequence.startswith(asequence) else -1
+		if pos >= 0:
+			match = AdapterMatch(0, len(asequence), pos, pos + len(asequence), len(asequence), 0, self, read)
+		else:
+			# try approximate matching
+			alignment = align.globalalign_locate(asequence, read.sequence,
+				self.max_error_rate, self.where, self.wildcard_flags)
+			match = AdapterMatch(*(alignment) + (self, read))
+		length = match.astop - match.astart
+		# TODO globalalign_locate should be modified to allow the following
+		# assertion.
+		# assert length == 0 or match.errors / length <= self.max_error_rate
+		if length < self.min_overlap or match.errors / length > self.max_error_rate:
+			return None
+		return match
 
 	def remove_front(self, read, match):
-		read = Adapter.remove_front(self, read, match)
-		read = read[1:]
-		# trim one more color
-		#rstop = min(rstop + 1, len(read))
+		self.lengths_front[match.rstop] += 1
+		self._write_rest(read.sequence[:match.rstart], read)
+		# to remove a front adapter, we need to re-encode the first color following the adapter match
+		color_after_adapter = read.sequence[match.rstop:match.rstop + 1]
+		base_after_adapter = colorspace.DECODE[self.nucleotide_sequence[-1] + color_after_adapter]
+		new_first_color = colorspace.ENCODE[read.primer + base_after_adapter]
+		qual = read.qualities[match.rstop:] if read.qualities else None
+		read = seqio.ColorspaceSequence(read.name, new_first_color + read.sequence[match.rstop + 1:], qual, read.primer)
 		return read
 
 	def remove_back(self, read, match):
 		read = Adapter.remove_back(self, read, match)
-		read = read[:-1]
 		# TODO avoid the copy (previously, this was just an index operation)
 		# trim one more color if long enough
 		#rstart = max(0, match.rstart - 1)
+		read = read[:-1]
 		return read
 
 	def __repr__(self):
 		return '<ColorspaceAdapter(sequence="{0}", where={1})>'.format(self.sequence, self.where)
-
 
 
 def matched_wildcards(match, wildcard_char='N'):
@@ -348,7 +373,7 @@ def write_read(read, outfile, twoheaders=False):
 	initial = getattr(read, 'primer', '')
 	if read.qualities is None:
 		# FASTA
-		print('>%s%s\n%s' % (initial, read.name, read.sequence), file=outfile)
+		print('>%s\n%s%s' % (read.name, initial, read.sequence), file=outfile)
 	else:
 		# FASTQ
 		tmp = read.name if twoheaders else ''
@@ -739,8 +764,6 @@ def main(cmdlineargs=None):
 		parser.error("Trimming the primer makes only sense in color space.")
 	if options.double_encode and not options.colorspace:
 		parser.error("Double-encoding makes only sense in color space.")
-	if options.colorspace and options.front and not options.trim_primer:
-		parser.error("Currently, when you want to trim a 5' adapter in colorspace, you must also specify the --trim-primer option")
 	if options.anywhere and options.colorspace:
 		parser.error("Using --anywhere with color space reads is currently not supported  (if you think this may be useful, contact the author).")
 	if not (0 <= options.error_rate <= 1.):
@@ -810,20 +833,6 @@ def main(cmdlineargs=None):
 		twoheaders = None
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
 		for read in reader:
-			# In colorspace, the first character is the last nucleotide of the primer base
-			# and the second character encodes the transition from the primer base to the
-			# first real base of the read.
-			#if options.trim_primer:
-				#read.sequence = read.sequence[2:]
-				#if read.qualities is not None: # TODO
-					#read.qualities = read.qualities[1:]
-				#initial = ''
-			#elif options.colorspace:
-				#initial = read.sequence[0]
-				#read.sequence = read.sequence[1:]
-			#else:
-				#initial = ''
-
 			#total_bases += len(qualities)
 			if options.quality_cutoff > 0:
 				index = quality_trim_index(read.qualities, options.quality_cutoff, options.quality_base)
@@ -841,8 +850,8 @@ def main(cmdlineargs=None):
 				continue
 			#read.sequence = initial + read.sequence
 			if options.trim_primer:
-				read.primer = ''
 				read = read[1:]
+				read.primer = ''
 			try:
 				write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
 			except IOError as e:

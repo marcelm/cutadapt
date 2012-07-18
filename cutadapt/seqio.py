@@ -25,7 +25,6 @@ class Sequence(object):
 
 	def __init__(self, name, sequence, qualities):
 		"""Set qualities to None if there are no quality values"""
-		print("calling Sequence(", name, sequence, qualities)
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
@@ -56,9 +55,17 @@ class Sequence(object):
 
 
 class ColorspaceSequence(Sequence):
-	def __init__(self, name, sequence, qualities):
-		super(ColorspaceSequence, self).__init__(name, sequence[1:], qualities)
-		self.primer = sequence[0:1]
+
+	def __init__(self, name, sequence, qualities, primer=None):
+		# In colorspace, the first character is the last nucleotide of the primer base
+		# and the second character encodes the transition from the primer base to the
+		# first real base of the read.
+		if primer is None:
+			self.primer = sequence[0:1]
+			sequence = sequence[1:]
+		else:
+			self.primer = primer
+		super(ColorspaceSequence, self).__init__(name, sequence, qualities)
 		if not self.primer in ('A', 'C', 'G', 'T'):
 			raise ValueError("primer base is '{0}', but it should be one of A, C, G, T".format(self.primer))
 		if qualities is not None and len(self.sequence) != len(qualities):
@@ -72,13 +79,12 @@ class ColorspaceSequence(Sequence):
 		return '<ColorspaceSequence(name="{0}", primer="{1}", sequence="{2}"{3})>'.format(_shorten(self.name), self.primer, _shorten(self.sequence), qstr)
 
 	def __getitem__(self, key):
-		#assert key.start is None or key.start == 0
-		return super(ColorspaceSequence, self).__getitem__(key)
+		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None, self.primer)
 
 
-class SRAColorspaceSequence(Sequence):
-	def __init__(self, name, sequence, qualities):
-		super(SRAColorspaceSequence, self).__init__(name, sequence, qualities[1:])
+def sra_colorspace_sequence(name, sequence, qualities):
+	"""Factory for an SRA colorspace sequence (which has one quality value too many)"""
+	return ColorspaceSequence(name, sequence, qualities[1:])
 
 
 class FormatError(Exception):
@@ -330,7 +336,7 @@ class ColorspaceFastqReader(FastqReader):
 
 class SRAColorspaceFastqReader(FastqReader):
 	def __init__(self, file):
-		super(SRAColorspaceFastqReader, self).__init__(file, sequence_class=SRAColorspaceSequence)
+		super(SRAColorspaceFastqReader, self).__init__(file, sequence_class=sra_colorspace_sequence)
 
 
 def _quality_to_ascii(qualities, base=33):
