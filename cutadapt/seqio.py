@@ -20,14 +20,17 @@ def _shorten(s, n=20):
 	return s
 
 
-class Sequence:
+class Sequence(object):
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
 	def __init__(self, name, sequence, qualities):
 		"""Set qualities to None if there are no quality values"""
+		print("calling Sequence(", name, sequence, qualities)
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
+		if qualities is not None and len(qualities) != len(sequence):
+			raise ValueError("Length of quality sequence and length of read do not match ({0}!={1})".format(len(qualities), len(sequence)))
 
 	def __getitem__(self, key):
 		"""slicing"""
@@ -37,7 +40,7 @@ class Sequence:
 		qstr = ''
 		if self.qualities is not None:
 			qstr = '\', qualities="{0}"'.format(_shorten(self.qualities))
-		return 'Sequence(name="{0}", sequence="{1}"{2})'.format(_shorten(self.name), _shorten(self.sequence), qstr)
+		return '<Sequence(name="{0}", sequence="{1}"{2})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
 
 	def __len__(self):
 		return len(self.sequence)
@@ -49,6 +52,33 @@ class Sequence:
 
 	def __ne__(self, other):
 		return not self.__eq__(other)
+
+
+
+class ColorspaceSequence(Sequence):
+	def __init__(self, name, sequence, qualities):
+		super(ColorspaceSequence, self).__init__(name, sequence[1:], qualities)
+		self.primer = sequence[0:1]
+		if not self.primer in ('A', 'C', 'G', 'T'):
+			raise ValueError("primer base is '{0}', but it should be one of A, C, G, T".format(self.primer))
+		if qualities is not None and len(self.sequence) != len(qualities):
+			raise ValueError("Length of colorspace quality sequence and length of read do not match (primer: {0}, lengths: {0}!={1})"\
+				.format(self.primer, len(qualities), len(sequence)))
+
+	def __repr__(self):
+		qstr = ''
+		if self.qualities is not None:
+			qstr = '\', qualities="{0}"'.format(_shorten(self.qualities))
+		return '<ColorspaceSequence(name="{0}", primer="{1}", sequence="{2}"{3})>'.format(_shorten(self.name), self.primer, _shorten(self.sequence), qstr)
+
+	def __getitem__(self, key):
+		#assert key.start is None or key.start == 0
+		return super(ColorspaceSequence, self).__getitem__(key)
+
+
+class SRAColorspaceSequence(Sequence):
+	def __init__(self, name, sequence, qualities):
+		super(SRAColorspaceSequence, self).__init__(name, sequence, qualities[1:])
 
 
 class FormatError(Exception):
@@ -109,14 +139,17 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 	from standard input), then the file is read and the file
 	type determined from the content.
 	"""
+	fastq_reader = ColorspaceFastqReader if colorspace else FastqReader
+	fasta_reader = ColorspaceFastaReader if colorspace else FastaReader
+
 	if fileformat is not None:
 		fileformat = fileformat.lower()
 		if fileformat == 'fasta':
-			return FastaReader(file)
+			return fasta_reader(file)
 		elif fileformat == 'fastq':
-			return FastqReader(file, colorspace)
+			return fastq_reader(file)
 		elif fileformat == 'sra-fastq' and colorspace:
-			return FastqReader(file, colorspace, skip_color=1)
+			return SRAColorspaceFastqReader(file)
 		else:
 			raise UnknownFileType("File format {0} is unknown (expected 'sra-fastq' (only for colorspace), 'fasta' or 'fastq').".format(fileformat))
 
@@ -133,9 +166,9 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 		name, ext = splitext(name)
 		ext = ext.lower()
 		if ext in ['.fasta', '.fa', '.fna', '.csfasta', '.csfa']:
-			return FastaReader(file)
+			return fasta_reader(file)
 		elif ext in ['.fastq', '.fq'] or (ext == '.txt' and name.endswith('_sequence')):
-			return FastqReader(file, colorspace)
+			return fastq_reader(file)
 		else:
 			raise UnknownFileType("Could not determine whether this is FASTA or FASTQ: file name extension {0} not recognized".format(ext))
 
@@ -147,18 +180,17 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 			# Skip comment lines (needed for csfasta)
 			continue
 		if line.startswith('>'):
-			return FastaReader(FileWithPrependedLine(file, line))
+			return fasta_reader(FileWithPrependedLine(file, line))
 		if line.startswith('@'):
-			return FastqReader(FileWithPrependedLine(file, line), colorspace)
+			return fastq_reader(FileWithPrependedLine(file, line))
 	raise UnknownFileType("File is neither FASTQ nor FASTA.")
-
 
 
 class FastaReader(object):
 	"""
 	Reader for FASTA files.
 	"""
-	def __init__(self, file, wholefile=False, keep_linebreaks=False):
+	def __init__(self, file, wholefile=False, keep_linebreaks=False, sequence_class=Sequence):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
@@ -172,6 +204,7 @@ class FastaReader(object):
 		self.fp = file
 		self.wholefile = wholefile
 		self.keep_linebreaks = keep_linebreaks
+		self.sequence_class = sequence_class
 		assert not (wholefile and keep_linebreaks), "not supported"
 
 	def __iter__(self):
@@ -196,14 +229,14 @@ class FastaReader(object):
 			if line and line[0] == ">":
 				if name is not None:
 					assert self.keep_linebreaks or seq.find('\n') == -1
-					yield Sequence(name, seq, None)
+					yield self.sequence_class(name, seq, None)
 				name = line[1:]
 				seq = ""
 			else:
 				seq += line + appendchar
 		if name is not None:
 			assert self.keep_linebreaks or seq.find('\n') == -1
-			yield Sequence(name, seq, None)
+			yield self.sequence_class(name, seq, None)
 
 	def _wholefile_iter(self):
 		"""
@@ -219,7 +252,7 @@ class FastaReader(object):
 		parts[0] = parts[0][1:]
 		for part in parts:
 			lines = part.split('\n', 1)
-			yield Sequence(name=lines[0], sequence=lines[1].replace('\n', ''), qualities=None)
+			yield self.sequence_class(name=lines[0], sequence=lines[1].replace('\n', ''), qualities=None)
 
 	def __enter__(self):
 		if self.fp is None:
@@ -230,11 +263,16 @@ class FastaReader(object):
 		self.fp.close()
 
 
+class ColorspaceFastaReader(FastaReader):
+	def __init__(self, file, wholefile=False, keep_linebreaks=False):
+		super(ColorspaceFastaReader, self).__init__(file, wholefile, keep_linebreaks, sequence_class=ColorspaceSequence)
+
+
 class FastqReader(object):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
-	def __init__(self, file, colorspace=False, skip_color=0):
+	def __init__(self, file, sequence_class=Sequence):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
@@ -245,16 +283,14 @@ class FastqReader(object):
 		if isinstance(file, basestring):
 			file = xopen(file, "r")
 		self.fp = file
-		self.colorspace = colorspace
-		self.skip_color = skip_color
 		self.twoheaders = False
+		self.sequence_class = sequence_class
 
 	def __iter__(self):
 		"""
 		Return tuples: (name, sequence, qualities).
 		qualities is a string and it contains the unmodified, encoded qualities.
 		"""
-		lengthdiff = 1 if self.colorspace else 0
 		for i, line in enumerate(self.fp):
 			if i % 4 == 0:
 				if not line.startswith('@'):
@@ -275,10 +311,8 @@ class FastqReader(object):
 							"('{1}' != '{2}')"
 							" perhaps you should try the 'sra-fastq' format?".format(i+1, name, line.rstrip()[1:]))
 			elif i % 4 == 3:
-				qualities = line.rstrip("\n\r")[self.skip_color:]
-				if len(qualities) + lengthdiff != len(sequence):
-					raise ValueError("Length of quality sequence and length of read do not match (%d+%d!=%d)" % (len(qualities), lengthdiff, len(sequence)))
-				yield Sequence(name, sequence, qualities)
+				qualities = line.rstrip("\n\r")
+				yield self.sequence_class(name, sequence, qualities)
 
 	def __enter__(self):
 		if self.fp is None:
@@ -287,6 +321,16 @@ class FastqReader(object):
 
 	def __exit__(self, *args):
 		self.fp.close()
+
+
+class ColorspaceFastqReader(FastqReader):
+	def __init__(self, file):
+		super(ColorspaceFastqReader, self).__init__(file, sequence_class=ColorspaceSequence)
+
+
+class SRAColorspaceFastqReader(FastqReader):
+	def __init__(self, file):
+		super(SRAColorspaceFastqReader, self).__init__(file, sequence_class=SRAColorspaceSequence)
 
 
 def _quality_to_ascii(qualities, base=33):
@@ -307,7 +351,7 @@ class FastaQualReader(object):
 	"""
 	Reader for reads that are stored in .(CS)FASTA and .QUAL files.
 	"""
-	def __init__(self, fastafile, qualfile, colorspace=False):
+	def __init__(self, fastafile, qualfile, sequence_class=Sequence):
 		"""
 		fastafile and qualfile are filenames file-like objects.
 		If file is a filename, then .gz files are supported.
@@ -317,13 +361,12 @@ class FastaQualReader(object):
 		"""
 		self.fastareader = FastaReader(fastafile)
 		self.qualreader = FastaReader(qualfile, keep_linebreaks=True)
-		self.colorspace = colorspace
+		self.sequence_class = sequence_class
 
 	def __iter__(self):
 		"""
 		Yield Sequence objects.
 		"""
-		lengthdiff = 1 if self.colorspace else 0
 		# conversion dictionary: maps strings to the appropriate ASCII-encoded character
 		conv = dict()
 		if sys.version > '3':
@@ -336,11 +379,10 @@ class FastaQualReader(object):
 			q2a = bytearray
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
 			qualities = q2a([conv[value] for value in qualread.sequence.split()])
+			if fastaread.name != qualread.name:
+				raise ValueError("The read names in the FASTA and QUAL file do not match ('{0}' != '{1}')".format(fastaread.name, qualread.name))
 			assert fastaread.name == qualread.name
-			if len(qualities) + lengthdiff != len(fastaread.sequence):
-				raise ValueError("Length of quality sequence and length of read do not match (%d+%d!=%d)" % (
-					len(qualities), lengthdiff, len(fastaread.sequence)))
-			yield Sequence(fastaread.name, fastaread.sequence, qualities)
+			yield self.sequence_class(fastaread.name, fastaread.sequence, qualities)
 
 	def __enter__(self):
 		if self.fastafile is None:
@@ -351,3 +393,7 @@ class FastaQualReader(object):
 		self.fastareader.close()
 		self.qualreader.close()
 
+
+class ColorspaceFastaQualReader(FastaQualReader):
+	def __init__(self, fastafile, qualfile):
+		super(ColorspaceFastaQualReader, self).__init__(fastafile, qualfile, sequence_class=ColorspaceSequence)

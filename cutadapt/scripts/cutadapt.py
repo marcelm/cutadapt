@@ -345,13 +345,14 @@ def write_read(read, outfile, twoheaders=False):
 	If twoheaders is True and the output is FASTQ, then the sequence name
 	(description) is also written after the "+" character in the third line.
 	"""
+	initial = getattr(read, 'primer', '')
 	if read.qualities is None:
 		# FASTA
-		print('>%s\n%s' % (read.name, read.sequence), file=outfile)
+		print('>%s%s\n%s' % (initial, read.name, read.sequence), file=outfile)
 	else:
 		# FASTQ
 		tmp = read.name if twoheaders else ''
-		print('@%s\n%s\n+%s\n%s' % (read.name, read.sequence, tmp, read.qualities), file=outfile)
+		print('@%s\n%s%s\n+%s\n%s' % (read.name, initial, read.sequence, tmp, read.qualities), file=outfile)
 
 
 def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
@@ -370,8 +371,11 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 		#raise ValueError("If a FASTQ file is given, no quality file can be provided.")
 
 	if qualityfilename is not None:
+		if colorspace:
 		# read from .(CS)FASTA/.QUAL
-		return seqio.FastaQualReader(seqfilename, qualityfilename, colorspace)
+			return seqio.ColorspaceFastaQualReader(seqfilename, qualityfilename)
+		else:
+			return seqio.FastaQualReader(seqfilename, qualityfilename)
 	else:
 		# read from FASTA or FASTQ
 		return seqio.SequenceReader(seqfilename, colorspace, fileformat)
@@ -809,16 +813,16 @@ def main(cmdlineargs=None):
 			# In colorspace, the first character is the last nucleotide of the primer base
 			# and the second character encodes the transition from the primer base to the
 			# first real base of the read.
-			if options.trim_primer:
-				read.sequence = read.sequence[2:]
-				if read.qualities is not None: # TODO
-					read.qualities = read.qualities[1:]
-				initial = ''
-			elif options.colorspace:
-				initial = read.sequence[0]
-				read.sequence = read.sequence[1:]
-			else:
-				initial = ''
+			#if options.trim_primer:
+				#read.sequence = read.sequence[2:]
+				#if read.qualities is not None: # TODO
+					#read.qualities = read.qualities[1:]
+				#initial = ''
+			#elif options.colorspace:
+				#initial = read.sequence[0]
+				#read.sequence = read.sequence[1:]
+			#else:
+				#initial = ''
 
 			#total_bases += len(qualities)
 			if options.quality_cutoff > 0:
@@ -835,7 +839,10 @@ def main(cmdlineargs=None):
 					twoheaders = False
 			if not readfilter.keep(read, trimmed):
 				continue
-			read.sequence = initial + read.sequence
+			#read.sequence = initial + read.sequence
+			if options.trim_primer:
+				read.primer = ''
+				read = read[1:]
 			try:
 				write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
 			except IOError as e:
