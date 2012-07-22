@@ -15,8 +15,10 @@ if sys.version_info[0] >= 3:
 
 if sys.version_info < (2, 7):
 	buffered_reader = lambda x: x
+	buffered_writer = lambda x: x
 else:
 	buffered_reader = io.BufferedReader
+	buffered_writer = io.BufferedWriter
 
 
 def xopen(filename, mode='r'):
@@ -35,7 +37,7 @@ def xopen(filename, mode='r'):
 			if 'r' in mode:
 				return buffered_reader(gzip.open(filename, mode))
 			else:
-				return gzip.open(filename, mode)
+				return buffered_writer(gzip.open(filename, mode))
 		else:
 			if 'r' in mode:
 				return getreader('ascii')(gzip.open(filename, mode))
