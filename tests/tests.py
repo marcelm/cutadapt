@@ -137,6 +137,10 @@ def test_qualtrim():
 	'''-q with low qualities'''
 	run("-q 10 -a XXXXXX", "lowqual.fastq", "lowqual.fastq")
 
+def test_qualtrim_csfastaqual():
+	'''-q with csfasta/qual files'''
+	run("-c -q 10", "solidqual.fastq", "solid.csfasta", 'solid.qual')
+
 def test_qualbase():
 	'''-q with low qualities, using ascii(quality+64) encoding'''
 	run("-q 10 --quality-base 64 -a XXXXXX", "illumina64.fastq", "illumina64.fastq")
@@ -180,9 +184,9 @@ def test_read_wildcard():
 def test_adapter_wildcard():
 	'''wildcards in adapter'''
 	wildcardtmp = dpath("wildcardtmp.txt")
-	for adapter_type, expected in (("-a", "wildcard_adapter.fa"), 
+	for adapter_type, expected in (("-a", "wildcard_adapter.fa"),
 		("-b", "wildcard_adapter_anywhere.fa")):
-		run("--wildcard-file {0} {1} ACGTNNNACGT".format(wildcardtmp, adapter_type), 
+		run("--wildcard-file {0} {1} ACGTNNNACGT".format(wildcardtmp, adapter_type),
 			expected, "wildcard_adapter.fa")
 		lines = open(wildcardtmp).readlines()
 		lines = [ line.strip() for line in lines ]
