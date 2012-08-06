@@ -320,6 +320,8 @@ Changes
 v1.2
 ----
 * At least 25% faster processing of .csfasta/.qual files due to faster parser.
+* Between 10% and 30% faster writing of gzip-compressed output files.
+* Support 5' adapters in color space, even when no primer trimming is requested.
 
 v1.1
 ----
