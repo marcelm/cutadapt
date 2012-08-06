@@ -2,10 +2,11 @@
 __author__ = "Marcel Martin"
 
 import sys
-if sys.version_info[0] < 3:
+if sys.version < '3':
 	from itertools import izip as zip
 else:
 	basestring = str
+
 from .xopen import xopen
 from os.path import splitext
 import sys
@@ -314,8 +315,7 @@ class FastqReader(object):
 						raise FormatError(
 							"At line {0}: Two sequence descriptions are given in "
 							"the FASTQ file, but they don't match "
-							"('{1}' != '{2}')"
-							" perhaps you should try the 'sra-fastq' format?".format(i+1, name, line.rstrip()[1:]))
+							"('{1}' != '{2}')".format(i+1, name, line.rstrip()[1:]))
 			elif i % 4 == 3:
 				qualities = line.rstrip("\n\r")
 				yield self.sequence_class(name, sequence, qualities)
