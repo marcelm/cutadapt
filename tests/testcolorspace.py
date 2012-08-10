@@ -51,3 +51,7 @@ def test_decode():
 		expected = s.replace('.', 'N')
 		encoded = encode(s)
 		assert decode(encoded) == expected
+	assert decode('A.') == 'AN'
+	assert decode('C.') == 'CN'
+	assert decode('G.') == 'GN'
+	assert decode('T.') == 'TN'

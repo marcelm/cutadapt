@@ -38,6 +38,7 @@ def _initialize_dicts():
 		dec['.' + str(i)] = 'N'
 		dec['N' + str(i)] = 'N'
 		dec[c1 + '4'] = 'N'
+		dec[c1 + '.'] = 'N'
 		for j, c2 in enumerate("ACGT"):
 			# XOR of nucleotides gives color
 			dec[c1 + chr(ord('0') + (i ^ j))] = c2
