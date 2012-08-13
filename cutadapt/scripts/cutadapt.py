@@ -792,6 +792,8 @@ def main(cmdlineargs=None):
 			if w == FRONT and seq.startswith('^'):
 				seq = seq[1:]
 				w = PREFIX
+			if len(seq) == 0:
+				parser.error("The adapter sequence is empty")
 			adapter = ADAPTER_CLASS(seq, w, options.error_rate,
 				options.overlap, options.match_read_wildcards,
 				options.match_adapter_wildcards,
