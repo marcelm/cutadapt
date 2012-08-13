@@ -191,7 +191,15 @@ class Statistics(object):
 		sys.stdout = old_stdout
 
 
-AdapterMatch = namedtuple('AdapterMatch', ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'adapter', 'read'])
+_AdapterMatchBase = namedtuple('AdapterMatch', ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'adapter', 'read'])
+class AdapterMatch(_AdapterMatchBase):
+	def wildcards(self, wildcard_char='N'):
+		"""
+		TODO doc
+		"""
+		wildcards = [ self.read.sequence[self.rstart + i] for i in range(self.astop - self.astart)
+			if self.adapter.sequence[self.astart + i] == wildcard_char ]
+		return ''.join(wildcards)
 
 
 class Adapter(object):
@@ -356,15 +364,6 @@ class ColorspaceAdapter(Adapter):
 		return '<ColorspaceAdapter(sequence="{0}", where={1})>'.format(self.sequence, self.where)
 
 
-def matched_wildcards(match, wildcard_char='N'):
-	"""
-	TODO doc TODO could be an AdapterMatch method
-	"""
-	wildcards = [ match.read.sequence[match.rstart + i] for i in range(match.astop - match.astart)
-		if match.adapter.sequence[match.astart + i] == wildcard_char ]
-	return ''.join(wildcards)
-
-
 def write_read(read, outfile, twoheaders=False):
 	"""
 	Write read in either FASTA or FASTQ format
@@ -516,7 +515,7 @@ class ZeroCapper:
 class AdapterCutter(object):
 	"""Cut adapters from reads."""
 
-	def __init__(self, adapters, times, rest_file, wildcard_file, info_file):
+	def __init__(self, adapters, times=1, rest_file=None, wildcard_file=None, info_file=None):
 		"""Initialize this cutter.
 		adapters -- list of Adapter objects
 		"""
@@ -589,7 +588,7 @@ class AdapterCutter(object):
 
 			any_adapter_matches = True
 			if self.wildcard_file:
-				print(matched_wildcards(match), read.name, file=self.wildcard_file)
+				print(match.wildcards(), read.name, file=self.wildcard_file)
 
 			read = match.adapter.remove(read, match)
 
