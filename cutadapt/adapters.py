@@ -49,9 +49,9 @@ class Adapter(object):
 	match_adapter_wildcards -- Whether wildcards in the adapter are allowed
 		to match any character in the read (at zero cost).
 	"""
-	def __init__(self, sequence, where, max_error_rate, min_overlap,
-			match_read_wildcards, match_adapter_wildcards,
-			rest_file):
+	def __init__(self, sequence, where, max_error_rate, min_overlap=3,
+			match_read_wildcards=False, match_adapter_wildcards=False,
+			rest_file=None):
 		self.sequence = sequence.upper()
 		self.where = where
 		self.max_error_rate = max_error_rate
@@ -133,10 +133,14 @@ class Adapter(object):
 class ColorspaceAdapter(Adapter):
 	def __init__(self, *args):
 		super(ColorspaceAdapter, self).__init__(*args)
+		has_nucleotide_seq = False
 		if set(self.sequence) <= set('ACGT'):
 			# adapter was given in basespace
 			self.nucleotide_sequence = self.sequence
+			has_nucleotide_seq = True
 			self.sequence = colorspace.encode(self.sequence)[1:]
+		if self.where in (PREFIX, FRONT) and not has_nucleotide_seq:
+			raise ValueError("A 5' colorspace adapter needs to be given in nucleotide space")
 
 	def match(self, read):
 		if self.where != PREFIX:
