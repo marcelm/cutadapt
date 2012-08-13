@@ -232,6 +232,20 @@ def test_solid5p_prefix():
 	'''test anchored 5' colorspace adapter'''
 	run("-c -e 0.1 --trim-primer -g ^CCGGAGGTCAGCTCGCTATA", "solid5p-anchored.fasta", "solid5p.fasta")
 
+def test_solid5p_fastq():
+	'''test 5' colorspace adapter'''
+	# this is not a real adapter, just a random string
+	# in colorspace: C0302201212322332333
+	run("-c -e 0.1 --trim-primer -g CCGGAGGTCAGCTCGCTATA", "solid5p.fastq", "solid5p.fastq")
+
+def test_solid5p_prefix_notrim_fastq():
+	'''test anchored 5' colorspace adapter, no primer trimming'''
+	run("-c -e 0.1 -g ^CCGGAGGTCAGCTCGCTATA", "solid5p-anchored.notrim.fastq", "solid5p.fastq")
+
+def test_solid5p_prefix_fastq():
+	'''test anchored 5' colorspace adapter'''
+	run("-c -e 0.1 --trim-primer -g ^CCGGAGGTCAGCTCGCTATA", "solid5p-anchored.fastq", "solid5p.fastq")
+
 def test_sra_fastq():
 	'''test SRA-formatted colorspace FASTQ'''
 	run("-c -e 0.1 --format sra-fastq -a CGCCTTGGCCGTACAGCAG", "sra.fastq", "sra.fastq")
