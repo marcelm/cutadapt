@@ -335,6 +335,9 @@ class ColorspaceAdapter(Adapter):
 		self._write_rest(read.sequence[:match.rstart], read)
 		# to remove a front adapter, we need to re-encode the first color following the adapter match
 		color_after_adapter = read.sequence[match.rstop:match.rstop + 1]
+		if not color_after_adapter:
+			# the read is empty
+			return read[match.rstop:]
 		base_after_adapter = colorspace.DECODE[self.nucleotide_sequence[-1] + color_after_adapter]
 		new_first_color = colorspace.ENCODE[read.primer + base_after_adapter]
 		qual = read.qualities[match.rstop:] if read.qualities else None
