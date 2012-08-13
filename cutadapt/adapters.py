@@ -184,4 +184,3 @@ class ColorspaceAdapter(Adapter):
 
 	def __repr__(self):
 		return '<ColorspaceAdapter(sequence="{0}", where={1})>'.format(self.sequence, self.where)
-

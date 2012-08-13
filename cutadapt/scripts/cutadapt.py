@@ -59,18 +59,14 @@ from __future__ import print_function, division
 
 import sys
 import re
-import gzip
 import time
 import errno
-from os.path import dirname, join, isfile, realpath
 if sys.version_info[0] < 3:
 	from string import maketrans
 else:
 	maketrans = bytes.maketrans
 	xrange = range
 from optparse import OptionParser, OptionGroup
-from contextlib import closing
-from collections import defaultdict, namedtuple
 
 from .. import seqio, __version__
 from ..xopen import xopen
