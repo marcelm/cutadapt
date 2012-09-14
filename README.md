@@ -61,7 +61,7 @@ version.
     python setup.py build
     python setup.py install
 
-If you get an error about a missing "Python.h" file, then make sure that 
+If you get an error about a missing "Python.h" file, then make sure that
 the python-dev package is installed (or python3-dev for Python 3).
 
 Use without installation
@@ -110,6 +110,9 @@ option) to write the output to a file.
 By default, the output file contains all reads, even those
 that did not contain an adapter. (See also the `--discard` option.)
 
+The following examples refer to basespace reads. See the "Colorspace"
+section on how to use cutadapt with SOLiD reads.
+
 
 Illumina data
 -------------
@@ -127,30 +130,6 @@ gz-compressed output is also supported, but the -o parameter (output file) needs
 to be used (gzip compression is auto-detected by looking at the file name):
 
     cutadapt -a ADAPTER-SEQUENCE -o output.fastq.gz input.fastq.gz
-
-
-SOLiD data
-----------
-
-With color space data, the option `-c` must be used. The adapter can be given either
-either as a string of colors or as a sequence of nucleotides, which will be 
-automatically converted.
-
-For example, to cut an adapter from SOLiD data given in solid.csfasta and solid.qual,
-to produce MAQ- and BWA-compatible output, allow 10% errors, write the
-resulting FASTQ file to output.fastq and to the prefix "abc:" to the read
-names:
-
-    cutadapt -c -e 0.10 -a CGCCTTGGCCGTACAGCAG -x abc: --maq solid.csfasta solid.qual > output.fastq
-
-Instead of redirecting standard output with `>`, the `-o` option can be used. This 
-also shows that you can give the adapter in color space:
-
-    cutadapt -c -e 0.10 -a 330201030313112312 -x abc: --maq -o output.fastq solid.csfasta solid.qual
-
-This does the same, but produces BFAST-compatible output and strips the _F3 suffix from read names:
-
-    cutadapt -c -e 0.10 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
 
 
 FASTA file
@@ -190,10 +169,10 @@ Adapters
 ========
 
 These are some 454 adapters:
-A1:   5'- TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA  
-A2:   5'- TGAGACAGGGAGGGAACAGATGGGACACGCAGGGATGAGATGGA  
-B1:   5'- CCTATCCCCTGTGTGCCTTGCCTATCCCCTGTTGCGTGTCTCA  
-B2:   5'- TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG  
+A1:   5'- TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA
+A2:   5'- TGAGACAGGGAGGGAACAGATGGGACACGCAGGGATGAGATGGA
+B1:   5'- CCTATCCCCTGTGTGCCTTGCCTATCCCCTGTTGCGTGTCTCA
+B2:   5'- TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG
 
 This is an AB SOLiD adapter (in color space) used in the SREK protocol:
 330201030313112312
@@ -202,10 +181,11 @@ This is an AB SOLiD adapter (in color space) used in the SREK protocol:
 Algorithm
 =========
 
-cutadapt uses a simple semi-global alignment algorithm, without any special optimizations.
-For speed, the algorithm is implemented as a Python extension module in `calignmodule.c`.
+cutadapt uses a modified semi-global alignment algorithm. For speed, the
+algorithm is implemented as a Python extension module in `calignmodule.c`.
 
-The program is sufficiently fast for my purposes, but speedups should be simple to achieve.
+Cutadapt’s processing speed is currently not dominated by the alignment
+algorithm, but by parsing the input and writing the output.
 
 
 Partial adapter matches
@@ -314,6 +294,79 @@ Then run cutadapt like this:
 The Bash shell will replace the `$(<...)` with the content of the given file.
 
 
+Colorspace
+==========
+
+Cutadapt was designed to work with colorspace reads from the ABi SOLiD sequencer.
+Colorspace trimming is activated by the `--colorspace` option (or use `-c` for short).
+The input reads can be given either:
+* in a FASTA file
+* in a FASTQ file
+* in a `.csfasta` and a `.qual` file (this is the native SOLiD format).
+
+In all cases, the colors must be represented by the characters 0, 1, 2, 3.
+Example input files are in the cutadapt distribution at `tests/data/solid.*`.
+The `.csfasta`/`.qual` file format is automatically assumed if two input
+files are given to cutadapt.
+
+In colorspace mode, the adapter sequences given to the `-a`, `-b` and `-g` options
+can be given both as colors or as nucleotides. In the latter case, they will
+simply be converted automatically. For example, to trim an adapter from
+`solid.csfasta` and `solid.qual`, use this command-line:
+
+	cutadapt -c -a CGCCTTGGCCGTACAGCAG solid.csfasta solid.qual > output.fastq
+
+In case you know the colorspace adapter sequence, you can also write `330201030313112312`
+instead of `CGCCTTGGCCGTACAGCAG` and the result is the same.
+
+
+Double-encoding, BWA and MAQ
+----------------------------
+
+The read mappers MAQ and BWA (and possibly others) need their colorspace
+input reads to be in a so-called "double encoding". This simply means that
+they cannot deal with the characters 0, 1, 2, 3 in the reads, but require
+that the letters A, C, G, T be used for colors. For example, the colorspace
+sequence `0011321` would be `AACCTGC` in double-encoded form. This is not
+the same as conversion to basespace! The read is still in colorspace, only
+letters are used instead of digits. If that sounds confusing, that is
+because it is.
+
+Note that MAQ is unmaintained and should not be used in new projects.
+
+BWA’s colorspace support was dropped in versions more recent than 0.5.9, but
+that version works well.
+
+When you want to trim reads that will be mapped with BWA or MAQ, you can
+use the `--bwa` option, which enables colorspace mode (`-c`), double-encoding
+(`-d`) and primer trimming (`-t`), all of which are required for BWA, in
+addition to some other useful options.
+
+There is also the `--maq` option, which is simply another name for the
+`--bwa` option.
+
+
+Colorspace examples
+-------------------
+
+To cut an adapter from SOLiD data given in `solid.csfasta` and `solid.qual`,
+to produce MAQ- and BWA-compatible output, allow the default of 10% errors
+and write the resulting FASTQ file to output.fastq:
+
+    cutadapt --bwa -a CGCCTTGGCCGTACAGCAG solid.csfasta solid.qual > output.fastq
+
+Instead of redirecting standard output with `>`, the `-o` option can be used. This
+also shows that you can give the adapter in colorspace and how to use a different
+error rate:
+
+    cutadapt --bwa -e 0.15 -a 330201030313112312 -o output.fastq solid.csfasta solid.qual
+
+This does the same as above, but produces BFAST-compatible output, strips the _F3 suffix
+from read names and adds the prefix "abc:" to them:
+
+    cutadapt -c -e 0.15 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
+
+
 Changes
 =======
 
@@ -339,7 +392,7 @@ v1.1
 * Allow to search for 5' adapters (those specified with `-g`) in colorspace.
 * Speed up the alignment by a factor of at least 3 by using Ukkonen's algorithm.
   The total runtime decreases by about 30% in the tested cases.
-* allow to deal with colorspace FASTQ files from the SRA that contain a fake 
+* allow to deal with colorspace FASTQ files from the SRA that contain a fake
   additional quality in the beginning (use --format sra-fastq)
 
 v1.0
