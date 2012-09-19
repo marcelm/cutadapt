@@ -81,6 +81,20 @@ class HelpfulOptionParser(OptionParser):
 		self.exit(2, "\n%s: error: %s\n" % (self.get_prog_name(), msg))
 
 
+def print_error_ranges(adapter_length, error_rate):
+	print("No. of allowed errors:")
+	prev = 0
+	for errors in range(1, int(error_rate * adapter_length) + 1):
+		r = int(errors / error_rate)
+		print("{0}-{1} bp: {2};".format(prev, r - 1, errors - 1), end=' ')
+		prev = r
+	if prev == adapter_length:
+		print("{0} bp: {1}".format(adapter_length, int(error_rate * adapter_length)))
+	else:
+		print("{0}-{1} bp: {2}".format(prev, adapter_length, int(error_rate * adapter_length)))
+	print()
+
+
 def print_histogram(d, adapter_length, n, error_rate):
 	"""
 	Print a histogram. Also, print the no. of reads expected to be
@@ -89,7 +103,6 @@ def print_histogram(d, adapter_length, n, error_rate):
 	adapter_length -- adapter length
 	n -- total no. of reads.
 	"""
-	print("length", "count", "expected", sep="\t")
 	h = []
 	for length in sorted(d):
 		# when length surpasses adapter_length, the
@@ -97,8 +110,9 @@ def print_histogram(d, adapter_length, n, error_rate):
 		estimated = n * 0.25 ** min(length, adapter_length)
 		h.append( (length, d[length], estimated) )
 
+	print("length", "count", "expected", "max. errors", sep="\t")
 	for length, count, estimate in h:
-		print(length, count, "{0:.1F}".format(estimate), sep="\t")
+		print(length, count, "{0:.1F}".format(estimate), int(error_rate*length), sep="\t")
 	print()
 
 
@@ -161,6 +175,7 @@ class Statistics(object):
 				print(total_front, "times, it overlapped the 5' end of a read")
 				print(total_back, "times, it overlapped the 3' end or was within the read")
 				print()
+				print_error_ranges(len(adapter), error_rate)
 				print("Lengths of removed sequences (5')")
 				print_histogram(adapter.lengths_front, len(adapter), self.n, error_rate)
 				print()
@@ -168,11 +183,13 @@ class Statistics(object):
 				print_histogram(adapter.lengths_back, len(adapter), self.n, error_rate)
 			elif where in (FRONT, PREFIX):
 				print()
+				print_error_ranges(len(adapter), error_rate)
 				print("Lengths of removed sequences")
 				print_histogram(adapter.lengths_front, len(adapter), self.n, error_rate)
 			else:
 				assert where == BACK
 				print()
+				print_error_ranges(len(adapter), error_rate)
 				print("Lengths of removed sequences")
 				print_histogram(adapter.lengths_back, len(adapter), self.n, error_rate)
 
