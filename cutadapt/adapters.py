@@ -19,9 +19,13 @@ class AdapterMatch(_AdapterMatchBase):
 		"""
 		TODO doc
 		"""
-		wildcards = [ self.read.sequence[self.rstart + i] for i in range(self.astop - self.astart)
+		wildcards = [ self.read.sequence[self.rstart + i] for i in range(self.length)
 			if self.adapter.sequence[self.astart + i] == wildcard_char ]
 		return ''.join(wildcards)
+
+	@property
+	def length(self):
+		return self.astop - self.astart
 
 
 class Adapter(object):
@@ -96,11 +100,10 @@ class Adapter(object):
 			alignment = align.globalalign_locate(self.sequence, read_seq,
 				self.max_error_rate, self.where, self.wildcard_flags)
 			match = AdapterMatch(*(alignment + (self, read)))
-		length = match.astop - match.astart
 		# TODO globalalign_locate should be modified to allow the following
 		# assertion.
 		# assert length == 0 or match.errors / length <= self.max_error_rate
-		if length < self.min_overlap or match.errors / length > self.max_error_rate:
+		if match.length < self.min_overlap or match.errors / match.length > self.max_error_rate:
 			return None
 		return match
 
@@ -156,11 +159,11 @@ class ColorspaceAdapter(Adapter):
 			alignment = align.globalalign_locate(asequence, read.sequence,
 				self.max_error_rate, self.where, self.wildcard_flags)
 			match = AdapterMatch(*(alignment) + (self, read))
-		length = match.astop - match.astart
+
 		# TODO globalalign_locate should be modified to allow the following
 		# assertion.
 		# assert length == 0 or match.errors / length <= self.max_error_rate
-		if length < self.min_overlap or match.errors / length > self.max_error_rate:
+		if match.length < self.min_overlap or match.errors / match.length > self.max_error_rate:
 			return None
 		return match
 
