@@ -424,7 +424,7 @@ class AdapterCutter(object):
 			if self.wildcard_file:
 				print(match.wildcards(), read.name, file=self.wildcard_file)
 
-			read = match.adapter.remove(read, match)
+			read = match.adapter.remove(match)
 
 		# if an adapter was found, then the read should now be shorter
 		assert (not any_adapter_matches) or (len(read.sequence) < old_length)

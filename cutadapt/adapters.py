@@ -107,22 +107,22 @@ class Adapter(object):
 			return None
 		return match
 
-	def remove_anywhere(self, read, match):
+	def remove_anywhere(self, match):
 		if match.astart == 0 and match.rstart > 0:
-			return self.remove_back(read, match)
+			return self.remove_back(match)
 		else:
-			return self.remove_front(read, match)
+			return self.remove_front(match)
 
-	def remove_front(self, read, match):
+	def remove_front(self, match):
 		self.lengths_front[match.rstop] += 1
-		self._write_rest(read.sequence[:match.rstart], read)
-		return read[match.rstop:]
+		self._write_rest(match.read.sequence[:match.rstart], match.read)
+		return match.read[match.rstop:]
 
-	def remove_back(self, read, match):
+	def remove_back(self, match):
 		# The adapter is at the end of the read or within the read
-		self._write_rest(read.sequence[match.rstop:], read)
-		self.lengths_back[len(read) - match.rstart] += 1
-		return read[:match.rstart]
+		self._write_rest(match.read.sequence[match.rstop:], match.read)
+		self.lengths_back[len(match.read) - match.rstart] += 1
+		return match.read[:match.rstart]
 
 	def _write_rest(self, rest, read):
 		if len(rest) > 0 and self.rest_file:
@@ -167,7 +167,8 @@ class ColorspaceAdapter(Adapter):
 			return None
 		return match
 
-	def remove_front(self, read, match):
+	def remove_front(self, match):
+		read = match.read
 		self.lengths_front[match.rstop] += 1
 		self._write_rest(read.sequence[:match.rstart], read)
 		# to remove a front adapter, we need to re-encode the first color following the adapter match
@@ -181,8 +182,8 @@ class ColorspaceAdapter(Adapter):
 		qual = read.qualities[match.rstop:] if read.qualities else None
 		return ColorspaceSequence(read.name, seq, qual, read.primer)
 
-	def remove_back(self, read, match):
-		read = Adapter.remove_back(self, read, match)
+	def remove_back(self, match):
+		read = Adapter.remove_back(self, match)
 		# TODO avoid the copy (previously, this was just an index operation)
 		# trim one more color if long enough
 		#rstart = max(0, match.rstart - 1)
