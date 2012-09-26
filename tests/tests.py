@@ -65,13 +65,13 @@ def test_lowercase():
 def test_rest():
 	'''-r/--rest-file'''
 	run(['-b', 'ADAPTER', '-r', dpath('rest.tmp')], "rest.fa", "rest.fa")
-	diff(dpath('rest.tmp'), datapath('rest.txt'))
+	diff(datapath('rest.txt'), dpath('rest.tmp'))
 	os.remove(dpath('rest.tmp'))
 
 
 def test_restfront():
 	run(['-g', 'ADAPTER', '-r', dpath('rest.tmp')], "restfront.fa", "rest.fa")
-	diff(dpath('rest.tmp'), datapath('restfront.txt'))
+	diff(datapath('restfront.txt'), dpath('rest.tmp'))
 	os.remove(dpath('rest.tmp'))
 
 
