@@ -346,11 +346,15 @@ class ZeroCapper:
 		return read
 
 
-class AdapterCutter(object):
-	"""Cut adapters from reads."""
+class RepeatedAdapterMatcher(object):
+	"""
+	Repeatedly find one of multiple adapters in reads.
+	The number of times the search is repeated is specified by the
+	times parameter.
+	"""
 
 	def __init__(self, adapters, times=1, rest_file=None, wildcard_file=None, info_file=None):
-		"""Initialize this cutter.
+		"""
 		adapters -- list of Adapter objects
 		"""
 		self.adapters = adapters
@@ -366,7 +370,7 @@ class AdapterCutter(object):
 
 		read -- The read to which each adapter will be aligned
 
-		Return an AdapterMach object or None if there are no matches.
+		Return an AdapterMatch instance or None if there are no matches.
 		"""
 		best = None
 		for adapter in self.adapters:
@@ -379,59 +383,73 @@ class AdapterCutter(object):
 				best = match
 		return best
 
-	def _write_info(self, read, match):
+	def _write_info(self, match):
 		"""write one line to the info file"""
+		# TODO move to separate class
 		if not self.info_file:
 			return
-		seq = read.sequence
+		seq = match.read.sequence
 		if match is None:
-			print(read.name, -1, seq, sep='\t', file=self.info_file)
+			print(match.read.name, -1, seq, sep='\t', file=self.info_file)
 		else:
-			print(read.name, match.errors, seq[0:match.rstart], seq[match.rstart:match.rstop], seq[match.rstop:], sep='\t', file=self.info_file)
+			print(match.read.name, match.errors, seq[0:match.rstart], seq[match.rstart:match.rstop], seq[match.rstop:], sep='\t', file=self.info_file)
 
-	def cut(self, read):
+	def find_match(self, read):
 		"""
-		Cut adapters from a single read. The read will be converted to uppercase
+		Determine the adapter that best matches the given read.
+		Since the best adapter is searched repeatedly, a list
+		of RepeatedAdapterMatch instances is returned, which
+		need to be applied consecutively to the read.
+		The list is empty if there are no adapter matches.
+
+		The read will be converted to uppercase
 		before it is compared to the adapter sequences.
-
-		read -- a seqio.Sequence object
-
-		Return a tuple (read, trimmed) with the modified read.
-		trimmed is True when any adapter was found and trimmed.
 		"""
+		matches = []
+
+		# try at most self.times times to remove an adapter
+		for t in xrange(self.times):
+			match = self._best_match(read)
+			self._write_info(match) # FIXME move to cut() or somewhere else
+			if match is None:
+				# nothing found
+				break
+			assert match.length > 0
+			assert match.errors / match.length <= match.adapter.max_error_rate
+			assert match.length - match.errors > 0
+
+			if self.wildcard_file: # FIXME move to cut() or somewhere else
+				print(match.wildcards(), read.name, file=self.wildcard_file)
+
+			matches.append(match)
+			read = match.adapter.remove(match)
+		return matches
+
+
+	def cut(self, matches):
+		"""
+		Cut found adapters from a single read.
+
+		matches -- a list of AdapterMatch instances
+		"""
+		# TODO move these lines out of here
 		self.stats.n += 1
+		read = matches[0].read
 		self.stats.total_bp += len(read.sequence)
 
 		if __debug__:
 			old_length = len(read.sequence)
+		assert len(matches) > 0
 
-		# try at most self.times times to remove an adapter
-		any_adapter_matches = False
-		for t in xrange(self.times):
-			match = self._best_match(read)
-			self._write_info(read, match)
-			if match is None:
-				# nothing found
-				break
-
-			if __debug__:
-				length = match.astop - match.astart
-				assert length > 0
-				assert match.errors / length <= match.adapter.max_error_rate
-				assert length - match.errors > 0
-
-			any_adapter_matches = True
-			if self.wildcard_file:
-				print(match.wildcards(), read.name, file=self.wildcard_file)
-
-			read = match.adapter.remove(match)
+		# The last match contains a copy of the read it was matched to.
+		# No iteration is necessary.
+		read = matches[-1].adapter.remove(matches[-1])
 
 		# if an adapter was found, then the read should now be shorter
-		assert (not any_adapter_matches) or (len(read.sequence) < old_length)
-		if any_adapter_matches: # trimmed: # TODO move to filter class
-			self.stats.reads_changed += 1
+		assert len(read.sequence) < old_length
+		self.stats.reads_changed += 1 # TODO move to filter class
 
-		return (read, any_adapter_matches)
+		return read
 
 
 #class QualityTrimmer:
@@ -667,10 +685,10 @@ def main(cmdlineargs=None):
 	if options.zero_cap:
 		modifiers.append(ZeroCapper(quality_base=options.quality_base))
 
-	cutter = AdapterCutter(adapters, options.times, options.rest_file,
+	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times, options.rest_file,
 				options.wildcard_file, options.info_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
-		too_short_outfile, options.discard_trimmed, cutter.stats, options.trim_primer) # TODO stats?
+		too_short_outfile, options.discard_trimmed, adapter_matcher.stats, options.trim_primer) # TODO stats?
 	try:
 		twoheaders = None
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
@@ -680,7 +698,12 @@ def main(cmdlineargs=None):
 				index = quality_trim_index(read.qualities, options.quality_cutoff, options.quality_base)
 				read = read[:index]
 
-			read, trimmed = cutter.cut(read)
+			matches = adapter_matcher.find_match(read)
+			if len(matches) > 0:
+				read = adapter_matcher.cut(matches)
+				trimmed = True
+			else:
+				trimmed = False
 			for modifier in modifiers:
 				read = modifier.apply(read)
 			if twoheaders is None:
@@ -710,7 +733,7 @@ def main(cmdlineargs=None):
 		options.info_file.close()
 	# send statistics to stderr if result was sent to stdout
 	stat_file = sys.stderr if options.output is None else None
-	cutter.stats.print_statistics(options.error_rate, file=stat_file)
+	adapter_matcher.stats.print_statistics(options.error_rate, file=stat_file)
 
 	return 0
 

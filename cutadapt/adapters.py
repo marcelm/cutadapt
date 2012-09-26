@@ -146,6 +146,7 @@ class ColorspaceAdapter(Adapter):
 			raise ValueError("A 5' colorspace adapter needs to be given in nucleotide space")
 
 	def match(self, read):
+		"""Return AdapterMatch instance"""
 		if self.where != PREFIX:
 			return super(ColorspaceAdapter, self).match(read)
 		# create artificial adapter that includes a first color that encodes the
