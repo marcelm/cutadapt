@@ -17,7 +17,9 @@ _AdapterMatchBase = namedtuple('AdapterMatch', ['astart', 'astop', 'rstart', 'rs
 class AdapterMatch(_AdapterMatchBase):
 	def wildcards(self, wildcard_char='N'):
 		"""
-		TODO doc
+		Return a string that contains, for each wildcard character,
+		the character that it matches. For example, if the adapter
+		ATNGNA matches ATCGTA, then the string 'CT' is returned.
 		"""
 		wildcards = [ self.read.sequence[self.rstart + i] for i in range(self.length)
 			if self.adapter.sequence[self.astart + i] == wildcard_char ]

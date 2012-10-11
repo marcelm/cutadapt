@@ -548,4 +548,5 @@ To Do / Ideas
   * check whether input is FASTQ although -f fasta is given
   * close on StopIteration
   * search for adapters in the order in which they are given on the command line
+  * re-write alignment in Cython
 
