@@ -528,7 +528,9 @@ def main(cmdlineargs=None):
 		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
 	group.add_option("--wildcard-file", default=None, metavar="FILE",
 		help="When the adapter has wildcard bases ('N's) write adapter bases matching wildcard "
-		     "positions to FILE.  Use - for standard output.")
+		     "positions to FILE. Use - for standard output. "
+		     "When there are indels in the alignment, this may occasionally "
+		     "not be quite accurate.")
 	group.add_option("--too-short-output", default=None, metavar="FILE",
 		help="Write reads that are too short (according to length specified by -m) to FILE. (default: discard reads)")
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",

@@ -20,13 +20,21 @@ class AdapterMatch(_AdapterMatchBase):
 		Return a string that contains, for each wildcard character,
 		the character that it matches. For example, if the adapter
 		ATNGNA matches ATCGTA, then the string 'CT' is returned.
+
+		If there are indels, this is not reliable as the full alignment
+		is not available.
 		"""
 		wildcards = [ self.read.sequence[self.rstart + i] for i in range(self.length)
-			if self.adapter.sequence[self.astart + i] == wildcard_char ]
+			if self.adapter.sequence[self.astart + i] == wildcard_char and self.rstart + i < len(self.read.sequence) ]
 		return ''.join(wildcards)
 
 	@property
 	def length(self):
+		"""
+		Number of aligned characters in the adapter. If there are
+		indels, this may be different from the number of characters
+		in the read.
+		"""
 		return self.astop - self.astart
 
 
@@ -80,7 +88,16 @@ class Adapter(object):
 		self.lengths_back = defaultdict(int)
 
 	def __repr__(self):
-		return '<Adapter(sequence="{0}", where={1})>'.format(self.sequence, self.where)
+		match_read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)
+		match_adapter_wildcards = bool(align.ALLOW_WILDCARD_SEQ1 & self.wildcard_flags)
+		return '<Adapter(sequence="{sequence}", where={where}, '\
+			'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
+			'match_read_wildcards={match_read_wildcards}, '\
+			'match_adapter_wildcards={match_adapter_wildcards}, '\
+			'rest_file={rest_file})>'.format(
+				match_read_wildcards=match_read_wildcards,
+				match_adapter_wildcards=match_adapter_wildcards,
+				**vars(self))
 
 	def match(self, read):
 		"""
