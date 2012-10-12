@@ -24,7 +24,7 @@ def _shorten(s, n=20):
 class Sequence(object):
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
-	def __init__(self, name, sequence, qualities):
+	def __init__(self, name, sequence, qualities=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
