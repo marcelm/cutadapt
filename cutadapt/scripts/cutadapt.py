@@ -392,7 +392,7 @@ class RepeatedAdapterMatcher(object):
 		if match is None:
 			print(match.read.name, -1, seq, sep='\t', file=self.info_file)
 		else:
-			print(match.read.name, match.errors, seq[0:match.rstart], seq[match.rstart:match.rstop], seq[match.rstop:], sep='\t', file=self.info_file)
+			print(match.read.name, match.errors, match.rstart, match.rstop, seq[0:match.rstart], seq[match.rstart:match.rstop], seq[match.rstop:], sep='\t', file=self.info_file)
 
 	def find_match(self, read):
 		"""
