@@ -120,9 +120,6 @@ class Statistics(object):
 	"""Store statistics about reads and adapters"""
 
 	def __init__(self, adapters):
-		self.reads_changed = 0
-		self.n = 0
-		self.total_bp = 0
 		self._start_time = time.clock()
 		self.time = None
 		self.adapters = adapters
@@ -131,7 +128,7 @@ class Statistics(object):
 		"""Stop the timer that was automatically started when the class was instantiated."""
 		self.time = time.clock() - self._start_time
 
-	def print_statistics(self, error_rate, too_long, too_short, file=None):
+	def print_statistics(self, n, total_bp, reads_changed, error_rate, too_short, too_long, file=None):
 		"""Print summary to file"""
 		if self.time is None:
 			self.stop_clock()
@@ -141,23 +138,23 @@ class Statistics(object):
 		print("cutadapt version", __version__)
 		print("Command line parameters:", " ".join(sys.argv[1:]))
 		print("Maximum error rate: %.2f%%" % (error_rate * 100.))
-		print("   Processed reads:", self.n)
+		print("   Processed reads:", n)
 
 		trimmed_bp = 0
 		for adapter in self.adapters:
 			for d in (adapter.lengths_front, adapter.lengths_back):
 				trimmed_bp += sum( seqlen*count for (seqlen, count) in d.items() )
 
-		if self.n > 0:
-			print("     Trimmed reads:", self.reads_changed, "(%5.1f%%)" % (100. * self.reads_changed / self.n))
-			print("   Total basepairs: {0:12} ({1:.1F} Mbp)".format(self.total_bp, self.total_bp/1E6))
-			s = " ({0:.2%} of total)".format(float(trimmed_bp)/self.total_bp) if self.total_bp > 0 else ''
+		if n > 0:
+			print("     Trimmed reads:", reads_changed, "(%5.1f%%)" % (100. * reads_changed / n))
+			print("   Total basepairs: {0:12} ({1:.1F} Mbp)".format(total_bp, total_bp/1E6))
+			s = " ({0:.2%} of total)".format(float(trimmed_bp)/total_bp) if total_bp > 0 else ''
 			print(" Trimmed basepairs: {0:12} ({1:.1F} Mbp){2}".format(trimmed_bp, trimmed_bp/1E6, s))
-			print("   Too short reads:", too_short, "(%5.1f%% of processed reads)" % (100. * too_short / self.n))
-			print("    Too long reads:", too_long, "(%5.1f%% of processed reads)" % (100. * too_long / self.n))
+			print("   Too short reads:", too_short, "(%5.1f%% of processed reads)" % (100. * too_short / n))
+			print("    Too long reads:", too_long, "(%5.1f%% of processed reads)" % (100. * too_long / n))
 		print("        Total time: %9.2f s" % self.time)
-		if self.n > 0:
-			print("     Time per read: %9.2f ms" % (1000. * self.time / self.n))
+		if n > 0:
+			print("     Time per read: %9.2f ms" % (1000. * self.time / n))
 		print()
 		for index, adapter in enumerate(self.adapters):
 			total_front = sum(adapter.lengths_front.values())
@@ -175,23 +172,23 @@ class Statistics(object):
 				print()
 				print_error_ranges(len(adapter), error_rate)
 				print("Lengths of removed sequences (5')")
-				print_histogram(adapter.lengths_front, len(adapter), self.n, error_rate)
+				print_histogram(adapter.lengths_front, len(adapter), n, error_rate)
 				print()
 				print("Lengths of removed sequences (3' or within)")
-				print_histogram(adapter.lengths_back, len(adapter), self.n, error_rate)
+				print_histogram(adapter.lengths_back, len(adapter), n, error_rate)
 			elif where in (FRONT, PREFIX):
 				print()
 				print_error_ranges(len(adapter), error_rate)
 				print("Lengths of removed sequences")
-				print_histogram(adapter.lengths_front, len(adapter), self.n, error_rate)
+				print_histogram(adapter.lengths_front, len(adapter), n, error_rate)
 			else:
 				assert where == BACK
 				print()
 				print_error_ranges(len(adapter), error_rate)
 				print("Lengths of removed sequences")
-				print_histogram(adapter.lengths_back, len(adapter), self.n, error_rate)
+				print_histogram(adapter.lengths_back, len(adapter), n, error_rate)
 
-		if self.n == 0:
+		if n == 0:
 			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
 		sys.stdout = old_stdout
 
@@ -361,7 +358,7 @@ class RepeatedAdapterMatcher(object):
 		self.rest_file = rest_file
 		self.info_file = info_file
 		self.wildcard_file = wildcard_file
-		self.stats = Statistics(self.adapters)
+		self.reads_changed = 0
 
 	def _best_match(self, read):
 		"""
@@ -444,7 +441,7 @@ class RepeatedAdapterMatcher(object):
 
 		# if an adapter was found, then the read should now be shorter
 		assert len(read.sequence) < old_length
-		self.stats.reads_changed += 1 # TODO move to filter class
+		self.reads_changed += 1 # TODO move to filter class
 
 		return read
 
@@ -687,13 +684,16 @@ def main(cmdlineargs=None):
 	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times, options.rest_file,
 				options.wildcard_file, options.info_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
-		too_short_outfile, options.discard_trimmed, options.trim_primer) # TODO stats?
+		too_short_outfile, options.discard_trimmed, options.trim_primer)
+	stats = Statistics(adapters)
+	n = 0 # no. of processed reads
+	total_bp = 0
 	try:
 		twoheaders = None
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
 		for read in reader:
-			adapter_matcher.stats.n += 1 # TODO this should go somewhere else
-			adapter_matcher.stats.total_bp += len(read.sequence)
+			n += 1
+			total_bp += len(read.sequence)
 			#total_bases += len(qualities)
 			if options.quality_cutoff > 0:
 				index = quality_trim_index(read.qualities, options.quality_cutoff, options.quality_base)
@@ -734,9 +734,10 @@ def main(cmdlineargs=None):
 		options.info_file.close()
 	# send statistics to stderr if result was sent to stdout
 	stat_file = sys.stderr if options.output is None else None
-	adapter_matcher.stats.print_statistics(options.error_rate,
-		too_long=readfilter.too_long, too_short=readfilter.too_short,
-		file=stat_file)
+
+	stats.print_statistics(
+		n, total_bp, adapter_matcher.reads_changed, options.error_rate,
+		readfilter.too_short, readfilter.too_long, file=stat_file)
 
 	return 0
 
