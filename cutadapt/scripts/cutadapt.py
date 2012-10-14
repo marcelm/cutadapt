@@ -410,10 +410,10 @@ class RepeatedAdapterMatcher(object):
 		# try at most self.times times to remove an adapter
 		for t in xrange(self.times):
 			match = self._best_match(read)
-			self._write_info(match) # FIXME move to cut() or somewhere else
 			if match is None:
 				# nothing found
 				break
+			self._write_info(match) # FIXME move to cut() or somewhere else
 			assert match.length > 0
 			assert match.errors / match.length <= match.adapter.max_error_rate
 			assert match.length - match.errors > 0
