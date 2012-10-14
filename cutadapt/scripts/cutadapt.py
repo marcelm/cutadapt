@@ -170,23 +170,23 @@ class Statistics(object):
 				print(total_front, "times, it overlapped the 5' end of a read")
 				print(total_back, "times, it overlapped the 3' end or was within the read")
 				print()
-				print_error_ranges(len(adapter), error_rate)
+				print_error_ranges(len(adapter), adapter.max_error_rate)
 				print("Lengths of removed sequences (5')")
-				print_histogram(adapter.lengths_front, len(adapter), n, error_rate)
+				print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate)
 				print()
 				print("Lengths of removed sequences (3' or within)")
-				print_histogram(adapter.lengths_back, len(adapter), n, error_rate)
+				print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate)
 			elif where in (FRONT, PREFIX):
 				print()
-				print_error_ranges(len(adapter), error_rate)
+				print_error_ranges(len(adapter), adapter.max_error_rate)
 				print("Lengths of removed sequences")
-				print_histogram(adapter.lengths_front, len(adapter), n, error_rate)
+				print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate)
 			else:
 				assert where == BACK
 				print()
-				print_error_ranges(len(adapter), error_rate)
+				print_error_ranges(len(adapter), adapter.max_error_rate)
 				print("Lengths of removed sequences")
-				print_histogram(adapter.lengths_back, len(adapter), n, error_rate)
+				print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate)
 
 		if n == 0:
 			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
