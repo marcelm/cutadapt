@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# kate: word-wrap off;
+# kate: word-wrap off; remove-trailing-space on; replace-trailing-space-save on;
 #
 # Copyright (c) 2010-2012 Marcel Martin <marcel.martin@tu-dortmund.de>
 #
@@ -121,8 +121,6 @@ class Statistics(object):
 
 	def __init__(self, adapters):
 		self.reads_changed = 0
-		self.too_short = 0
-		self.too_long = 0
 		self.n = 0
 		self.total_bp = 0
 		self._start_time = time.clock()
@@ -133,7 +131,7 @@ class Statistics(object):
 		"""Stop the timer that was automatically started when the class was instantiated."""
 		self.time = time.clock() - self._start_time
 
-	def print_statistics(self, error_rate, file=None):
+	def print_statistics(self, error_rate, too_long, too_short, file=None):
 		"""Print summary to file"""
 		if self.time is None:
 			self.stop_clock()
@@ -155,8 +153,8 @@ class Statistics(object):
 			print("   Total basepairs: {0:12} ({1:.1F} Mbp)".format(self.total_bp, self.total_bp/1E6))
 			s = " ({0:.2%} of total)".format(float(trimmed_bp)/self.total_bp) if self.total_bp > 0 else ''
 			print(" Trimmed basepairs: {0:12} ({1:.1F} Mbp){2}".format(trimmed_bp, trimmed_bp/1E6, s))
-			print("   Too short reads:", self.too_short, "(%5.1f%% of processed reads)" % (100. * self.too_short / self.n))
-			print("    Too long reads:", self.too_long, "(%5.1f%% of processed reads)" % (100. * self.too_long / self.n))
+			print("   Too short reads:", too_short, "(%5.1f%% of processed reads)" % (100. * too_short / self.n))
+			print("    Too long reads:", too_long, "(%5.1f%% of processed reads)" % (100. * too_long / self.n))
 		print("        Total time: %9.2f s" % self.time)
 		if self.n > 0:
 			print("     Time per read: %9.2f ms" % (1000. * self.time / self.n))
@@ -245,13 +243,14 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 class ReadFilter(object):
 	"""Filter reads according to length and according to whether any adapter matches."""
 
-	def __init__(self, minimum_length, maximum_length, too_short_outfile, discard_trimmed, statistics, trim_primer):
+	def __init__(self, minimum_length, maximum_length, too_short_outfile, discard_trimmed, trim_primer):
 		self.minimum_length = minimum_length
 		self.maximum_length = maximum_length
 		self.too_short_outfile = too_short_outfile
-		self.statistics = statistics
 		self.discard_trimmed = discard_trimmed
 		self.trim_primer = trim_primer
+		self.too_long = 0
+		self.too_short = 0
 
 	def keep(self, read, trimmed):
 		"""
@@ -260,7 +259,7 @@ class ReadFilter(object):
 		if self.discard_trimmed and trimmed:
 			return False
 		if len(read.sequence) < self.minimum_length:
-			self.statistics.too_short += 1
+			self.too_short += 1
 			if self.too_short_outfile is not None:
 				if self.trim_primer: # TODO refactor
 					read = read[1:]
@@ -268,7 +267,7 @@ class ReadFilter(object):
 				write_read(read, self.too_short_outfile)
 			return False
 		if len(read.sequence) > self.maximum_length:
-			self.statistics.too_long += 1
+			self.too_long += 1
 			return False
 		return True
 
@@ -433,9 +432,7 @@ class RepeatedAdapterMatcher(object):
 		matches -- a list of AdapterMatch instances
 		"""
 		# TODO move these lines out of here
-		self.stats.n += 1
 		read = matches[0].read
-		self.stats.total_bp += len(read.sequence)
 
 		if __debug__:
 			old_length = len(read.sequence)
@@ -690,11 +687,13 @@ def main(cmdlineargs=None):
 	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times, options.rest_file,
 				options.wildcard_file, options.info_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
-		too_short_outfile, options.discard_trimmed, adapter_matcher.stats, options.trim_primer) # TODO stats?
+		too_short_outfile, options.discard_trimmed, options.trim_primer) # TODO stats?
 	try:
 		twoheaders = None
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
 		for read in reader:
+			adapter_matcher.stats.n += 1 # TODO this should go somewhere else
+			adapter_matcher.stats.total_bp += len(read.sequence)
 			#total_bases += len(qualities)
 			if options.quality_cutoff > 0:
 				index = quality_trim_index(read.qualities, options.quality_cutoff, options.quality_base)
@@ -735,7 +734,9 @@ def main(cmdlineargs=None):
 		options.info_file.close()
 	# send statistics to stderr if result was sent to stdout
 	stat_file = sys.stderr if options.output is None else None
-	adapter_matcher.stats.print_statistics(options.error_rate, file=stat_file)
+	adapter_matcher.stats.print_statistics(options.error_rate,
+		too_long=readfilter.too_long, too_short=readfilter.too_short,
+		file=stat_file)
 
 	return 0
 
