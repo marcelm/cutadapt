@@ -112,7 +112,7 @@ def print_histogram(d, adapter_length, n, error_rate):
 
 	print("length", "count", "expected", "max. errors", sep="\t")
 	for length, count, estimate in h:
-		print(length, count, "{0:.1F}".format(estimate), int(error_rate*length), sep="\t")
+		print(length, count, "{0:.1F}".format(estimate), int(error_rate*min(length, adapter_length)), sep="\t")
 	print()
 
 
