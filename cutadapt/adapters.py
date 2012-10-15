@@ -75,13 +75,15 @@ class Adapter(object):
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
 		if match_adapter_wildcards and 'N' in self.sequence:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ1
-		removers = {
-			FRONT: self.remove_front,
-			PREFIX: self.remove_front,
-			BACK: self.remove_back,
-			ANYWHERE: self.remove_anywhere
+		# redirect to appropriate trimmed() function depending on
+		# adapter type
+		trimmers = {
+			FRONT: self._trimmed_front,
+			PREFIX: self._trimmed_front,
+			BACK: self._trimmed_back,
+			ANYWHERE: self._trimmed_anywhere
 		}
-		self.remove = removers[where]
+		self.trimmed = trimmers[where]
 		self.rest_file = rest_file
 		# statistics about length of removed sequences
 		self.lengths_front = defaultdict(int)
@@ -126,18 +128,22 @@ class Adapter(object):
 			return None
 		return match
 
-	def remove_anywhere(self, match):
+	def _trimmed_anywhere(self, match):
+		"""Return a trimmed read"""
+		# guess if this is a front or back adapter
 		if match.astart == 0 and match.rstart > 0:
-			return self.remove_back(match)
+			return self._trimmed_back(match)
 		else:
-			return self.remove_front(match)
+			return self._trimmed_front(match)
 
-	def remove_front(self, match):
+	def _trimmed_front(self, match):
+		"""Return a trimmed read"""
 		self.lengths_front[match.rstop] += 1
 		self._write_rest(match.read.sequence[:match.rstart], match.read)
 		return match.read[match.rstop:]
 
-	def remove_back(self, match):
+	def _trimmed_back(self, match):
+		"""Return a trimmed read"""
 		# The adapter is at the end of the read or within the read
 		self._write_rest(match.read.sequence[match.rstop:], match.read)
 		self.lengths_back[len(match.read) - match.rstart] += 1
@@ -187,7 +193,8 @@ class ColorspaceAdapter(Adapter):
 			return None
 		return match
 
-	def remove_front(self, match):
+	def _trimmed_front(self, match):
+		"""Return a trimmed read"""
 		read = match.read
 		self.lengths_front[match.rstop] += 1
 		self._write_rest(read.sequence[:match.rstart], read)
@@ -198,12 +205,13 @@ class ColorspaceAdapter(Adapter):
 			return read[match.rstop:]
 		base_after_adapter = colorspace.DECODE[self.nucleotide_sequence[-1] + color_after_adapter]
 		new_first_color = colorspace.ENCODE[read.primer + base_after_adapter]
-		seq = new_first_color + read.sequence[match.rstop + 1:]
+		seq = new_first_color + read.sequence[(match.rstop + 1):]
 		qual = read.qualities[match.rstop:] if read.qualities else None
 		return ColorspaceSequence(read.name, seq, qual, read.primer)
 
-	def remove_back(self, match):
-		read = Adapter.remove_back(self, match)
+	def _trimmed_back(self, match):
+		"""Return a trimmed read"""
+		read = Adapter._trimmed_back(self, match)
 		# TODO avoid the copy (previously, this was just an index operation)
 		# trim one more color if long enough
 		#rstart = max(0, match.rstart - 1)

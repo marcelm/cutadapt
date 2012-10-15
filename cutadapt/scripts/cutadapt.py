@@ -286,7 +286,7 @@ class LengthTagModifier:
 
 class SuffixRemover:
 	"""
-	Remove any suffix from read names.
+	Remove a given suffix from read names.
 	"""
 	def __init__(self, suffix):
 		self.suffix = suffix
@@ -394,7 +394,7 @@ class RepeatedAdapterMatcher(object):
 		"""
 		Determine the adapter that best matches the given read.
 		Since the best adapter is searched repeatedly, a list
-		of RepeatedAdapterMatch instances is returned, which
+		of AdapterMatch instances is returned, which
 		need to be applied consecutively to the read.
 		The list is empty if there are no adapter matches.
 
@@ -418,7 +418,7 @@ class RepeatedAdapterMatcher(object):
 				print(match.wildcards(), read.name, file=self.wildcard_file)
 
 			matches.append(match)
-			read = match.adapter.remove(match)
+			read = match.adapter.trimmed(match)
 		return matches
 
 
@@ -433,11 +433,11 @@ class RepeatedAdapterMatcher(object):
 
 		if __debug__:
 			old_length = len(read.sequence)
-		assert len(matches) > 0
+		assert matches
 
 		# The last match contains a copy of the read it was matched to.
 		# No iteration is necessary.
-		read = matches[-1].adapter.remove(matches[-1])
+		read = matches[-1].adapter.trimmed(matches[-1])
 
 		# if an adapter was found, then the read should now be shorter
 		assert len(read.sequence) < old_length
