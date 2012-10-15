@@ -8,8 +8,9 @@ from cutadapt.scripts import cutadapt
 
 
 def dpath(path):
-	"""get path to a data file (relative to the directory this
-	test lives in)"""
+	"""
+	get path to a data file (relative to the directory this test lives in)
+	"""
 	return os.path.join(os.path.dirname(__file__), path)
 
 def datapath(path):
@@ -258,3 +259,8 @@ def test_issue_46():
 
 def test_strip_suffix():
 	run("--strip-suffix _sequence -a XXXXXXX", "stripped.fasta", "simple.fasta")
+
+def test_info_file():
+	infotmp = dpath("infotmp.txt")
+	run("--info-file infotmp.txt -a GCCTAACTTCTTAGACTGCCTTAAGGACGT", "illumina.fastq", "illumina.fastq.gz")
+	os.remove(infotmp)
