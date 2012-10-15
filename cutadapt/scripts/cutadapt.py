@@ -342,6 +342,16 @@ class ZeroCapper:
 		return read
 
 
+class RestFileWriter(object):
+	def __init__(self, file):
+		self.file = file
+
+	def write(self, match):
+		rest = match.rest()
+		if len(rest) > 0:
+			print(rest, match.read.name, file=self.file)
+
+
 class RepeatedAdapterMatcher(object):
 	"""
 	Repeatedly find one of multiple adapters in reads.
@@ -349,13 +359,12 @@ class RepeatedAdapterMatcher(object):
 	times parameter.
 	"""
 
-	def __init__(self, adapters, times=1, rest_file=None, wildcard_file=None, info_file=None):
+	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None):
 		"""
 		adapters -- list of Adapter objects
 		"""
 		self.adapters = adapters
 		self.times = times
-		self.rest_file = rest_file
 		self.info_file = info_file
 		self.wildcard_file = wildcard_file
 		self.reads_changed = 0
@@ -627,6 +636,9 @@ def main(cmdlineargs=None):
 
 	if options.rest_file is not None:
 		options.rest_file = xopen(options.rest_file, 'w')
+		rest_writer = RestFileWriter(options.rest_file)
+	else:
+		rest_writer = None
 	if options.info_file is not None:
 		options.info_file = xopen(options.info_file, 'w')
 	if options.wildcard_file is not None:
@@ -646,8 +658,7 @@ def main(cmdlineargs=None):
 				parser.error("The adapter sequence is empty")
 			adapter = ADAPTER_CLASS(seq, w, options.error_rate,
 				options.overlap, options.match_read_wildcards,
-				options.match_adapter_wildcards,
-				options.rest_file)
+				options.match_adapter_wildcards)
 			adapters.append(adapter)
 
 	append_adapters(options.adapters, BACK)
@@ -681,7 +692,7 @@ def main(cmdlineargs=None):
 	if options.zero_cap:
 		modifiers.append(ZeroCapper(quality_base=options.quality_base))
 
-	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times, options.rest_file,
+	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times,
 				options.wildcard_file, options.info_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, options.trim_primer)
@@ -705,6 +716,8 @@ def main(cmdlineargs=None):
 				trimmed = True
 			else:
 				trimmed = False
+			if rest_writer:
+				rest_writer.write(matches[-1])
 			for modifier in modifiers:
 				read = modifier.apply(read)
 			if twoheaders is None:

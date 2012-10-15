@@ -12,9 +12,28 @@ PREFIX = align.STOP_WITHIN_SEQ2
 ANYWHERE = align.SEMIGLOBAL
 
 
-_AdapterMatchBase = namedtuple('AdapterMatch', ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'adapter', 'read'])
+class AdapterMatch:
+	def __init__(self, astart, astop, rstart, rstop, matches, errors, front, adapter, read):
+		self.astart, self.astop, self.rstart, self.rstop = astart, astop, rstart, rstop
+		self.matches = matches
+		self.errors = errors
+		self.front = self._guess_is_front() if front is None else front
+		self.adapter = adapter
+		self.read = read
 
-class AdapterMatch(_AdapterMatchBase):
+	def _guess_is_front(self):
+		"""
+		Return whether this is guessed to be a front adapter.
+		
+		The match is assumed to be a front adapter when the first base of
+		the read is involved in the alignment to the adapter.
+		"""
+		# TODO remove
+		# if match.rstart != 0  ==>  match.astart == 0
+		assert self.rstart == 0 or self.astart == 0
+		#return not (match.rstart > 0 and match.astart == 0)
+		return self.rstart == 0
+
 	def wildcards(self, wildcard_char='N'):
 		"""
 		Return a string that contains, for each wildcard character,
@@ -37,6 +56,18 @@ class AdapterMatch(_AdapterMatchBase):
 		"""
 		return self.astop - self.astart
 
+	def rest(self):
+		"""
+		Return the part of the read before this match if this is a 
+		'front' (5') adapter,
+		return the part after the match if this is not a 'front' adapter (3').
+		This can be an empty string.
+		"""
+		if self.front:
+			return self.read.sequence[:self.rstart]
+		else:
+			return self.read.sequence[self.rstop:]
+		
 
 class Adapter(object):
 	"""
@@ -64,8 +95,7 @@ class Adapter(object):
 		to match any character in the read (at zero cost).
 	"""
 	def __init__(self, sequence, where, max_error_rate, min_overlap=3,
-			match_read_wildcards=False, match_adapter_wildcards=False,
-			rest_file=None):
+			match_read_wildcards=False, match_adapter_wildcards=False):
 		self.sequence = sequence.upper()
 		self.where = where
 		self.max_error_rate = max_error_rate
@@ -84,7 +114,10 @@ class Adapter(object):
 			ANYWHERE: self._trimmed_anywhere
 		}
 		self.trimmed = trimmers[where]
-		self.rest_file = rest_file
+		if where == ANYWHERE:
+			self._front_flag = None # means: guess
+		else:
+			self._front_flag = where != BACK
 		# statistics about length of removed sequences
 		self.lengths_front = defaultdict(int)
 		self.lengths_back = defaultdict(int)
@@ -95,8 +128,7 @@ class Adapter(object):
 		return '<Adapter(sequence="{sequence}", where={where}, '\
 			'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
 			'match_read_wildcards={match_read_wildcards}, '\
-			'match_adapter_wildcards={match_adapter_wildcards}, '\
-			'rest_file={rest_file})>'.format(
+			'match_adapter_wildcards={match_adapter_wildcards})>'.format(
 				match_read_wildcards=match_read_wildcards,
 				match_adapter_wildcards=match_adapter_wildcards,
 				**vars(self))
@@ -115,12 +147,15 @@ class Adapter(object):
 		else:
 			pos = read_seq.find(self.sequence)
 		if pos >= 0:
-			match = AdapterMatch(0, len(self.sequence), pos, pos + len(self.sequence), len(self.sequence), 0, self, read)
+			match = AdapterMatch(
+				0, len(self.sequence), pos, pos + len(self.sequence), 
+				len(self.sequence), 0, self._front_flag, self, read)
 		else:
 			# try approximate matching
 			alignment = align.globalalign_locate(self.sequence, read_seq,
 				self.max_error_rate, self.where, self.wildcard_flags)
-			match = AdapterMatch(*(alignment + (self, read)))
+			match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
+
 		# TODO globalalign_locate should be modified to allow the following
 		# assertion.
 		# assert length == 0 or match.errors / length <= self.max_error_rate
@@ -130,29 +165,22 @@ class Adapter(object):
 
 	def _trimmed_anywhere(self, match):
 		"""Return a trimmed read"""
-		# guess if this is a front or back adapter
-		if match.astart == 0 and match.rstart > 0:
-			return self._trimmed_back(match)
-		else:
+		if match.front:
 			return self._trimmed_front(match)
+		else:
+			return self._trimmed_back(match)
 
 	def _trimmed_front(self, match):
 		"""Return a trimmed read"""
+		# TODO move away
 		self.lengths_front[match.rstop] += 1
-		self._write_rest(match.read.sequence[:match.rstart], match.read)
 		return match.read[match.rstop:]
 
 	def _trimmed_back(self, match):
-		"""Return a trimmed read"""
-		# The adapter is at the end of the read or within the read
-		self._write_rest(match.read.sequence[match.rstop:], match.read)
+		"""Return a trimmed read without the 3' (back) adapter"""
+		# TODO move away
 		self.lengths_back[len(match.read) - match.rstart] += 1
 		return match.read[:match.rstart]
-
-	def _write_rest(self, rest, read):
-		if len(rest) > 0 and self.rest_file:
-			# The adapter is within the read
-			print(rest, read.name, file=self.rest_file)
 
 	def __len__(self):
 		return len(self.sequence)
@@ -179,12 +207,14 @@ class ColorspaceAdapter(Adapter):
 		asequence = colorspace.ENCODE[read.primer + self.nucleotide_sequence[0]] + self.sequence
 		pos = 0 if read.sequence.startswith(asequence) else -1
 		if pos >= 0:
-			match = AdapterMatch(0, len(asequence), pos, pos + len(asequence), len(asequence), 0, self, read)
+			match = AdapterMatch(
+				0, len(asequence), pos, pos + len(asequence), 
+				len(asequence), 0, self._front_flag, self, read)
 		else:
 			# try approximate matching
 			alignment = align.globalalign_locate(asequence, read.sequence,
 				self.max_error_rate, self.where, self.wildcard_flags)
-			match = AdapterMatch(*(alignment) + (self, read))
+			match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
 
 		# TODO globalalign_locate should be modified to allow the following
 		# assertion.
@@ -197,7 +227,6 @@ class ColorspaceAdapter(Adapter):
 		"""Return a trimmed read"""
 		read = match.read
 		self.lengths_front[match.rstop] += 1
-		self._write_rest(read.sequence[:match.rstart], read)
 		# to remove a front adapter, we need to re-encode the first color following the adapter match
 		color_after_adapter = read.sequence[match.rstop:match.rstop + 1]
 		if not color_after_adapter:
