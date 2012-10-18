@@ -128,7 +128,8 @@ class Statistics(object):
 		"""Stop the timer that was automatically started when the class was instantiated."""
 		self.time = time.clock() - self._start_time
 
-	def print_statistics(self, n, total_bp, reads_changed, error_rate, too_short, too_long, file=None):
+	def print_statistics(self, n, total_bp, quality_trimmed, reads_changed,
+			error_rate, too_short, too_long, file=None):
 		"""Print summary to file"""
 		if self.time is None:
 			self.stop_clock()
@@ -139,7 +140,6 @@ class Statistics(object):
 		print("Command line parameters:", " ".join(sys.argv[1:]))
 		print("Maximum error rate: %.2f%%" % (error_rate * 100.))
 		print("   Processed reads:", n)
-
 		trimmed_bp = 0
 		for adapter in self.adapters:
 			for d in (adapter.lengths_front, adapter.lengths_back):
@@ -148,8 +148,13 @@ class Statistics(object):
 		if n > 0:
 			print("     Trimmed reads:", reads_changed, "(%5.1f%%)" % (100. * reads_changed / n))
 			print("   Total basepairs: {0:12} ({1:.1F} Mbp)".format(total_bp, total_bp/1E6))
-			s = " ({0:.2%} of total)".format(float(trimmed_bp)/total_bp) if total_bp > 0 else ''
-			print(" Trimmed basepairs: {0:12} ({1:.1F} Mbp){2}".format(trimmed_bp, trimmed_bp/1E6, s))
+			t = [ ("Quality-trimmed", quality_trimmed), ("Adapter-trimmed", trimmed_bp)]
+			if quality_trimmed < 0:
+				del t[0]
+			for what, bp in t:
+				s = " ({0:.2%} of total)".format(float(bp)/total_bp) if total_bp > 0 else ''
+				print("   {0}: {1:12} bp ({2:.1F} Mbp){3}".format(what, bp, trimmed_bp/1E6, s))
+			#print(" Trimmed basepairs: {0:12} ({1:.1F} Mbp){2}".format(trimmed_bp, trimmed_bp/1E6, s))
 			print("   Too short reads:", too_short, "(%5.1f%% of processed reads)" % (100. * too_short / n))
 			print("    Too long reads:", too_long, "(%5.1f%% of processed reads)" % (100. * too_long / n))
 		print("        Total time: %9.2f s" % self.time)
@@ -455,17 +460,16 @@ class RepeatedAdapterMatcher(object):
 		return read
 
 
-#class QualityTrimmer:
-	#"""Pipeline step that trims qualities"""
-	#def __init__(self, cutoff):
-		#self.cutoff = cutoff
+class QualityTrimmer:
+	def __init__(self, cutoff, base):
+		self.cutoff = cutoff
+		self.base = base
+		self.trimmed_bases = 0  # statistics
 
-	#def process(self, read):
-		#index = quality_trim_index(qualities, options.quality_cutoff)
-		##total_quality_trimmed += len(qualities) - index
-		#qualities = qualities[:index]
-		#seq = seq[:index]
-
+	def trimmed(self, read):
+		index = quality_trim_index(read.qualities, self.cutoff, self.base)
+		self.trimmed_bases += len(read.qualities) - index
+		return read[:index]
 
 
 def main(cmdlineargs=None):
@@ -675,7 +679,6 @@ def main(cmdlineargs=None):
 		print("You need to provide at least one adapter sequence.", file=sys.stderr)
 		return 1
 
-	#total_bases = 0
 	#total_quality_trimmed = 0
 
 	modifiers = []
@@ -691,6 +694,10 @@ def main(cmdlineargs=None):
 		modifiers.append(DoubleEncoder())
 	if options.zero_cap:
 		modifiers.append(ZeroCapper(quality_base=options.quality_base))
+	if options.quality_cutoff > 0:
+		quality_trimmer = QualityTrimmer(options.quality_cutoff, options.quality_base)
+	else:
+		quality_trimmer = None
 
 	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times,
 				options.wildcard_file, options.info_file)
@@ -705,11 +712,8 @@ def main(cmdlineargs=None):
 		for read in reader:
 			n += 1
 			total_bp += len(read.sequence)
-			#total_bases += len(qualities)
-			if options.quality_cutoff > 0:
-				index = quality_trim_index(read.qualities, options.quality_cutoff, options.quality_base)
-				read = read[:index]
-
+			if quality_trimmer:
+				read = quality_trimmer.trimmed(read)
 			matches = adapter_matcher.find_match(read)
 			if len(matches) > 0:
 				read = adapter_matcher.cut(matches)
@@ -748,9 +752,10 @@ def main(cmdlineargs=None):
 	# send statistics to stderr if result was sent to stdout
 	stat_file = sys.stderr if options.output is None else None
 
+	total_quality_trimmed = quality_trimmer.trimmed_bases if quality_trimmer else -1
 	stats.print_statistics(
-		n, total_bp, adapter_matcher.reads_changed, options.error_rate,
-		readfilter.too_short, readfilter.too_long, file=stat_file)
+		n, total_bp, total_quality_trimmed, adapter_matcher.reads_changed,
+		options.error_rate, readfilter.too_short, readfilter.too_long, file=stat_file)
 
 	return 0
 
