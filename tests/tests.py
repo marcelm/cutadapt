@@ -264,3 +264,6 @@ def test_info_file():
 	infotmp = dpath("infotmp.txt")
 	run("--info-file infotmp.txt -a GCCTAACTTCTTAGACTGCCTTAAGGACGT", "illumina.fastq", "illumina.fastq.gz")
 	os.remove(infotmp)
+
+def test_named_adapter():
+	run("-a MY_ADAPTER=GCCTAACTTCTTAGACTGCCTTAAGGACGT", "illumina.fastq", "illumina.fastq.gz")

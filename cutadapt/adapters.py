@@ -24,7 +24,7 @@ class AdapterMatch:
 	def _guess_is_front(self):
 		"""
 		Return whether this is guessed to be a front adapter.
-		
+
 		The match is assumed to be a front adapter when the first base of
 		the read is involved in the alignment to the adapter.
 		"""
@@ -58,7 +58,7 @@ class AdapterMatch:
 
 	def rest(self):
 		"""
-		Return the part of the read before this match if this is a 
+		Return the part of the read before this match if this is a
 		'front' (5') adapter,
 		return the part after the match if this is not a 'front' adapter (3').
 		This can be an empty string.
@@ -67,7 +67,7 @@ class AdapterMatch:
 			return self.read.sequence[:self.rstart]
 		else:
 			return self.read.sequence[self.rstop:]
-		
+
 
 class Adapter(object):
 	"""
@@ -95,7 +95,9 @@ class Adapter(object):
 		to match any character in the read (at zero cost).
 	"""
 	def __init__(self, sequence, where, max_error_rate, min_overlap=3,
-			match_read_wildcards=False, match_adapter_wildcards=False):
+			match_read_wildcards=False, match_adapter_wildcards=False,
+			name=None):
+		self.name = name
 		self.sequence = sequence.upper()
 		self.where = where
 		self.max_error_rate = max_error_rate
@@ -125,7 +127,7 @@ class Adapter(object):
 	def __repr__(self):
 		match_read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)
 		match_adapter_wildcards = bool(align.ALLOW_WILDCARD_SEQ1 & self.wildcard_flags)
-		return '<Adapter(sequence="{sequence}", where={where}, '\
+		return '<Adapter(name="{name}", sequence="{sequence}", where={where}, '\
 			'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
 			'match_read_wildcards={match_read_wildcards}, '\
 			'match_adapter_wildcards={match_adapter_wildcards})>'.format(
@@ -148,7 +150,7 @@ class Adapter(object):
 			pos = read_seq.find(self.sequence)
 		if pos >= 0:
 			match = AdapterMatch(
-				0, len(self.sequence), pos, pos + len(self.sequence), 
+				0, len(self.sequence), pos, pos + len(self.sequence),
 				len(self.sequence), 0, self._front_flag, self, read)
 		else:
 			# try approximate matching
@@ -187,8 +189,8 @@ class Adapter(object):
 
 
 class ColorspaceAdapter(Adapter):
-	def __init__(self, *args):
-		super(ColorspaceAdapter, self).__init__(*args)
+	def __init__(self, *args, **kwargs):
+		super(ColorspaceAdapter, self).__init__(*args, **kwargs)
 		has_nucleotide_seq = False
 		if set(self.sequence) <= set('ACGT'):
 			# adapter was given in basespace
@@ -208,7 +210,7 @@ class ColorspaceAdapter(Adapter):
 		pos = 0 if read.sequence.startswith(asequence) else -1
 		if pos >= 0:
 			match = AdapterMatch(
-				0, len(asequence), pos, pos + len(asequence), 
+				0, len(asequence), pos, pos + len(asequence),
 				len(asequence), 0, self._front_flag, self, read)
 		else:
 			# try approximate matching

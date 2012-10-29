@@ -132,6 +132,19 @@ to be used (gzip compression is auto-detected by looking at the file name):
     cutadapt -a ADAPTER-SEQUENCE -o output.fastq.gz input.fastq.gz
 
 
+Named adapters
+--------------
+
+You can give names to the adapters. The names are shown in addition to
+the sequences themselves in the statistics overview when the program
+has finished trimming the reads. You can use it like this:
+
+    cutadapt -a My_adapter=ACGTAA input.fastq > output.fastq
+
+Here, the actual adapter sequence is `ACGTAA` and the name assigned
+to it is `My_adapter`.
+
+
 FASTA file
 ----------
 
@@ -376,6 +389,7 @@ v1.2
 * Between 10% and 30% faster writing of gzip-compressed output files.
 * Support 5' adapters in color space, even when no primer trimming is requested.
 * Add the `--info-file' option, which has a line for each found adapter.
+* Named adapters are possible. Usage: `-a My_Adapter=ACCGTA` assigns the name "My_adapter".
 
 v1.1
 ----

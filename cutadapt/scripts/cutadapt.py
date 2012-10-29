@@ -170,7 +170,11 @@ class Statistics(object):
 
 			print("=" * 3, "Adapter", index+1, "=" * 3)
 			print()
-			print("Adapter '%s'," % adapter.sequence, "length %d," % len(adapter.sequence), "was trimmed", total, "times.")
+			if adapter.name:
+				name = "'{0}' ({1})".format(adapter.name, adapter.sequence)
+			else:
+				name = "'{0}'".format(adapter.sequence)
+			print("Adapter {0}, length {1}, was trimmed {2} times.".format(name, len(adapter.sequence), total))
 			if where == ANYWHERE:
 				print(total_front, "times, it overlapped the 5' end of a read")
 				print(total_back, "times, it overlapped the 3' end or was within the read")
@@ -653,6 +657,12 @@ def main(cmdlineargs=None):
 	ADAPTER_CLASS = ColorspaceAdapter if options.colorspace else Adapter
 	def append_adapters(adapter_list, where):
 		for seq in adapter_list:
+			fields = seq.split('=', 1)
+			if len(fields) > 1:
+				name, seq = fields
+				name = name.strip()
+			else:
+				name = None
 			seq = seq.strip()
 			w = where
 			if w == FRONT and seq.startswith('^'):
@@ -662,7 +672,7 @@ def main(cmdlineargs=None):
 				parser.error("The adapter sequence is empty")
 			adapter = ADAPTER_CLASS(seq, w, options.error_rate,
 				options.overlap, options.match_read_wildcards,
-				options.match_adapter_wildcards)
+				options.match_adapter_wildcards, name=name)
 			adapters.append(adapter)
 
 	append_adapters(options.adapters, BACK)
