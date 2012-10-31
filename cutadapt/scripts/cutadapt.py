@@ -507,11 +507,11 @@ def process_reads(reader, adapter_matcher, quality_trimmer, modifiers,
 				twoheaders = reader.twoheaders
 			except AttributeError:
 				twoheaders = False
+		if not readfilter.keep(read, trimmed):
+			continue
 		if trim_primer:
 			read = read[1:]
 			read.primer = ''
-		if not readfilter.keep(read, trimmed):
-			continue
 		write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
 	return (n, total_bp)
 
