@@ -197,7 +197,7 @@ py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
 			column[i].cost = cost;
 			column[i].origin = origin;
 			column[i].matches = matches;
-			
+
 		}
 		while (column[last].cost > k) {
 			last--;
@@ -212,7 +212,7 @@ py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
 				int length = m + min(column[m].origin, 0);
 				int cost = column[m].cost;
 				int matches = column[m].matches;
-				if (cost <= length * error_rate && (matches > best_matches || (matches == best_matches && cost <= best_cost))) {
+				if (cost <= length * error_rate && (matches > best_matches || (matches == best_matches && cost < best_cost))) {
 					// update
 					best_matches = matches;
 					best_cost = cost;
@@ -221,7 +221,7 @@ py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
 					best_j = j;
 				}
 			}
-			
+
 		}
 		// column finished
 	}
@@ -232,7 +232,7 @@ py_globalalign_locate(PyObject *self UNUSED, PyObject *args)
 			int length = i + min(column[i].origin, 0);
 			int cost = column[i].cost;
 			int matches = column[i].matches;
-			if (cost <= length * error_rate && (matches > best_matches || (matches == best_matches && cost <= best_cost))) {
+			if (cost <= length * error_rate && (matches > best_matches || (matches == best_matches && cost < best_cost))) {
 				// update best
 				best_matches = matches;
 				best_cost = cost;
