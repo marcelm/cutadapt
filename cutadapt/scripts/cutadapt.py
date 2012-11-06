@@ -476,6 +476,44 @@ class QualityTrimmer:
 		return read[:index]
 
 
+def process_reads(reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, rest_writer, trim_primer):
+	"""
+	Loop over the reader, find adapters, trim reads and output modified
+	reads.
+	Return a tuple (number_of_processed_reads, number_of_processed_basepairs)
+	"""
+	n = 0 # no. of processed reads
+	total_bp = 0
+	twoheaders = None
+	for read in reader:
+		n += 1
+		total_bp += len(read.sequence)
+		if quality_trimmer:
+			read = quality_trimmer.trimmed(read)
+		matches = adapter_matcher.find_match(read)
+		if len(matches) > 0:
+			read = adapter_matcher.cut(matches)
+			trimmed = True
+		else:
+			trimmed = False
+		if rest_writer:
+			rest_writer.write(matches[-1])
+		for modifier in modifiers:
+			read = modifier.apply(read)
+		if twoheaders is None:
+			try:
+				twoheaders = reader.twoheaders
+			except AttributeError:
+				twoheaders = False
+		if trim_primer:
+			read = read[1:]
+			read.primer = ''
+		if not readfilter.keep(read, trimmed):
+			continue
+		write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
+	return (n, total_bp)
+
+
 def main(cmdlineargs=None):
 	"""Main function that evaluates command-line parameters and contains the main loop over all reads."""
 	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
@@ -714,42 +752,13 @@ def main(cmdlineargs=None):
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, options.trim_primer)
 	stats = Statistics(adapters)
-	n = 0 # no. of processed reads
-	total_bp = 0
 	try:
-		twoheaders = None
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
-		for read in reader:
-			n += 1
-			total_bp += len(read.sequence)
-			if quality_trimmer:
-				read = quality_trimmer.trimmed(read)
-			matches = adapter_matcher.find_match(read)
-			if len(matches) > 0:
-				read = adapter_matcher.cut(matches)
-				trimmed = True
-			else:
-				trimmed = False
-			if rest_writer:
-				rest_writer.write(matches[-1])
-			for modifier in modifiers:
-				read = modifier.apply(read)
-			if twoheaders is None:
-				try:
-					twoheaders = reader.twoheaders
-				except AttributeError:
-					twoheaders = False
-			if options.trim_primer:
-				read = read[1:]
-				read.primer = ''
-			if not readfilter.keep(read, trimmed):
-				continue
-			try:
-				write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
-			except IOError as e:
-				if e.errno == errno.EPIPE:
-					return 1
-				raise
+		(n, total_bp) = process_reads(reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, rest_writer, options.trim_primer)
+	except IOError as e:
+		if e.errno == errno.EPIPE:
+			return 1
+		raise
 	except seqio.FormatError as e:
 		print("Error:", e, file=sys.stderr)
 		return 1
