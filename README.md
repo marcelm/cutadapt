@@ -390,6 +390,8 @@ v1.2
 * Support 5' adapters in color space, even when no primer trimming is requested.
 * Add the `--info-file' option, which has a line for each found adapter.
 * Named adapters are possible. Usage: `-a My_Adapter=ACCGTA` assigns the name "My_adapter".
+* Improve alignment algorithm for better poly-A trimming when there are sequencing errors.
+  Previously, not the longest possible poly-A tail would be trimmed.
 
 v1.1
 ----
