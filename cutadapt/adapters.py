@@ -93,6 +93,8 @@ class Adapter(object):
 
 	match_adapter_wildcards -- Whether wildcards in the adapter are allowed
 		to match any character in the read (at zero cost).
+
+	name -- optional name of the adapter
 	"""
 	def __init__(self, sequence, where, max_error_rate, min_overlap=3,
 			match_read_wildcards=False, match_adapter_wildcards=False,
@@ -103,9 +105,10 @@ class Adapter(object):
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
 		self.wildcard_flags = 0
+		self.match_adapter_wildcards = match_adapter_wildcards and 'N' in self.sequence
 		if match_read_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
-		if match_adapter_wildcards and 'N' in self.sequence:
+		if self.match_adapter_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ1
 		# redirect to appropriate trimmed() function depending on
 		# adapter type
@@ -141,13 +144,14 @@ class Adapter(object):
 
 		Return None if the minimum overlap length is not met or the error rate is too high.
 		"""
-		# try to find an exact match first
-		# TODO do not do this when wildcards are allowed!
 		read_seq = read.sequence.upper()
-		if self.where == PREFIX:
-			pos = 0 if read_seq.startswith(self.sequence) else -1
-		else:
-			pos = read_seq.find(self.sequence)
+		pos = -1
+		# try to find an exact match first unless wildcards are allowed
+		if not self.match_adapter_wildcards:
+			if self.where == PREFIX:
+				pos = 0 if read_seq.startswith(self.sequence) else -1
+			else:
+				pos = read_seq.find(self.sequence)
 		if pos >= 0:
 			match = AdapterMatch(
 				0, len(self.sequence), pos, pos + len(self.sequence),
