@@ -149,18 +149,17 @@ class Statistics(object):
 
 		if n > 0:
 			print("     Trimmed reads: {0:12} ({1:.1%})".format(reads_changed, reads_changed / n))
-			t = [ ("Quality-trimmed", quality_trimmed), ("Adapter-trimmed", trimmed_bp)]
+			t = [ ("Quality-trimmed", quality_trimmed), ("  Trimmed bases", trimmed_bp)]
 			if quality_trimmed < 0:
 				del t[0]
 			for what, bp in t:
 				s = " ({0:.2%} of total)".format(float(bp)/total_bp) if total_bp > 0 else ''
 				print("   {0}: {1:12} bp ({2:.1F} Mbp){3}".format(what, bp, trimmed_bp/1E6, s))
-			#print(" Trimmed basepairs: {0:12} ({1:.1F} Mbp){2}".format(trimmed_bp, trimmed_bp/1E6, s))
-			print("   Too short reads:", too_short, "(%5.1f%% of processed reads)" % (100. * too_short / n))
-			print("    Too long reads:", too_long, "(%5.1f%% of processed reads)" % (100. * too_long / n))
-		print("        Total time: %9.2f s" % self.time)
+			print("   Too short reads: {0:12} ({1:.1%} of processed reads)".format(too_short, too_short / n))
+			print("    Too long reads: {0:12} ({1:.1%} of processed reads)".format(too_long, too_long / n))
+		print("        Total time: {0:9.2F} s".format(self.time))
 		if n > 0:
-			print("     Time per read: %9.2f ms" % (1000. * self.time / n))
+			print("     Time per read: {0:9.2F} ms".format(1000. * self.time / n))
 		print()
 		for index, adapter in enumerate(self.adapters):
 			total_front = sum(adapter.lengths_front.values())
@@ -203,6 +202,7 @@ class Statistics(object):
 		sys.stdout = old_stdout
 
 
+# TODO make this a class and add a trim_primer parameter
 def write_read(read, outfile, twoheaders=False):
 	"""
 	Write read in either FASTA or FASTQ format
