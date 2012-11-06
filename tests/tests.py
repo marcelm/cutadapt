@@ -264,7 +264,7 @@ def test_strip_suffix():
 # GCCTAACTTCTTAGACTGCCTTAAGGACGT (fourth base is different)
 def test_info_file():
 	infotmp = dpath("infotmp.txt")
-	run("--info-file infotmp.txt -a GCCGAACTTCTTAGACTGCCTTAAGGACGT", "illumina.fastq", "illumina.fastq.gz")
+	run("--info-file {0} -a GCCGAACTTCTTAGACTGCCTTAAGGACGT".format(infotmp), "illumina.fastq", "illumina.fastq.gz")
 	os.remove(infotmp)
 
 def test_named_adapter():
