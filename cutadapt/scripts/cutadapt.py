@@ -138,16 +138,17 @@ class Statistics(object):
 			sys.stdout = file
 		print("cutadapt version", __version__)
 		print("Command line parameters:", " ".join(sys.argv[1:]))
-		print("Maximum error rate: %.2f%%" % (error_rate * 100.))
-		print("   Processed reads:", n)
+		print("Maximum error rate: {0:.2%}".format(error_rate))
+		print("   No. of adapters:", len(self.adapters))
+		print("   Processed reads: {0:12}".format(n))
+		print("   Processed bases: {0:12} bp ({1:.1F} Mbp)".format(total_bp, total_bp/1E6))
 		trimmed_bp = 0
 		for adapter in self.adapters:
 			for d in (adapter.lengths_front, adapter.lengths_back):
 				trimmed_bp += sum( seqlen*count for (seqlen, count) in d.items() )
 
 		if n > 0:
-			print("     Trimmed reads:", reads_changed, "(%5.1f%%)" % (100. * reads_changed / n))
-			print("   Total basepairs: {0:12} ({1:.1F} Mbp)".format(total_bp, total_bp/1E6))
+			print("     Trimmed reads: {0:12} ({1:.1%})".format(reads_changed, reads_changed / n))
 			t = [ ("Quality-trimmed", quality_trimmed), ("Adapter-trimmed", trimmed_bp)]
 			if quality_trimmed < 0:
 				del t[0]
@@ -476,10 +477,11 @@ class QualityTrimmer:
 		return read[:index]
 
 
-def process_reads(reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, rest_writer, trim_primer):
+def process_reads(reader, adapter_matcher, quality_trimmer, modifiers,
+		readfilter, trimmed_outfile, untrimmed_outfile, rest_writer, trim_primer):
 	"""
-	Loop over the reader, find adapters, trim reads and output modified
-	reads.
+	Loop over reads, find adapters, trim reads, apply modifiers and
+	output modified reads.
 	Return a tuple (number_of_processed_reads, number_of_processed_basepairs)
 	"""
 	n = 0 # no. of processed reads
