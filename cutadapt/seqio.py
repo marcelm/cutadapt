@@ -30,7 +30,9 @@ class Sequence(object):
 		self.sequence = sequence
 		self.qualities = qualities
 		if qualities is not None and len(qualities) != len(sequence):
-			raise ValueError("Length of quality sequence and length of read do not match ({0}!={1})".format(len(qualities), len(sequence)))
+			rname = _shorten(name)
+			raise ValueError("In read named '{0}': length of quality sequence and length of read do not match ({1}!={2})".format(
+				rname, len(qualities), len(sequence)))
 
 	def __getitem__(self, key):
 		"""slicing"""
@@ -70,8 +72,10 @@ class ColorspaceSequence(Sequence):
 		if not self.primer in ('A', 'C', 'G', 'T'):
 			raise ValueError("primer base is '{0}', but it should be one of A, C, G, T".format(self.primer))
 		if qualities is not None and len(self.sequence) != len(qualities):
-			raise ValueError("Length of colorspace quality sequence and length of read do not match (primer: {0}, lengths: {0}!={1})"\
-				.format(self.primer, len(qualities), len(sequence)))
+			rname = _shorten(name)
+			raise ValueError("In read named '{0}': length of colorspace quality "
+				"sequence and length of read do not match (primer: {1}, "
+				"lengths: {2}!={3})".format(name, self.primer, len(qualities), len(sequence)))
 
 	def __repr__(self):
 		qstr = ''
