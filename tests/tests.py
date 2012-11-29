@@ -81,6 +81,11 @@ def test_discard():
 	run("-b TTAGACATATCTCCGTCG --discard", "discard.fastq", "small.fastq")
 
 
+def test_discard_untrimmed():
+	'''--discard-untrimmed'''
+	run('-b CAAGAT --discard-untrimmed', 'discard-untrimmed.fastq', 'small.fastq')
+
+
 def test_plus():
 	'''test if sequence name after the "+" is retained'''
 	run("-e 0.12 -b TTAGACATATCTCCGTCG", "plus.fastq", "plus.fastq")
@@ -260,7 +265,7 @@ def test_issue_46():
 def test_strip_suffix():
 	run("--strip-suffix _sequence -a XXXXXXX", "stripped.fasta", "simple.fasta")
 
-# note: the actual adapter sequence in the illumina.fastq.gz data set is 
+# note: the actual adapter sequence in the illumina.fastq.gz data set is
 # GCCTAACTTCTTAGACTGCCTTAAGGACGT (fourth base is different)
 def test_info_file():
 	infotmp = dpath("infotmp.txt")

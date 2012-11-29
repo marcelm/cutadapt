@@ -250,11 +250,12 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 class ReadFilter(object):
 	"""Filter reads according to length and according to whether any adapter matches."""
 
-	def __init__(self, minimum_length, maximum_length, too_short_outfile, discard_trimmed, trim_primer):
+	def __init__(self, minimum_length, maximum_length, too_short_outfile, discard_trimmed, discard_untrimmed, trim_primer):
 		self.minimum_length = minimum_length
 		self.maximum_length = maximum_length
 		self.too_short_outfile = too_short_outfile
 		self.discard_trimmed = discard_trimmed
+		self.discard_untrimmed = discard_untrimmed
 		self.trim_primer = trim_primer
 		self.too_long = 0
 		self.too_short = 0
@@ -264,6 +265,8 @@ class ReadFilter(object):
 		Return whether to keep the given read.
 		"""
 		if self.discard_trimmed and trimmed:
+			return False
+		if self.discard_untrimmed and not trimmed:
 			return False
 		if len(read.sequence) < self.minimum_length:
 			self.too_short += 1
@@ -559,6 +562,8 @@ def main(cmdlineargs=None):
 	group = OptionGroup(parser, "Options for filtering of processed reads")
 	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
 		help="Discard reads that contain the adapter instead of trimming them. Also use -O in order to avoid throwing away too many randomly matching reads!")
+	group.add_option("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
+		help="Discard reads that do not contain the adapter.")
 	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
 		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted (default: 0).")
 	group.add_option("-M", "--maximum-length", type=int, default=sys.maxsize, metavar="LENGTH",
@@ -752,7 +757,8 @@ def main(cmdlineargs=None):
 	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times,
 				options.wildcard_file, options.info_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
-		too_short_outfile, options.discard_trimmed, options.trim_primer)
+		too_short_outfile, options.discard_trimmed, options.discard_untrimmed,
+		options.trim_primer)
 	stats = Statistics(adapters)
 	try:
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
