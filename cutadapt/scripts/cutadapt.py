@@ -525,7 +525,8 @@ def main(cmdlineargs=None):
 
 	parser.add_option("-f", "--format", default=None,
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
-		"Ignored when reading csfasta/qual files (default: auto-detect from file name extension).")
+		"Ignored when reading csfasta/qual files (default: auto-detect "
+		"from file name extension).")
 
 	group = OptionGroup(parser, "Options that influence how the adapters are found",
 		description="Each of the following three parameters (-a, -b, -g) can be used "
@@ -544,7 +545,7 @@ def main(cmdlineargs=None):
 		"5' end of the read (it is a prefix of the read). A non-anchored adapter may "
 		"appear partially at the 5' end, or it may occur within the read. If it is "
 		"found within a read, the sequence preceding the adapter is also trimmed. "
-		"In all cases the adapter itself is trimmed.")
+		"In all cases, the adapter itself is trimmed.")
 	group.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
@@ -627,7 +628,7 @@ def main(cmdlineargs=None):
 		help="Search for TAG followed by a decimal number in the name of the read "
 			"(description/comment field of the FASTA or FASTQ file). Replace the "
 			"decimal number with the correct length of the trimmed read. "
-			"For example, use --length-tag 'length=' to search for fields "
+			"For example, use --length-tag 'length=' to correct fields "
 			"like 'length=123'.")
 	group.add_option("--zero-cap", "-z", action='store_true', default=False,
 		help="Change negative quality values to zero (workaround to avoid segmentation faults in BWA)")
