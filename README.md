@@ -100,12 +100,12 @@ The basic command-line for cutadapt looks like this:
 
     cutadapt -a AACCGGTT input.fastq > output.fastq
 
-The adapter sequence is given with `-a` option. Replace
+The adapter sequence is given with the `-a` option. Replace
 AACCGGTT with your actual adapter sequence.
 
 input.fastq is a file with reads. The result will be written
-to standard output. Use redirection with `>` (or cutadapt's `-o`
-option) to write the output to a file.
+to standard output. Use redirection with `>` (or the `-o` option) to
+write the output to a file.
 
 By default, the output file contains all reads, even those
 that did not contain an adapter. (See also the `--discard` option.)
@@ -392,6 +392,7 @@ v1.2
 * Named adapters are possible. Usage: `-a My_Adapter=ACCGTA` assigns the name "My_adapter".
 * Improve alignment algorithm for better poly-A trimming when there are sequencing errors.
   Previously, not the longest possible poly-A tail would be trimmed.
+* James Casbon contributed the `--discard-untrimmed` option.
 
 v1.1
 ----
