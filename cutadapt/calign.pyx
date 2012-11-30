@@ -203,7 +203,7 @@ def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SE
 					best_j = j
 		# column finished
 
-	if flags & STOP_WITHIN_SEQ1:
+	if max_n == n and flags & STOP_WITHIN_SEQ1:
 		# search in last column # TODO last?
 		for i in range(0, m+1):
 			length = i + min(column[i].origin, 0)

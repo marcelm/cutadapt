@@ -556,8 +556,6 @@ To Do / Ideas
   * `--progress`
   * run pylint, pychecker
   * print adapter fragments in statistics
-  * `--discard-uncut` (discard sequences in which no adapter was found)
-  * no. of trimmed nucleotides
   * length histogram
   * refactor read_sequences (use classes)
   * put write_read into a Fast(a|q)Writer class?
@@ -566,5 +564,5 @@ To Do / Ideas
   * check whether input is FASTQ although -f fasta is given
   * close on StopIteration
   * search for adapters in the order in which they are given on the command line
-  * re-write alignment in Cython
+  * more tests for the alignment algorithm
 
