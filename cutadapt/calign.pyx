@@ -13,7 +13,7 @@ DEF INSERTION_COST = 1
 DEF DELETION_COST = 1
 DEF MATCH_COST = 0
 DEF MISMATCH_COST = 1
-
+DEF WILDCARD_CHAR = 'N'
 
 # structure for a DP matrix entry
 ctypedef struct Entry:
@@ -115,14 +115,18 @@ def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SE
 	cdef int cost_deletion
 	cdef int cost_insertion
 	cdef int origin, cost, matches
+	cdef int length
+	cdef int wildcard1 = degenerate & ALLOW_WILDCARD_SEQ1
+	cdef int wildcard2 = degenerate & ALLOW_WILDCARD_SEQ2
+	cdef int tmp, tmp2
 	cdef Entry tmp_entry
 
 	if flags & START_WITHIN_SEQ1:
 		last = m
 
 	# determine largest column we need to compute
-	max_n = n
-	if flags & START_WITHIN_SEQ2:
+	cdef int max_n = n
+	if not (flags & START_WITHIN_SEQ2):
 		# costs can only get worse after column m
 		max_n = min(max_n, m+k)
 	# iterate over columns
@@ -140,14 +144,21 @@ def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SE
 			column[0].origin = 0
 			column[0].matches = 0
 		for i in range(1, last + 1):
-			match = (s1[i-1] == s2[j-1]) \
-					or ((degenerate & ALLOW_WILDCARD_SEQ1) and (s1[i-1] == 'N')) \
-					or ((degenerate & ALLOW_WILDCARD_SEQ2) and (s2[j-1] == 'N'))
+			# the following code is ugly due to a bug in Cython up to at least 0.17.2
+			match = (s1[i-1] == s2[j-1])
+			tmp = wildcard1
+			tmp2 = (s1[i-1] == WILDCARD_CHAR)
+			tmp = tmp and tmp2
+			match = match or tmp
+			tmp = wildcard2
+			tmp2 = (s2[j-1] == WILDCARD_CHAR)
+			tmp = tmp and tmp2
+			match = match or tmp
+
 			cost_diag = tmp_entry.cost + (MATCH_COST if match else MISMATCH_COST)
 			cost_deletion = column[i].cost + DELETION_COST
 			cost_insertion = column[i-1].cost + INSERTION_COST
 
-			origin, cost, matches
 			if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
 				# MATCH or MISMATCH
 				cost = cost_diag
