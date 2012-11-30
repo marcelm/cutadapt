@@ -118,7 +118,6 @@ def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SE
 	cdef int length
 	cdef int wildcard1 = degenerate & ALLOW_WILDCARD_SEQ1
 	cdef int wildcard2 = degenerate & ALLOW_WILDCARD_SEQ2
-	cdef int tmp, tmp2
 	cdef Entry tmp_entry
 
 	if flags & START_WITHIN_SEQ1:
@@ -144,16 +143,11 @@ def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SE
 			column[0].origin = 0
 			column[0].matches = 0
 		for i in range(1, last + 1):
-			# the following code is ugly due to a bug in Cython up to at least 0.17.2
-			match = (s1[i-1] == s2[j-1])
-			tmp = wildcard1
-			tmp2 = (s1[i-1] == WILDCARD_CHAR)
-			tmp = tmp and tmp2
-			match = match or tmp
-			tmp = wildcard2
-			tmp2 = (s2[j-1] == WILDCARD_CHAR)
-			tmp = tmp and tmp2
-			match = match or tmp
+			# The casts to <int> are necessary due to a bug in Cython up to at least 0.17.2.
+			# If they are removed, this will not be compiled to pure C.
+			match = <int>(s1[i-1] == s2[j-1]) or \
+				(<int>wildcard1 and <int>(s1[i-1] == WILDCARD_CHAR)) or \
+				(<int>wildcard2 and <int>(s2[j-1] == WILDCARD_CHAR))
 
 			cost_diag = tmp_entry.cost + (MATCH_COST if match else MISMATCH_COST)
 			cost_deletion = column[i].cost + DELETION_COST
