@@ -519,8 +519,14 @@ def process_reads(reader, adapter_matcher, quality_trimmer, modifiers,
 	return (n, total_bp)
 
 
-def main(cmdlineargs=None):
-	"""Main function that evaluates command-line parameters and contains the main loop over all reads."""
+def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
+	"""
+	Main function that evaluates command-line parameters and iterates
+	over all reads.
+
+	trimmed_outfile is the default output file to which trimmed reads
+	are sent. It can be overriden by using the '-o' parameter.
+	"""
 	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
 
 	parser.add_option("-f", "--format", default=None,
@@ -656,7 +662,6 @@ def main(cmdlineargs=None):
 		parser.error("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
 
 	# default output files (overwritten below)
-	trimmed_outfile = sys.stdout # reads with adapters go here
 	too_short_outfile = None # too short reads go here
 	#too_long_outfile = None # too long reads go here
 
@@ -734,8 +739,6 @@ def main(cmdlineargs=None):
 	if not adapters and options.quality_cutoff == 0:
 		print("You need to provide at least one adapter sequence.", file=sys.stderr)
 		return 1
-
-	#total_quality_trimmed = 0
 
 	modifiers = []
 	if options.length_tag:
