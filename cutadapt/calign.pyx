@@ -120,8 +120,13 @@ def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SE
 	if flags & START_WITHIN_SEQ1:
 		last = m
 
+	# determine largest column we need to compute
+	max_n = n
+	if flags & START_WITHIN_SEQ2:
+		# costs can only get worse after column m
+		max_n = min(max_n, m+k)
 	# iterate over columns
-	for j in range(1, n+1):
+	for j in range(1, max_n+1):
 		# remember first entry
 		tmp_entry = column[0]
 
