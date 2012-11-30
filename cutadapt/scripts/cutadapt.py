@@ -440,7 +440,8 @@ class RepeatedAdapterMatcher(object):
 				print(match.wildcards(), read.name, file=self.wildcard_file)
 
 			matches.append(match)
-			read = match.adapter.trimmed(match)
+			if t != self.times - 1:
+				read = match.adapter.trimmed(match)
 		return matches
 
 
