@@ -12,11 +12,12 @@ try:
 except ImportError:
 	# no Cython available
 	cmdclass = { }
-	align_module = Extension('cutadapt.calign', sources = [ 'cutadapt/calign.c' ])
+	align_sources = [ 'cutadapt/calign.c' ]
 else:
 	cmdclass = { 'build_ext' : build_ext }
-	align_module = Extension('cutadapt.calign', sources = [ 'cutadapt/calign.pyx' ])
+	align_sources = [ 'cutadapt/calign.pyx' ]
 
+align_module = Extension('cutadapt.calign', sources=align_sources)
 
 setup(
 	name = 'cutadapt',
