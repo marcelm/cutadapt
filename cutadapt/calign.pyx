@@ -143,11 +143,12 @@ def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SE
 			column[0].origin = 0
 			column[0].matches = 0
 		for i in range(1, last + 1):
-			# The casts to <int> are necessary due to a bug in Cython up to at least 0.17.2.
-			# If they are removed, this will not be compiled to pure C.
-			match = <int>(s1[i-1] == s2[j-1]) or \
-				(<int>wildcard1 and <int>(s1[i-1] == WILDCARD_CHAR)) or \
-				(<int>wildcard2 and <int>(s2[j-1] == WILDCARD_CHAR))
+			if s1[i-1] == s2[j-1] or \
+					(wildcard1 and s1[i-1] == WILDCARD_CHAR) or \
+					(wildcard2 and s2[j-1] == WILDCARD_CHAR):
+				match = 1
+			else:
+				match = 0
 
 			cost_diag = tmp_entry.cost + (MATCH_COST if match else MISMATCH_COST)
 			cost_deletion = column[i].cost + DELETION_COST
