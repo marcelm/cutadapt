@@ -116,90 +116,76 @@ def print_histogram(d, adapter_length, n, error_rate):
 	print()
 
 
-class Statistics(object):
-	"""Store statistics about reads and adapters"""
+def print_statistics(adapters, time, n, total_bp, quality_trimmed, reads_changed,
+		error_rate, too_short, too_long, file=None):
+	"""Print summary to file"""
+	old_stdout = sys.stdout
+	if file is not None:
+		sys.stdout = file
+	print("cutadapt version", __version__)
+	print("Command line parameters:", " ".join(sys.argv[1:]))
+	print("Maximum error rate: {0:.2%}".format(error_rate))
+	print("   No. of adapters:", len(adapters))
+	print("   Processed reads: {0:12}".format(n))
+	print("   Processed bases: {0:12} bp ({1:.1F} Mbp)".format(total_bp, total_bp/1E6))
+	trimmed_bp = 0
+	for adapter in adapters:
+		for d in (adapter.lengths_front, adapter.lengths_back):
+			trimmed_bp += sum( seqlen*count for (seqlen, count) in d.items() )
 
-	def __init__(self, adapters):
-		self._start_time = time.clock()
-		self.time = None
-		self.adapters = adapters
+	if n > 0:
+		print("     Trimmed reads: {0:12} ({1:.1%})".format(reads_changed, reads_changed / n))
+		t = [ ("Quality-trimmed", quality_trimmed), ("  Trimmed bases", trimmed_bp)]
+		if quality_trimmed < 0:
+			del t[0]
+		for what, bp in t:
+			s = " ({0:.2%} of total)".format(float(bp)/total_bp) if total_bp > 0 else ''
+			print("   {0}: {1:12} bp ({2:.1F} Mbp){3}".format(what, bp, trimmed_bp/1E6, s))
+		print("   Too short reads: {0:12} ({1:.1%} of processed reads)".format(too_short, too_short / n))
+		print("    Too long reads: {0:12} ({1:.1%} of processed reads)".format(too_long, too_long / n))
+	print("        Total time: {0:9.2F} s".format(time))
+	if n > 0:
+		print("     Time per read: {0:9.2F} ms".format(1000. * time / n))
+	print()
+	for index, adapter in enumerate(adapters):
+		total_front = sum(adapter.lengths_front.values())
+		total_back = sum(adapter.lengths_back.values())
+		total = total_front + total_back
+		where = adapter.where
+		assert where == ANYWHERE or (where == BACK and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
 
-	def stop_clock(self):
-		"""Stop the timer that was automatically started when the class was instantiated."""
-		self.time = time.clock() - self._start_time
-
-	def print_statistics(self, n, total_bp, quality_trimmed, reads_changed,
-			error_rate, too_short, too_long, file=None):
-		"""Print summary to file"""
-		if self.time is None:
-			self.stop_clock()
-		old_stdout = sys.stdout
-		if file is not None:
-			sys.stdout = file
-		print("cutadapt version", __version__)
-		print("Command line parameters:", " ".join(sys.argv[1:]))
-		print("Maximum error rate: {0:.2%}".format(error_rate))
-		print("   No. of adapters:", len(self.adapters))
-		print("   Processed reads: {0:12}".format(n))
-		print("   Processed bases: {0:12} bp ({1:.1F} Mbp)".format(total_bp, total_bp/1E6))
-		trimmed_bp = 0
-		for adapter in self.adapters:
-			for d in (adapter.lengths_front, adapter.lengths_back):
-				trimmed_bp += sum( seqlen*count for (seqlen, count) in d.items() )
-
-		if n > 0:
-			print("     Trimmed reads: {0:12} ({1:.1%})".format(reads_changed, reads_changed / n))
-			t = [ ("Quality-trimmed", quality_trimmed), ("  Trimmed bases", trimmed_bp)]
-			if quality_trimmed < 0:
-				del t[0]
-			for what, bp in t:
-				s = " ({0:.2%} of total)".format(float(bp)/total_bp) if total_bp > 0 else ''
-				print("   {0}: {1:12} bp ({2:.1F} Mbp){3}".format(what, bp, trimmed_bp/1E6, s))
-			print("   Too short reads: {0:12} ({1:.1%} of processed reads)".format(too_short, too_short / n))
-			print("    Too long reads: {0:12} ({1:.1%} of processed reads)".format(too_long, too_long / n))
-		print("        Total time: {0:9.2F} s".format(self.time))
-		if n > 0:
-			print("     Time per read: {0:9.2F} ms".format(1000. * self.time / n))
+		print("=" * 3, "Adapter", index+1, "=" * 3)
 		print()
-		for index, adapter in enumerate(self.adapters):
-			total_front = sum(adapter.lengths_front.values())
-			total_back = sum(adapter.lengths_back.values())
-			total = total_front + total_back
-			where = adapter.where
-			assert where == ANYWHERE or (where == BACK and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
-
-			print("=" * 3, "Adapter", index+1, "=" * 3)
+		if adapter.name:
+			name = "'{0}' ({1})".format(adapter.name, adapter.sequence)
+		else:
+			name = "'{0}'".format(adapter.sequence)
+		print("Adapter {0}, length {1}, was trimmed {2} times.".format(name, len(adapter.sequence), total))
+		if where == ANYWHERE:
+			print(total_front, "times, it overlapped the 5' end of a read")
+			print(total_back, "times, it overlapped the 3' end or was within the read")
 			print()
-			if adapter.name:
-				name = "'{0}' ({1})".format(adapter.name, adapter.sequence)
-			else:
-				name = "'{0}'".format(adapter.sequence)
-			print("Adapter {0}, length {1}, was trimmed {2} times.".format(name, len(adapter.sequence), total))
-			if where == ANYWHERE:
-				print(total_front, "times, it overlapped the 5' end of a read")
-				print(total_back, "times, it overlapped the 3' end or was within the read")
-				print()
-				print_error_ranges(len(adapter), adapter.max_error_rate)
-				print("Lengths of removed sequences (5')")
-				print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate)
-				print()
-				print("Lengths of removed sequences (3' or within)")
-				print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate)
-			elif where in (FRONT, PREFIX):
-				print()
-				print_error_ranges(len(adapter), adapter.max_error_rate)
-				print("Lengths of removed sequences")
-				print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate)
-			else:
-				assert where == BACK
-				print()
-				print_error_ranges(len(adapter), adapter.max_error_rate)
-				print("Lengths of removed sequences")
-				print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate)
+			print_error_ranges(len(adapter), adapter.max_error_rate)
+			print("Lengths of removed sequences (5')")
+			print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate)
+			print()
+			print("Lengths of removed sequences (3' or within)")
+			print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate)
+		elif where in (FRONT, PREFIX):
+			print()
+			print_error_ranges(len(adapter), adapter.max_error_rate)
+			print("Lengths of removed sequences")
+			print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate)
+		else:
+			assert where == BACK
+			print()
+			print_error_ranges(len(adapter), adapter.max_error_rate)
+			print("Lengths of removed sequences")
+			print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate)
 
-		if n == 0:
-			print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
-		sys.stdout = old_stdout
+	if n == 0:
+		print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
+	sys.stdout = old_stdout
 
 
 # TODO make this a class and add a trim_primer parameter
@@ -764,7 +750,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, options.discard_trimmed, options.discard_untrimmed,
 		options.trim_primer)
-	stats = Statistics(adapters)
+	start_time = time.clock()
 	try:
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
 		(n, total_bp) = process_reads(reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, rest_writer, options.trim_primer)
@@ -785,7 +771,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	stat_file = sys.stderr if options.output is None else None
 
 	total_quality_trimmed = quality_trimmer.trimmed_bases if quality_trimmer else -1
-	stats.print_statistics(
+	print_statistics(adapters, time.clock() - start_time,
 		n, total_bp, total_quality_trimmed, adapter_matcher.reads_changed,
 		options.error_rate, readfilter.too_short, readfilter.too_long, file=stat_file)
 
