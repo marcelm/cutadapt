@@ -145,7 +145,7 @@ def print_statistics(adapters, time, n, total_bp, quality_trimmed, reads_changed
 		print("    Too long reads: {0:12} ({1:.1%} of processed reads)".format(too_long, too_long / n))
 	print("        Total time: {0:9.2F} s".format(time))
 	if n > 0:
-		print("     Time per read: {0:9.2F} ms".format(1000. * time / n))
+		print("     Time per read: {0:10.3F} ms".format(1000. * time / n))
 	print()
 	for index, adapter in enumerate(adapters):
 		total_front = sum(adapter.lengths_front.values())
