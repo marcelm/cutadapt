@@ -103,26 +103,26 @@ def test_format():
 
 def test_minimum_length():
 	'''-m/--minimum-length'''
-	run("-c -m 5 -a 330201030313112312", "minlen.fa", "minlen.fa")
+	run("-c -m 5 -a 330201030313112312", "minlen.fa", "lengths.fa")
 
 
 def test_too_short():
 	'''--too-short-output'''
-	run("-c -m 5 -a 330201030313112312 --too-short-output tooshort.tmp.fa", "minlen.fa", "minlen.fa")
+	run("-c -m 5 -a 330201030313112312 --too-short-output tooshort.tmp.fa", "minlen.fa", "lengths.fa")
 	diff(datapath('tooshort.fa'), "tooshort.tmp.fa")
 	os.remove('tooshort.tmp.fa')
 
 
 def test_too_short_no_primer():
 	'''--too-short-output and --trim-primer'''
-	run("-c -m 5 -a 330201030313112312 --trim-primer --too-short-output tooshort.tmp.fa", "minlen.noprimer.fa", "minlen.fa")
+	run("-c -m 5 -a 330201030313112312 --trim-primer --too-short-output tooshort.tmp.fa", "minlen.noprimer.fa", "lengths.fa")
 	diff(datapath('tooshort.noprimer.fa'), "tooshort.tmp.fa")
 	os.remove('tooshort.tmp.fa')
 
 
 def test_maximum_length():
 	'''-M/--maximum-length'''
-	run("-c -M 5 -a 330201030313112312", "maxlen.fa", "maxlen.fa")
+	run("-c -M 5 -a 330201030313112312", "maxlen.fa", "lengths.fa")
 
 
 def test_length_tag():
