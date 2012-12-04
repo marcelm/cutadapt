@@ -12,7 +12,7 @@ PREFIX = align.STOP_WITHIN_SEQ2
 ANYWHERE = align.SEMIGLOBAL
 
 
-class AdapterMatch:
+class AdapterMatch(object):
 	def __init__(self, astart, astop, rstart, rstop, matches, errors, front, adapter, read):
 		self.astart, self.astop, self.rstart, self.rstop = astart, astop, rstart, rstop
 		self.matches = matches

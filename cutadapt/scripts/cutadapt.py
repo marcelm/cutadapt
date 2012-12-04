@@ -274,7 +274,7 @@ class ReadFilter(object):
 		return True
 
 
-class LengthTagModifier:
+class LengthTagModifier(object):
 	"""
 	Replace "length=..." strings in read names.
 	"""
@@ -289,7 +289,7 @@ class LengthTagModifier:
 		return read
 
 
-class SuffixRemover:
+class SuffixRemover(object):
 	"""
 	Remove a given suffix from read names.
 	"""
@@ -303,7 +303,7 @@ class SuffixRemover:
 		return read
 
 
-class PrefixSuffixAdder:
+class PrefixSuffixAdder(object):
 	"""
 	Add a suffix and a prefix to read names
 	"""
@@ -317,7 +317,7 @@ class PrefixSuffixAdder:
 		return read
 
 
-class DoubleEncoder:
+class DoubleEncoder(object):
 	"""
 	Double-encode colorspace reads, using characters ACGTN to represent colors.
 	"""
@@ -330,7 +330,7 @@ class DoubleEncoder:
 		return read
 
 
-class ZeroCapper:
+class ZeroCapper(object):
 	"""
 	Change negative quality values of a read to zero
 	"""
@@ -461,7 +461,7 @@ class RepeatedAdapterMatcher(object):
 		return read
 
 
-class QualityTrimmer:
+class QualityTrimmer(object):
 	def __init__(self, cutoff, base):
 		self.cutoff = cutoff
 		self.base = base
@@ -724,7 +724,6 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	append_adapters(options.adapters, BACK)
 	append_adapters(options.anywhere, ANYWHERE)
 	append_adapters(options.front, FRONT)
-
 
 	# make sure these aren't used by accident
 	del options.adapters
