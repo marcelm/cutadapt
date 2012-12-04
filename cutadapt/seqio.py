@@ -1,4 +1,6 @@
 # coding: utf-8
+from __future__ import print_function, division, absolute_import
+
 __author__ = "Marcel Martin"
 
 import sys
@@ -7,7 +9,7 @@ if sys.version < '3':
 else:
 	basestring = str
 
-from .xopen import xopen
+from cutadapt.xopen import xopen
 from os.path import splitext
 import sys
 

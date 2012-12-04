@@ -1,8 +1,8 @@
-#!/usr/bin/env python
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
+
 from collections import namedtuple, defaultdict
-from . import align, colorspace
-from .seqio import ColorspaceSequence
+from cutadapt import align, colorspace
+from cutadapt.seqio import ColorspaceSequence
 
 # Constants for the find_best_alignment function.
 # The function is called with SEQ1 as the adapter, SEQ2 as the read.

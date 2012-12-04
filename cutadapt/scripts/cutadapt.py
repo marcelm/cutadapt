@@ -55,7 +55,7 @@ $ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq
 
 See the README file for more help and examples."""
 
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 
 import sys
 import re
@@ -68,10 +68,10 @@ else:
 	xrange = range
 from optparse import OptionParser, OptionGroup
 
-from .. import seqio, __version__
-from ..xopen import xopen
-from ..qualtrim import quality_trim_index
-from ..adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, ANYWHERE
+from cutadapt import seqio, __version__
+from cutadapt.xopen import xopen
+from cutadapt.qualtrim import quality_trim_index
+from cutadapt.adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, ANYWHERE
 
 
 class HelpfulOptionParser(OptionParser):
