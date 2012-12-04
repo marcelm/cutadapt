@@ -785,9 +785,4 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 
 
 if __name__ == '__main__':
-	if len(sys.argv) > 1 and sys.argv[1] == '--profile':
-		del sys.argv[1]
-		import cProfile as profile
-		profile.run('main()', 'cutadapt.prof')
-	else:
-		sys.exit(main())
+	sys.exit(main())
