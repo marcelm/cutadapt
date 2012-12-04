@@ -486,10 +486,10 @@ def process_reads(reader, adapter_matcher, quality_trimmer, modifiers,
 		if len(matches) > 0:
 			read = adapter_matcher.cut(matches)
 			trimmed = True
+			if rest_writer:
+				rest_writer.write(matches[-1])
 		else:
 			trimmed = False
-		if rest_writer:
-			rest_writer.write(matches[-1])
 		for modifier in modifiers:
 			read = modifier.apply(read)
 		if twoheaders is None:
