@@ -125,6 +125,13 @@ def test_maximum_length():
 	run("-c -M 5 -a 330201030313112312", "maxlen.fa", "lengths.fa")
 
 
+def test_too_long():
+	'''--too-long-output'''
+	run("-c -M 5 --too-long-output toolong.tmp.fa -a 330201030313112312", "maxlen.fa", "lengths.fa")
+	diff(datapath('toolong.fa'), "toolong.tmp.fa")
+	os.remove('toolong.tmp.fa')
+
+
 def test_length_tag():
 	'''454 data; -n and --length-tag'''
 	run("-n 3 -e 0.1 --length-tag length= " \

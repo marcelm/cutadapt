@@ -383,6 +383,10 @@ from read names and adds the prefix "abc:" to them:
 Changes
 =======
 
+v1.3
+----
+* Add the `--too-long-output` option.
+
 v1.2
 ----
 * At least 25% faster processing of .csfasta/.qual files due to faster parser.

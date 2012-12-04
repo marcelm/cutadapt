@@ -236,10 +236,11 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 class ReadFilter(object):
 	"""Filter reads according to length and according to whether any adapter matches."""
 
-	def __init__(self, minimum_length, maximum_length, too_short_outfile, discard_trimmed, discard_untrimmed, trim_primer):
+	def __init__(self, minimum_length, maximum_length, too_short_outfile, too_long_outfile, discard_trimmed, discard_untrimmed, trim_primer):
 		self.minimum_length = minimum_length
 		self.maximum_length = maximum_length
 		self.too_short_outfile = too_short_outfile
+		self.too_long_outfile = too_long_outfile
 		self.discard_trimmed = discard_trimmed
 		self.discard_untrimmed = discard_untrimmed
 		self.trim_primer = trim_primer
@@ -264,6 +265,11 @@ class ReadFilter(object):
 			return False
 		if len(read.sequence) > self.maximum_length:
 			self.too_long += 1
+			if self.too_long_outfile is not None:
+				if self.trim_primer: # TODO refactor
+					read = read[1:]
+					read.primer = ''
+				write_read(read, self.too_long_outfile)
 			return False
 		return True
 
@@ -583,6 +589,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		     "not be quite accurate.")
 	group.add_option("--too-short-output", default=None, metavar="FILE",
 		help="Write reads that are too short (according to length specified by -m) to FILE. (default: discard reads)")
+	group.add_option("--too-long-output", default=None, metavar="FILE",
+		help="Write reads that are too long (according to length specified by -M) to FILE. (default: discard reads)")
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
 		help="Write reads that do not contain the adapter to FILE, instead "
 			"of writing them to the regular output file. (default: output "
@@ -650,7 +658,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 
 	# default output files (overwritten below)
 	too_short_outfile = None # too short reads go here
-	#too_long_outfile = None # too long reads go here
+	too_long_outfile = None # too long reads go here
 
 	if options.output is not None:
 		trimmed_outfile = xopen(options.output, 'w')
@@ -659,8 +667,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		untrimmed_outfile = xopen(options.untrimmed_output, 'w')
 	if options.too_short_output is not None:
 		too_short_outfile = xopen(options.too_short_output, 'w')
-	#if options.too_long_output is not None:
-		#too_long_outfile = xopen(options.too_long_output, 'w')
+	if options.too_long_output is not None:
+		too_long_outfile = xopen(options.too_long_output, 'w')
 
 	if options.maq:
 		options.colorspace = True
@@ -748,8 +756,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times,
 				options.wildcard_file, options.info_file)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
-		too_short_outfile, options.discard_trimmed, options.discard_untrimmed,
-		options.trim_primer)
+		too_short_outfile, too_long_outfile, options.discard_trimmed,
+		options.discard_untrimmed, options.trim_primer)
 	start_time = time.clock()
 	try:
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
@@ -761,12 +769,11 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	except seqio.FormatError as e:
 		print("Error:", e, file=sys.stderr)
 		return 1
-	if options.rest_file is not None:
-		options.rest_file.close()
-	if options.wildcard_file is not None:
-		options.wildcard_file.close()
-	if options.info_file is not None:
-		options.info_file.close()
+	# close open files
+	for f in [options.rest_file, options.wildcard_file, options.info_file,
+			too_short_outfile, too_long_outfile, options.info_file]:
+		if f is not None:
+			f.close()
 	# send statistics to stderr if result was sent to stdout
 	stat_file = sys.stderr if options.output is None else None
 
