@@ -7,3 +7,7 @@ dist/
 *~
 .tox
 galaxy/package/
+.pydevproject
+.project
+.settings
+cutadapt/calign.c
