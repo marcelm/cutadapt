@@ -1,6 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 from cutadapt import align, colorspace
 from cutadapt.seqio import ColorspaceSequence
 

@@ -9,7 +9,6 @@ import io
 
 __author__ = 'Marcel Martin'
 
-import sys
 if sys.version_info[0] >= 3:
 	basestring = str
 	from codecs import getreader, getwriter

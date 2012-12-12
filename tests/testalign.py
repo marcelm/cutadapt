@@ -1,3 +1,5 @@
+from __future__ import print_function, division, absolute_import
+
 from cutadapt.align import globalalign_locate
 from cutadapt.adapters import BACK
 

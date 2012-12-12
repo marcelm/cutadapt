@@ -1,6 +1,6 @@
+from __future__ import print_function, division, absolute_import
+
 from cutadapt.xopen import xopen
-from cutadapt import seqio
-import sys
 
 uncompressed = "tests/data/simple.fasta"
 compressed = "tests/data/compressed.fastq.gz"

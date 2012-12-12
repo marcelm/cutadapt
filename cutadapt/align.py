@@ -84,8 +84,8 @@ def pysemiglobalalign(s1, s2, print_table=False):
 	# the DP and backtrace table are both stored column-wise
 	# It's much faster to use two tables instead
 	# of one with tuples. (Tried both.)
-	columns = [ array('h', (m+1)*[0]) for x in xrange(n+1) ]
-	backtrace = [ array('h', (m+1)*[0]) for x in xrange(n+1) ]
+	columns = [ array('h', (m+1)*[0]) for _ in xrange(n+1) ]
+	backtrace = [ array('h', (m+1)*[0]) for _ in xrange(n+1) ]
 
 	# direction constants for backtrace table
 	LEFT = 1
@@ -166,8 +166,6 @@ def pysemiglobalalign(s1, s2, print_table=False):
 			r2.append('-')
 			i -= 1
 
-	rlen = len(r1)
-
 	errors = 0
 	# now, the actual backtracing.
 	# we build reverse sequences while backtracing and
@@ -193,9 +191,6 @@ def pysemiglobalalign(s1, s2, print_table=False):
 			errors += 1
 			i -= 1
 
-	# compute the length of the actual alignment (ignoring ends)
-	length = len(r1) - rlen
-
 	start1 = i
 	start2 = j
 
@@ -219,4 +214,4 @@ def pysemiglobalalign(s1, s2, print_table=False):
 	return (r1, r2, start1, stop1, start2, stop2, errors)
 
 
-from .calign import globalalign_locate
+from cutadapt.calign import globalalign_locate

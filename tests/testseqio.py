@@ -1,3 +1,5 @@
+from __future__ import print_function, division, absolute_import
+
 from nose.tools import raises
 from cutadapt import seqio
 import sys

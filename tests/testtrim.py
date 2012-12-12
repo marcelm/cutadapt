@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 
-from cutadapt.seqio import Sequence, ColorspaceSequence
+from cutadapt.seqio import ColorspaceSequence
 from cutadapt.adapters import ColorspaceAdapter, PREFIX
 from cutadapt.scripts.cutadapt import RepeatedAdapterMatcher
 

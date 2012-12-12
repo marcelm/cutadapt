@@ -1,3 +1,5 @@
+from __future__ import print_function, division, absolute_import
+
 from cutadapt.colorspace import encode, decode
 
 # If there are any unknown characters in the test sequence,

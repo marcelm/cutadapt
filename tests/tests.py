@@ -2,7 +2,8 @@
 # test --untrimmed-output
 # test with the --output option
 # test reading from standard input
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
+
 import os
 from cutadapt.scripts import cutadapt
 

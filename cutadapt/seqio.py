@@ -11,7 +11,6 @@ else:
 
 from cutadapt.xopen import xopen
 from os.path import splitext
-import sys
 
 
 def _shorten(s, n=20):
@@ -77,7 +76,7 @@ class ColorspaceSequence(Sequence):
 			rname = _shorten(name)
 			raise ValueError("In read named '{0}': length of colorspace quality "
 				"sequence and length of read do not match (primer: {1}, "
-				"lengths: {2}!={3})".format(name, self.primer, len(qualities), len(sequence)))
+				"lengths: {2}!={3})".format(rname, self.primer, len(qualities), len(sequence)))
 
 	def __repr__(self):
 		qstr = ''

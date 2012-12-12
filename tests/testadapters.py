@@ -1,6 +1,7 @@
+from __future__ import print_function, division, absolute_import
+
 from cutadapt.seqio import Sequence
 from cutadapt.adapters import Adapter, AdapterMatch, BACK
-from cutadapt.align import ALLOW_WILDCARD_SEQ1
 
 def test_issue_52():
 	adapter = Adapter(
