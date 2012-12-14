@@ -282,3 +282,7 @@ def test_info_file():
 
 def test_named_adapter():
 	run("-a MY_ADAPTER=GCCGAACTTCTTAGACTGCCTTAAGGACGT", "illumina.fastq", "illumina.fastq.gz")
+
+def test_no_trim():
+	''' --no-trim '''
+	run("--no-trim --discard-untrimmed -a CCCTAGTTAAAC", 'no-trim.fastq', 'small.fastq')

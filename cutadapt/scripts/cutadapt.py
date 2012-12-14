@@ -116,7 +116,7 @@ def print_histogram(d, adapter_length, n, error_rate):
 	print()
 
 
-def print_statistics(adapters, time, n, total_bp, quality_trimmed, reads_changed,
+def print_statistics(adapters, time, n, total_bp, quality_trimmed, no_trim, reads_matched,
 		error_rate, too_short, too_long, file=None):
 	"""Print summary to file"""
 	old_stdout = sys.stdout
@@ -134,7 +134,8 @@ def print_statistics(adapters, time, n, total_bp, quality_trimmed, reads_changed
 			trimmed_bp += sum( seqlen*count for (seqlen, count) in d.items() )
 
 	if n > 0:
-		print("     Trimmed reads: {0:12} ({1:.1%})".format(reads_changed, reads_changed / n))
+		operation = "Matched" if no_trim else "Trimmed"
+		print("     {0} reads: {1:12} ({2:.1%})".format(operation, reads_matched, reads_matched / n))
 		t = [ ("Quality-trimmed", quality_trimmed), ("  Trimmed bases", trimmed_bp)]
 		if quality_trimmed < 0:
 			del t[0]
@@ -364,7 +365,7 @@ class RepeatedAdapterMatcher(object):
 	times parameter.
 	"""
 
-	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None):
+	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None, no_trim=None):
 		"""
 		adapters -- list of Adapter objects
 		"""
@@ -372,7 +373,8 @@ class RepeatedAdapterMatcher(object):
 		self.times = times
 		self.info_file = info_file
 		self.wildcard_file = wildcard_file
-		self.reads_changed = 0
+		self.no_trim = no_trim
+		self.reads_matched = 0
 
 	def _best_match(self, read):
 		"""
@@ -450,13 +452,15 @@ class RepeatedAdapterMatcher(object):
 			old_length = len(read.sequence)
 		assert matches
 
-		# The last match contains a copy of the read it was matched to.
-		# No iteration is necessary.
-		read = matches[-1].adapter.trimmed(matches[-1])
+		if not self.no_trim:
+			# The last match contains a copy of the read it was matched to.
+			# No iteration is necessary.
+			read = matches[-1].adapter.trimmed(matches[-1])
+	
+			# if an adapter was found, then the read should now be shorter
+			assert len(read.sequence) < old_length
 
-		# if an adapter was found, then the read should now be shorter
-		assert len(read.sequence) < old_length
-		self.reads_changed += 1 # TODO move to filter class
+		self.reads_matched += 1 # TODO move to filter class
 
 		return read
 
@@ -571,6 +575,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 			"Reads that are too long even before adapter removal "
 			"are also discarded. In colorspace, an initial primer "
 			"is not counted (default: no limit).")
+	group.add_option("--no-trim", action='store_true', default=False,
+		help="Match and redirect reads to output/untrimmed-output as usual, but don't remove the adapters. (default: False. Remove the adapters)")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
@@ -753,7 +759,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		quality_trimmer = None
 
 	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times,
-				options.wildcard_file, options.info_file)
+				options.wildcard_file, options.info_file, options.no_trim)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, too_long_outfile, options.discard_trimmed,
 		options.discard_untrimmed, options.trim_primer)
@@ -778,7 +784,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 
 	total_quality_trimmed = quality_trimmer.trimmed_bases if quality_trimmer else -1
 	print_statistics(adapters, time.clock() - start_time,
-		n, total_bp, total_quality_trimmed, adapter_matcher.reads_changed,
+		n, total_bp, total_quality_trimmed, options.no_trim, adapter_matcher.reads_matched,
 		options.error_rate, readfilter.too_short, readfilter.too_long, file=stat_file)
 
 	return 0
