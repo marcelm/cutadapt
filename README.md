@@ -386,6 +386,10 @@ Changes
 v1.3
 ----
 * Add the `--too-long-output` option.
+* Add the `--no-trim` option, contributed by Dave Lawrence.
+* Port handwritten C alignment module to Cython.
+* Fix the `--rest-file` option (issue 56)
+* Slightly speed up alignment of 5' adapters.
 
 v1.2
 ----
@@ -550,7 +554,6 @@ To Do / Ideas
 =============
 
   * show average error rate
-  * show table of length vs. max errors
   * In color space and probably also for Illumina data, gapped alignment
     is not necessary
   * bzip2 support
@@ -559,7 +562,6 @@ To Do / Ideas
   * multi-threading
   * `--progress`
   * run pylint, pychecker
-  * print adapter fragments in statistics
   * length histogram
   * refactor read_sequences (use classes)
   * put write_read into a Fast(a|q)Writer class?
@@ -569,4 +571,3 @@ To Do / Ideas
   * close on StopIteration
   * search for adapters in the order in which they are given on the command line
   * more tests for the alignment algorithm
-
