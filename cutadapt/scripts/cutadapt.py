@@ -141,7 +141,7 @@ def print_statistics(adapters, time, n, total_bp, quality_trimmed, trim, reads_m
 			del t[0]
 		for what, bp in t:
 			s = " ({0:.2%} of total)".format(float(bp)/total_bp) if total_bp > 0 else ''
-			print("   {0}: {1:12} bp ({2:.1F} Mbp){3}".format(what, bp, trimmed_bp/1E6, s))
+			print("   {0}: {1:12} bp ({2:.1F} Mbp){3}".format(what, bp, bp/1E6, s))
 		print("   Too short reads: {0:12} ({1:.1%} of processed reads)".format(too_short, too_short / n))
 		print("    Too long reads: {0:12} ({1:.1%} of processed reads)".format(too_long, too_long / n))
 	print("        Total time: {0:9.2F} s".format(time))
