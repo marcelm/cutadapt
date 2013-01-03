@@ -318,9 +318,10 @@ class FastqReader(object):
 					self.twoheaders = True
 					if not line[1:] == name:
 						raise FormatError(
-							"At line {0}: Two sequence descriptions are given in "
-							"the FASTQ file, but they don't match "
-							"('{1}' != '{2}')".format(i+1, name, line.rstrip()[1:]))
+							"At line {0}: Sequence descriptions in the FASTQ file don't match "
+							"('{1}' != '{2}').\n"
+							"The second sequence description must be either empty "
+							"or equal to the first description.".format(i+1, name, line.rstrip()[1:]))
 			elif i % 4 == 3:
 				qualities = line.rstrip("\n\r")
 				yield self.sequence_class(name, sequence, qualities)
