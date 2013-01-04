@@ -30,7 +30,7 @@ def run(params, expected, inpath, inpath2=None):
 	if inpath2:
 		params += [ datapath(inpath2) ]
 
-	assert cutadapt.main(params) == 0
+	assert cutadapt.main(params) is None
 	# TODO redirect standard output
 	diff(dpath(os.path.join('cut', expected)), dpath('tmp.fastaq'))
 	os.remove(dpath('tmp.fastaq'))

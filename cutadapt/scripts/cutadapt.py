@@ -740,7 +740,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 
 	if not adapters and options.quality_cutoff == 0:
 		print("You need to provide at least one adapter sequence.", file=sys.stderr)
-		return 1
+		sys.exit(1)
 
 	modifiers = []
 	if options.length_tag:
@@ -771,11 +771,11 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		(n, total_bp) = process_reads(reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, rest_writer, options.trim_primer)
 	except IOError as e:
 		if e.errno == errno.EPIPE:
-			return 1
+			sys.exit(1)
 		raise
 	except seqio.FormatError as e:
 		print("Error:", e, file=sys.stderr)
-		return 1
+		sys.exit(1)
 	# close open files
 	for f in [options.rest_file, options.wildcard_file, options.info_file,
 			too_short_outfile, too_long_outfile, options.info_file]:
@@ -789,8 +789,6 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		n, total_bp, total_quality_trimmed, options.trim, adapter_matcher.reads_matched,
 		options.error_rate, readfilter.too_short, readfilter.too_long, file=stat_file)
 
-	return 0
-
 
 if __name__ == '__main__':
-	sys.exit(main())
+	main()
