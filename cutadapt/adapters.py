@@ -13,7 +13,7 @@ ANYWHERE = align.SEMIGLOBAL
 
 
 class AdapterMatch(object):
-	__slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'front', 'adapter', 'read']
+	__slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'front', 'adapter', 'read', 'length']
 	def __init__(self, astart, astop, rstart, rstop, matches, errors, front, adapter, read):
 		self.astart = astart
 		self.astop = astop
@@ -24,6 +24,10 @@ class AdapterMatch(object):
 		self.front = self._guess_is_front() if front is None else front
 		self.adapter = adapter
 		self.read = read
+		# Number of aligned characters in the adapter. If there are
+		# indels, this may be different from the number of characters
+		# in the read.
+		self.length = self.astop - self.astart
 
 	def _guess_is_front(self):
 		"""
@@ -50,15 +54,6 @@ class AdapterMatch(object):
 		wildcards = [ self.read.sequence[self.rstart + i] for i in range(self.length)
 			if self.adapter.sequence[self.astart + i] == wildcard_char and self.rstart + i < len(self.read.sequence) ]
 		return ''.join(wildcards)
-
-	@property
-	def length(self):
-		"""
-		Number of aligned characters in the adapter. If there are
-		indels, this may be different from the number of characters
-		in the read.
-		"""
-		return self.astop - self.astart
 
 	def rest(self):
 		"""
