@@ -15,7 +15,10 @@ ANYWHERE = align.SEMIGLOBAL
 class AdapterMatch(object):
 	__slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'front', 'adapter', 'read']
 	def __init__(self, astart, astop, rstart, rstop, matches, errors, front, adapter, read):
-		self.astart, self.astop, self.rstart, self.rstop = astart, astop, rstart, rstop
+		self.astart = astart
+		self.astop = astop
+		self.rstart = rstart
+		self.rstop = rstop
 		self.matches = matches
 		self.errors = errors
 		self.front = self._guess_is_front() if front is None else front
