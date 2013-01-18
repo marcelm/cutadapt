@@ -13,6 +13,7 @@ ANYWHERE = align.SEMIGLOBAL
 
 
 class AdapterMatch(object):
+	__slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'front', 'adapter', 'read']
 	def __init__(self, astart, astop, rstart, rstop, matches, errors, front, adapter, read):
 		self.astart, self.astop, self.rstart, self.rstop = astart, astop, rstart, rstop
 		self.matches = matches
@@ -160,6 +161,8 @@ class Adapter(object):
 			# try approximate matching
 			alignment = align.globalalign_locate(self.sequence, read_seq,
 				self.max_error_rate, self.where, self.wildcard_flags)
+			# TODO line-based profiling tells me that the following line
+			# is slow (takes 30% of match()'s running time)
 			match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
 
 		# TODO globalalign_locate should be modified to allow the following
