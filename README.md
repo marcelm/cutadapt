@@ -6,8 +6,8 @@ sequencing data. This is usually necessary when the read length of the
 machine is longer than the molecule that is sequenced, such as in
 microRNA data.
 
-cutadapt is implemented in Python, with an extension module,
-written in C, that implements the alignment algorithm.
+cutadapt is implemented in Python. It comes with an extension module
+written in Cython that implements the alignment algorithm.
 
 
 Project homepage
@@ -22,7 +22,7 @@ License
 
 (This is the MIT license.)
 
-Copyright (c) 2010-2012 Marcel Martin <marcel.martin@tu-dortmund.de>
+Copyright (c) 2010-2013 Marcel Martin <marcel.martin@tu-dortmund.de>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -106,6 +106,10 @@ AACCGGTT with your actual adapter sequence.
 input.fastq is a file with reads. The result will be written
 to standard output. Use redirection with `>` (or the `-o` option) to
 write the output to a file.
+
+cutadapt also writes a report after it has finished processing the
+reads. If you use `-o`, the report is sent to standard output and to
+stderr otherwise.
 
 By default, the output file contains all reads, even those
 that did not contain an adapter. (See also the `--discard` option.)
