@@ -87,6 +87,14 @@ def test_discard_untrimmed():
 	run('-b CAAGAT --discard-untrimmed', 'discard-untrimmed.fastq', 'small.fastq')
 
 
+def test_paired_end():
+	'''--paired end'''
+	if os.path.exists('/tmp/peout'):
+		os.unlink('/tmp/peout')
+	run('-b CAAGAT --paired-output /tmp/peout --discard-untrimmed', 'paired_end.fastq', 'small.fastq', 'small.fastq')
+	diff(dpath(os.path.join('cut', 'paired_end.fastq.paired')), '/tmp/peout')
+
+
 def test_plus():
 	'''test if sequence name after the "+" is retained'''
 	run("-e 0.12 -b TTAGACATATCTCCGTCG", "plus.fastq", "plus.fastq")

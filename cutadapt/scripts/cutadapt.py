@@ -481,8 +481,8 @@ class QualityTrimmer(object):
 		return read[:index]
 
 
-def process_reads(reader, adapter_matcher, quality_trimmer, modifiers,
-		readfilter, trimmed_outfile, untrimmed_outfile, rest_writer, trim_primer):
+def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers,
+		readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile, rest_writer, trim_primer):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -490,10 +490,15 @@ def process_reads(reader, adapter_matcher, quality_trimmer, modifiers,
 	"""
 	n = 0 # no. of processed reads
 	total_bp = 0
+	if pe_reader:
+		pe_reader = iter(pe_reader)
+
 	twoheaders = None
 	for read in reader:
 		n += 1
 		total_bp += len(read.sequence)
+		if pe_reader:
+			pe_read = pe_reader.next()
 		if quality_trimmer:
 			read = quality_trimmer.trimmed(read)
 		matches = adapter_matcher.find_match(read)
@@ -517,6 +522,8 @@ def process_reads(reader, adapter_matcher, quality_trimmer, modifiers,
 			read = read[1:]
 			read.primer = ''
 		write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
+		if pe_reader:
+			write_read(pe_read, pe_outfile)
 	return (n, total_bp)
 
 
@@ -605,6 +612,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		help="Write reads that do not contain the adapter to FILE, instead "
 			"of writing them to the regular output file. (default: output "
 			"to same file as trimmed)")
+	group.add_option('-p', "--paired-output", default=None, metavar="FILE",
+		help="Write reads from the paired end input to FILE. ")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
@@ -654,8 +663,15 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 
 	input_filename = args[0]
 	quality_filename = None
+	pe_filename = None
 	if len(args) == 2:
-		quality_filename = args[1]
+		if args[1].endswith('.qual'):
+			quality_filename = args[1]
+		else:
+			pe_filename = args[1]
+			if not options.paired_output:
+				parser.error('you must use --paired-output when trimming paired end reads')
+
 	if input_filename.endswith('.qual') and quality_filename.endswith('fasta'):
 		parser.error("FASTA and QUAL file given, but the FASTA file must be first.")
 
@@ -669,6 +685,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	# default output files (overwritten below)
 	too_short_outfile = None # too short reads go here
 	too_long_outfile = None # too long reads go here
+	pe_outfile = None
 
 	if options.output is not None:
 		trimmed_outfile = xopen(options.output, 'w')
@@ -679,6 +696,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		too_short_outfile = xopen(options.too_short_output, 'w')
 	if options.too_long_output is not None:
 		too_long_outfile = xopen(options.too_long_output, 'w')
+	if options.paired_output:
+		pe_outfile = xopen(options.paired_output, 'w')
 
 	if options.maq:
 		options.colorspace = True
@@ -770,7 +789,11 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	start_time = time.clock()
 	try:
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
-		(n, total_bp) = process_reads(reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, rest_writer, options.trim_primer)
+		if pe_filename:
+			pe_reader = read_sequences(pe_filename, None, colorspace=options.colorspace, fileformat=options.format)
+		else:
+			pe_reader = None
+		(n, total_bp) = process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile, rest_writer, options.trim_primer)
 	except IOError as e:
 		if e.errno == errno.EPIPE:
 			sys.exit(1)
