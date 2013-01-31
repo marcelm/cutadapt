@@ -286,3 +286,7 @@ def test_named_adapter():
 def test_no_trim():
 	''' --no-trim '''
 	run("--no-trim --discard-untrimmed -a CCCTAGTTAAAC", 'no-trim.fastq', 'small.fastq')
+
+def test_bzip2():
+	'''test bzip2 support'''
+	run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.bz2')

@@ -394,6 +394,7 @@ v1.3
 * Port handwritten C alignment module to Cython.
 * Fix the `--rest-file` option (issue 56)
 * Slightly speed up alignment of 5' adapters.
+* Support bzip2-compressed files.
 
 v1.2
 ----

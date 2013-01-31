@@ -144,7 +144,7 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 	'fasta' or 'fastq'
 
 	file is a filename or a file-like object.
-	If file is a filename, then .gz files are supported.
+	If file is a filename, then .gz and .bz2 files are supported.
 	If the file name is available, the file type is detected
 	by looking at the file name.
 	If the file name is not available (for example, reading
@@ -175,6 +175,8 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 	if name is not None:
 		if name.endswith('.gz'):
 			name = name[:-3]
+		elif name.endswith('.bz2'):
+			name = name[:-4]
 		name, ext = splitext(name)
 		ext = ext.lower()
 		if ext in ['.fasta', '.fa', '.fna', '.csfasta', '.csfa']:
