@@ -4,9 +4,13 @@ Open compressed files transparently.
 from __future__ import print_function, division, absolute_import
 
 import gzip
-import bz2
 import sys
 import io
+
+try:
+	import bz2
+except ImportError:
+	bz2 = None
 
 __author__ = 'Marcel Martin'
 
@@ -35,6 +39,8 @@ def xopen(filename, mode='r'):
 	if filename == '-':
 		return sys.stdin if 'r' in mode else sys.stdout
 	if filename.endswith('.bz2'):
+		if bz2 is None:
+			raise ImportError("Cannot open bz2 files: The bz2 module is not available")
 		if sys.version_info[0] < 3:
 			return bz2.BZ2File(filename, mode)
 		else:
