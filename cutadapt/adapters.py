@@ -119,12 +119,14 @@ class Adapter(object):
 		}
 		self.trimmed = trimmers[where]
 		if where == ANYWHERE:
-			self._front_flag = None # means: guess
+			self._front_flag = None  # means: guess
 		else:
 			self._front_flag = where != BACK
 		# statistics about length of removed sequences
 		self.lengths_front = defaultdict(int)
 		self.lengths_back = defaultdict(int)
+		self.errors_front = defaultdict(lambda: defaultdict(int))
+		self.errors_back = defaultdict(lambda: defaultdict(int))
 
 	def __repr__(self):
 		match_read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)
@@ -181,12 +183,14 @@ class Adapter(object):
 		"""Return a trimmed read"""
 		# TODO move away
 		self.lengths_front[match.rstop] += 1
+		self.errors_back[match.rstop][match.errors] += 1
 		return match.read[match.rstop:]
 
 	def _trimmed_back(self, match):
 		"""Return a trimmed read without the 3' (back) adapter"""
 		# TODO move away
 		self.lengths_back[len(match.read) - match.rstart] += 1
+		self.errors_back[len(match.read) - match.rstart][match.errors] += 1
 		return match.read[:match.rstart]
 
 	def __len__(self):
@@ -234,6 +238,7 @@ class ColorspaceAdapter(Adapter):
 		"""Return a trimmed read"""
 		read = match.read
 		self.lengths_front[match.rstop] += 1
+		self.errors_front[match.rstop][match.errors] += 1
 		# to remove a front adapter, we need to re-encode the first color following the adapter match
 		color_after_adapter = read.sequence[match.rstop:match.rstop + 1]
 		if not color_after_adapter:

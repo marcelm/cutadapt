@@ -287,6 +287,78 @@ but trim the third to an empty sequence and trim the fourth not at all.
 The `-b` parameter currently does not work with color space data.
 
 
+Interpreting the statistics output
+==================================
+
+After every run, cutadapt prints out per-adapter statistics. The output starts
+with something like this:
+
+	Adapter 'ACGTACGTACGTTAGCTAGC', length 20, was trimmed 2402 times.
+
+The meaning of this should be obvious.
+
+The next piece of information is this:
+
+	No. of allowed errors:
+	0-9 bp: 0; 10-19 bp: 1; 20 bp: 2
+
+The adapter has, as was conveniently shown above, a length of 20 characters.
+We are using the default error rate of 0.1. What this implies is shown above:
+Matches up to a length of 9 bp are allowed to have no errors. Matches of
+lengths 10-19 bp are allowd to have 1 error and matches of length 20 can have
+2 errors.
+
+Finally, a table is output that gives more detailed information about the
+lengths of the removed sequences. The following is only an excerpt; some
+rows are left out:
+
+	Overview of removed sequences
+	length  count   expect  max.err error counts
+	3       140     156.2   0       140
+	4       57      39.1    0       57
+	5       50      9.8     0       50
+	6       35      2.4     0       35
+	...
+	100     397     0.0     3       358 36 3
+
+The first row tells us the following: Three bases were removed in 140 reads;
+randomly, one would expect this to occur 156.2 times;
+the maximum number of errors at that match length is 0 (this is actually redundant since
+we know already that no errors are allowed at lengths 0-9bp).
+
+The last column shows the number of reads that had 0, 1, 2 ... errors.
+In the last row, for example, 358 reads matched the adapter with zero errors, 36 with
+1 error, and 3 matched with 2 errors.
+
+The "expect" column gives only a rough estimate of the number of sequences
+that is expected to match randomly (it assumes a GC content of 50%,
+for example), but it can help to estimate whether the matches that were found are true
+adapter matches or if they are due to chance. At lengths 6, for example, only 2.4 reads
+are expected, but 35 do match, which hints that most of these matches are due to actual
+adapters.
+
+Note that the "length" column refers to the length of the removed sequence. That is,
+the actual length of the match in the above row at length 100 is 20 since that is
+the adapter length. Assuming the read length is 100, the adapter was found in the
+beginning of 397 reads and therefore those reads were trimmed to a length of zero.
+
+The table may also be useful in case the given adapter sequence contains an
+error. In that case, it may look like this:
+
+	...
+	length  count   expect  max.err error counts
+	10      53      0.0     1       51 2
+	11      45      0.0     1       42 3
+	12      51      0.0     1       48 3
+	13      39      0.0     1       0 39
+	14      40      0.0     1       0 40
+	15      36      0.0     1       0 36
+	...
+
+We can see that no matches longer than 12 have zero errors. In this case, it
+indicates that the 13th base of the given adapter sequence is incorrect.
+
+
 Using a "configuration file"
 ============================
 

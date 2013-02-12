@@ -95,7 +95,7 @@ def print_error_ranges(adapter_length, error_rate):
 	print()
 
 
-def print_histogram(d, adapter_length, n, error_rate):
+def print_histogram(d, adapter_length, n, error_rate, errors):
 	"""
 	Print a histogram. Also, print the no. of reads expected to be
 	trimmed by chance (assuming a uniform distribution of nucleotides in the reads).
@@ -110,9 +110,11 @@ def print_histogram(d, adapter_length, n, error_rate):
 		estimated = n * 0.25 ** min(length, adapter_length)
 		h.append( (length, d[length], estimated) )
 
-	print("length", "count", "expected", "max. errors", sep="\t")
+	print("length", "count", "expect", "max.err", "error counts", sep="\t")
 	for length, count, estimate in h:
-		print(length, count, "{0:.1F}".format(estimate), int(error_rate*min(length, adapter_length)), sep="\t")
+		max_errors = max(errors[length].keys())
+		errs = ' '.join(str(errors[length][e]) for e in range(max_errors+1))
+		print(length, count, "{0:.1F}".format(estimate), int(error_rate*min(length, adapter_length)), errs, sep="\t")
 	print()
 
 
@@ -167,22 +169,22 @@ def print_statistics(adapters, time, n, total_bp, quality_trimmed, trim, reads_m
 			print(total_back, "times, it overlapped the 3' end or was within the read")
 			print()
 			print_error_ranges(len(adapter), adapter.max_error_rate)
-			print("Lengths of removed sequences (5')")
-			print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate)
+			print("Overview of removed sequences (5')")
+			print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate, adapter.errors_front)
 			print()
-			print("Lengths of removed sequences (3' or within)")
-			print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate)
+			print("Overview of removed sequences (3' or within)")
+			print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate, adapter.errors_back)
 		elif where in (FRONT, PREFIX):
 			print()
 			print_error_ranges(len(adapter), adapter.max_error_rate)
-			print("Lengths of removed sequences")
-			print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate)
+			print("Overview of removed sequences")
+			print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate, adapter.errors_front)
 		else:
 			assert where == BACK
 			print()
 			print_error_ranges(len(adapter), adapter.max_error_rate)
-			print("Lengths of removed sequences")
-			print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate)
+			print("Overview of removed sequences")
+			print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate, adapter.errors_back)
 
 	if n == 0:
 		print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
