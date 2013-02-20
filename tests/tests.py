@@ -88,14 +88,6 @@ def test_discard_untrimmed():
 	run('-b CAAGAT --discard-untrimmed', 'discard-untrimmed.fastq', 'small.fastq')
 
 
-def test_paired_end():
-	'''--paired-output'''
-	if os.path.exists('/tmp/peout'):
-		os.unlink('/tmp/peout')
-	run('-b CAAGAT --paired-output /tmp/peout --discard-untrimmed', 'paired_end.fastq', 'small.fastq', 'small.fastq')
-	diff(dpath(os.path.join('cut', 'paired_end.fastq.paired')), '/tmp/peout')
-
-
 def test_plus():
 	'''test if sequence name after the "+" is retained'''
 	run("-e 0.12 -b TTAGACATATCTCCGTCG", "plus.fastq", "plus.fastq")
@@ -286,7 +278,7 @@ def test_strip_suffix():
 # GCCTAACTTCTTAGACTGCCTTAAGGACGT (fourth base is different)
 def test_info_file():
 	infotmp = dpath("infotmp.txt")
-	run("--info-file {0} -a GCCGAACTTCTTAGACTGCCTTAAGGACGT".format(infotmp), "illumina.fastq", "illumina.fastq.gz")
+	run(["--info-file", infotmp, '-a', 'GCCGAACTTCTTAGACTGCCTTAAGGACGT'], "illumina.fastq", "illumina.fastq.gz")
 	os.remove(infotmp)
 
 def test_named_adapter():
@@ -310,3 +302,12 @@ def test_paired_separate():
 @raises(SystemExit)
 def test_paired_end_missing_file():
 	cutadapt.main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
+
+
+def test_paired_end():
+	'''--paired-output'''
+	pairedtmp = dpath("paired-tmp.fastq")
+	# the -m 14 filters out one read, which should then also be filtered out in the second output file
+	run(['-a', 'TTAGACATAT', '-m', '14', '--paired-output', pairedtmp], 'paired.m14.1.fastq', 'paired.1.fastq', 'paired.2.fastq')
+	diff(dpath(os.path.join('cut', 'paired.m14.2.fastq')), pairedtmp)
+	os.remove(pairedtmp)
