@@ -5,6 +5,7 @@
 from __future__ import print_function, division, absolute_import
 
 import os
+from nose.tools import raises
 from cutadapt.scripts import cutadapt
 
 
@@ -304,3 +305,8 @@ def test_paired_separate():
 	'''test separate trimming of paired-end reads'''
 	run('-a TTAGACATAT', 'paired.1.fastq', 'paired.1.fastq')
 	run('-a CAGTGGAGTA', 'paired.2.fastq', 'paired.2.fastq')
+
+
+@raises(SystemExit)
+def test_paired_end_missing_file():
+	cutadapt.main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])

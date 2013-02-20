@@ -670,8 +670,10 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		else:
 			pe_filename = args[1]
 			if not options.paired_output:
-				parser.error('you must use --paired-output when trimming paired end reads')
+				parser.error('you must use --paired-output when trimming paired-end reads')
 
+	if len(args) == 1 and options.paired_output:
+		parser.error("You specified a --paired-output file, but gave only one input file.")
 	if input_filename.endswith('.qual') and quality_filename.endswith('fasta'):
 		parser.error("FASTA and QUAL file given, but the FASTA file must be first.")
 
