@@ -88,7 +88,7 @@ def test_discard_untrimmed():
 
 
 def test_paired_end():
-	'''--paired end'''
+	'''--paired-output'''
 	if os.path.exists('/tmp/peout'):
 		os.unlink('/tmp/peout')
 	run('-b CAAGAT --paired-output /tmp/peout --discard-untrimmed', 'paired_end.fastq', 'small.fastq', 'small.fastq')
@@ -298,3 +298,9 @@ def test_no_trim():
 def test_bzip2():
 	'''test bzip2 support'''
 	run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.bz2')
+
+
+def test_paired_separate():
+	'''test separate trimming of paired-end reads'''
+	run('-a TTAGACATAT', 'paired.1.fastq', 'paired.1.fastq')
+	run('-a CAGTGGAGTA', 'paired.2.fastq', 'paired.2.fastq')
