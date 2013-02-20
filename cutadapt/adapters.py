@@ -183,7 +183,7 @@ class Adapter(object):
 		"""Return a trimmed read"""
 		# TODO move away
 		self.lengths_front[match.rstop] += 1
-		self.errors_back[match.rstop][match.errors] += 1
+		self.errors_front[match.rstop][match.errors] += 1
 		return match.read[match.rstop:]
 
 	def _trimmed_back(self, match):
