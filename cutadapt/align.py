@@ -48,7 +48,7 @@ def pysemiglobalalign(s1, s2, print_table=False):
 	(an INDEL is marked by '-').
 
 	start1 is the position within r1 at which the part of s1, that is aligned, starts.
-	stop2 is the position within r1 at which the part of s1, that is aligned, ends.
+	stop1 is the position within r1 at which the part of s1, that is aligned, ends.
 	The same holds for start2, stop2.
 
 	It is always the case that at least one of start1 and start2 is zero.
