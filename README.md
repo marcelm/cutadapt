@@ -359,6 +359,34 @@ We can see that no matches longer than 12 have zero errors. In this case, it
 indicates that the 13th base of the given adapter sequence is incorrect.
 
 
+Format of the info file
+=======================
+
+When the `--info-file` command-line parameter is given, detailed information
+about the found adapters is written to the given file. The output is a
+tab-separated text file. Each line corresponds to one read of the input file.
+The columns are:
+* Read name
+* Number of errors
+* 0-based start coordinate of the adapter match
+* 0-based end coordinate of the adapter match
+* Sequence of the read before the adapter match
+* Sequence of the read that was matched to the adapter
+* Sequence of the read after the adapter match
+
+The concatenation of the last three fields yields the full read sequence.
+
+If no adapter was found, the format is as follows:
+* Read name
+* The value -1
+* The read sequence
+
+The option is currently experimental and additional columns may be
+added in the future. Also, in the current version, when the `--times`
+option is set to a value other than 1 (the default value), multiple
+lines are written to the info file for each read.
+
+
 Using a "configuration file"
 ============================
 
