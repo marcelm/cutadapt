@@ -484,6 +484,18 @@ from read names and adds the prefix "abc:" to them:
     cutadapt -c -e 0.15 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
 
 
+Bowtie
+------
+
+Quality values of colorspace reads are sometimes negative. Bowtie gets
+confused and prints this message:
+> Encountered a space parsing the quality string for read xyz
+To avoid this problem, use the `--zero-cap` option (or the short
+version `-z`), which converts negative quality values to zero. Since
+BWA has a similar problem (it crashes) the option is automatically
+enabled when `--bwa` is used.
+
+
 Changes
 =======
 
