@@ -37,8 +37,16 @@ def _ansired(s):
 	return "\x1b[1;31m" + s + "\x1b[00m"
 
 
-# Pure Python implementation, fallback for when the C module is not available.
-# Also useful for testing.
+# NOTE
+#
+# The pysemiglobalalign function is quite old and does not compute the same
+# alignments as the globalalign_locate function. The latter is implemented
+# in Cython and currently used for finding adapters.
+# The main difference is that pysemiglobalalign uses scores, while
+# globalalign_locate uses costs (unit costs), but that is not all.
+#
+# This function should either get removed or be re-written to do the same as
+# globalalign_locate.
 def pysemiglobalalign(s1, s2, print_table=False):
 	"""
 	Compute a semiglobal alignment of strings s1 and s2.
