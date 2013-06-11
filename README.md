@@ -135,6 +135,10 @@ to be used (gzip compression is auto-detected by looking at the file name):
 
     cutadapt -a ADAPTER-SEQUENCE -o output.fastq.gz input.fastq.gz
 
+If your Python installation includes support for bzip2 compression, then
+bzip2-compressed files are also supported and recognized by their extension
+`.bz2`.
+
 
 Named adapters
 --------------
@@ -169,7 +173,7 @@ from each read (but see the `--times` option).
     cutadapt -b TGAGACACGCA -g AGGCACACAGGG input.fastq > output.fastq
 
 
-Quality Trimming
+Quality trimming
 ----------------
 
 The `-q` (or `--trim-qualities`) parameter can be used to trim low-quality ends
@@ -180,6 +184,59 @@ ascii(phred quality + 64), you need to add `--quality-base=64` to the command li
 The trimming algorithm is the same as the one used by BWA. That is: Subtract
 the given cutoff from all qualities; compute partial sums from all indices to
 the end of the sequence; cut sequence at the index at which the sum is minimal.
+
+
+Paired-end adapter trimming
+---------------------------
+
+Cutadapt supports paired-end trimming, but currently two passes over
+the data are required.
+
+Assume the input is in `reads.1.fastq` and `reads.2.fastq` and that
+`ADAPTER_FWD` should be trimmed from the forward reads (first file) and
+`ADAPTER_REV` from the second reverse reads (second file). There are
+two cases.
+
+If you do not use any of the options that discard reads,
+such as `--discard`, `--minimum-length` or `--maximum-length`, then
+run cutadapt on each file separately:
+
+    cutadapt -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
+    cutadapt -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
+
+If you use one of the read-discarding options, then the `--paired-output`
+option is needed to keep the two files synchronized. First trim the forward read,
+writing output to temporary files:
+
+    cutadapt -a ADAPTER_FWD --minimum-length 20 --paired-output tmp.2.fastq -o tmp.1.fastq reads.1.fastq reads.2.fastq
+
+Then trim the reverse read, using the temporary files as input:
+
+    cutadapt -a ADAPTER_REV --minimum-length 20 --paired-output trimmed.1.fastq -o trimmed.2.fastq tmp.1.fastq tmp.2.fastq
+
+Finally, remove the temporary files:
+
+    rm tmp.1.fastq tmp.2.fastq
+
+
+Illumina TruSeq
+---------------
+
+The adapters that should be trimmed from Illumina TruSeq are the following.
+
+1. Trim read 1 with `A` + the “TruSeq Indexed Adapter”:
+
+    cutadapt -a TGATCGGAAGAGCACACGTCTGAACTCCAGTCAC reads.1.fastq > trimmed.1.fastq
+
+2. Trim read 2 with the reverse complement of the ”TruSeq Universal Adapter”:
+
+    cutadapt -a AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT reads.2.fastq > trimmed.2.fastq
+
+See also the section about paired-end adapter trimming above.
+
+The adapter sequences can be found in the document [Illumina TruSeq Adapters De-Mystified][1].
+
+[1]: http://genomics.med.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf
 
 
 Adapters
