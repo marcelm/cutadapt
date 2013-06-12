@@ -226,7 +226,7 @@ The adapters that should be trimmed from Illumina TruSeq are the following.
 
 Trim read 1 with `A` + the “TruSeq Indexed Adapter”:
 
-    cutadapt -a TGATCGGAAGAGCACACGTCTGAACTCCAGTCAC reads.1.fastq > trimmed.1.fastq
+    cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC reads.1.fastq > trimmed.1.fastq
 
 Trim read 2 with the reverse complement of the ”TruSeq Universal Adapter”:
 
