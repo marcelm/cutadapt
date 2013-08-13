@@ -212,7 +212,7 @@ writing output to temporary files:
 
 Then trim the reverse read, using the temporary files as input:
 
-    cutadapt -a ADAPTER_REV --minimum-length 20 --paired-output trimmed.1.fastq -o trimmed.2.fastq tmp.1.fastq tmp.2.fastq
+    cutadapt -a ADAPTER_REV --minimum-length 20 --paired-output trimmed.1.fastq -o trimmed.2.fastq tmp.2.fastq tmp.1.fastq
 
 Finally, remove the temporary files:
 
