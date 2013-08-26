@@ -236,7 +236,7 @@ See also the section about paired-end adapter trimming above.
 
 The adapter sequences can be found in the document [Illumina TruSeq Adapters De-Mystified][1].
 
-[1]: http://genomics.med.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf
+[1]: http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf
 
 
 Adapters
