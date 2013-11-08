@@ -46,10 +46,10 @@ THE SOFTWARE.
 Dependencies
 ============
 
-cutadapt needs Python 2.6 or later, including Python 3 (tested with
-Python 3.1.2 and 3.2.2). Using Python 2.7 is recommended since it works fastest.
-For installation from sources, a C compiler needs to be installed. The program
-has been developed and tested on Ubuntu and OpenSuSE.
+cutadapt needs Python 2.6 or later. Python 3 is not supported in this release,
+but will be back in future versions. Using Python 2.7 is recommended since it 
+works fastest. For installation from sources, a C compiler needs to be 
+installed. The program has been developed and tested on Ubuntu and OpenSuSE.
 
 
 Installation
@@ -558,6 +558,11 @@ Changes
 
 v1.3
 ----
+
+* Preliminary paired-end support with the --paired-output option (contributed by 
+  James Casbon). See the README section on how to use it.
+* Improved statistics.
+* Fix incorrectly reported amount of quality-trimmed Mbp (issue 57, fix by Chris Penkett)
 * Add the `--too-long-output` option.
 * Add the `--no-trim` option, contributed by Dave Lawrence.
 * Port handwritten C alignment module to Cython.
@@ -730,7 +735,6 @@ To Do / Ideas
   * show average error rate
   * In color space and probably also for Illumina data, gapped alignment
     is not necessary
-  * bzip2 support
   * use `str.format` instead of `%`
   * allow to change scores at runtime (using command-line parameters)
   * multi-threading
