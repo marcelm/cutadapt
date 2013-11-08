@@ -313,7 +313,7 @@ at least the SOLiD and Illumina small RNA protocols and probably others.
 The assumption is enforced by the alignment algorithm, which only finds the adapter
 when its starting position is within the read. In other words, the 5' base of
 the adapter must appear within the read. The adapter and all bases following
-it are remved.
+it are removed.
 
 If, on the other hand, your adapter can also be ligated to the 5' end (on
 purpose or by accident), you should tell cutadapt so by using the `-b` (or
