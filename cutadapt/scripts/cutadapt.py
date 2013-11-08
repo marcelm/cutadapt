@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# kate: word-wrap off; remove-trailing-space on; replace-trailing-space-save on;
+# kate: word-wrap off; remove-trailing-spaces all;
 #
-# Copyright (c) 2010-2012 Marcel Martin <marcel.martin@tu-dortmund.de>
+# Copyright (c) 2010-2013 Marcel Martin <marcel.martin@tu-dortmund.de>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -37,8 +37,8 @@ used by some 454 software and by the SOLiD sequencer.
 If you have color space data, you still need to provide the -c option
 to correctly deal with color space!
 
-If the name of any input or output file ends with '.gz', it is
-assumed to be gzip-compressed.
+If the name of any input or output file ends with '.gz' or '.bz2', it is
+assumed to be gzip-/bzip2-compressed.
 
 If you want to search for the reverse complement of an adapter, you must
 provide an additional adapter sequence using another -a, -b or -g parameter.
@@ -651,7 +651,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 			"For example, use --length-tag 'length=' to correct fields "
 			"like 'length=123'.")
 	group.add_option("--zero-cap", "-z", action='store_true', default=False,
-		help="Change negative quality values to zero (workaround to avoid segmentation faults in BWA)")
+		help="Change negative quality values to zero (workaround to avoid segmentation faults in old BWA versions)")
 	parser.add_option_group(group)
 
 	options, args = parser.parse_args(args=cmdlineargs)
