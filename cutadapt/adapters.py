@@ -97,12 +97,14 @@ class Adapter(object):
 	"""
 	def __init__(self, sequence, where, max_error_rate, min_overlap=3,
 			match_read_wildcards=False, match_adapter_wildcards=False,
-			name=None):
+			name=None, indels=True):
 		self.name = name
 		self.sequence = sequence.upper()
 		self.where = where
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
+		self.indels = indels
+		assert where != FRONT or self.indels
 		self.wildcard_flags = 0
 		self.match_adapter_wildcards = match_adapter_wildcards and 'N' in self.sequence
 		if match_read_wildcards:
@@ -134,7 +136,8 @@ class Adapter(object):
 		return '<Adapter(name="{name}", sequence="{sequence}", where={where}, '\
 			'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
 			'match_read_wildcards={match_read_wildcards}, '\
-			'match_adapter_wildcards={match_adapter_wildcards})>'.format(
+			'match_adapter_wildcards={match_adapter_wildcards}, '\
+			'indels={indels})>'.format(
 				match_read_wildcards=match_read_wildcards,
 				match_adapter_wildcards=match_adapter_wildcards,
 				**vars(self))
@@ -159,8 +162,11 @@ class Adapter(object):
 				len(self.sequence), 0, self._front_flag, self, read)
 		else:
 			# try approximate matching
-			alignment = align.globalalign_locate(self.sequence, read_seq,
-				self.max_error_rate, self.where, self.wildcard_flags)
+			if not self.indels:
+				alignment = align.compare_prefixes(self.sequence, read_seq, self.wildcard_flags)
+			else:
+				alignment = align.globalalign_locate(self.sequence, read_seq,
+					self.max_error_rate, self.where, self.wildcard_flags)
 			# TODO line-based profiling tells me that the following line
 			# is slow (takes 30% of match()'s running time)
 			match = AdapterMatch(*(alignment + (self._front_flag, self, read)))

@@ -222,3 +222,27 @@ def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SE
 		start2 = 0
 
 	return (start1, best_i, start2, best_j, best_matches, best_cost)
+
+
+def compare_prefixes(char* s1, char* s2, int degenerate = 0):
+	"""
+	Find out whether two strings have a common prefix, allowing mismatches.
+
+	This is used to find an anchored 5' adapter (type 'FRONT') in the 'no indels' mode.
+	This is very simple as only the number of errors needs to be counted.
+
+	This function returns a tuple compatible with what globalalign_locate outputs.
+	"""
+	cdef int m = len(s1)
+	cdef int n = len(s2)
+	cdef int wildcard1 = degenerate & ALLOW_WILDCARD_SEQ1
+	cdef int wildcard2 = degenerate & ALLOW_WILDCARD_SEQ2
+	cdef int length = min(m, n)
+	cdef int i, matches = 0
+	for i in range(length):
+		if s1[i] == s2[i] or \
+				(wildcard1 and s1[i] == WILDCARD_CHAR) or \
+				(wildcard2 and s2[i] == WILDCARD_CHAR):
+			matches += 1
+	# length - matches = no. of errors
+	return (0, length, 0, length, matches, length - matches)

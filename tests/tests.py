@@ -311,3 +311,18 @@ def test_paired_end():
 	run(['-a', 'TTAGACATAT', '-m', '14', '--paired-output', pairedtmp], 'paired.m14.1.fastq', 'paired.1.fastq', 'paired.2.fastq')
 	diff(dpath(os.path.join('cut', 'paired.m14.2.fastq')), pairedtmp)
 	os.remove(pairedtmp)
+
+
+def test_anchored_no_indels():
+	'''anchored 5' adapter, mismatches only (no indels)'''
+	run('-g ^TTAGACATAT --no-indels -e 0.1', 'anchored_no_indels.fasta', 'anchored_no_indels.fasta')
+
+
+def test_anchored_no_indels_wildcard_read():
+	'''anchored 5' adapter, mismatches only (no indels), but wildcards in the read count as matches'''
+	run('-g ^TTAGACATAT --match-read-wildcards --no-indels -e 0.1', 'anchored_no_indels_wildcard.fasta', 'anchored_no_indels.fasta')
+
+
+def test_anchored_no_indels_wildcard_adapt():
+	'''anchored 5' adapter, mismatches only (no indels), but wildcards in the adapter count as matches'''
+	run('-g ^TTAGACANAT --no-indels -e 0.1', 'anchored_no_indels.fasta', 'anchored_no_indels.fasta')

@@ -562,6 +562,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		"In all cases, the adapter itself is trimmed.")
 	group.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
+	group.add_option("--no-indels", action='store_false', dest='indels', default=True,
+		help="Do not allow indels in the alignments, that is, allow only mismatches. This option is currently only supported for anchored 5' adapters ('-g ^ADAPTER') (default: both mismatches and indels are allowed)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
 		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times (default: %default).")
 	group.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
@@ -731,25 +733,32 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 
 	adapters = []
 
+	def parse_adapter_name(seq):
+		"""Parse an adapter given as 'name=adapt' into 'name' and 'adapt'."""
+		fields = seq.split('=', 1)
+		if len(fields) > 1:
+			name, seq = fields
+			name = name.strip()
+		else:
+			name = None
+		seq = seq.strip()
+		return name, seq
+
 	ADAPTER_CLASS = ColorspaceAdapter if options.colorspace else Adapter
 	def append_adapters(adapter_list, where):
 		for seq in adapter_list:
-			fields = seq.split('=', 1)
-			if len(fields) > 1:
-				name, seq = fields
-				name = name.strip()
-			else:
-				name = None
-			seq = seq.strip()
+			name, seq = parse_adapter_name(seq)
 			w = where
 			if w == FRONT and seq.startswith('^'):
 				seq = seq[1:]
 				w = PREFIX
+			elif not options.indels:
+				parser.error("Not allowing indels is currently supported only for anchored 5' adapters.")
 			if len(seq) == 0:
 				parser.error("The adapter sequence is empty")
 			adapter = ADAPTER_CLASS(seq, w, options.error_rate,
 				options.overlap, options.match_read_wildcards,
-				options.match_adapter_wildcards, name=name)
+				options.match_adapter_wildcards, name=name, indels=options.indels)
 			adapters.append(adapter)
 
 	append_adapters(options.adapters, BACK)

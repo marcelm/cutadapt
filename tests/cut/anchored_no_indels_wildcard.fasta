@@ -1,0 +1,12 @@
+>no_mismatch (adapter: TTAGACATAT)
+GAGGTCAG
+>one_mismatch
+GAGGTCAG
+>two_mismatches
+TAAGACGTATGAGGTCAG
+>insertion
+ATTAGACATATGAGGTCAG
+>deletion
+TAGACATATGAGGTCAG
+>mismatch_plus_wildcard
+GAGGTCAG
