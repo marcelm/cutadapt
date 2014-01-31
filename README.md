@@ -556,6 +556,13 @@ enabled when `--bwa` is used.
 Changes
 =======
 
+v1.4
+----
+
+* Support the `--no-indels` option. This disallows insertions and deletions while
+  aligning the adapter. Currently, the option is only available for anchored 5' adapters.
+  This fixes issue 69.
+
 v1.3
 ----
 
