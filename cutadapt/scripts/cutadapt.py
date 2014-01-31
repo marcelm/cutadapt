@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # kate: word-wrap off; remove-trailing-spaces all;
 #
-# Copyright (c) 2010-2013 Marcel Martin <marcel.martin@tu-dortmund.de>
+# Copyright (c) 2010-2014 Marcel Martin <marcel.martin@tu-dortmund.de>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
