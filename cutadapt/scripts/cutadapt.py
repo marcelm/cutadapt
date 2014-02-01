@@ -191,11 +191,10 @@ def print_statistics(adapters, time, n, total_bp, quality_trimmed, trim, reads_m
 	sys.stdout = old_stdout
 
 
-# TODO make this a class and add a trim_primer parameter
 def write_read(read, outfile, twoheaders=False):
 	"""
 	Write read in either FASTA or FASTQ format
-	(depending on whether qualities is None or not) to outfile
+	(depending on whether read.qualities is None or not) to outfile
 
 	If twoheaders is True and the output is FASTQ, then the sequence name
 	(description) is also written after the "+" character in the third line.
@@ -239,14 +238,13 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 class ReadFilter(object):
 	"""Filter reads according to length and according to whether any adapter matches."""
 
-	def __init__(self, minimum_length, maximum_length, too_short_outfile, too_long_outfile, discard_trimmed, discard_untrimmed, trim_primer):
+	def __init__(self, minimum_length, maximum_length, too_short_outfile, too_long_outfile, discard_trimmed, discard_untrimmed):
 		self.minimum_length = minimum_length
 		self.maximum_length = maximum_length
 		self.too_short_outfile = too_short_outfile
 		self.too_long_outfile = too_long_outfile
 		self.discard_trimmed = discard_trimmed
 		self.discard_untrimmed = discard_untrimmed
-		self.trim_primer = trim_primer
 		self.too_long = 0
 		self.too_short = 0
 
@@ -261,17 +259,11 @@ class ReadFilter(object):
 		if len(read.sequence) < self.minimum_length:
 			self.too_short += 1
 			if self.too_short_outfile is not None:
-				if self.trim_primer: # TODO refactor
-					read = read[1:]
-					read.primer = ''
 				write_read(read, self.too_short_outfile)
 			return False
-		if len(read.sequence) > self.maximum_length:
+		elif len(read.sequence) > self.maximum_length:
 			self.too_long += 1
 			if self.too_long_outfile is not None:
-				if self.trim_primer: # TODO refactor
-					read = read[1:]
-					read.primer = ''
 				write_read(read, self.too_long_outfile)
 			return False
 		return True
@@ -347,6 +339,14 @@ class ZeroCapper(object):
 	def apply(self, read):
 		read = read[:]
 		read.qualities = read.qualities.translate(self.ZERO_CAP_TRANS)
+		return read
+
+
+class PrimerTrimmer(object):
+	"""Trim primer base from colorspace reads"""
+	def apply(self, read):
+		read = read[1:]
+		read.primer = ''
 		return read
 
 
@@ -482,7 +482,7 @@ class QualityTrimmer(object):
 
 
 def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers,
-		readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile, rest_writer, trim_primer):
+		readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile, rest_writer):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -518,9 +518,6 @@ def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers
 				twoheaders = False
 		if not readfilter.keep(read, trimmed):
 			continue
-		if trim_primer:
-			read = read[1:]
-			read.primer = ''
 		write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
 		if pe_reader:
 			write_read(pe_read, pe_outfile)
@@ -787,6 +784,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		modifiers.append(DoubleEncoder())
 	if options.zero_cap:
 		modifiers.append(ZeroCapper(quality_base=options.quality_base))
+	if options.trim_primer:
+		modifiers.append(PrimerTrimmer())
 	if options.quality_cutoff > 0:
 		quality_trimmer = QualityTrimmer(options.quality_cutoff, options.quality_base)
 	else:
@@ -796,7 +795,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 				options.wildcard_file, options.info_file, options.trim)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, too_long_outfile, options.discard_trimmed,
-		options.discard_untrimmed, options.trim_primer)
+		options.discard_untrimmed)
 	start_time = time.clock()
 	try:
 		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
@@ -804,7 +803,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 			pe_reader = read_sequences(pe_filename, None, colorspace=options.colorspace, fileformat=options.format)
 		else:
 			pe_reader = None
-		(n, total_bp) = process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile, rest_writer, options.trim_primer)
+		(n, total_bp) = process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile, rest_writer)
 	except IOError as e:
 		if e.errno == errno.EPIPE:
 			sys.exit(1)

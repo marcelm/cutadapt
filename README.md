@@ -562,6 +562,8 @@ v1.4
 * Support the `--no-indels` option. This disallows insertions and deletions while
   aligning the adapter. Currently, the option is only available for anchored 5' adapters.
   This fixes issue 69.
+* For colorspace, the length of a read (for `--minimum- and --maximum-length`)
+  is now computed after primer base removal (when `--trim-primer` is specified).
 
 v1.3
 ----
