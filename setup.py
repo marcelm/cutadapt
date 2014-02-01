@@ -14,15 +14,18 @@ except ImportError:
 	# no Cython available
 	cmdclass = { }
 	align_sources = [ 'cutadapt/calign.c' ]
-	if not os.path.exists(align_sources[0]):
+	qualtrim_sources = [ 'cutadapt/cqualtrim.c' ]
+	if not os.path.exists(align_sources[0]) or not os.path.exists(qualtrim_sources[0]):
 		sys.stdout.write("Cython is not installed and a pre-compiled alignment module\n")
 		sys.stdout.write("is also not available. You need to install Cython to continue.\n")
 		sys.exit(1)
 else:
 	cmdclass = { 'build_ext' : build_ext }
 	align_sources = [ 'cutadapt/calign.pyx' ]
+	qualtrim_sources = [ 'cutadapt/cqualtrim.pyx' ]
 
 align_module = Extension('cutadapt.calign', sources=align_sources)
+qualtrim_module = Extension('cutadapt.cqualtrim', sources=qualtrim_sources)
 
 setup(
 	name = 'cutadapt',
@@ -32,7 +35,7 @@ setup(
 	url = 'http://code.google.com/p/cutadapt/',
 	description = 'trim adapters from high-throughput sequencing reads',
 	license = 'MIT',
-	ext_modules = [align_module],
+	ext_modules = [align_module, qualtrim_module],
 	cmdclass = cmdclass,
 	packages = ['cutadapt', 'cutadapt.scripts'],
 	scripts = ['bin/cutadapt'],
@@ -51,4 +54,3 @@ setup(
 		"Topic :: Scientific/Engineering :: Bio-Informatics"
 	]
 )
-

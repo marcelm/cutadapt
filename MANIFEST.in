@@ -1,5 +1,7 @@
 include cutadapt/calign.so
 include cutadapt/calign.c
+include cutadapt/cqualtrim.so
+include cutadapt/cqualtrim.c
 include bin/_preamble.py
 include README.md
 include tests/test*.py

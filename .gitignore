@@ -1,5 +1,4 @@
 *.pyc
-calign.so
 MANIFEST
 build/
 dist/
@@ -11,3 +10,5 @@ galaxy/package/
 .project
 .settings
 cutadapt/calign.c
+cutadapt/cqualtrim.c
+cutadapt/*.so

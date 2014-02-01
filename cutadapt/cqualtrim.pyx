@@ -1,14 +1,12 @@
+# kate: syntax Python;
 """
 Quality trimming.
 """
-from __future__ import print_function, division, absolute_import
 
 import sys
-if sys.version_info[0] >= 3:
-	xrange = range
 
 
-def py_quality_trim_index(qualities, cutoff, base=33):
+def quality_trim_index(char* qualities, int cutoff, int base=33):
 	"""
 	Find the position at which to trim a low-quality end from a nucleotide sequence.
 
@@ -20,11 +18,11 @@ def py_quality_trim_index(qualities, cutoff, base=33):
 	- Compute partial sums from all indices to the end of the sequence.
 	- Trim sequence at the index at which the sum is minimal.
 	"""
-	s = 0
-	max_qual = 0
-	max_i = len(qualities)
-	for i in reversed(xrange(max_i)):
-		q = ord(qualities[i:i+1]) - base
+	cdef int s = 0
+	cdef int max_qual = 0
+	cdef int max_i = len(qualities)
+	for i in reversed(xrange(len(qualities))):
+		q = qualities[i] - base
 		s += cutoff - q
 		if s < 0:
 			break
@@ -32,9 +30,3 @@ def py_quality_trim_index(qualities, cutoff, base=33):
 			max_qual = s
 			max_i = i
 	return max_i
-
-try:
-	from cutadapt import cqualtrim
-	quality_trim_index = cqualtrim.quality_trim_index
-except:
-	quality_trim_index = py_quality_trim_index
