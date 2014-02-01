@@ -363,20 +363,6 @@ class SRAColorspaceFastqReader(FastqReader):
 		super(SRAColorspaceFastqReader, self).__init__(file, sequence_class=sra_colorspace_sequence)
 
 
-def _quality_to_ascii(qualities, base=33):
-	"""
-	Convert a list containing qualities given as integer to a string of
-	ASCII-encoded qualities.
-
-	base -- ASCII code of quality zero (sensible values are 33 and 64).
-
-	>>> _quality_to_ascii([17, 4, 29, 18])
-	'2%>3'
-	"""
-	qualities = ''.join(chr(q+base) for q in qualities)
-	return qualities
-
-
 class FastaQualReader(object):
 	"""
 	Reader for reads that are stored in .(CS)FASTA and .QUAL files.
@@ -399,14 +385,9 @@ class FastaQualReader(object):
 		"""
 		# conversion dictionary: maps strings to the appropriate ASCII-encoded character
 		conv = dict()
-		if sys.version > '3':
-			for i in range(-5, 256 - 33):
-				conv[str(i)] = chr(i + 33)
-			q2a = lambda x: ''.join(x)
-		else:
-			for i in range(-5, 256 - 33):
-				conv[str(i)] = chr(i + 33)
-			q2a = bytearray
+		for i in range(-5, 256 - 33):
+			conv[str(i)] = chr(i + 33)
+		q2a = lambda x: ''.join(x)
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
 			qualities = q2a([conv[value] for value in qualread.sequence.split()])
 			if fastaread.name != qualread.name:
