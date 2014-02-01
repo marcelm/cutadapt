@@ -191,24 +191,6 @@ def print_statistics(adapters, time, n, total_bp, quality_trimmed, trim, reads_m
 	sys.stdout = old_stdout
 
 
-def write_read(read, outfile, twoheaders=False):
-	"""
-	Write read in either FASTA or FASTQ format
-	(depending on whether read.qualities is None or not) to outfile
-
-	If twoheaders is True and the output is FASTQ, then the sequence name
-	(description) is also written after the "+" character in the third line.
-	"""
-	initial = getattr(read, 'primer', '')
-	if read.qualities is None:
-		# FASTA
-		print('>%s\n%s%s' % (read.name, initial, read.sequence), file=outfile)
-	else:
-		# FASTQ
-		tmp = read.name if twoheaders else ''
-		print('@%s\n%s%s\n+%s\n%s' % (read.name, initial, read.sequence, tmp, read.qualities), file=outfile)
-
-
 def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 	"""
 	Read sequences and (if available) quality information from either:
@@ -259,12 +241,12 @@ class ReadFilter(object):
 		if len(read.sequence) < self.minimum_length:
 			self.too_short += 1
 			if self.too_short_outfile is not None:
-				write_read(read, self.too_short_outfile)
+				read.write(self.too_short_outfile)
 			return False
 		elif len(read.sequence) > self.maximum_length:
 			self.too_long += 1
 			if self.too_long_outfile is not None:
-				write_read(read, self.too_long_outfile)
+				read.write(self.too_long_outfile)
 			return False
 		return True
 
@@ -518,9 +500,9 @@ def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers
 				twoheaders = False
 		if not readfilter.keep(read, trimmed):
 			continue
-		write_read(read, trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
+		read.write(trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
 		if pe_reader:
-			write_read(pe_read, pe_outfile)
+			pe_read.write(pe_outfile)
 	return (n, total_bp)
 
 

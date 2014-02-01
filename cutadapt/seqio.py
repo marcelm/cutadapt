@@ -30,10 +30,13 @@ class Sequence(object):
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
-		if qualities is not None and len(qualities) != len(sequence):
-			rname = _shorten(name)
-			raise ValueError("In read named '{0}': length of quality sequence and length of read do not match ({1}!={2})".format(
-				rname, len(qualities), len(sequence)))
+		if qualities is not None:
+			if len(qualities) != len(sequence):
+				rname = _shorten(name)
+				raise ValueError("In read named '{0}': length of quality sequence and length of read do not match ({1}!={2})".format(
+					rname, len(qualities), len(sequence)))
+		else:
+			self.write = self._write_fasta
 
 	def __getitem__(self, key):
 		"""slicing"""
@@ -56,6 +59,12 @@ class Sequence(object):
 	def __ne__(self, other):
 		return not self.__eq__(other)
 
+	def _write_fasta(self, outfile, twoheaders='ignored'):
+		print('>', self.name, '\n', self.sequence, file=outfile, sep='')
+
+	def write(self, outfile, twoheaders=False):
+		tmp = self.name if twoheaders else ''
+		print('@', self.name, '\n', self.sequence, '\n+', tmp, '\n', self.qualities, file=outfile, sep='')
 
 
 class ColorspaceSequence(Sequence):
@@ -86,6 +95,13 @@ class ColorspaceSequence(Sequence):
 
 	def __getitem__(self, key):
 		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None, self.primer)
+
+	def _write_fasta(self, outfile, twoheaders='ignored'):
+		print('>', self.name, '\n', self.primer, self.sequence, file=outfile, sep='')
+
+	def write(self, outfile, twoheaders=False):
+		tmp = self.name if twoheaders else ''
+		print('@', self.name, '\n', self.primer, self.sequence, '\n+', tmp, '\n', self.qualities, file=outfile, sep='')
 
 
 def sra_colorspace_sequence(name, sequence, qualities):
