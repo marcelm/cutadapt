@@ -13,7 +13,7 @@ DEF INSERTION_COST = 1
 DEF DELETION_COST = 1
 DEF MATCH_COST = 0
 DEF MISMATCH_COST = 1
-DEF WILDCARD_CHAR = 'N'
+DEF WILDCARD_CHAR = b'N'
 
 # structure for a DP matrix entry
 ctypedef struct Entry:
