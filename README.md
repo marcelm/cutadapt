@@ -47,8 +47,8 @@ Dependencies
 ============
 
 cutadapt needs Python 2.6 or later. Python 3 is not supported in this release,
-but will be back in future versions. Using Python 2.7 is recommended since it 
-works fastest. For installation from sources, a C compiler needs to be 
+but will be back in future versions. Using Python 2.7 is recommended since it
+works fastest. For installation from sources, a C compiler needs to be
 installed. The program has been developed and tested on Ubuntu and OpenSuSE.
 
 
@@ -583,7 +583,7 @@ v1.4
 v1.3
 ----
 
-* Preliminary paired-end support with the --paired-output option (contributed by 
+* Preliminary paired-end support with the --paired-output option (contributed by
   James Casbon). See the README section on how to use it.
 * Improved statistics.
 * Fix incorrectly reported amount of quality-trimmed Mbp (issue 57, fix by Chris Penkett)
