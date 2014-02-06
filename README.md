@@ -22,7 +22,7 @@ License
 
 (This is the MIT license.)
 
-Copyright (c) 2010-2014 Marcel Martin <marcel.martin@tu-dortmund.de>
+Copyright (c) 2010-2014 Marcel Martin <marcel.martin@scilifelab.se>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -189,34 +189,49 @@ the end of the sequence; cut sequence at the index at which the sum is minimal.
 Paired-end adapter trimming
 ---------------------------
 
-Cutadapt supports paired-end trimming, but currently two passes over
-the data are required.
+Cutadapt supports paired-end trimming, but currently two passes over the data are
+required.
 
 Assume the input is in `reads.1.fastq` and `reads.2.fastq` and that
 `ADAPTER_FWD` should be trimmed from the forward reads (first file) and
-`ADAPTER_REV` from the second reverse reads (second file). There are
-two cases.
+`ADAPTER_REV` from the reverse reads (second file).
 
-If you do not use any of the options that discard reads,
+If you do not use any of the filtering options that discard reads,
 such as `--discard`, `--minimum-length` or `--maximum-length`, then
 run cutadapt on each file separately:
 
     cutadapt -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
     cutadapt -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
 
-If you use one of the read-discarding options, then the `--paired-output`
-option is needed to keep the two files synchronized. First trim the forward read,
-writing output to temporary files:
+You can use the options that are listed under 'Additional modifications' in cutadapt's help
+output without problems. For example, if you want to quality-trim the first read in each
+pair with a threshold of 10, and the second read in each pair with a threshold of 15, then
+the commands could be:
 
-    cutadapt -a ADAPTER_FWD --minimum-length 20 --paired-output tmp.2.fastq -o tmp.1.fastq reads.1.fastq reads.2.fastq
+    cutadapt -q 10 -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
+    cutadapt -q 15 -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
+
+However, if you use one of the filtering options that discard reads, then you need to give
+both input read files to cutadapt and the `--paired-output` option is needed to keep the two
+files synchronized. First trim the forward read, writing output to temporary files (we
+also add some quality trimming):
+
+    cutadapt -q 10 -a ADAPTER_FWD --minimum-length 20 --paired-output tmp.2.fastq -o tmp.1.fastq reads.1.fastq reads.2.fastq
 
 Then trim the reverse read, using the temporary files as input:
 
-    cutadapt -a ADAPTER_REV --minimum-length 20 --paired-output trimmed.1.fastq -o trimmed.2.fastq tmp.2.fastq tmp.1.fastq
+    cutadapt -q 15 -a ADAPTER_REV --minimum-length 20 --paired-output trimmed.1.fastq -o trimmed.2.fastq tmp.2.fastq tmp.1.fastq
 
 Finally, remove the temporary files:
 
     rm tmp.1.fastq tmp.2.fastq
+
+In each call to cutadapt, the read-modifying options such as `-q` only apply to the first
+file (first reads.1.fastq, then tmp.2.fastq in this example). Reads in the second file
+are not affected by those options, but by the filtering options: If a read in
+the first file is discarded, then the matching read in the second file is also filtered
+and not written to the output given by `--paired-output` in order to keep both output
+files synchronized.
 
 
 Illumina TruSeq
