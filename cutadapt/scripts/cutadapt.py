@@ -159,7 +159,7 @@ def print_statistics(adapters, time, n, total_bp, quality_trimmed, trim, reads_m
 
 		print("=" * 3, "Adapter", index+1, "=" * 3)
 		print()
-		if adapter.name:
+		if not adapter.name_is_generated:
 			name = "'{0}' ({1})".format(adapter.name, adapter.sequence)
 		else:
 			name = "'{0}'".format(adapter.sequence)
@@ -390,7 +390,16 @@ class RepeatedAdapterMatcher(object):
 		if match is None:
 			print(match.read.name, -1, seq, sep='\t', file=self.info_file)
 		else:
-			print(match.read.name, match.errors, match.rstart, match.rstop, seq[0:match.rstart], seq[match.rstart:match.rstop], seq[match.rstop:], sep='\t', file=self.info_file)
+			print(
+				match.read.name,
+				match.errors,
+				match.rstart,
+				match.rstop,
+				seq[0:match.rstart],
+				seq[match.rstart:match.rstop],
+				seq[match.rstop:],
+				match.adapter.name,
+				sep='\t', file=self.info_file)
 
 	def find_match(self, read):
 		"""
@@ -713,7 +722,9 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	adapters = []
 
 	def parse_adapter_name(seq):
-		"""Parse an adapter given as 'name=adapt' into 'name' and 'adapt'."""
+		"""
+		Parse an adapter given as 'name=adapt' into 'name' and 'adapt'.
+		"""
 		fields = seq.split('=', 1)
 		if len(fields) > 1:
 			name, seq = fields
