@@ -574,6 +574,8 @@ Changes
 v1.4
 ----
 
+* Speed up reading and writing of gzipped files on systems where the `gzip`
+  program is available. This gives up to a 2x speedup.
 * Support the `--no-indels` option. This disallows insertions and deletions while
   aligning the adapter. Currently, the option is only available for anchored 5' adapters.
   This fixes issue 69.

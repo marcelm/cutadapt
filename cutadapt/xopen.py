@@ -6,6 +6,7 @@ from __future__ import print_function, division, absolute_import
 import gzip
 import sys
 import io
+from subprocess import Popen, PIPE
 
 try:
 	import bz2
@@ -32,7 +33,9 @@ def xopen(filename, mode='r'):
 	Replacement for the "open" function that can also open files that have
 	been compressed with gzip or bzip2. If the filename is '-', standard
 	output (mode 'w') or input (mode 'r') is returned. If the filename ends
-	with .gz, the file is opened with gzip.open(). If it ends with .bz2, it's
+	with .gz, the file is opened with a pipe to the gzip program. If that
+	does not work, then gzip.open() is used (the gzip module is slower than
+	the pipe to the gzip program). If the filename ends with .bz2, it's
 	opened as a bz2.BZ2File. Otherwise, the regular open() is used.
 	"""
 	assert isinstance(filename, basestring)
@@ -51,9 +54,20 @@ def xopen(filename, mode='r'):
 	elif filename.endswith('.gz'):
 		if sys.version_info[0] < 3:
 			if 'r' in mode:
-				return buffered_reader(gzip.open(filename, mode))
+				try:
+					return Popen(['gzip', '-cd', filename], stdout=PIPE).stdout
+				except IOError:
+					# gzip not installed
+					return buffered_reader(gzip.open(filename, mode))
 			else:
-				return buffered_writer(gzip.open(filename, mode))
+				try:
+					f = open(filename, 'w')
+					# TODO
+					# f is not closed when the returned
+					# file-like object is closed.
+					return Popen(['gzip'], stdin=PIPE, stdout=f).stdin
+				except IOError:
+					return buffered_writer(gzip.open(filename, mode))
 		else:
 			if 'r' in mode:
 				return getreader('ascii')(gzip.open(filename, mode))
