@@ -438,15 +438,18 @@ When the `--info-file` command-line parameter is given, detailed information
 about the found adapters is written to the given file. The output is a
 tab-separated text file. Each line corresponds to one read of the input file.
 The columns are:
-* Read name
-* Number of errors
-* 0-based start coordinate of the adapter match
-* 0-based end coordinate of the adapter match
-* Sequence of the read before the adapter match
-* Sequence of the read that was matched to the adapter
-* Sequence of the read after the adapter match
+1. Read name
+2. Number of errors
+3. 0-based start coordinate of the adapter match
+4. 0-based end coordinate of the adapter match
+5. Sequence of the read before the adapter match
+6. Sequence of the read that was matched to the adapter
+7. Sequence of the read after the adapter match
+8. Name of the found adapter.
 
-The concatenation of the last three fields yields the full read sequence.
+The concatenation of the fields 5-6 yields the full read sequence. The adapter
+name that should be used in column 8 can be given by writing `-a name=sequence`
+instead of just `-a sequence`. Adapters without a name are numbered starting from 1.
 
 If no adapter was found, the format is as follows:
 * Read name
@@ -579,8 +582,10 @@ v1.4
 * Support the `--no-indels` option. This disallows insertions and deletions while
   aligning the adapter. Currently, the option is only available for anchored 5' adapters.
   This fixes issue 69.
-* For colorspace, the length of a read (for `--minimum- and --maximum-length`)
-  is now computed after primer base removal (when `--trim-primer` is specified).
+* As a sideeffect of implementing the --no-indels option: For colorspace, the
+  length of a read (for `--minimum- and --maximum-length`) is now computed after
+  primer base removal (when `--trim-primer` is specified).
+* Added one column to the info file that contains the name of the found adapter.
 
 v1.3
 ----
