@@ -90,8 +90,8 @@ def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SE
 	"""
 	# only a single column of the DP matrix is stored
 	cdef Entry* column = <Entry*> PyMem_Malloc((m+1) * sizeof(Entry))
-	#TODO if column == NULL:
-	#	return NULL;
+	if not column:
+		return MemoryError()
 	cdef int i, j, best_i, best_j, best_cost, best_matches, best_origin
 
 	# initialize first column
