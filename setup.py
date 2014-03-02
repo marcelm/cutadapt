@@ -31,7 +31,7 @@ setup(
 	name = 'cutadapt',
 	version = __version__,
 	author = 'Marcel Martin',
-	author_email = 'marcel.martin@tu-dortmund.de',
+	author_email = 'marcel.martin@scilifelab.se',
 	url = 'http://code.google.com/p/cutadapt/',
 	description = 'trim adapters from high-throughput sequencing reads',
 	license = 'MIT',
