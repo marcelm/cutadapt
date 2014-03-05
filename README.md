@@ -157,7 +157,7 @@ FASTA file
 ----------
 
 Cut an adapter from reads given in a FASTA file. Try to remove an adapter three times
-(this is usually not needed), use the default error rate of 10%, write result to output.fa:
+(this is usually not needed), use the default error rate of 10%, write result to `output.fa`:
 
     cutadapt -n 3 -a TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG input.fa > output.fa
 
@@ -502,14 +502,30 @@ The `.csfasta`/`.qual` file format is automatically assumed if two input
 files are given to cutadapt.
 
 In colorspace mode, the adapter sequences given to the `-a`, `-b` and `-g` options
-can be given both as colors or as nucleotides. In the latter case, they will
-simply be converted automatically. For example, to trim an adapter from
+can be given both as colors or as nucleotides. If given as nucleotides, they will
+automatically be converted to colorspace. For example, to trim an adapter from
 `solid.csfasta` and `solid.qual`, use this command-line:
 
 	cutadapt -c -a CGCCTTGGCCGTACAGCAG solid.csfasta solid.qual > output.fastq
 
 In case you know the colorspace adapter sequence, you can also write `330201030313112312`
 instead of `CGCCTTGGCCGTACAGCAG` and the result is the same.
+
+
+Ambiguity in colorspace
+-----------------------
+
+The ambiguity of colorspace encoding leads to some effects to be aware of when trimming
+3' adapters from colorspace reads. For example, when trimming the adapter `AACTC`, cutadapt
+searches for its colorspace-encoded version `0122`. But also `TTGAG`, `CCAGA` and `GGTCT`
+have an encoding of `0122`. This means that effectively four different adapter sequences
+are searched and trimmed at the same time. There is no way around this, unless
+the decoded sequence were available, but that is usually only the case after read mapping.
+
+The effect should usually be quite small. The number of false positives is multiplied by
+four, but with a sufficiently large overlap (3 or 4 is already enough), this is still
+only around 0.2 bases lost per read on average. If inspecting k-mer frequencies or using
+small overlaps, you need to be aware of the effect, however.
 
 
 Double-encoding, BWA and MAQ
@@ -531,11 +547,10 @@ that version works well.
 
 When you want to trim reads that will be mapped with BWA or MAQ, you can
 use the `--bwa` option, which enables colorspace mode (`-c`), double-encoding
-(`-d`) and primer trimming (`-t`), all of which are required for BWA, in
+(`-d`), primer trimming (`-t`), all of which are required for BWA, in
 addition to some other useful options.
 
-There is also the `--maq` option, which is simply another name for the
-`--bwa` option.
+The `--maq` option is an alias for `--bwa`.
 
 
 Colorspace examples
@@ -586,6 +601,7 @@ v1.4
   length of a read (for `--minimum- and --maximum-length`) is now computed after
   primer base removal (when `--trim-primer` is specified).
 * Added one column to the info file that contains the name of the found adapter.
+* Add an explanation about colorspace ambiguity to the README
 
 v1.3
 ----
