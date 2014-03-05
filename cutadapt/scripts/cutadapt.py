@@ -129,11 +129,11 @@ def print_statistics(adapters, time, n, total_bp, quality_trimmed, trim, reads_m
 	print("Maximum error rate: {0:.2%}".format(error_rate))
 	print("   No. of adapters:", len(adapters))
 	print("   Processed reads: {0:12}".format(n))
-	print("   Processed bases: {0:12} bp ({1:.1F} Mbp)".format(total_bp, total_bp/1E6))
+	print("   Processed bases: {0:12} bp ({1:.1F} Mbp)".format(total_bp, total_bp / 1E6))
 	trimmed_bp = 0
 	for adapter in adapters:
 		for d in (adapter.lengths_front, adapter.lengths_back):
-			trimmed_bp += sum( seqlen*count for (seqlen, count) in d.items() )
+			trimmed_bp += sum(seqlen * count for (seqlen, count) in d.items())
 
 	if n > 0:
 		operation = "Trimmed" if trim else "Matched"
