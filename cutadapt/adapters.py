@@ -268,11 +268,11 @@ class ColorspaceAdapter(Adapter):
 
 	def _trimmed_back(self, match):
 		"""Return a trimmed read"""
-		read = Adapter._trimmed_back(self, match)
-		# TODO avoid the copy (previously, this was just an index operation)
 		# trim one more color if long enough
-		#rstart = max(0, match.rstart - 1)
-		read = read[:-1]
+		adjusted_rstart = max(match.rstart - 1, 0)
+		self.lengths_back[len(match.read) - adjusted_rstart] += 1
+		self.errors_back[len(match.read) - adjusted_rstart][match.errors] += 1
+		read = match.read[:adjusted_rstart]
 		return read
 
 	def __repr__(self):

@@ -592,8 +592,10 @@ Changes
 v1.4
 ----
 
+* Fix the statistics output for 3' colorspace adapters: The reported lengths were one
+  too short. Thanks to Frank Wessely for reporting this.
 * Speed up reading and writing of gzipped files on systems where the `gzip`
-  program is available. This gives up to a 2x speedup.
+  program is available. This results in up to 2x speedup.
 * Support the `--no-indels` option. This disallows insertions and deletions while
   aligning the adapter. Currently, the option is only available for anchored 5' adapters.
   This fixes issue 69.
