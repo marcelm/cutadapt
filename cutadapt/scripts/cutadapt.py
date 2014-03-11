@@ -477,9 +477,10 @@ def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
+
 	Return a tuple (number_of_processed_reads, number_of_processed_basepairs)
 	"""
-	n = 0 # no. of processed reads
+	n = 0  # no. of processed reads
 	total_bp = 0
 	if pe_reader:
 		pe_reader = iter(pe_reader)
@@ -515,14 +516,7 @@ def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers
 	return (n, total_bp)
 
 
-def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
-	"""
-	Main function that evaluates command-line parameters and iterates
-	over all reads.
-
-	trimmed_outfile is the default output file to which trimmed reads
-	are sent. It can be overriden by using the '-o' parameter.
-	"""
+def get_option_parser():
 	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
 
 	parser.add_option("-f", "--format", default=None,
@@ -644,6 +638,18 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		help="Change negative quality values to zero (workaround to avoid segmentation faults in old BWA versions)")
 	parser.add_option_group(group)
 
+	return parser
+
+
+def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
+	"""
+	Main function that evaluates command-line parameters and iterates
+	over all reads.
+
+	trimmed_outfile is the default output file to which trimmed reads
+	are sent. It can be overriden by using the '-o' parameter.
+	"""
+	parser = get_option_parser()
 	options, args = parser.parse_args(args=cmdlineargs)
 
 	if len(args) == 0:
