@@ -8,7 +8,7 @@ if sys.version_info[0] >= 3:
 	xrange = range
 
 
-def py_quality_trim_index(qualities, cutoff, base=33):
+def quality_trim_index(qualities, cutoff, base=33):
 	"""
 	Find the position at which to trim a low-quality end from a nucleotide sequence.
 
@@ -34,7 +34,6 @@ def py_quality_trim_index(qualities, cutoff, base=33):
 	return max_i
 
 try:
-	from cutadapt import cqualtrim
-	quality_trim_index = cqualtrim.quality_trim_index
+	from cutadapt.cqualtrim import quality_trim_index
 except:
-	quality_trim_index = py_quality_trim_index
+	pass
