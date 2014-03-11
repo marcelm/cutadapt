@@ -274,12 +274,15 @@ def test_issue_46():
 def test_strip_suffix():
 	run("--strip-suffix _sequence -a XXXXXXX", "stripped.fasta", "simple.fasta")
 
+
 # note: the actual adapter sequence in the illumina.fastq.gz data set is
 # GCCTAACTTCTTAGACTGCCTTAAGGACGT (fourth base is different)
 def test_info_file():
 	infotmp = dpath("infotmp.txt")
-	run(["--info-file", infotmp, '-a', 'GCCGAACTTCTTAGACTGCCTTAAGGACGT'], "illumina.fastq", "illumina.fastq.gz")
+	run(["--info-file", infotmp, '-a', 'adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT'], "illumina.fastq", "illumina.fastq.gz")
+	diff(dpath(os.path.join('cut', 'illumina.info.txt')), infotmp)
 	os.remove(infotmp)
+
 
 def test_named_adapter():
 	run("-a MY_ADAPTER=GCCGAACTTCTTAGACTGCCTTAAGGACGT", "illumina.fastq", "illumina.fastq.gz")
