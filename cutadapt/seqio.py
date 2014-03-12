@@ -33,10 +33,8 @@ class Sequence(object):
 		if qualities is not None:
 			if len(qualities) != len(sequence):
 				rname = _shorten(name)
-				raise ValueError("In read named '{0}': length of quality sequence and length of read do not match ({1}!={2})".format(
+				raise ValueError("In read named {0!r}: length of quality sequence and length of read do not match ({1}!={2})".format(
 					rname, len(qualities), len(sequence)))
-		else:
-			self.write = self._write_fasta
 
 	def __getitem__(self, key):
 		"""slicing"""
@@ -45,8 +43,8 @@ class Sequence(object):
 	def __repr__(self):
 		qstr = ''
 		if self.qualities is not None:
-			qstr = '\', qualities="{0}"'.format(_shorten(self.qualities))
-		return '<Sequence(name="{0}", sequence="{1}"{2})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
+			qstr = '\', qualities={0!r}'.format(_shorten(self.qualities))
+		return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
 
 	def __len__(self):
 		return len(self.sequence)
@@ -59,12 +57,12 @@ class Sequence(object):
 	def __ne__(self, other):
 		return not self.__eq__(other)
 
-	def _write_fasta(self, outfile, twoheaders='ignored'):
-		print('>', self.name, '\n', self.sequence, file=outfile, sep='')
-
 	def write(self, outfile, twoheaders=False):
-		tmp = self.name if twoheaders else ''
-		print('@', self.name, '\n', self.sequence, '\n+', tmp, '\n', self.qualities, file=outfile, sep='')
+		if self.qualities is not None:
+			tmp = self.name if twoheaders else ''
+			print('@', self.name, '\n', self.sequence, '\n+', tmp, '\n', self.qualities, file=outfile, sep='')
+		else:
+			print('>', self.name, '\n', self.sequence, file=outfile, sep='')
 
 try:
 	from ._seqio import Sequence
@@ -85,28 +83,29 @@ class ColorspaceSequence(Sequence):
 			self.primer = primer
 		super(ColorspaceSequence, self).__init__(name, sequence, qualities)
 		if not self.primer in ('A', 'C', 'G', 'T'):
-			raise ValueError("primer base is '{0}', but it should be one of A, C, G, T".format(self.primer))
+			raise ValueError("primer base is {0!r}, but it should be one of A, C, G, T".format(self.primer))
 		if qualities is not None and len(self.sequence) != len(qualities):
 			rname = _shorten(name)
-			raise ValueError("In read named '{0}': length of colorspace quality "
-				"sequence and length of read do not match (primer: {1}, "
+			raise ValueError("In read named {0!r}: length of colorspace quality "
+				"sequence and length of read do not match (primer: {1!r}, "
 				"lengths: {2}!={3})".format(rname, self.primer, len(qualities), len(sequence)))
 
 	def __repr__(self):
 		qstr = ''
 		if self.qualities is not None:
-			qstr = '\', qualities="{0}"'.format(_shorten(self.qualities))
-		return '<ColorspaceSequence(name="{0}", primer="{1}", sequence="{2}"{3})>'.format(_shorten(self.name), self.primer, _shorten(self.sequence), qstr)
+			qstr = '\', qualities={0!r}'.format(_shorten(self.qualities))
+		return '<ColorspaceSequence(name={0!r}, primer={1!r}, sequence={2!r}{3})>'.format(_shorten(self.name), self.primer, _shorten(self.sequence), qstr)
 
 	def __getitem__(self, key):
 		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None, self.primer)
 
-	def _write_fasta(self, outfile, twoheaders='ignored'):
-		print('>', self.name, '\n', self.primer, self.sequence, file=outfile, sep='')
 
 	def write(self, outfile, twoheaders=False):
-		tmp = self.name if twoheaders else ''
-		print('@', self.name, '\n', self.primer, self.sequence, '\n+', tmp, '\n', self.qualities, file=outfile, sep='')
+		if self.qualities is not None:
+			tmp = self.name if twoheaders else ''
+			print('@', self.name, '\n', self.primer, self.sequence, '\n+', tmp, '\n', self.qualities, file=outfile, sep='')
+		else:
+			print('>', self.name, '\n', self.primer, self.sequence, file=outfile, sep='')
 
 
 def sra_colorspace_sequence(name, sequence, qualities):
@@ -341,8 +340,8 @@ class FastqReader(object):
 					self.twoheaders = True
 					if not line[1:] == name:
 						raise FormatError(
-							"At line {0}: Sequence descriptions in the FASTQ file don't match "
-							"('{1}' != '{2}').\n"
+							"At line {0}: Sequence descriptions in the FASTQ file do not match "
+							"({1!r} != {2!r}).\n"
 							"The second sequence description must be either empty "
 							"or equal to the first description.".format(i+1, name, line.rstrip()[1:]))
 			elif i % 4 == 3:
@@ -402,7 +401,7 @@ class FastaQualReader(object):
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
 			qualities = q2a([conv[value] for value in qualread.sequence.split()])
 			if fastaread.name != qualread.name:
-				raise ValueError("The read names in the FASTA and QUAL file do not match ('{0}' != '{1}')".format(fastaread.name, qualread.name))
+				raise ValueError("The read names in the FASTA and QUAL file do not match ({0!r} != {1!r})".format(fastaread.name, qualread.name))
 			assert fastaread.name == qualread.name
 			yield self.sequence_class(fastaread.name, fastaread.sequence, qualities)
 
