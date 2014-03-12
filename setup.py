@@ -10,22 +10,26 @@ if sys.version_info < (2, 6):
 
 try:
 	from Cython.Distutils import build_ext
+	USE_CYTHON = True
 except ImportError:
-	# no Cython available
+	USE_CYTHON = False
 	cmdclass = { }
-	align_sources = [ 'cutadapt/_align.c' ]
-	qualtrim_sources = [ 'cutadapt/_qualtrim.c' ]
-	if not os.path.exists(align_sources[0]) or not os.path.exists(qualtrim_sources[0]):
-		sys.stdout.write("Cython is not installed and a pre-compiled alignment module\n")
-		sys.stdout.write("is also not available. You need to install Cython to continue.\n")
-		sys.exit(1)
 else:
 	cmdclass = { 'build_ext' : build_ext }
-	align_sources = [ 'cutadapt/_align.pyx' ]
-	qualtrim_sources = [ 'cutadapt/_qualtrim.pyx' ]
 
-align_module = Extension('cutadapt._align', sources=align_sources)
-qualtrim_module = Extension('cutadapt._qualtrim', sources=qualtrim_sources)
+ext = '.pyx' if USE_CYTHON else '.c'
+
+extensions = [
+	Extension('cutadapt._align', sources=['cutadapt/_align' + ext]),
+	Extension('cutadapt._qualtrim', sources=['cutadapt/_qualtrim' + ext]),
+]
+
+if not USE_CYTHON:
+	for extension in extensions:
+		if not os.path.exists(extension.sources[0]):
+			sys.stdout.write("Cython is not installed and pre-compiled C sources\n")
+			sys.stdout.write("are also not available. You need to install Cython to continue.\n")
+			sys.exit(1)
 
 setup(
 	name = 'cutadapt',
@@ -35,7 +39,7 @@ setup(
 	url = 'http://code.google.com/p/cutadapt/',
 	description = 'trim adapters from high-throughput sequencing reads',
 	license = 'MIT',
-	ext_modules = [align_module, qualtrim_module],
+	ext_modules = extensions,
 	cmdclass = cmdclass,
 	packages = ['cutadapt', 'cutadapt.scripts'],
 	scripts = ['bin/cutadapt'],
