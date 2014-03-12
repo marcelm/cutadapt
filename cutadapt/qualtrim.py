@@ -4,7 +4,8 @@ Quality trimming.
 from __future__ import print_function, division, absolute_import
 
 import sys
-if sys.version_info[0] >= 3:
+
+if sys.version > '3':
 	xrange = range
 
 
@@ -34,6 +35,6 @@ def quality_trim_index(qualities, cutoff, base=33):
 	return max_i
 
 try:
-	from cutadapt.cqualtrim import quality_trim_index
+	from cutadapt._qualtrim import quality_trim_index
 except:
 	pass

@@ -1,7 +1,7 @@
-include cutadapt/calign.so
-include cutadapt/calign.c
-include cutadapt/cqualtrim.so
-include cutadapt/cqualtrim.c
+include cutadapt/_align.so
+include cutadapt/_align.c
+include cutadapt/_qualtrim.so
+include cutadapt/_qualtrim.c
 include bin/_preamble.py
 include README.md
 include tests/test*.py

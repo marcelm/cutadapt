@@ -9,6 +9,5 @@ galaxy/package/
 .pydevproject
 .project
 .settings
-cutadapt/calign.c
-cutadapt/cqualtrim.c
+cutadapt/_*.c
 cutadapt/*.so

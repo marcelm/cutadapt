@@ -222,4 +222,4 @@ def pysemiglobalalign(s1, s2, print_table=False):
 	return (r1, r2, start1, stop1, start2, stop2, errors)
 
 
-from cutadapt.calign import globalalign_locate, compare_prefixes
+from cutadapt._align import globalalign_locate, compare_prefixes

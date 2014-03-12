@@ -5,7 +5,6 @@ Quality trimming.
 
 import sys
 
-
 def quality_trim_index(char* qualities, int cutoff, int base=33):
 	"""
 	Find the position at which to trim a low-quality end from a nucleotide sequence.

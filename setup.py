@@ -13,19 +13,19 @@ try:
 except ImportError:
 	# no Cython available
 	cmdclass = { }
-	align_sources = [ 'cutadapt/calign.c' ]
-	qualtrim_sources = [ 'cutadapt/cqualtrim.c' ]
+	align_sources = [ 'cutadapt/_align.c' ]
+	qualtrim_sources = [ 'cutadapt/_qualtrim.c' ]
 	if not os.path.exists(align_sources[0]) or not os.path.exists(qualtrim_sources[0]):
 		sys.stdout.write("Cython is not installed and a pre-compiled alignment module\n")
 		sys.stdout.write("is also not available. You need to install Cython to continue.\n")
 		sys.exit(1)
 else:
 	cmdclass = { 'build_ext' : build_ext }
-	align_sources = [ 'cutadapt/calign.pyx' ]
-	qualtrim_sources = [ 'cutadapt/cqualtrim.pyx' ]
+	align_sources = [ 'cutadapt/_align.pyx' ]
+	qualtrim_sources = [ 'cutadapt/_qualtrim.pyx' ]
 
-align_module = Extension('cutadapt.calign', sources=align_sources)
-qualtrim_module = Extension('cutadapt.cqualtrim', sources=qualtrim_sources)
+align_module = Extension('cutadapt._align', sources=align_sources)
+qualtrim_module = Extension('cutadapt._qualtrim', sources=qualtrim_sources)
 
 setup(
 	name = 'cutadapt',
