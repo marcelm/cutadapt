@@ -22,6 +22,7 @@ ext = '.pyx' if USE_CYTHON else '.c'
 extensions = [
 	Extension('cutadapt._align', sources=['cutadapt/_align' + ext]),
 	Extension('cutadapt._qualtrim', sources=['cutadapt/_qualtrim' + ext]),
+	Extension('cutadapt._seqio', sources=['cutadapt/_seqio' + ext]),
 ]
 
 if not USE_CYTHON:

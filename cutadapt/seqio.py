@@ -66,6 +66,11 @@ class Sequence(object):
 		tmp = self.name if twoheaders else ''
 		print('@', self.name, '\n', self.sequence, '\n+', tmp, '\n', self.qualities, file=outfile, sep='')
 
+try:
+	from ._seqio import Sequence
+except ImportError:
+	pass
+
 
 class ColorspaceSequence(Sequence):
 
@@ -351,6 +356,12 @@ class FastqReader(object):
 
 	def __exit__(self, *args):
 		self.fp.close()
+
+
+try:
+	from ._seqio import FastqReader, FormatError
+except ImportError:
+	pass
 
 
 class ColorspaceFastqReader(FastqReader):
