@@ -456,10 +456,10 @@ If no adapter was found, the format is as follows:
 * The value -1
 * The read sequence
 
-The option is currently experimental and additional columns may be
-added in the future. Also, in the current version, when the `--times`
-option is set to a value other than 1 (the default value), multiple
-lines are written to the info file for each read.
+When parsing that file, be aware that additional columns may be added in the
+future. Also, in the current version, when the `--times` option is set to a
+value other than 1 (the default value), multiple lines are written to the info
+file for each read.
 
 
 Using a "configuration file"
@@ -592,10 +592,15 @@ Changes
 v1.4
 ----
 
+* This release of cutadapt reduces the overhead of reading and writing files.
+  On my test data set, a typical run of cutadapt (with a single adapter) takes
+  40% less time due to the following two changes.
+* Reading and writing of FASTQ files is faster (thanks to Cython).
+* Reading and writing of gzipped files is faster (up to 2x) on systems
+  where the `gzip` program is available.
+* The quality trimming function is four times faster (also due to Cython).
 * Fix the statistics output for 3' colorspace adapters: The reported lengths were one
   too short. Thanks to Frank Wessely for reporting this.
-* Speed up reading and writing of gzipped files on systems where the `gzip`
-  program is available. This results in up to 2x speedup.
 * Support the `--no-indels` option. This disallows insertions and deletions while
   aligning the adapter. Currently, the option is only available for anchored 5' adapters.
   This fixes issue 69.
