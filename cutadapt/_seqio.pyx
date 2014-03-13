@@ -35,8 +35,6 @@ class Sequence(object):
 				rname = _shorten(name)
 				raise ValueError("In read named {0!r}: length of quality sequence and length of read do not match ({1}!={2})".format(
 					rname, len(qualities), len(sequence)))
-		else:
-			self.write = self._write_fasta
 
 	def __getitem__(self, key):
 		"""slicing"""
@@ -63,8 +61,11 @@ class Sequence(object):
 		print('>', self.name, '\n', self.sequence, file=outfile, sep='')
 
 	def write(self, outfile, twoheaders=False):
-		tmp = self.name if twoheaders else ''
-		print('@', self.name, '\n', self.sequence, '\n+', tmp, '\n', self.qualities, file=outfile, sep='')
+		if self.qualities is not None:
+			tmp = self.name if twoheaders else ''
+			print('@', self.name, '\n', self.sequence, '\n+', tmp, '\n', self.qualities, file=outfile, sep='')
+		else:
+			print('>', self.name, '\n', self.sequence, file=outfile, sep='')
 
 
 class FastqReader(object):
