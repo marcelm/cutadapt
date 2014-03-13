@@ -1,4 +1,5 @@
 # kate: syntax Python;
+# cython: profile=False
 from __future__ import print_function, division, absolute_import
 
 from .xopen import xopen
@@ -64,12 +65,16 @@ cdef class Sequence(object):
 		else:
 			raise NotImplementedError()
 
-	def write(self, outfile, twoheaders=False):
+	def write(self, outfile, bint twoheaders=False):
+		cdef str tmp
 		if self.qualities is not None:
-			tmp = self.name if twoheaders else ''
-			print('@', self.name, '\n', self.sequence, '\n+', tmp, '\n', self.qualities, file=outfile, sep='')
+			s = '@' + self.name + '\n' + self.sequence + '\n+'
+			if twoheaders:
+				s += self.name
+			s += '\n' + self.qualities + '\n'
 		else:
-			print('>', self.name, '\n', self.sequence, file=outfile, sep='')
+			s = '>' + self.name + '\n' + self.sequence + '\n'
+		outfile.write(s)
 
 
 class FastqReader(object):
