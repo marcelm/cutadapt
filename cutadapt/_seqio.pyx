@@ -33,7 +33,7 @@ class Sequence(object):
 		if qualities is not None:
 			if len(qualities) != len(sequence):
 				rname = _shorten(name)
-				raise ValueError("In read named '{0}': length of quality sequence and length of read do not match ({1}!={2})".format(
+				raise ValueError("In read named {0!r}: length of quality sequence and length of read do not match ({1}!={2})".format(
 					rname, len(qualities), len(sequence)))
 		else:
 			self.write = self._write_fasta
@@ -45,8 +45,8 @@ class Sequence(object):
 	def __repr__(self):
 		qstr = ''
 		if self.qualities is not None:
-			qstr = '\', qualities="{0}"'.format(_shorten(self.qualities))
-		return '<Sequence(name="{0}", sequence="{1}"{2})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
+			qstr = '\', qualities={0!r}'.format(_shorten(self.qualities))
+		return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
 
 	def __len__(self):
 		return len(self.sequence)
@@ -106,7 +106,7 @@ class FastqReader(object):
 					if not line[1:] == name:
 						raise FormatError(
 							"At line {0}: Sequence descriptions in the FASTQ file don't match "
-							"('{1}' != '{2}').\n"
+							"({1!r} != {2!r}).\n"
 							"The second sequence description must be either empty "
 							"or equal to the first description.".format(i+1, name, line.rstrip()[1:]))
 			elif i % 4 == 3:
