@@ -21,11 +21,14 @@ class FormatError(Exception):
 	pass
 
 
-
-class Sequence(object):
+cdef class Sequence(object):
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
+	cdef:
+		public str name
+		public bytes sequence
+		public bytes qualities
 
-	def __init__(self, name, sequence, qualities=None):
+	def __init__(self, str name, bytes sequence, bytes qualities=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
@@ -49,16 +52,17 @@ class Sequence(object):
 	def __len__(self):
 		return len(self.sequence)
 
-	def __eq__(self, other):
-		return self.name == other.name and \
-			self.sequence == other.sequence and \
-			self.qualities == other.qualities
-
-	def __ne__(self, other):
-		return not self.__eq__(other)
-
-	def _write_fasta(self, outfile, twoheaders='ignored'):
-		print('>', self.name, '\n', self.sequence, file=outfile, sep='')
+	def __richcmp__(self, other, int op):
+		if 2 <= op <= 3:
+			eq = self.name == other.name and \
+				self.sequence == other.sequence and \
+				self.qualities == other.qualities
+			if op == 2:
+				return eq
+			else:
+				return not eq
+		else:
+			raise NotImplementedError()
 
 	def write(self, outfile, twoheaders=False):
 		if self.qualities is not None:
