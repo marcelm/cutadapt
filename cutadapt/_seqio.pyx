@@ -95,15 +95,18 @@ class FastqReader(object):
 		Return tuples: (name, sequence, qualities).
 		qualities is a string and it contains the unmodified, encoded qualities.
 		"""
-		for i, line in enumerate(self.fp):
+		cdef int i = 0
+		cdef bytes line, name, qualities, sequence
+
+		for line in self.fp:
 			if i % 4 == 0:
 				if not line.startswith('@'):
 					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
-				name = line.strip()[1:]
+				name = line.rstrip('\r\n')[1:]
 			elif i % 4 == 1:
-				sequence = line.strip()
+				sequence = line.rstrip('\r\n')
 			elif i % 4 == 2:
-				line = line.strip()
+				line = line.rstrip('\r\n')
 				if not line.startswith('+'):
 					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
 				if len(line) > 1:
@@ -115,8 +118,9 @@ class FastqReader(object):
 							"The second sequence description must be either empty "
 							"or equal to the first description.".format(i+1, name, line.rstrip()[1:]))
 			elif i % 4 == 3:
-				qualities = line.rstrip("\n\r")
+				qualities = line.rstrip('\r\n')
 				yield self.sequence_class(name, sequence, qualities)
+			i += 1
 
 	def __enter__(self):
 		if self.fp is None:
