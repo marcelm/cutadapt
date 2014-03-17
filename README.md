@@ -237,18 +237,24 @@ files synchronized.
 Illumina TruSeq
 ---------------
 
-The adapters that should be trimmed from Illumina TruSeq are the following.
+If you have reads containing Illumina TruSeq adapters, follow these steps.
 
 Trim read 1 with `A` + the “TruSeq Indexed Adapter”. Use only the prefix of the adapter
 sequence that is common to all Indexed Adapter sequences:
 
-    cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC reads.1.fastq > trimmed.1.fastq
+    cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -o trimmed.1.fastq.gz reads.1.fastq.gz
 
 Trim read 2 with the reverse complement of the ”TruSeq Universal Adapter”:
 
-    cutadapt -a AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT reads.2.fastq > trimmed.2.fastq
+    cutadapt -a AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -o trimmed.2.fastq.gz reads.2.fastq.gz
 
 See also the section about paired-end adapter trimming above.
+
+If you want to simplify this a bit, you can also use `AGATCGGAAGAGC` as the adapter
+sequence in both cases:
+
+    cutadapt -a AGATCGGAAGAGC -o trimmed.1.fastq.gz reads.1.fastq.gz
+    cutadapt -a AGATCGGAAGAGC -o trimmed.2.fastq.gz reads.2.fastq.gz
 
 The adapter sequences can be found in the document [Illumina TruSeq Adapters De-Mystified][1].
 
@@ -259,20 +265,22 @@ Adapters
 ========
 
 These are some 454 adapters:
-A1:   5'- TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA
-A2:   5'- TGAGACAGGGAGGGAACAGATGGGACACGCAGGGATGAGATGGA
-B1:   5'- CCTATCCCCTGTGTGCCTTGCCTATCCCCTGTTGCGTGTCTCA
-B2:   5'- TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG
+
+    A1:   5'- TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA
+    A2:   5'- TGAGACAGGGAGGGAACAGATGGGACACGCAGGGATGAGATGGA
+    B1:   5'- CCTATCCCCTGTGTGCCTTGCCTATCCCCTGTTGCGTGTCTCA
+    B2:   5'- TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG
 
 This is an AB SOLiD adapter (in color space) used in the SREK protocol:
-330201030313112312
+
+    330201030313112312
 
 
 Algorithm
 =========
 
 cutadapt uses a modified semi-global alignment algorithm. For speed, the
-algorithm is implemented as a Python extension module in `calignmodule.c`.
+algorithm is implemented as a Cython extension module in `_align.pyx`.
 
 Cutadapt’s processing speed is currently not dominated by the alignment
 algorithm, but by parsing the input and writing the output.
