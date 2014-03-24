@@ -13,6 +13,7 @@ G 2 3 0 1
 T 3 2 1 0
 """
 from __future__ import print_function, division, absolute_import
+from cutadapt.compat import PY3
 
 __author__ = 'Marcel Martin'
 
@@ -55,7 +56,7 @@ def encode(s):
 	"""
 	if not s:
 		return s
-	r = s[0]
+	r = s[0:1]
 	for i in range(len(s) - 1):
 		r += ENCODE[s[i:i+2]]
 	return r
@@ -80,3 +81,10 @@ def decode(s):
 
 
 (ENCODE, DECODE) = _initialize_dicts()
+
+if PY3:
+	# convert to "bytes"
+	def _str_dict_to_bytes(d):
+		return dict((bytes(k, 'ascii'), bytes(v, 'ascii')) for k,v in d.items())
+	ENCODE.update(_str_dict_to_bytes(ENCODE))
+	DECODE.update(_str_dict_to_bytes(DECODE))

@@ -61,17 +61,13 @@ import sys
 import re
 import time
 import errno
-if sys.version_info[0] < 3:
-	from string import maketrans
-else:
-	maketrans = bytes.maketrans
-	xrange = range
 from optparse import OptionParser, OptionGroup
 
 from cutadapt import seqio, __version__
 from cutadapt.xopen import xopen
 from cutadapt.qualtrim import quality_trim_index
 from cutadapt.adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, ANYWHERE
+from cutadapt.compat import PY3, maketrans, bytes_to_str
 
 
 class HelpfulOptionParser(OptionParser):
@@ -119,13 +115,13 @@ def print_histogram(d, adapter_length, n, error_rate, errors):
 
 
 def print_statistics(adapters, time, n, total_bp, quality_trimmed, trim, reads_matched,
-		error_rate, too_short, too_long, file=None):
+		error_rate, too_short, too_long, args, file=None):
 	"""Print summary to file"""
 	old_stdout = sys.stdout
 	if file is not None:
 		sys.stdout = file
 	print("cutadapt version", __version__)
-	print("Command line parameters:", " ".join(sys.argv[1:]))
+	print("Command line parameters:", " ".join(args))
 	print("Maximum error rate: {0:.2%}".format(error_rate))
 	print("   No. of adapters:", len(adapters))
 	print("   Processed reads: {0:12}".format(n))
@@ -160,9 +156,9 @@ def print_statistics(adapters, time, n, total_bp, quality_trimmed, trim, reads_m
 		print("=" * 3, "Adapter", index+1, "=" * 3)
 		print()
 		if not adapter.name_is_generated:
-			name = "'{0}' ({1})".format(adapter.name, adapter.sequence)
+			name = "'{0}' ({1})".format(adapter.name, bytes_to_str(adapter.sequence))
 		else:
-			name = "'{0}'".format(adapter.sequence)
+			name = "'{0}'".format(bytes_to_str(adapter.sequence))
 		print("Adapter {0}, length {1}, was trimmed {2} times.".format(name, len(adapter.sequence), total))
 		if where == ANYWHERE:
 			print(total_front, "times, it overlapped the 5' end of a read")
@@ -328,7 +324,7 @@ class PrimerTrimmer(object):
 	"""Trim primer base from colorspace reads"""
 	def apply(self, read):
 		read = read[1:]
-		read.primer = ''
+		read.primer = b''
 		return read
 
 
@@ -339,7 +335,7 @@ class RestFileWriter(object):
 	def write(self, match):
 		rest = match.rest()
 		if len(rest) > 0:
-			print(rest, match.read.name, file=self.file)
+			print(bytes_to_str(rest), match.read.name, file=self.file)
 
 
 class RepeatedAdapterMatcher(object):
@@ -395,9 +391,9 @@ class RepeatedAdapterMatcher(object):
 				match.errors,
 				match.rstart,
 				match.rstop,
-				seq[0:match.rstart],
-				seq[match.rstart:match.rstop],
-				seq[match.rstop:],
+				bytes_to_str(seq[0:match.rstart]),
+				bytes_to_str(seq[match.rstart:match.rstop]),
+				bytes_to_str(seq[match.rstop:]),
 				match.adapter.name,
 				sep='\t', file=self.info_file)
 
@@ -415,7 +411,7 @@ class RepeatedAdapterMatcher(object):
 		matches = []
 
 		# try at most self.times times to remove an adapter
-		for t in xrange(self.times):
+		for t in range(self.times):
 			match = self._best_match(read)
 			if match is None:
 				# nothing found
@@ -426,7 +422,7 @@ class RepeatedAdapterMatcher(object):
 			assert match.length - match.errors > 0
 
 			if self.wildcard_file: # FIXME move to cut() or somewhere else
-				print(match.wildcards(), read.name, file=self.wildcard_file)
+				print(bytes_to_str(match.wildcards()), read.name, file=self.wildcard_file)
 
 			matches.append(match)
 			if t != self.times - 1:
@@ -490,7 +486,10 @@ def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers
 		n += 1
 		total_bp += len(read.sequence)
 		if pe_reader:
-			pe_read = pe_reader.next()
+			if PY3:
+				pe_read = next(pe_reader)
+			else:
+				pe_read = pe_reader.next()
 		if quality_trimmer:
 			read = quality_trimmer.trimmed(read)
 		matches = adapter_matcher.find_match(read)
@@ -650,6 +649,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	are sent. It can be overriden by using the '-o' parameter.
 	"""
 	parser = get_option_parser()
+	if cmdlineargs is None:
+		cmdlineargs = sys.argv[1:]
 	options, args = parser.parse_args(args=cmdlineargs)
 
 	if len(args) == 0:
@@ -750,7 +751,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 				w = PREFIX
 			elif not options.indels:
 				parser.error("Not allowing indels is currently supported only for anchored 5' adapters.")
-			if len(seq) == 0:
+			if not seq:
 				parser.error("The adapter sequence is empty")
 			adapter = ADAPTER_CLASS(seq, w, options.error_rate,
 				options.overlap, options.match_read_wildcards,
@@ -821,7 +822,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	total_quality_trimmed = quality_trimmer.trimmed_bases if quality_trimmer else -1
 	print_statistics(adapters, time.clock() - start_time,
 		n, total_bp, total_quality_trimmed, options.trim, adapter_matcher.reads_matched,
-		options.error_rate, readfilter.too_short, readfilter.too_long, file=stat_file)
+		options.error_rate, readfilter.too_short, readfilter.too_long, cmdlineargs, file=stat_file)
 
 
 if __name__ == '__main__':

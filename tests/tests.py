@@ -203,7 +203,7 @@ def test_adapter_wildcard():
 		("-b", "wildcard_adapter_anywhere.fa")):
 		run("--wildcard-file {0} {1} ACGTNNNACGT".format(wildcardtmp, adapter_type),
 			expected, "wildcard_adapter.fa")
-		lines = open(wildcardtmp).readlines()
+		lines = open(wildcardtmp, 'rt').readlines()
 		lines = [ line.strip() for line in lines ]
 		assert lines == ['AAA 1', 'GGG 2', 'CCC 3b', 'TTT 4b']
 		os.remove(wildcardtmp)

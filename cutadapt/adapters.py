@@ -1,8 +1,9 @@
 from __future__ import print_function, division, absolute_import
-
+import sys
 from collections import defaultdict
 from cutadapt import align, colorspace
 from cutadapt.seqio import ColorspaceSequence
+from cutadapt.compat import str_to_bytes, PY3
 
 # Constants for the find_best_alignment function.
 # The function is called with SEQ1 as the adapter, SEQ2 as the read.
@@ -42,7 +43,7 @@ class AdapterMatch(object):
 		#return not (match.rstart > 0 and match.astart == 0)
 		return self.rstart == 0
 
-	def wildcards(self, wildcard_char='N'):
+	def wildcards(self, wildcard_char=ord('N') if PY3 else b'N'):
 		"""
 		Return a string that contains, for each wildcard character,
 		the character that it matches. For example, if the adapter
@@ -51,9 +52,9 @@ class AdapterMatch(object):
 		If there are indels, this is not reliable as the full alignment
 		is not available.
 		"""
-		wildcards = [ self.read.sequence[self.rstart + i] for i in range(self.length)
+		wildcards = [ self.read.sequence[self.rstart + i:self.rstart + i + 1] for i in range(self.length)
 			if self.adapter.sequence[self.astart + i] == wildcard_char and self.rstart + i < len(self.read.sequence) ]
-		return ''.join(wildcards)
+		return b''.join(wildcards)
 
 	def rest(self):
 		"""
@@ -109,14 +110,17 @@ class Adapter(object):
 			self.name = name
 			self.name_is_generated = False
 
-		self.sequence = sequence.upper()
+		if isinstance(sequence, str) and PY3:
+			self.sequence = str_to_bytes(sequence).upper()
+		else:
+			self.sequence = sequence.upper()
 		self.where = where
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
 		self.indels = indels
 		assert where != FRONT or self.indels
 		self.wildcard_flags = 0
-		self.match_adapter_wildcards = match_adapter_wildcards and 'N' in self.sequence
+		self.match_adapter_wildcards = match_adapter_wildcards and b'N' in self.sequence
 		if match_read_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
 		if self.match_adapter_wildcards:
@@ -142,14 +146,12 @@ class Adapter(object):
 
 	def __repr__(self):
 		match_read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)
-		match_adapter_wildcards = bool(align.ALLOW_WILDCARD_SEQ1 & self.wildcard_flags)
 		return '<Adapter(name="{name}", sequence="{sequence}", where={where}, '\
 			'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
 			'match_read_wildcards={match_read_wildcards}, '\
 			'match_adapter_wildcards={match_adapter_wildcards}, '\
 			'indels={indels})>'.format(
 				match_read_wildcards=match_read_wildcards,
-				match_adapter_wildcards=match_adapter_wildcards,
 				**vars(self))
 
 	def match(self, read):
@@ -217,7 +219,7 @@ class ColorspaceAdapter(Adapter):
 	def __init__(self, *args, **kwargs):
 		super(ColorspaceAdapter, self).__init__(*args, **kwargs)
 		has_nucleotide_seq = False
-		if set(self.sequence) <= set('ACGT'):
+		if set(self.sequence) <= set(b'ACGT'):
 			# adapter was given in basespace
 			self.nucleotide_sequence = self.sequence
 			has_nucleotide_seq = True
@@ -231,7 +233,7 @@ class ColorspaceAdapter(Adapter):
 			return super(ColorspaceAdapter, self).match(read)
 		# create artificial adapter that includes a first color that encodes the
 		# transition from primer base into adapter
-		asequence = colorspace.ENCODE[read.primer + self.nucleotide_sequence[0]] + self.sequence
+		asequence = colorspace.ENCODE[read.primer + self.nucleotide_sequence[0:1]] + self.sequence
 		pos = 0 if read.sequence.startswith(asequence) else -1
 		if pos >= 0:
 			match = AdapterMatch(
@@ -260,7 +262,7 @@ class ColorspaceAdapter(Adapter):
 		if not color_after_adapter:
 			# the read is empty
 			return read[match.rstop:]
-		base_after_adapter = colorspace.DECODE[self.nucleotide_sequence[-1] + color_after_adapter]
+		base_after_adapter = colorspace.DECODE[self.nucleotide_sequence[-1:] + color_after_adapter]
 		new_first_color = colorspace.ENCODE[read.primer + base_after_adapter]
 		seq = new_first_color + read.sequence[(match.rstop + 1):]
 		qual = read.qualities[match.rstop:] if read.qualities else None
@@ -276,4 +278,4 @@ class ColorspaceAdapter(Adapter):
 		return read
 
 	def __repr__(self):
-		return '<ColorspaceAdapter(sequence="{0}", where={1})>'.format(self.sequence, self.where)
+		return '<ColorspaceAdapter(sequence={0!r}, where={1})>'.format(self.sequence, self.where)

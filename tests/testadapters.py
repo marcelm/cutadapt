@@ -5,15 +5,15 @@ from cutadapt.adapters import Adapter, AdapterMatch, BACK
 
 def test_issue_52():
 	adapter = Adapter(
-		sequence="GAACTCCAGTCACNNNNN",
+		sequence=b"GAACTCCAGTCACNNNNN",
 		where=BACK,
 		max_error_rate=0.1,
 		min_overlap=5,
 		match_read_wildcards=False,
 		match_adapter_wildcards=True)
-	read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
+	read = Sequence(name="abc", sequence=b'CCCCAGAACTACAGTCCCGGC')
 	am = AdapterMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, front=None, adapter=adapter, read=read)
-	assert am.wildcards() == 'GGC'
+	assert am.wildcards() == b'GGC'
 	"""
 	The result above should actually be 'CGGC' since the correct
 	alignment is this one:

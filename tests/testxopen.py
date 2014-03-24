@@ -7,8 +7,8 @@ files = [ base + ext for ext in ['', '.gz', '.bz2' ] ]
 
 def test_xopen():
 	for name in files:
-		f = xopen(name)
+		f = xopen(name, 'rb')
 		lines = list(f)
 		assert len(lines) == 12
-		assert lines[5] == 'AGCCGCTANGACGGGTTGGCCCTTAGACGTATCT\n', name
+		assert lines[5] == b'AGCCGCTANGACGGGTTGGCCCTTAGACGTATCT\n', name
 		f.close()

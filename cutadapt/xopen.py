@@ -7,6 +7,7 @@ import gzip
 import sys
 import io
 from subprocess import Popen, PIPE
+from cutadapt.compat import PY3, basestring
 
 try:
 	import bz2
@@ -14,10 +15,6 @@ except ImportError:
 	bz2 = None
 
 __author__ = 'Marcel Martin'
-
-if sys.version_info[0] >= 3:
-	basestring = str
-	from codecs import getreader, getwriter
 
 
 if sys.version_info < (2, 7):
@@ -44,15 +41,12 @@ def xopen(filename, mode='r'):
 	if filename.endswith('.bz2'):
 		if bz2 is None:
 			raise ImportError("Cannot open bz2 files: The bz2 module is not available")
-		if sys.version_info[0] < 3:
-			return bz2.BZ2File(filename, mode)
-		else:
-			if 'r' in mode:
-				return getreader('ascii')(bz2.BZ2File(filename, mode))
-			else:
-				return getwriter('ascii')(bz2.BZ2File(filename, mode))
+		return bz2.BZ2File(filename, mode)
+
 	elif filename.endswith('.gz'):
-		if sys.version_info[0] < 3:
+		if PY3:
+			return gzip.open(filename, mode)
+		else:
 			if 'r' in mode:
 				try:
 					return Popen(['gzip', '-cd', filename], stdout=PIPE).stdout
@@ -68,10 +62,5 @@ def xopen(filename, mode='r'):
 					return Popen(['gzip'], stdin=PIPE, stdout=f).stdin
 				except IOError:
 					return buffered_writer(gzip.open(filename, mode))
-		else:
-			if 'r' in mode:
-				return getreader('ascii')(gzip.open(filename, mode))
-			else:
-				return getwriter('ascii')(gzip.open(filename, mode))
 	else:
 		return open(filename, mode)
