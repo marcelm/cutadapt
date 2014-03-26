@@ -2,6 +2,8 @@ include cutadapt/_align.so
 include cutadapt/_align.c
 include cutadapt/_qualtrim.so
 include cutadapt/_qualtrim.c
+include cutadapt/_seqio.c
+include cutadapt/_seqio.so
 include bin/_preamble.py
 include README.md
 include tests/test*.py
