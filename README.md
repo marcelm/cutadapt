@@ -46,10 +46,10 @@ THE SOFTWARE.
 Dependencies
 ============
 
-cutadapt needs Python 2.6 or later. Python 3 is not supported in this release,
-but will be back in future versions. Using Python 2.7 is recommended since it
-works fastest. For installation from sources, a C compiler needs to be
-installed. The program has been developed and tested on Ubuntu and OpenSuSE.
+cutadapt needs Python 2.6 or later (this includes Python 3). Python 2.6 supported
+is not tested thoroughly and is also slower than later versions. For installation
+from sources, a C compiler needs to be installed. The program has been developed
+and tested on Ubuntu and OpenSuSE.
 
 
 Installation
@@ -597,6 +597,11 @@ enabled when `--bwa` is used.
 
 Changes
 =======
+
+v1.5
+----
+* Cutadapt is again compatible with Python 3.
+* U characters in the adapter sequence are automatically converted to T.
 
 v1.4
 ----

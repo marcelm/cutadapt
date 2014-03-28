@@ -80,6 +80,7 @@ class Adapter(object):
 		the constant influences which part of the read gets removed.
 
 	sequence -- The adapter sequence as string. Will be converted to uppercase.
+		Also, Us will be converted to Ts.
 
 	max_error_rate -- Maximum allowed error rate. The error rate is
 		the number of errors in the alignment divided by the length
@@ -114,6 +115,7 @@ class Adapter(object):
 			self.sequence = str_to_bytes(sequence).upper()
 		else:
 			self.sequence = sequence.upper()
+		self.sequence = self.sequence.replace(b'U', b'T')
 		self.where = where
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
