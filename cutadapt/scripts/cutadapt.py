@@ -22,11 +22,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""%prog [options] <FASTA/FASTQ FILE> [<QUALITY FILE>]
+"""
+
+    %prog -a ADAPTER [options] <FASTA/FASTQ FILE>
 
 Reads a FASTA or FASTQ file, finds and removes adapters,
 and writes the changed sequence to standard output.
-When finished, statistics are printed to standard error.
 
 Use a dash "-" as file name to read from standard input
 (FASTA/FASTQ is autodetected).
@@ -51,7 +52,8 @@ EXAMPLE
 
 Assuming your sequencing data is available as a FASTQ file, use this
 command line:
-$ cutadapt -e ERROR-RATE -a ADAPTER-SEQUENCE input.fastq > output.fastq
+
+$ cutadapt -a ADAPTER-SEQUENCE input.fastq > output.fastq
 
 See the README file for more help and examples."""
 
@@ -204,7 +206,7 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 
 	if qualityfilename is not None:
 		if colorspace:
-		# read from .(CS)FASTA/.QUAL
+			# read from .(CS)FASTA/.QUAL
 			return seqio.ColorspaceFastaQualReader(seqfilename, qualityfilename)
 		else:
 			return seqio.FastaQualReader(seqfilename, qualityfilename)
@@ -768,8 +770,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	del options.front
 
 	if not adapters and options.quality_cutoff == 0:
-		print("You need to provide at least one adapter sequence.", file=sys.stderr)
-		sys.exit(1)
+		parser.error("You need to provide at least one adapter sequence.")
 
 	modifiers = []
 	if options.length_tag:

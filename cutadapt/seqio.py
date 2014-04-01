@@ -66,6 +66,7 @@ class Sequence(object):
 		else:
 			outfile.write(s)
 
+
 try:
 	from ._seqio import Sequence
 except ImportError:

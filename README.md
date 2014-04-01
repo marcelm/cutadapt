@@ -1,50 +1,28 @@
 cutadapt
 ========
 
-cutadapt removes adapter sequences from DNA high-throughput
-sequencing data. This is usually necessary when the read length of the
-machine is longer than the molecule that is sequenced, such as in
-microRNA data.
+cutadapt removes adapter sequences from DNA high-throughput sequencing data.
+This is necessary when the reads are longer than the molecule that is sequenced,
+such as in microRNA data.
 
 cutadapt is implemented in Python. It comes with an extension module
 written in Cython that implements the alignment algorithm.
 
+License
+-------
+
+cutadapt is licensed under the MIT license (see the file `LICENSE`).
+
 
 Project homepage
-================
+----------------
 
 See http://code.google.com/p/cutadapt/ . Please use the Google code issue
 tracker for bug reports and feature requests.
 
 
-License
-=======
-
-(This is the MIT license.)
-
-Copyright (c) 2010-2014 Marcel Martin <marcel.martin@scilifelab.se>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-
 Dependencies
-============
+------------
 
 cutadapt needs Python 2.6 or later (this includes Python 3). Python 2.6 supported
 is not tested thoroughly and is also slower than later versions. For installation
@@ -53,7 +31,7 @@ and tested on Ubuntu and OpenSuSE.
 
 
 Installation
-============
+------------
 
 Replace "python" with "python3" in the following lines to install the Python 3
 version.
@@ -64,8 +42,9 @@ version.
 If you get an error about a missing "Python.h" file, then make sure that
 the python-dev package is installed (or python3-dev for Python 3).
 
+
 Use without installation
-========================
+------------------------
 
 Build the C extension module (you can try to skip this step -- a compiled
 version of the module for Linux x86 is already included):
@@ -83,7 +62,7 @@ version by running cutadapt like this:
 
 
 Galaxy
-======
+------
 
 If you want to use cutadapt within the web-based Galaxy platform
 (http://galaxy.psu.edu/), please see the README file in the galaxy/ subfolder.
@@ -94,14 +73,15 @@ How to use, examples
 ====================
 
 Please also see the command-line help:
+
     cutadapt --help
 
-The basic command-line for cutadapt looks like this:
+The basic command-line for cutadapt is:
 
     cutadapt -a AACCGGTT input.fastq > output.fastq
 
 The adapter sequence is given with the `-a` option. Replace
-AACCGGTT with your actual adapter sequence.
+`AACCGGTT` with your actual adapter sequence.
 
 input.fastq is a file with reads. The result will be written
 to standard output. Use redirection with `>` (or the `-o` option) to
