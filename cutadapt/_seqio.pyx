@@ -42,12 +42,14 @@ cdef class Sequence(object):
 		public str name
 		public bytes sequence
 		public bytes qualities
+		public bint trimmed
 
-	def __init__(self, str name, bytes sequence, bytes qualities=None):
+	def __init__(self, str name, bytes sequence, bytes qualities=None, bint trimmed=False):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
+		self.trimmed = trimmed
 		if qualities is not None:
 			if len(qualities) != len(sequence):
 				rname = _shorten(name)
@@ -56,7 +58,7 @@ cdef class Sequence(object):
 
 	def __getitem__(self, key):
 		"""slicing"""
-		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None)
+		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None, self.trimmed)
 
 	def __repr__(self):
 		qstr = ''

@@ -116,12 +116,15 @@ def print_histogram(d, adapter_length, n, error_rate, errors):
 	print()
 
 
-def print_statistics(adapters, time, n, total_bp, quality_trimmed, trim, reads_matched,
+def print_statistics(adapters, time, stats, trim, reads_matched,
 		error_rate, too_short, too_long, args, file=None):
 	"""Print summary to file"""
 	old_stdout = sys.stdout
 	if file is not None:
 		sys.stdout = file
+	n = stats.n
+	total_bp = stats.total_bp
+	quality_trimmed = stats.quality_trimmed_bases
 	print("cutadapt version", __version__)
 	print("Command line parameters:", " ".join(args))
 	print("Maximum error rate: {0:.2%}".format(error_rate))
@@ -155,7 +158,7 @@ def print_statistics(adapters, time, n, total_bp, quality_trimmed, trim, reads_m
 		where = adapter.where
 		assert where == ANYWHERE or (where == BACK and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
 
-		print("=" * 3, "Adapter", index+1, "=" * 3)
+		print("=" * 3, "Adapter", index + 1, "=" * 3)
 		print()
 		if not adapter.name_is_generated:
 			name = "'{0}' ({1})".format(adapter.name, bytes_to_str(adapter.sequence))
@@ -228,13 +231,13 @@ class ReadFilter(object):
 		self.too_long = 0
 		self.too_short = 0
 
-	def keep(self, read, trimmed):
+	def keep(self, read):
 		"""
 		Return whether to keep the given read.
 		"""
-		if self.discard_trimmed and trimmed:
+		if self.discard_trimmed and read.trimmed:
 			return False
-		if self.discard_untrimmed and not trimmed:
+		if self.discard_untrimmed and not read.trimmed:
 			return False
 		if len(read.sequence) < self.minimum_length:
 			self.too_short += 1
@@ -311,10 +314,10 @@ class ZeroCapper(object):
 	"""
 	def __init__(self, quality_base=33):
 		qb = quality_base
-		if sys.version_info[0] < 3:
-			self.ZERO_CAP_TRANS = maketrans(''.join(map(chr, range(qb))), chr(qb) * qb)
-		else:
+		if PY3:
 			self.ZERO_CAP_TRANS = maketrans(bytes(range(qb)), bytes([qb] * qb))
+		else:
+			self.ZERO_CAP_TRANS = maketrans(''.join(map(chr, range(qb))), chr(qb) * qb)
 
 	def apply(self, read):
 		read = read[:]
@@ -340,7 +343,7 @@ class RestFileWriter(object):
 			print(bytes_to_str(rest), match.read.name, file=self.file)
 
 
-class RepeatedAdapterMatcher(object):
+class RepeatedAdapterCutter(object):
 	"""
 	Repeatedly find one of multiple adapters in reads.
 	The number of times the search is repeated is specified by the
@@ -398,7 +401,8 @@ class RepeatedAdapterMatcher(object):
 				bytes_to_str(seq[match.rstart:match.rstop]),
 				bytes_to_str(seq[match.rstop:]),
 				match.adapter.name,
-				sep='\t', file=self.info_file)
+				sep='\t', file=self.info_file
+			)
 
 	def find_match(self, read):
 		"""
@@ -432,7 +436,6 @@ class RepeatedAdapterMatcher(object):
 				read = match.adapter.trimmed(match)
 		return matches
 
-
 	def cut(self, matches):
 		"""
 		Cut found adapters from a single read.
@@ -461,20 +464,30 @@ class RepeatedAdapterMatcher(object):
 
 		return read
 
+	def apply(self, read):
+		matches = self.find_match(read)
+		if len(matches) > 0:
+			read = self.cut(matches)
+			read.trimmed = True
+		else:
+			read.trimmed = False
+
+		return read
+
 
 class QualityTrimmer(object):
 	def __init__(self, cutoff, base):
 		self.cutoff = cutoff
 		self.base = base
-		self.trimmed_bases = 0  # statistics
+		self.trimmed_bases = 0
 
-	def trimmed(self, read):
+	def apply(self, read):
 		index = quality_trim_index(read.qualities, self.cutoff, self.base)
 		self.trimmed_bases += len(read.qualities) - index
 		return read[:index]
 
 
-def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers,
+def process_reads(reader, pe_reader, modifiers,
 		readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
@@ -496,14 +509,6 @@ def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers
 				pe_read = next(pe_reader)
 			else:
 				pe_read = pe_reader.next()
-		if quality_trimmer:
-			read = quality_trimmer.trimmed(read)
-		matches = adapter_matcher.find_match(read)
-		if len(matches) > 0:
-			read = adapter_matcher.cut(matches)
-			trimmed = True
-		else:
-			trimmed = False
 		for modifier in modifiers:
 			read = modifier.apply(read)
 		if twoheaders is None:
@@ -511,12 +516,23 @@ def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers
 				twoheaders = reader.twoheaders
 			except AttributeError:
 				twoheaders = False
-		if not readfilter.keep(read, trimmed):
+		if not readfilter.keep(read):
 			continue
-		read.write(trimmed_outfile if trimmed else untrimmed_outfile, twoheaders)
+		read.write(trimmed_outfile if read.trimmed else untrimmed_outfile, twoheaders)
 		if pe_reader:
 			pe_read.write(pe_outfile)
-	return (n, total_bp)
+	# TODO
+	class Stats:
+		pass
+	stats = Stats()
+	stats.total_bp = total_bp
+	stats.n = n
+	stats.quality_trimmed_bases = -1
+	for m in modifiers:
+		if isinstance(m, QualityTrimmer):
+			stats.quality_trimmed_bases = m.trimmed_bases
+			break
+	return stats
 
 
 def get_option_parser():
@@ -574,18 +590,21 @@ def get_option_parser():
 			"are also discarded. In colorspace, an initial primer "
 			"is not counted (default: no limit).")
 	group.add_option("--no-trim", dest='trim', action='store_false', default=True,
-		help="Match and redirect reads to output/untrimmed-output as usual, but don't remove the adapters. (default: False. Remove the adapters)")
+		help="Match and redirect reads to output/untrimmed-output as usual, but don't remove the adapters. (default: Trim the adapters)")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
 	group.add_option("-o", "--output", default=None, metavar="FILE",
-		help="Write the modified sequences to this file instead of standard output and send the summary report to standard output. "
-		     "The format is FASTQ if qualities are available, FASTA otherwise. (default: standard output)")
+		help="Write the modified sequences to this file instead of standard "
+			"output and send the summary report to standard output. "
+		    "The format is FASTQ if qualities are available, FASTA "
+			"otherwise. (default: standard output)")
 	group.add_option("--info-file", metavar="FILE",
 		help="Write information about each read and its adapter matches into FILE. "
-			"Currently experimental: Expect the file format to change!")
+			"See the README for the file format.")
 	group.add_option("-r", "--rest-file", default=None, metavar="FILE",
-		help="When the adapter matches in the middle of a read, write the rest (after the adapter) into a file. Use - for standard output.")
+		help="When the adapter matches in the middle of a read, write the "
+			"rest (after the adapter) into a file. Use - for standard output.")
 	group.add_option("--wildcard-file", default=None, metavar="FILE",
 		help="When the adapter has wildcard bases ('N's) write adapter bases matching wildcard "
 		     "positions to FILE. Use - for standard output. "
@@ -714,7 +733,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	if options.double_encode and not options.colorspace:
 		parser.error("Double-encoding makes only sense in color space.")
 	if options.anywhere and options.colorspace:
-		parser.error("Using --anywhere with color space reads is currently not supported  (if you think this may be useful, contact the author).")
+		parser.error("Using --anywhere with color space reads is currently not supported (if you think this may be useful, contact the author).")
 	if not (0 <= options.error_rate <= 1.):
 		parser.error("The maximum error rate must be between 0 and 1.")
 	if options.overlap < 1:
@@ -775,6 +794,15 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		parser.error("You need to provide at least one adapter sequence.")
 
 	modifiers = []
+	if options.quality_cutoff > 0:
+		modifiers.append(QualityTrimmer(options.quality_cutoff, options.quality_base))
+	if adapters:
+		adapter_cutter = RepeatedAdapterCutter(adapters, options.times,
+				options.wildcard_file, options.info_file, options.trim,
+				rest_writer)
+		modifiers.append(adapter_cutter)
+	else:
+		adapter_cutter = None
 	if options.length_tag:
 		modifiers.append(LengthTagModifier(options.length_tag))
 	if options.strip_f3:
@@ -789,14 +817,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		modifiers.append(ZeroCapper(quality_base=options.quality_base))
 	if options.trim_primer:
 		modifiers.append(PrimerTrimmer())
-	if options.quality_cutoff > 0:
-		quality_trimmer = QualityTrimmer(options.quality_cutoff, options.quality_base)
-	else:
-		quality_trimmer = None
 
-	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times,
-				options.wildcard_file, options.info_file, options.trim,
-				rest_writer)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, too_long_outfile, options.discard_trimmed,
 		options.discard_untrimmed)
@@ -807,7 +828,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 			pe_reader = read_sequences(pe_filename, None, colorspace=options.colorspace, fileformat=options.format)
 		else:
 			pe_reader = None
-		(n, total_bp) = process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile)
+		stats = process_reads(reader, pe_reader, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile)
 	except IOError as e:
 		if e.errno == errno.EPIPE:
 			sys.exit(1)
@@ -823,9 +844,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	# send statistics to stderr if result was sent to stdout
 	stat_file = sys.stderr if options.output is None else None
 
-	total_quality_trimmed = quality_trimmer.trimmed_bases if quality_trimmer else -1
-	print_statistics(adapters, time.clock() - start_time,
-		n, total_bp, total_quality_trimmed, options.trim, adapter_matcher.reads_matched,
+	print_statistics(adapters, time.clock() - start_time, stats,
+		options.trim, adapter_cutter.reads_matched if adapter_cutter else 0,
 		options.error_rate, readfilter.too_short, readfilter.too_long, cmdlineargs, file=stat_file)
 
 

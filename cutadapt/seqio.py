@@ -20,11 +20,12 @@ def _shorten(s, n=20):
 class Sequence(object):
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
-	def __init__(self, name, sequence, qualities=None):
+	def __init__(self, name, sequence, qualities=None, trimmed=False):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
+		self.trimmed = trimmed
 		if qualities is not None:
 			if len(qualities) != len(sequence):
 				rname = _shorten(name)
@@ -33,7 +34,8 @@ class Sequence(object):
 
 	def __getitem__(self, key):
 		"""slicing"""
-		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None)
+		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None,
+		    trimmed=self.trimmed)
 
 	def __repr__(self):
 		qstr = ''
