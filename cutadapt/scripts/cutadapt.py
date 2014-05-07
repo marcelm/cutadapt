@@ -347,7 +347,7 @@ class RepeatedAdapterMatcher(object):
 	times parameter.
 	"""
 
-	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None, trim=True):
+	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None, trim=True, rest_writer=None):
 		"""
 		adapters -- list of Adapter objects
 
@@ -359,6 +359,7 @@ class RepeatedAdapterMatcher(object):
 		self.wildcard_file = wildcard_file
 		self.trim = trim
 		self.reads_matched = 0
+		self.rest_writer = rest_writer
 
 	def _best_match(self, read):
 		"""
@@ -455,6 +456,9 @@ class RepeatedAdapterMatcher(object):
 
 		self.reads_matched += 1 # TODO move to filter class
 
+		if self.rest_writer:
+			self.rest_writer.write(matches[-1])
+
 		return read
 
 
@@ -471,7 +475,7 @@ class QualityTrimmer(object):
 
 
 def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers,
-		readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile, rest_writer):
+		readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -498,8 +502,6 @@ def process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers
 		if len(matches) > 0:
 			read = adapter_matcher.cut(matches)
 			trimmed = True
-			if rest_writer:
-				rest_writer.write(matches[-1])
 		else:
 			trimmed = False
 		for modifier in modifiers:
@@ -793,7 +795,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		quality_trimmer = None
 
 	adapter_matcher = RepeatedAdapterMatcher(adapters, options.times,
-				options.wildcard_file, options.info_file, options.trim)
+				options.wildcard_file, options.info_file, options.trim,
+				rest_writer)
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, too_long_outfile, options.discard_trimmed,
 		options.discard_untrimmed)
@@ -804,7 +807,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 			pe_reader = read_sequences(pe_filename, None, colorspace=options.colorspace, fileformat=options.format)
 		else:
 			pe_reader = None
-		(n, total_bp) = process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile, rest_writer)
+		(n, total_bp) = process_reads(reader, pe_reader, adapter_matcher, quality_trimmer, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile)
 	except IOError as e:
 		if e.errno == errno.EPIPE:
 			sys.exit(1)
