@@ -1,4 +1,5 @@
 import re
+from cutadapt.qualtrim import quality_trim_index
 from cutadapt.compat import PY3, maketrans
 
 
@@ -10,7 +11,7 @@ class LengthTagModifier(object):
 		self.regex = re.compile(r"\b" + length_tag + r"[0-9]*\b")
 		self.length_tag = length_tag
 
-	def apply(self, read):
+	def __call__(self, read):
 		read = read[:]
 		if read.name.find(self.length_tag) >= 0:
 			read.name = self.regex.sub(self.length_tag + str(len(read.sequence)), read.name)
@@ -24,7 +25,7 @@ class SuffixRemover(object):
 	def __init__(self, suffix):
 		self.suffix = suffix
 
-	def apply(self, read):
+	def __call__(self, read):
 		read = read[:]
 		if read.name.endswith(self.suffix):
 			read.name = read.name[:-len(self.suffix)]
@@ -39,7 +40,7 @@ class PrefixSuffixAdder(object):
 		self.prefix = prefix
 		self.suffix = suffix
 
-	def apply(self, read):
+	def __call__(self, read):
 		read = read[:]
 		read.name = self.prefix + read.name + self.suffix
 		return read
@@ -50,11 +51,11 @@ class DoubleEncoder(object):
 	Double-encode colorspace reads, using characters ACGTN to represent colors.
 	"""
 	def __init__(self):
-		self.DOUBLE_ENCODE_TRANS = maketrans(b'0123.', b'ACGTN')
+		self.double_encode_trans = maketrans(b'0123.', b'ACGTN')
 
-	def apply(self, read):
+	def __call__(self, read):
 		read = read[:]
-		read.sequence = read.sequence.translate(self.DOUBLE_ENCODE_TRANS)
+		read.sequence = read.sequence.translate(self.double_encode_trans)
 		return read
 
 
@@ -65,19 +66,30 @@ class ZeroCapper(object):
 	def __init__(self, quality_base=33):
 		qb = quality_base
 		if PY3:
-			self.ZERO_CAP_TRANS = maketrans(bytes(range(qb)), bytes([qb] * qb))
+			self.zero_cap_trans = maketrans(bytes(range(qb)), bytes([qb] * qb))
 		else:
-			self.ZERO_CAP_TRANS = maketrans(''.join(map(chr, range(qb))), chr(qb) * qb)
+			self.zero_cap_trans = maketrans(''.join(map(chr, range(qb))), chr(qb) * qb)
 
-	def apply(self, read):
+	def __call__(self, read):
 		read = read[:]
-		read.qualities = read.qualities.translate(self.ZERO_CAP_TRANS)
+		read.qualities = read.qualities.translate(self.zero_cap_trans)
 		return read
 
 
-class PrimerTrimmer(object):
+def PrimerTrimmer(read):
 	"""Trim primer base from colorspace reads"""
-	def apply(self, read):
-		read = read[1:]
-		read.primer = b''
-		return read
+	read = read[1:]
+	read.primer = b''
+	return read
+
+
+class QualityTrimmer(object):
+	def __init__(self, cutoff, base):
+		self.cutoff = cutoff
+		self.base = base
+		self.trimmed_bases = 0
+
+	def __call__(self, read):
+		index = quality_trim_index(read.qualities, self.cutoff, self.base)
+		self.trimmed_bases += len(read.qualities) - index
+		return read[:index]

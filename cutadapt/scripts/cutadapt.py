@@ -66,9 +66,9 @@ from optparse import OptionParser, OptionGroup
 
 from cutadapt import seqio, __version__
 from cutadapt.xopen import xopen
-from cutadapt.qualtrim import quality_trim_index
 from cutadapt.adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, ANYWHERE
-from cutadapt.modifiers import LengthTagModifier, SuffixRemover, PrefixSuffixAdder, DoubleEncoder, ZeroCapper, PrimerTrimmer
+from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
+	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer)
 from cutadapt.compat import PY3, bytes_to_str
 
 
@@ -383,7 +383,7 @@ class RepeatedAdapterCutter(object):
 
 		return read
 
-	def apply(self, read):
+	def __call__(self, read):
 		matches = self.find_match(read)
 		if len(matches) > 0:
 			read = self.cut(matches)
@@ -391,18 +391,6 @@ class RepeatedAdapterCutter(object):
 		else:
 			read.trimmed = False
 		return read
-
-
-class QualityTrimmer(object):
-	def __init__(self, cutoff, base):
-		self.cutoff = cutoff
-		self.base = base
-		self.trimmed_bases = 0
-
-	def apply(self, read):
-		index = quality_trim_index(read.qualities, self.cutoff, self.base)
-		self.trimmed_bases += len(read.qualities) - index
-		return read[:index]
 
 
 def process_reads(reader, pe_reader, modifiers,
@@ -428,7 +416,7 @@ def process_reads(reader, pe_reader, modifiers,
 			else:
 				pe_read = pe_reader.next()
 		for modifier in modifiers:
-			read = modifier.apply(read)
+			read = modifier(read)
 		if twoheaders is None:
 			try:
 				twoheaders = reader.twoheaders
@@ -734,7 +722,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	if options.zero_cap:
 		modifiers.append(ZeroCapper(quality_base=options.quality_base))
 	if options.trim_primer:
-		modifiers.append(PrimerTrimmer())
+		modifiers.append(PrimerTrimmer)
 
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, too_long_outfile, options.discard_trimmed,
