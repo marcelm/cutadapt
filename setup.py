@@ -44,10 +44,7 @@ if use_cython:
 			"', but at least version " + str(MIN_CYTHON_VERSION) + " is required.\n")
 		sys.exit(1)
 
-	from Cython.Distutils import build_ext
-	cmdclass = {'build_ext': build_ext}
-else:
-	cmdclass = {}
+	from Cython.Build import cythonize
 
 ext = '.pyx' if use_cython else '.c'
 
@@ -56,6 +53,8 @@ extensions = [
 	Extension('cutadapt._qualtrim', sources=['cutadapt/_qualtrim' + ext]),
 	Extension('cutadapt._seqio', sources=['cutadapt/_seqio' + ext]),
 ]
+if use_cython:
+	extensions = cythonize(extensions)
 
 setup(
 	name = 'cutadapt',
@@ -66,7 +65,6 @@ setup(
 	description = 'trim adapters from high-throughput sequencing reads',
 	license = 'MIT',
 	ext_modules = extensions,
-	cmdclass = cmdclass,
 	packages = ['cutadapt', 'cutadapt.scripts'],
 	scripts = ['bin/cutadapt'],
 	classifiers = [
