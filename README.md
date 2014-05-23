@@ -582,6 +582,7 @@ v1.5
 ----
 * Cutadapt is again compatible with Python 3.
 * U characters in the adapter sequence are automatically converted to T.
+* Do not run Cython at installation time unless the --cython option is provided.
 
 v1.4
 ----
