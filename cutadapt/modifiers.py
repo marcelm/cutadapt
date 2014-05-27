@@ -3,6 +3,23 @@ from cutadapt.qualtrim import quality_trim_index
 from cutadapt.compat import PY3, maketrans
 
 
+class UnconditionalCutter(object):
+	"""
+	A modifier that unconditionally removes the first n or the last n bases from a read.
+
+	If the length is positive, the bases are removed from the beginning of the read.
+	If the length is negative, the bases are removed from the end of the read.
+	"""
+	def __init__(self, length):
+		self.length = length
+
+	def __call__(self, read):
+		if self.length > 0:
+			return read[self.length:]
+		elif self.length < 0:
+			return read[:self.length]
+
+
 class LengthTagModifier(object):
 	"""
 	Replace "length=..." strings in read names.

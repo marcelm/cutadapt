@@ -166,6 +166,26 @@ the given cutoff from all qualities; compute partial sums from all indices to
 the end of the sequence; cut sequence at the index at which the sum is minimal.
 
 
+Removing bases from the beginning or end of each read
+-----------------------------------------------------
+
+By using the `--cut` or its abbreviation `-u`, it is possible to unconditionally
+remove bases from the beginning or end of each read. If the given length is
+positive, the bases are removed from the beginning of each read. If it is
+negative, the bases are removed from the end.
+
+Remove the first seven bases of each read:
+
+	cutadapt -u 7 -o trimmed.fastq reads.fastq
+
+Remove the last seven bases of each read:
+
+	cutadapt -u -7 -o trimmed.fastq reads.fastq
+
+The `-u`/`--cut` option can be combined with the other options, but the desired
+bases are removed *before* any adapter trimming.
+
+
 Paired-end adapter trimming
 ---------------------------
 
@@ -583,6 +603,8 @@ v1.5
 * Cutadapt is again compatible with Python 3.
 * U characters in the adapter sequence are automatically converted to T.
 * Do not run Cython at installation time unless the --cython option is provided.
+* Add the option -u/--cut, which can be used to unconditionally remove a number
+  of bases from the beginning or end of each read.
 
 v1.4
 ----

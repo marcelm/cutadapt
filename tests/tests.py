@@ -334,3 +334,11 @@ def test_anchored_no_indels_wildcard_read():
 def test_anchored_no_indels_wildcard_adapt():
 	'''anchored 5' adapter, mismatches only (no indels), but wildcards in the adapter count as matches'''
 	run('-g ^TTAGACANAT --no-indels -e 0.1', 'anchored_no_indels.fasta', 'anchored_no_indels.fasta')
+
+
+def test_unconditional_cut_front():
+	run('-u 5', 'unconditional-front.fastq', 'small.fastq')
+
+
+def test_unconditional_cut_back():
+	run('-u -5', 'unconditional-back.fastq', 'small.fastq')

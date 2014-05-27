@@ -68,7 +68,7 @@ from cutadapt import seqio, __version__
 from cutadapt.xopen import xopen
 from cutadapt.adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, ANYWHERE
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
-	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer)
+	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter)
 from cutadapt.compat import PY3, bytes_to_str
 
 
@@ -342,12 +342,12 @@ class RepeatedAdapterCutter(object):
 			if match is None:
 				# nothing found
 				break
-			self._write_info(match) # FIXME move to cut() or somewhere else
+			self._write_info(match)  # FIXME move to cut() or somewhere else
 			assert match.length > 0
 			assert match.errors / match.length <= match.adapter.max_error_rate
 			assert match.length - match.errors > 0
 
-			if self.wildcard_file: # FIXME move to cut() or somewhere else
+			if self.wildcard_file:  # FIXME move to cut() or somewhere else
 				print(bytes_to_str(match.wildcards()), read.name, file=self.wildcard_file)
 
 			matches.append(match)
@@ -376,7 +376,7 @@ class RepeatedAdapterCutter(object):
 			# if an adapter was found, then the read should now be shorter
 			assert len(read.sequence) < old_length
 
-		self.reads_matched += 1 # TODO move to filter class
+		self.reads_matched += 1  # TODO move to filter class
 
 		if self.rest_writer:
 			self.rest_writer.write(matches[-1])
@@ -427,7 +427,7 @@ def process_reads(reader, pe_reader, modifiers,
 		read.write(trimmed_outfile if read.trimmed else untrimmed_outfile, twoheaders)
 		if pe_reader:
 			pe_read.write(pe_outfile)
-	# TODO
+	# TODO remainder of this function
 	class Stats:
 		pass
 	stats = Stats()
@@ -529,6 +529,10 @@ def get_option_parser():
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
+	group.add_option("-u", "--cut", type=int, default=0, metavar="LENGTH",
+	    help="Remove bases from the beginning or end of each read. "
+			"If LENGTH is positive, the bases are removed from the beginning of each read. "
+			"If LENGTH is negative, the bases are removed from the end of each read.")
 	group.add_option("-q", "--quality-cutoff", type=int, default=0, metavar="CUTOFF",
 		help="Trim low-quality ends from reads before adapter removal. "
 			"The algorithm is the same as the one used by BWA "
@@ -696,10 +700,12 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	del options.anywhere
 	del options.front
 
-	if not adapters and options.quality_cutoff == 0:
+	if not adapters and options.quality_cutoff == 0 and options.cut == 0:
 		parser.error("You need to provide at least one adapter sequence.")
 
 	modifiers = []
+	if options.cut:
+		modifiers.append(UnconditionalCutter(options.cut))
 	if options.quality_cutoff > 0:
 		modifiers.append(QualityTrimmer(options.quality_cutoff, options.quality_base))
 	if adapters:
