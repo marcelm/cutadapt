@@ -77,7 +77,7 @@ except ImportError:
 
 class ColorspaceSequence(Sequence):
 
-	def __init__(self, name, sequence, qualities, primer=None):
+	def __init__(self, name, sequence, qualities, primer=None, trimmed=False):
 		# In colorspace, the first character is the last nucleotide of the primer base
 		# and the second character encodes the transition from the primer base to the
 		# first real base of the read.
@@ -86,7 +86,7 @@ class ColorspaceSequence(Sequence):
 			sequence = sequence[1:]
 		else:
 			self.primer = primer
-		super(ColorspaceSequence, self).__init__(name, sequence, qualities)
+		super(ColorspaceSequence, self).__init__(name, sequence, qualities, trimmed)
 		if not self.primer in (b'A', b'C', b'G', b'T'):
 			raise ValueError("primer base is {0!r}, but it should be one of A, C, G, T".format(self.primer))
 		if qualities is not None and len(self.sequence) != len(qualities):
