@@ -20,8 +20,6 @@ def datapath(path):
 
 
 def diff(path1, path2):
-	print(path1)
-	print(path2)
 	assert os.system("diff -u {0} {1}".format(path1, path2)) == 0
 
 

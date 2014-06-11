@@ -24,7 +24,7 @@
 
 """
 
-	%prog -a ADAPTER [options] <FASTA/FASTQ FILE>
+    %prog -a ADAPTER [options] <FASTA/FASTQ FILE>
 
 Reads a FASTA or FASTQ file, finds and removes adapters,
 and writes the changed sequence to standard output.
@@ -138,7 +138,7 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 
 	if n > 0:
 		operation = "Trimmed" if trim else "Matched"
-		print("	 {0} reads: {1:12} ({2:.1%})".format(operation, reads_matched, reads_matched / n))
+		print("     {0} reads: {1:12} ({2:.1%})".format(operation, reads_matched, reads_matched / n))
 		t = [ ("Quality-trimmed", quality_trimmed), ("  Trimmed bases", trimmed_bp)]
 		if quality_trimmed < 0:
 			del t[0]
@@ -146,11 +146,12 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 			s = " ({0:.2%} of total)".format(float(bp)/total_bp) if total_bp > 0 else ''
 			print("   {0}: {1:12} bp ({2:.1F} Mbp){3}".format(what, bp, bp/1E6, s))
 		print("   Too short reads: {0:12} ({1:.1%} of processed reads)".format(too_short, too_short / n))
-		print("	Too long reads: {0:12} ({1:.1%} of processed reads)".format(too_long, too_long / n))
-	print("		Total time: {0:9.2F} s".format(time))
+		print("    Too long reads: {0:12} ({1:.1%} of processed reads)".format(too_long, too_long / n))
+	print("        Total time: {0:9.2F} s".format(time))
 	if n > 0:
-		print("	 Time per read: {0:10.3F} ms".format(1000. * time / n))
+		print("     Time per read: {0:10.3F} ms".format(1000. * time / n))
 	print()
+
 	for index, adapter in enumerate(adapters):
 		total_front = sum(adapter.lengths_front.values())
 		total_back = sum(adapter.lengths_back.values())
