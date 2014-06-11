@@ -155,6 +155,7 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 	if n > 0:
 		print("     Time per read: {0:10.3F} ms".format(1000. * time / n))
 	print()
+
 	for index, adapter in enumerate(adapters):
 		total_front = sum(adapter.lengths_front.values())
 		total_back = sum(adapter.lengths_back.values())
@@ -273,7 +274,7 @@ class RepeatedAdapterCutter(object):
 	times parameter.
 	"""
 
-	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None, trim=True, rest_writer=None):
+	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None, trim=True, rest_writer=None, mask_adapter=False):
 		"""
 		adapters -- list of Adapter objects
 
@@ -286,6 +287,7 @@ class RepeatedAdapterCutter(object):
 		self.trim = trim
 		self.reads_matched = 0
 		self.rest_writer = rest_writer
+		self.mask_adapter = mask_adapter
 
 	def _best_match(self, read):
 		"""
@@ -371,7 +373,6 @@ class RepeatedAdapterCutter(object):
 		if __debug__:
 			old_length = len(read.sequence)
 		assert matches
-
 		if self.trim:
 			# The last match contains a copy of the read it was matched to.
 			# No iteration is necessary.
@@ -379,6 +380,24 @@ class RepeatedAdapterCutter(object):
 
 			# if an adapter was found, then the read should now be shorter
 			assert len(read.sequence) < old_length
+
+			if self.mask_adapter:
+				# add N from last modification
+				masked_sequence = matches[-1].adapter.trimmed(matches[-1]).sequence
+				for match in sorted(matches, reverse=True):
+					ns = 'N' * (len(match.read.sequence) -
+								len(match.adapter.trimmed(match).sequence))
+					# add N depending on match position
+					if match.front:
+						masked_sequence = ns + masked_sequence
+					else:
+						masked_sequence += ns
+				# set masked sequence as sequence with original quality
+				read.sequence = masked_sequence
+				read.qualities = matches[0].read.qualities
+				read.trimmed = True
+
+				assert len(read.sequence) == old_length
 
 		self.reads_matched += 1  # TODO move to filter class
 
@@ -501,13 +520,15 @@ def get_option_parser():
 			"is not counted (default: no limit).")
 	group.add_option("--no-trim", dest='trim', action='store_false', default=True,
 		help="Match and redirect reads to output/untrimmed-output as usual, but don't remove the adapters. (default: Trim the adapters)")
+	group.add_option("--mask-adapter", dest='mask_adapter', action='store_true', default=False,
+		help="Mask with 'N' adapter bases instead of trim (default: False)")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
 	group.add_option("-o", "--output", default=None, metavar="FILE",
 		help="Write the modified sequences to this file instead of standard "
 			"output and send the summary report to standard output. "
-		    "The format is FASTQ if qualities are available, FASTA "
+			"The format is FASTQ if qualities are available, FASTA "
 			"otherwise. (default: standard output)")
 	group.add_option("--info-file", metavar="FILE",
 		help="Write information about each read and its adapter matches into FILE. "
@@ -517,9 +538,9 @@ def get_option_parser():
 			"rest (after the adapter) into a file. Use - for standard output.")
 	group.add_option("--wildcard-file", default=None, metavar="FILE",
 		help="When the adapter has wildcard bases ('N's) write adapter bases matching wildcard "
-		     "positions to FILE. Use - for standard output. "
-		     "When there are indels in the alignment, this may occasionally "
-		     "not be quite accurate.")
+			 "positions to FILE. Use - for standard output. "
+			 "When there are indels in the alignment, this may occasionally "
+			 "not be quite accurate.")
 	group.add_option("--too-short-output", default=None, metavar="FILE",
 		help="Write reads that are too short (according to length specified by -m) to FILE. (default: discard reads)")
 	group.add_option("--too-long-output", default=None, metavar="FILE",
@@ -534,7 +555,7 @@ def get_option_parser():
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
 	group.add_option("-u", "--cut", type=int, default=0, metavar="LENGTH",
-	    help="Remove bases from the beginning or end of each read. "
+		help="Remove bases from the beginning or end of each read. "
 			"If LENGTH is positive, the bases are removed from the beginning of each read. "
 			"If LENGTH is negative, the bases are removed from the end of each read.")
 	group.add_option("-q", "--quality-cutoff", type=int, default=0, metavar="CUTOFF",
@@ -546,7 +567,7 @@ def get_option_parser():
 			"is minimal) (default: %default)")
 	group.add_option("--quality-base", type=int, default=33,
 		help="Assume that quality values are encoded as ascii(quality + QUALITY_BASE). The default (33) is usually correct, "
-		     "except for reads produced by some versions of the Illumina pipeline, where this should be set to 64. (default: %default)")
+			 "except for reads produced by some versions of the Illumina pipeline, where this should be set to 64. (default: %default)")
 	group.add_option("-x", "--prefix", default='',
 		help="Add this prefix to read names")
 	group.add_option("-y", "--suffix", default='',
@@ -622,7 +643,6 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	too_short_outfile = None # too short reads go here
 	too_long_outfile = None # too long reads go here
 	pe_outfile = None
-
 	if options.output is not None:
 		trimmed_outfile = xopen(options.output, 'w')
 	untrimmed_outfile = trimmed_outfile # reads without adapters go here
@@ -715,7 +735,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	if adapters:
 		adapter_cutter = RepeatedAdapterCutter(adapters, options.times,
 				options.wildcard_file, options.info_file, options.trim,
-				rest_writer)
+				rest_writer, options.mask_adapter)
 		modifiers.append(adapter_cutter)
 	else:
 		adapter_cutter = None

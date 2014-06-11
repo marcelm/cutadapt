@@ -184,6 +184,10 @@ def test_trim_095():
 	'''some reads properly trimmed since cutadapt 0.9.5'''
 	run("-c -e 0.122 -a 330201030313112312", "solid.fasta", "solid.fasta")
 
+def test_mask_adapter():
+	'''mask adapter with N (reads maintain the same length)'''
+	run("-b CAAG -n 3 --mask-adapter", "anywhere_repeat.fastq", "anywhere_repeat.fastq")
+
 def test_gz_multiblock():
 	'''compressed gz file with multiple blocks (created by concatenating two .gz files)'''
 	run("-b TTAGACATATCTCCGTCG", "small.fastq", "multiblock.fastq.gz")
