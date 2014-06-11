@@ -36,7 +36,7 @@ def run(params, expected, inpath, inpath2=None):
 	assert cutadapt.main(params) is None
 	# TODO redirect standard output
 	diff(dpath(os.path.join('cut', expected)), dpath('tmp.fastaq'))
-	#os.remove(dpath('tmp.fastaq'))
+	os.remove(dpath('tmp.fastaq'))
 	# TODO diff log files
 	#echo "Running $CA $1 data/$3 ${second}"
 	#if ! $CA $1 "data/$3" -o tmp.fastaq ${second} > tmp.log; then
