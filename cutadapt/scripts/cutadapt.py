@@ -64,7 +64,11 @@ import time
 import errno
 from optparse import OptionParser, OptionGroup
 
-from cutadapt import seqio, __version__
+from cutadapt import seqio, __version__, check_importability
+
+# Print a helpful error message if the extension modules cannot be imported.
+check_importability()
+
 from cutadapt.xopen import xopen
 from cutadapt.adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, ANYWHERE
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,

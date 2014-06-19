@@ -33,14 +33,22 @@ and tested on Ubuntu and OpenSuSE.
 Installation
 ------------
 
-Replace "python" with "python3" in the following lines to install the Python 3
-version.
+The easiest way to install cutadapt is via the `pip` command if that is
+available on your system:
 
-    python setup.py build
-    python setup.py install
+    pip install --user cutadapt
 
-If you get an error about a missing "Python.h" file, then make sure that
-the python-dev package is installed (or python3-dev for Python 3).
+This installs the cutadapt binary into `$HOME/.local/bin`. Make sure that this
+directory is on your `$PATH`.
+
+If you have already downloaded and unpacked the `.tar.gz` file, then
+installation is done like this (replace "python" with "python3" to install the
+Python 3 version):
+
+    python setup.py install --user
+
+If you get an error about a missing `Python.h` file, then make sure that
+the `python-dev` package is installed (or `python3-dev` for Python 3).
 
 
 Use without installation
