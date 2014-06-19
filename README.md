@@ -608,6 +608,9 @@ Changes
 
 v1.5
 ----
+* Add the option `--mask-adapter`, which can be used to not remove adapters,
+  but to instead mask them with `N` characters. Thanks to Vittorio Zamboni
+  for contributing this feature!
 * Cutadapt is again compatible with Python 3.
 * U characters in the adapter sequence are automatically converted to T.
 * Do not run Cython at installation time unless the --cython option is provided.
