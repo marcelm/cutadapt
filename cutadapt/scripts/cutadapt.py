@@ -584,15 +584,24 @@ def get_option_parser():
 	group.add_option("--strip-f3", action='store_true', default=False,
 		help="For color space: Strip the _F3 suffix of read names")
 	group.add_option("--maq", "--bwa", action='store_true', default=False,
-		help="MAQ- and BWA-compatible color space output. This enables -c, -d, -t, --strip-f3, -y '/1' and -z.")
+		help="MAQ- and BWA-compatible color space output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
 	group.add_option("--length-tag", default=None, metavar="TAG",
 		help="Search for TAG followed by a decimal number in the name of the read "
 			"(description/comment field of the FASTA or FASTQ file). Replace the "
 			"decimal number with the correct length of the trimmed read. "
 			"For example, use --length-tag 'length=' to correct fields "
 			"like 'length=123'.")
-	group.add_option("--zero-cap", "-z", action='store_true', default=False,
-		help="Change negative quality values to zero (workaround to avoid segmentation faults in old BWA versions)")
+	group.add_option("--no-zero-cap", dest='zero_cap', action='store_false',
+		help="Do not change negative quality values to zero. Colorspace "
+			"quality values of -1 would appear as spaces in the output FASTQ "
+			"file. Since many tools have problems with that, negative qualities "
+			"are converted to zero when trimming colorspace data. Use this "
+			"option to keep negative qualities.")
+	group.add_option("--zero-cap", "-z", action='store_true',
+		help="Change negative quality values to zero. This is enabled "
+		"by default when -c/--colorspace is also enabled. Use the above option "
+		"to disable it.")
+	parser.set_defaults(zero_cap=None)
 	parser.add_option_group(group)
 
 	return parser
@@ -640,8 +649,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		parser.error("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
 
 	# default output files (overwritten below)
-	too_short_outfile = None # too short reads go here
-	too_long_outfile = None # too long reads go here
+	too_short_outfile = None  # too short reads go here
+	too_long_outfile = None  # too long reads go here
 	pe_outfile = None
 	if options.output is not None:
 		trimmed_outfile = xopen(options.output, 'w')
@@ -654,14 +663,14 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		too_long_outfile = xopen(options.too_long_output, 'w')
 	if options.paired_output:
 		pe_outfile = xopen(options.paired_output, 'w')
-
 	if options.maq:
 		options.colorspace = True
 		options.double_encode = True
 		options.trim_primer = True
 		options.strip_suffix.append('_F3')
 		options.suffix = "/1"
-		options.zero_cap = True
+	if options.zero_cap is None:
+		options.zero_cap = options.colorspace
 	if options.trim_primer and not options.colorspace:
 		parser.error("Trimming the primer makes only sense in color space.")
 	if options.double_encode and not options.colorspace:
@@ -724,10 +733,20 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	del options.anywhere
 	del options.front
 
+	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
+		too_short_outfile, too_long_outfile, options.discard_trimmed,
+		options.discard_untrimmed)
+	start_time = time.clock()
+	reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
+	if pe_filename:
+		pe_reader = read_sequences(pe_filename, None, colorspace=options.colorspace, fileformat=options.format)
+	else:
+		pe_reader = None
+
+	# build up list of modifiers
+	modifiers = []
 	if not adapters and options.quality_cutoff == 0 and options.cut == 0:
 		parser.error("You need to provide at least one adapter sequence.")
-
-	modifiers = []
 	if options.cut:
 		modifiers.append(UnconditionalCutter(options.cut))
 	if options.quality_cutoff > 0:
@@ -749,21 +768,12 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		modifiers.append(PrefixSuffixAdder(options.prefix, options.suffix))
 	if options.double_encode:
 		modifiers.append(DoubleEncoder())
-	if options.zero_cap:
+	if options.zero_cap and reader.delivers_qualities:
 		modifiers.append(ZeroCapper(quality_base=options.quality_base))
 	if options.trim_primer:
 		modifiers.append(PrimerTrimmer)
 
-	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
-		too_short_outfile, too_long_outfile, options.discard_trimmed,
-		options.discard_untrimmed)
-	start_time = time.clock()
 	try:
-		reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
-		if pe_filename:
-			pe_reader = read_sequences(pe_filename, None, colorspace=options.colorspace, fileformat=options.format)
-		else:
-			pe_reader = None
 		stats = process_reads(reader, pe_reader, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile)
 	except IOError as e:
 		if e.errno == errno.EPIPE:

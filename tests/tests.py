@@ -346,3 +346,6 @@ def test_unconditional_cut_front():
 
 def test_unconditional_cut_back():
 	run('-u -5', 'unconditional-back.fastq', 'small.fastq')
+
+def test_no_zerocap():
+	run("--no-zero-cap -c -e 0.122 -a CGCCTTGGCCGTACAGCAG", "solid-no-zerocap.fastq", "solid.fastq")

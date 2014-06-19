@@ -128,7 +128,6 @@ class FormatError(Exception):
 	"""
 	Raised when an input file (FASTA or FASTQ) is malformatted.
 	"""
-	pass
 
 
 class FileWithPrependedLine(object):
@@ -254,6 +253,7 @@ class FastaReader(object):
 			file = xopen(file, "rb")
 		self.fp = file
 		self.sequence_class = sequence_class
+		self.delivers_qualities = False
 
 	def __iter__(self):
 		"""
@@ -311,6 +311,7 @@ class FastqReader(object):
 		self.fp = file
 		self.twoheaders = False
 		self.sequence_class = sequence_class
+		self.delivers_qualities = True
 
 	def __iter__(self):
 		"""
@@ -381,6 +382,7 @@ class FastaQualReader(object):
 		self.fastareader = FastaReader(fastafile)
 		self.qualreader = FastaReader(qualfile, keep_linebreaks=True)
 		self.sequence_class = sequence_class
+		self.delivers_qualities = True
 
 	def __iter__(self):
 		"""

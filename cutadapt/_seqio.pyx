@@ -33,7 +33,6 @@ class FormatError(Exception):
 	"""
 	Raised when an input file (FASTA or FASTQ) is malformatted.
 	"""
-	pass
 
 
 cdef class Sequence(object):
@@ -114,6 +113,7 @@ class FastqReader(object):
 		self.fp = file
 		self.twoheaders = False
 		self.sequence_class = sequence_class
+		self.delivers_qualities = True
 
 	def __iter__(self):
 		"""
