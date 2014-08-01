@@ -1,5 +1,4 @@
 # TODO
-# test --untrimmed-output
 # test with the --output option
 # test reading from standard input
 from __future__ import print_function, division, absolute_import
@@ -14,6 +13,7 @@ def dpath(path):
 	get path to a data file (relative to the directory this test lives in)
 	"""
 	return os.path.join(os.path.dirname(__file__), path)
+
 
 def datapath(path):
 	return dpath(os.path.join('data', path))
@@ -350,3 +350,9 @@ def test_unconditional_cut_back():
 
 def test_no_zerocap():
 	run("--no-zero-cap -c -e 0.122 -a CGCCTTGGCCGTACAGCAG", "solid-no-zerocap.fastq", "solid.fastq")
+
+def test_untrimmed_output():
+	tmp = dpath('untrimmed.tmp.fastq')
+	run(['-a', 'TTAGACATATCTCCGTCG', '--untrimmed-output', tmp], 'small.trimmed.fastq', 'small.fastq')
+	diff(dpath(os.path.join('cut', 'small.untrimmed.fastq')), tmp)
+	os.remove(tmp)
