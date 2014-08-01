@@ -617,7 +617,9 @@ v1.5
 * Do not run Cython at installation time unless the --cython option is provided.
 * Add the option -u/--cut, which can be used to unconditionally remove a number
   of bases from the beginning or end of each read.
-* Make --zero-cap the default for colorspace reads.
+* Make `--zero-cap` the default for colorspace reads.
+* When the new option `--quiet` is used, no report is printed after all reads
+  have been processed.
 
 v1.4
 ----

@@ -525,6 +525,8 @@ def get_option_parser():
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
+	group.add_option("--quiet", default=False, action='store_true',
+		help="Do not print a report at the end.")
 	group.add_option("-o", "--output", default=None, metavar="FILE",
 		help="Write the modified sequences to this file instead of standard "
 			"output and send the summary report to standard output. "
@@ -787,12 +789,13 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 			too_short_outfile, too_long_outfile, options.info_file]:
 		if f is not None:
 			f.close()
-	# send statistics to stderr if result was sent to stdout
-	stat_file = sys.stderr if options.output is None else None
 
-	print_statistics(adapters, time.clock() - start_time, stats,
-		options.trim, adapter_cutter.reads_matched if adapter_cutter else 0,
-		options.error_rate, readfilter.too_short, readfilter.too_long, cmdlineargs, file=stat_file)
+	if not options.quiet:
+		# send statistics to stderr if result was sent to stdout
+		stat_file = sys.stderr if options.output is None else None
+		print_statistics(adapters, time.clock() - start_time, stats,
+			options.trim, adapter_cutter.reads_matched if adapter_cutter else 0,
+			options.error_rate, readfilter.too_short, readfilter.too_long, cmdlineargs, file=stat_file)
 
 
 if __name__ == '__main__':
