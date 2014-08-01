@@ -455,6 +455,7 @@ When the `--info-file` command-line parameter is given, detailed information
 about the found adapters is written to the given file. The output is a
 tab-separated text file. Each line corresponds to one read of the input file.
 The columns are:
+
 1. Read name
 2. Number of errors
 3. 0-based start coordinate of the adapter match
