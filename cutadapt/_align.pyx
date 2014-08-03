@@ -25,7 +25,7 @@ ctypedef struct Entry:
 def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
 	"""
 	globalalign_locate(string1, string2, max_error_rate, flags=SEMIGLOBAL)
-		-> (start1, stop1, start2, stop2, matches, errors)
+	    -> (start1, stop1, start2, stop2, matches, errors)
 
 	Locate one string within another by computing an optimal semiglobal
 	alignment between string1 and string2.

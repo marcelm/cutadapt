@@ -9,6 +9,7 @@ if PY3:
 	maketrans = bytes.maketrans
 	basestring = str
 	zip = zip
+	next = next
 
 	def bytes_to_str(s):
 		return s.decode('ascii')
@@ -31,6 +32,9 @@ else:
 
 	def force_str(s):
 		return s
+
+	def next(it):
+		return it.next()
 
 	from string import maketrans
 	basestring = basestring

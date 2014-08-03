@@ -317,6 +317,24 @@ def test_paired_end_missing_file():
 	cutadapt.main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
 
 
+@raises(SystemExit)
+def test_first_too_short():
+	# paired-truncated.1.fastq is paired.1.fastq without the last read
+	cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired-truncated.1.fastq'), datapath('paired.2.fastq')])
+
+
+@raises(SystemExit)
+def test_second_too_short():
+	# paired-truncated.2.fastq is paired.2.fastq without the last read
+	cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired.1.fastq'), datapath('paired-truncated.2.fastq')])
+
+
+@raises(SystemExit)
+def test_unmatched_read_names():
+	# paired-swapped.1.fastq: paired.1.fastq with reads 2 and 3 swapped
+	cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired-swapped.1.fastq'), datapath('paired.2.fastq')])
+
+
 def test_paired_end():
 	'''--paired-output'''
 	pairedtmp = dpath("paired-tmp.fastq")
@@ -348,8 +366,10 @@ def test_unconditional_cut_front():
 def test_unconditional_cut_back():
 	run('-u -5', 'unconditional-back.fastq', 'small.fastq')
 
-def test_no_zerocap():
+
+def test_no_zero_cap():
 	run("--no-zero-cap -c -e 0.122 -a CGCCTTGGCCGTACAGCAG", "solid-no-zerocap.fastq", "solid.fastq")
+
 
 def test_untrimmed_output():
 	tmp = dpath('untrimmed.tmp.fastq')

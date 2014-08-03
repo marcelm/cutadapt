@@ -224,22 +224,36 @@ both input read files to cutadapt and the `--paired-output` option is needed to 
 files synchronized. First trim the forward read, writing output to temporary files (we
 also add some quality trimming):
 
-    cutadapt -q 10 -a ADAPTER_FWD --minimum-length 20 --paired-output tmp.2.fastq -o tmp.1.fastq reads.1.fastq reads.2.fastq
+    cutadapt -q 10 -a ADAPTER_FWD --minimum-length 20 -o tmp.1.fastq -p tmp.2.fastq reads.1.fastq reads.2.fastq
 
-Then trim the reverse read, using the temporary files as input:
+The `-p` is an abbreviation for `--paired-output`. Then trim the reverse read,
+using the temporary files as input:
 
-    cutadapt -q 15 -a ADAPTER_REV --minimum-length 20 --paired-output trimmed.1.fastq -o trimmed.2.fastq tmp.2.fastq tmp.1.fastq
+    cutadapt -q 15 -a ADAPTER_REV --minimum-length 20 -o trimmed.2.fastq -p trimmed.1.fastq tmp.2.fastq tmp.1.fastq
 
 Finally, remove the temporary files:
 
     rm tmp.1.fastq tmp.2.fastq
 
 In each call to cutadapt, the read-modifying options such as `-q` only apply to the first
-file (first reads.1.fastq, then tmp.2.fastq in this example). Reads in the second file
+file (first `reads.1.fastq`, then `tmp.2.fastq` in this example). Reads in the second file
 are not affected by those options, but by the filtering options: If a read in
 the first file is discarded, then the matching read in the second file is also filtered
 and not written to the output given by `--paired-output` in order to keep both output
 files synchronized.
+
+When you use `-p`/`--paired-output`, then cutadapt also checks whether the files are
+properly paired. An error is raised if one of the files contains more reads than
+the other or if the read names in the two files do not match. Only the part of
+the read name before the first space is considered. If the read name ends with
+`/1` or `/2`, then that is also ignored. For example, two FASTQ headers that
+would be considered to denote properly paired reads are:
+
+	@my_read/1 a comment
+
+and
+
+	@my_read/2 another comment
 
 
 Illumina TruSeq
@@ -620,6 +634,8 @@ v1.5
 * Make `--zero-cap` the default for colorspace reads.
 * When the new option `--quiet` is used, no report is printed after all reads
   have been processed.
+* When processing paired-end reads, cutadapt now checks whether the reads are
+  properly paired.
 
 v1.4
 ----

@@ -38,6 +38,9 @@ used by some 454 software and by the SOLiD sequencer.
 If you have color space data, you still need to provide the -c option
 to correctly deal with color space!
 
+When two file names are given and the --paired-output (or -p) option is used,
+then the two files contain paired-end reads. See the README!
+
 If the name of any input or output file ends with '.gz' or '.bz2', it is
 assumed to be gzip-/bzip2-compressed.
 
@@ -73,7 +76,7 @@ from cutadapt.xopen import xopen
 from cutadapt.adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, ANYWHERE
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter)
-from cutadapt.compat import PY3, bytes_to_str
+from cutadapt.compat import next, bytes_to_str
 
 
 class HelpfulOptionParser(OptionParser):
@@ -416,8 +419,8 @@ class RepeatedAdapterCutter(object):
 		return read
 
 
-def process_reads(reader, pe_reader, modifiers,
-		readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile):
+def process_single_reads(reader, modifiers,
+		readfilter, trimmed_outfile, untrimmed_outfile):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -426,18 +429,10 @@ def process_reads(reader, pe_reader, modifiers,
 	"""
 	n = 0  # no. of processed reads
 	total_bp = 0
-	if pe_reader:
-		pe_reader = iter(pe_reader)
-
 	twoheaders = None
 	for read in reader:
 		n += 1
 		total_bp += len(read.sequence)
-		if pe_reader:
-			if PY3:
-				pe_read = next(pe_reader)
-			else:
-				pe_read = pe_reader.next()
 		for modifier in modifiers:
 			read = modifier(read)
 		if twoheaders is None:
@@ -448,8 +443,7 @@ def process_reads(reader, pe_reader, modifiers,
 		if not readfilter.keep(read):
 			continue
 		read.write(trimmed_outfile if read.trimmed else untrimmed_outfile, twoheaders)
-		if pe_reader:
-			pe_read.write(pe_outfile)
+
 	# TODO remainder of this function
 	class Stats:
 		pass
@@ -462,6 +456,73 @@ def process_reads(reader, pe_reader, modifiers,
 			stats.quality_trimmed_bases = m.trimmed_bases
 			break
 	return stats
+
+
+def process_paired_reads(paired_reader, modifiers,
+		readfilter, trimmed1_outfile, trimmed2_outfile, untrimmed1_outfile, untrimmed2_outfile):
+	"""
+	Loop over reads, find adapters, trim reads, apply modifiers and
+	output modified reads.
+	
+	Note that all trimming is only done on the first read of each pair!
+
+	Return a tuple (number_of_processed_reads, number_of_processed_basepairs)
+	"""
+	n = 0  # no. of processed reads
+	total1_bp = 0
+	total2_bp = 0
+	twoheaders1, twoheaders2 = None, None
+	for read1, read2 in paired_reader:
+		n += 1
+		total1_bp += len(read1.sequence)
+		total2_bp += len(read2.sequence)
+		for modifier in modifiers:
+			read1 = modifier(read1)
+		if twoheaders1 is None:
+			try:
+				twoheaders1 = paired_reader.reader1.twoheaders
+			except AttributeError:
+				twoheaders1 = False
+		if twoheaders2 is None:
+			try:
+				twoheaders2 = paired_reader.reader2.twoheaders
+			except AttributeError:
+				twoheaders2 = False
+		if not readfilter.keep(read1):
+			continue
+		if read1.trimmed:
+			read1.write(trimmed1_outfile, twoheaders1)
+			read2.write(trimmed2_outfile, twoheaders2)
+		else:
+			read1.write(untrimmed1_outfile, twoheaders1)
+			read2.write(untrimmed2_outfile, twoheaders2)
+
+	# TODO remainder of this function
+	class Stats:
+		pass
+	stats = Stats()
+	stats.total_bp = total1_bp
+	stats.n = n
+	stats.quality_trimmed_bases = -1
+	for m in modifiers:
+		if isinstance(m, QualityTrimmer):
+			stats.quality_trimmed_bases = m.trimmed_bases
+			break
+	return stats
+
+
+def parse_adapter_name(seq):
+	"""
+	Parse an adapter given as 'name=adapt' into 'name' and 'adapt'.
+	"""
+	fields = seq.split('=', 1)
+	if len(fields) > 1:
+		name, seq = fields
+		name = name.strip()
+	else:
+		name = None
+	seq = seq.strip()
+	return name, seq
 
 
 def get_option_parser():
@@ -549,10 +610,10 @@ def get_option_parser():
 		help="Write reads that are too long (according to length specified by -M) to FILE. (default: discard reads)")
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
 		help="Write reads that do not contain the adapter to FILE, instead "
-			"of writing them to the regular output file. (default: output "
+			"of writing them to the regular output file. (Default: output "
 			"to same file as trimmed)")
 	group.add_option('-p', "--paired-output", default=None, metavar="FILE",
-		help="Write reads from the paired end input to FILE. ")
+		help="Write reads from the paired-end input to FILE.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
@@ -569,7 +630,7 @@ def get_option_parser():
 			"is minimal) (default: %default)")
 	group.add_option("--quality-base", type=int, default=33,
 		help="Assume that quality values are encoded as ascii(quality + QUALITY_BASE). The default (33) is usually correct, "
-			 "except for reads produced by some versions of the Illumina pipeline, where this should be set to 64. (default: %default)")
+			 "except for reads produced by some versions of the Illumina pipeline, where this should be set to 64. (Default: %default)")
 	group.add_option("-x", "--prefix", default='',
 		help="Add this prefix to read names")
 	group.add_option("-y", "--suffix", default='',
@@ -628,6 +689,9 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		parser.error("Too many parameters.")
 
 	input_filename = args[0]
+
+	# If a second file name was given, then we either have single-end reads
+	# provided as a pair of .fasta/.qual files or we have paired-end reads.
 	quality_filename = None
 	pe_filename = None
 	if len(args) == 2:
@@ -636,7 +700,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		else:
 			pe_filename = args[1]
 			if not options.paired_output:
-				parser.error('you must use --paired-output when trimming paired-end reads')
+				parser.error('You must use --paired-output when trimming paired-end reads.')
 
 	if len(args) == 1 and options.paired_output:
 		parser.error("You specified a --paired-output file, but gave only one input file.")
@@ -695,20 +759,6 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		options.wildcard_file = xopen(options.wildcard_file, 'w')
 
 	adapters = []
-
-	def parse_adapter_name(seq):
-		"""
-		Parse an adapter given as 'name=adapt' into 'name' and 'adapt'.
-		"""
-		fields = seq.split('=', 1)
-		if len(fields) > 1:
-			name, seq = fields
-			name = name.strip()
-		else:
-			name = None
-		seq = seq.strip()
-		return name, seq
-
 	ADAPTER_CLASS = ColorspaceAdapter if options.colorspace else Adapter
 	def append_adapters(adapter_list, where):
 		for seq in adapter_list:
@@ -739,11 +789,13 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		too_short_outfile, too_long_outfile, options.discard_trimmed,
 		options.discard_untrimmed)
 	start_time = time.clock()
-	reader = read_sequences(input_filename, quality_filename, colorspace=options.colorspace, fileformat=options.format)
+
 	if pe_filename:
-		pe_reader = read_sequences(pe_filename, None, colorspace=options.colorspace, fileformat=options.format)
+		reader = seqio.PairedSequenceReader(input_filename, pe_filename,
+			colorspace=options.colorspace, fileformat=options.format)
 	else:
-		pe_reader = None
+		reader = read_sequences(input_filename, quality_filename,
+			colorspace=options.colorspace, fileformat=options.format)
 
 	# build up list of modifiers
 	modifiers = []
@@ -776,7 +828,15 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		modifiers.append(PrimerTrimmer)
 
 	try:
-		stats = process_reads(reader, pe_reader, modifiers, readfilter, trimmed_outfile, untrimmed_outfile, pe_outfile)
+		if pe_filename:
+			stats = process_paired_reads(reader, modifiers, readfilter,
+				trimmed_outfile, pe_outfile,
+				trimmed_outfile, pe_outfile)
+				#trimmed1_outfile, trimmed2_outfile,
+				#untrimmed1_outfile, untrimmed2_outfile)
+		else:
+			stats = process_single_reads(reader, modifiers, readfilter,
+				trimmed_outfile, untrimmed_outfile)
 	except IOError as e:
 		if e.errno == errno.EPIPE:
 			sys.exit(1)

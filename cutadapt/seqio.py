@@ -303,8 +303,8 @@ class FastqReader(object):
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
 
-		colorspace -- Usually (when this is False), there must be n characters in the sequence and
-		n quality values. When this is True, there must be n+1 characters in the sequence and n quality values.
+		The sequence_class should be a class such as Sequence or
+		ColorspaceSequence.
 		"""
 		if isinstance(file, basestring):
 			file = xopen(file, "rb")
@@ -418,3 +418,44 @@ class FastaQualReader(object):
 class ColorspaceFastaQualReader(FastaQualReader):
 	def __init__(self, fastafile, qualfile):
 		super(ColorspaceFastaQualReader, self).__init__(fastafile, qualfile, sequence_class=ColorspaceSequence)
+
+
+class PairedSequenceReader(object):
+	"""
+	Wrap two SequenceReader instances, making sure that reads are
+	properly paired.
+	"""
+	def __init__(self, file1, file2, colorspace=False, fileformat=None):
+		self.reader1 = SequenceReader(file1)
+		self.reader2 = SequenceReader(file2)
+		self.delivers_qualities = self.reader1.delivers_qualities
+
+	def __iter__(self):
+		# Avoid usage of zip() below since it will consume one item too many.
+		it1, it2 = iter(self.reader1), iter(self.reader2)
+		while True:
+			try:
+				r1 = next(it1)
+			except StopIteration:
+				# End of file 1. Make sure that file 2 is also at end.
+				try:
+					next(it2)
+					raise FormatError("Reads are improperly paired. There are more reads in file 2 than in file 1.")
+				except StopIteration:
+					pass
+				break
+			try:
+				r2 = next(it2)
+			except StopIteration:
+				raise FormatError("Reads are improperly paired. There are more reads in file 1 than in file 2.")
+
+			name1 = r1.name.split(' ')[0]
+			name2 = r2.name.split(' ')[0]
+			if name1[-2:-1] == '/':
+				name1 = name1[:-2]
+			if name2[-2:-1] == '/':
+				name2 = name2[:-2]
+			if name1 != name2:
+				raise FormatError("Reads are improperly paired. Read name '{}' in file 1 not equal to '{}' in file 2.".format(name1, name2))
+			yield (r1, r2)
+
