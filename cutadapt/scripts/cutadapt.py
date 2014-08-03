@@ -530,8 +530,8 @@ def get_option_parser():
 
 	parser.add_option("-f", "--format", default=None,
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
-		"Ignored when reading csfasta/qual files (default: auto-detect "
-		"from file name extension).")
+			"Ignored when reading csfasta/qual files (default: auto-detect "
+			"from file name extension).")
 
 	group = OptionGroup(parser, "Options that influence how the adapters are found",
 		description="Each of the following three parameters (-a, -b, -g) can be used "
@@ -554,33 +554,45 @@ def get_option_parser():
 	group.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
 	group.add_option("--no-indels", action='store_false', dest='indels', default=True,
-		help="Do not allow indels in the alignments, that is, allow only mismatches. This option is currently only supported for anchored 5' adapters ('-g ^ADAPTER') (default: both mismatches and indels are allowed)")
+		help="Do not allow indels in the alignments, that is, allow only "
+			"mismatches. This option is currently only supported for anchored "
+			"5' adapters ('-g ^ADAPTER') (default: both mismatches and indels "
+			"are allowed)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
-		help="Try to remove adapters at most COUNT times. Useful when an adapter gets appended multiple times (default: %default).")
+		help="Try to remove adapters at most COUNT times. Useful when an "
+			"adapter gets appended multiple times (default: %default).")
 	group.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
-		help="Minimum overlap length. If the overlap between the read and the adapter is shorter than LENGTH, the read is not modified."
-			"This reduces the no. of bases trimmed purely due to short random adapter matches (default: %default).")
+		help="Minimum overlap length. If the overlap between the read and the "
+			"adapter is shorter than LENGTH, the read is not modified. "
+			"This reduces the no. of bases trimmed purely due to short random "
+			"adapter matches (default: %default).")
 	group.add_option("--match-read-wildcards", action="store_true", default=False,
 		help="Allow 'N's in the read as matches to the adapter (default: %default).")
 	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
 		default=True, dest='match_adapter_wildcards',
-		help="Do not treat 'N' in the adapter sequence as wildcards. This is needed when you want to search for literal 'N' characters.")
+		help="Do not treat 'N' in the adapter sequence as wildcards. This is "
+			"needed when you want to search for literal 'N' characters.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options for filtering of processed reads")
 	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
-		help="Discard reads that contain the adapter instead of trimming them. Also use -O in order to avoid throwing away too many randomly matching reads!")
+		help="Discard reads that contain the adapter instead of trimming them. "
+			"Also use -O in order to avoid throwing away too many randomly "
+			"matching reads!")
 	group.add_option("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
 		help="Discard reads that do not contain the adapter.")
 	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
-		help="Discard trimmed reads that are shorter than LENGTH. Reads that are too short even before adapter removal are also discarded. In colorspace, an initial primer is not counted (default: 0).")
+		help="Discard trimmed reads that are shorter than LENGTH. Reads that "
+			"are too short even before adapter removal are also discarded. In "
+			"colorspace, an initial primer is not counted (default: 0).")
 	group.add_option("-M", "--maximum-length", type=int, default=sys.maxsize, metavar="LENGTH",
 		help="Discard trimmed reads that are longer than LENGTH. "
 			"Reads that are too long even before adapter removal "
 			"are also discarded. In colorspace, an initial primer "
 			"is not counted (default: no limit).")
 	group.add_option("--no-trim", dest='trim', action='store_false', default=True,
-		help="Match and redirect reads to output/untrimmed-output as usual, but don't remove the adapters. (default: Trim the adapters)")
+		help="Match and redirect reads to output/untrimmed-output as usual, "
+			"but don't remove the adapters. (Default: trim the adapters)")
 	group.add_option("--mask-adapter", dest='mask_adapter', action='store_true', default=False,
 		help="Mask with 'N' adapter bases instead of trim (default: False)")
 	parser.add_option_group(group)
@@ -593,12 +605,14 @@ def get_option_parser():
 			"output and send the summary report to standard output. "
 			"The format is FASTQ if qualities are available, FASTA "
 			"otherwise. (default: standard output)")
+	group.add_option('-p', "--paired-output", default=None, metavar="FILE",
+		help="Write reads from the paired-end input to FILE.")
 	group.add_option("--info-file", metavar="FILE",
 		help="Write information about each read and its adapter matches into FILE. "
 			"See the README for the file format.")
 	group.add_option("-r", "--rest-file", default=None, metavar="FILE",
 		help="When the adapter matches in the middle of a read, write the "
-			"rest (after the adapter) into a file. Use - for standard output.")
+			"rest (after the adapter) into FILE. Use - for standard output.")
 	group.add_option("--wildcard-file", default=None, metavar="FILE",
 		help="When the adapter has wildcard bases ('N's) write adapter bases matching wildcard "
 			 "positions to FILE. Use - for standard output. "
@@ -612,8 +626,7 @@ def get_option_parser():
 		help="Write reads that do not contain the adapter to FILE, instead "
 			"of writing them to the regular output file. (Default: output "
 			"to same file as trimmed)")
-	group.add_option('-p', "--paired-output", default=None, metavar="FILE",
-		help="Write reads from the paired-end input to FILE.")
+	group.add_option
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
