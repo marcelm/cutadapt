@@ -376,3 +376,24 @@ def test_untrimmed_output():
 	run(['-a', 'TTAGACATATCTCCGTCG', '--untrimmed-output', tmp], 'small.trimmed.fastq', 'small.fastq')
 	diff(dpath(os.path.join('cut', 'small.untrimmed.fastq')), tmp)
 	os.remove(tmp)
+
+
+def test_untrimmed_paired_output():
+	paired1 = datapath('paired.1.fastq')
+	paired2 = datapath('paired.2.fastq')
+	tmp1 = dpath("tmp-paired.1.fastq")
+	tmp2 = dpath("tmp-paired.2.fastq")
+	untrimmed1 = dpath("tmp-untrimmed.1.fastq")
+	untrimmed2 = dpath("tmp-untrimmed.2.fastq")
+
+	params = ['--quiet', '-a', 'TTAGACATAT', '-o', tmp1, '-p', tmp2, '--untrimmed-output', untrimmed1, '--untrimmed-paired-output', untrimmed2, paired1, paired2]
+	assert cutadapt.main(params) is None
+
+	diff(dpath(os.path.join('cut', 'paired-untrimmed.1.fastq')), untrimmed1)
+	diff(dpath(os.path.join('cut', 'paired-untrimmed.2.fastq')), untrimmed2)
+	diff(dpath(os.path.join('cut', 'paired-trimmed.1.fastq')), tmp1)
+	diff(dpath(os.path.join('cut', 'paired-trimmed.2.fastq')), tmp2)
+	os.remove(tmp1)
+	os.remove(tmp2)
+	os.remove(untrimmed1)
+	os.remove(untrimmed2)

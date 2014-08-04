@@ -625,7 +625,12 @@ def get_option_parser():
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
 		help="Write reads that do not contain the adapter to FILE, instead "
 			"of writing them to the regular output file. (Default: output "
-			"to same file as trimmed)")
+			"to same file as trimmed reads.)")
+	group.add_option("--untrimmed-paired-output", default=None, metavar="FILE",
+		help="Write the second read in a pair to this FILE when no adapter "
+			"was found in the first read. Use this option together with "
+			"--untrimmed-output when trimming paired-end reads. (Default: output "
+			"to same file as trimmed reads.)")
 	group.add_option
 	parser.add_option_group(group)
 
@@ -706,17 +711,23 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	# If a second file name was given, then we either have single-end reads
 	# provided as a pair of .fasta/.qual files or we have paired-end reads.
 	quality_filename = None
-	pe_filename = None
+	input_paired_filename = None
 	if len(args) == 2:
 		if args[1].endswith('.qual'):
 			quality_filename = args[1]
 		else:
-			pe_filename = args[1]
+			input_paired_filename = args[1]
 			if not options.paired_output:
 				parser.error('You must use --paired-output when trimming paired-end reads.')
 
 	if len(args) == 1 and options.paired_output:
 		parser.error("You specified a --paired-output file, but gave only one input file.")
+	if options.paired_output and bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
+		parser.error("When trimming paired-end reads, you must use either none "
+			"or both of the --untrimmed-output/--untrimmed-paired-output options.")
+	if options.untrimmed_paired_output and not options.paired_output:
+		parser.error("Option --untrimmed-paired-output can only be used when "
+			"trimming paired-end reads (with option --paired-output).")
 	if input_filename.endswith('.qual') and quality_filename.endswith('fasta'):
 		parser.error("FASTA and QUAL file given, but the FASTA file must be first.")
 
@@ -727,21 +738,24 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	if options.format is not None and quality_filename is not None:
 		parser.error("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
 
-	# default output files (overwritten below)
-	too_short_outfile = None  # too short reads go here
-	too_long_outfile = None  # too long reads go here
-	pe_outfile = None
 	if options.output is not None:
 		trimmed_outfile = xopen(options.output, 'w')
-	untrimmed_outfile = trimmed_outfile # reads without adapters go here
+	trimmed_paired_outfile = None
+	if options.paired_output:
+		trimmed_paired_outfile = xopen(options.paired_output, 'w')
+	untrimmed_outfile = trimmed_outfile  # reads without adapters go here
+	untrimmed_paired_outfile = trimmed_paired_outfile
 	if options.untrimmed_output is not None:
 		untrimmed_outfile = xopen(options.untrimmed_output, 'w')
+	if options.untrimmed_paired_output is not None:
+		untrimmed_paired_outfile = xopen(options.untrimmed_paired_output, 'w')
+
+	too_short_outfile = None  # too short reads go here
 	if options.too_short_output is not None:
 		too_short_outfile = xopen(options.too_short_output, 'w')
+	too_long_outfile = None  # too long reads go here
 	if options.too_long_output is not None:
 		too_long_outfile = xopen(options.too_long_output, 'w')
-	if options.paired_output:
-		pe_outfile = xopen(options.paired_output, 'w')
 	if options.maq:
 		options.colorspace = True
 		options.double_encode = True
@@ -803,8 +817,8 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		options.discard_untrimmed)
 	start_time = time.clock()
 
-	if pe_filename:
-		reader = seqio.PairedSequenceReader(input_filename, pe_filename,
+	if input_paired_filename:
+		reader = seqio.PairedSequenceReader(input_filename, input_paired_filename,
 			colorspace=options.colorspace, fileformat=options.format)
 	else:
 		reader = read_sequences(input_filename, quality_filename,
@@ -841,12 +855,10 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		modifiers.append(PrimerTrimmer)
 
 	try:
-		if pe_filename:
+		if input_paired_filename:
 			stats = process_paired_reads(reader, modifiers, readfilter,
-				trimmed_outfile, pe_outfile,
-				trimmed_outfile, pe_outfile)
-				#trimmed1_outfile, trimmed2_outfile,
-				#untrimmed1_outfile, untrimmed2_outfile)
+				trimmed_outfile, trimmed_paired_outfile,
+				untrimmed_outfile, untrimmed_paired_outfile)
 		else:
 			stats = process_single_reads(reader, modifiers, readfilter,
 				trimmed_outfile, untrimmed_outfile)
