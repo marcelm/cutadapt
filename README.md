@@ -636,6 +636,8 @@ v1.5
   have been processed.
 * When processing paired-end reads, cutadapt now checks whether the reads are
   properly paired.
+* To properly handle paired-end reads, an option --untrimmed-paired-output was
+  added.
 
 v1.4
 ----
