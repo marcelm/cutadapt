@@ -154,7 +154,20 @@ has finished trimming the reads. You can use it like this:
     cutadapt -a My_adapter=ACGTAA input.fastq > output.fastq
 
 Here, the actual adapter sequence is `ACGTAA` and the name assigned
-to it is `My_adapter`.
+to it is `My_adapter`. When adapters are read from a FASTA file, the sequence
+header is used as the adapter name.
+
+
+Wildcards
+---------
+
+Wildcard characters `N` (which match any nucleotide) in the adapter sequence
+are supported. This is useful for trimming an adapter with a variable barcode:
+
+	cutadapt -a ACGTAANNNNTTAGC input.fastq > output.fastq
+
+Wildcard characters in the reads are also supported, but this must be enabled
+with `--match-read-wildcards`.
 
 
 FASTA file
@@ -508,30 +521,6 @@ When parsing that file, be aware that additional columns may be added in the
 future. Also, in the current version, when the `--times` option is set to a
 value other than 1 (the default value), multiple lines are written to the info
 file for each read.
-
-
-Using a "configuration file"
-============================
-
-Cutadapt currently does not support using a configuration file in which, for
-example, a list of adapters can be specified. If you have many adapters that
-you want to seach for and want to avoid typing all of them on the command line,
-then you can use so-called "command substitution" of your Unix shell. With
-Bash, this works as follows.
-
-First, create a configuration file cutadapt.conf that contains lines like
-this:
-
-    -a AACCGGTT
-    -a GTAATAACCGGTT
-    -e 0.05
-The file may contain line breaks (they will be replaced by spaces).
-
-Then run cutadapt like this:
-
-    cutadapt $(<cutadapt.conf) input.fastq > output.fastq
-
-The Bash shell will replace the `$(<...)` with the content of the given file.
 
 
 Colorspace
