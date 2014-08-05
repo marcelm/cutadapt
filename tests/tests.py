@@ -397,3 +397,7 @@ def test_untrimmed_paired_output():
 	os.remove(tmp2)
 	os.remove(untrimmed1)
 	os.remove(untrimmed2)
+
+
+def test_adapter_file():
+	run('-a file:' + dpath('adapter.fasta'), 'illumina.fastq', 'illumina.fastq.gz')

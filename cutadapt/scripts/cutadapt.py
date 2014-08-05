@@ -525,6 +525,23 @@ def parse_adapter_name(seq):
 	return name, seq
 
 
+def gather_adapters(back, anywhere, front):
+	"""
+	Yield (name, seq, where) tuples from which Adapter instances can be built.
+	This generator deals with the notation for anchored 5' adapters and also
+	understands the file: syntax for reading adapters from an external FASTA
+	file.
+	"""
+	for adapter_list, where in ((back, BACK), (anywhere, ANYWHERE), (front, FRONT)):
+		for seq in adapter_list:
+			name, seq = parse_adapter_name(seq)
+			w = where
+			if w == FRONT and seq.startswith('^'):
+				seq = seq[1:]
+				w = PREFIX
+			yield (name, seq, w)
+
+
 def get_option_parser():
 	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
 
@@ -536,11 +553,14 @@ def get_option_parser():
 	group = OptionGroup(parser, "Options that influence how the adapters are found",
 		description="Each of the following three parameters (-a, -b, -g) can be used "
 			"multiple times and in any combination to search for an entire set of "
-			"adapters of possibly different types. All of the "
-			"given adapters will be searched for in each read, but only the best "
-			"matching one will be trimmed (but see the --times option).")
+			"adapters of possibly different types. Only the best matching "
+			"adapter will be trimmed from each read (but see the --times option). "
+			"Instead of giving an adapter directly, you can also write "
+			"file:FILE and the adapter sequences will be read from the given "
+			"FILE (which must be in FASTA format).")
 	group.add_option("-a", "--adapter", action="append", metavar="ADAPTER", dest="adapters", default=[],
-		help="Sequence of an adapter that was ligated to the 3' end. The adapter itself and anything that follows is trimmed.")
+		help="Sequence of an adapter that was ligated to the 3' end. The "
+			"adapter itself and anything that follows is trimmed.")
 	group.add_option("-b", "--anywhere", action="append", metavar="ADAPTER", default=[],
 		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept.")
 	group.add_option("-g", "--front", action="append", metavar="ADAPTER", default=[],
@@ -787,30 +807,16 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 
 	adapters = []
 	ADAPTER_CLASS = ColorspaceAdapter if options.colorspace else Adapter
-	def append_adapters(adapter_list, where):
-		for seq in adapter_list:
-			name, seq = parse_adapter_name(seq)
-			w = where
-			if w == FRONT and seq.startswith('^'):
-				seq = seq[1:]
-				w = PREFIX
-			elif not options.indels:
-				parser.error("Not allowing indels is currently supported only for anchored 5' adapters.")
-			if not seq:
-				parser.error("The adapter sequence is empty")
-			adapter = ADAPTER_CLASS(seq, w, options.error_rate,
-				options.overlap, options.match_read_wildcards,
-				options.match_adapter_wildcards, name=name, indels=options.indels)
-			adapters.append(adapter)
 
-	append_adapters(options.adapters, BACK)
-	append_adapters(options.anywhere, ANYWHERE)
-	append_adapters(options.front, FRONT)
-
-	# make sure these aren't used by accident
-	del options.adapters
-	del options.anywhere
-	del options.front
+	for name, seq, where in gather_adapters(options.adapters, options.anywhere, options.front):
+		if not seq:
+			parser.error("The adapter sequence is empty")
+		if not options.indels and where != PREFIX:
+			parser.error("Not allowing indels is currently supported only for anchored 5' adapters.")
+		adapter = ADAPTER_CLASS(seq, where, options.error_rate,
+			options.overlap, options.match_read_wildcards,
+			options.match_adapter_wildcards, name=name, indels=options.indels)
+		adapters.append(adapter)
 
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, too_long_outfile, options.discard_trimmed,
