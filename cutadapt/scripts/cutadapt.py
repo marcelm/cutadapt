@@ -386,7 +386,7 @@ class RepeatedAdapterCutter(object):
 
 			if self.mask_adapter:
 				# add N from last modification
-				masked_sequence = matches[-1].adapter.trimmed(matches[-1]).sequence
+				masked_sequence = read.sequence
 				for match in sorted(matches, reverse=True):
 					ns = 'N' * (len(match.read.sequence) -
 								len(match.adapter.trimmed(match).sequence))
