@@ -65,7 +65,7 @@ from __future__ import print_function, division, absolute_import
 import sys
 import time
 import errno
-from optparse import OptionParser, OptionGroup
+from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
 
 from cutadapt import seqio, __version__, check_importability
 
@@ -598,8 +598,9 @@ def get_option_parser():
 		help="Allow 'N's in the read as matches to the adapter (default: %default).")
 	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
 		default=True, dest='match_adapter_wildcards',
-		help="Do not treat 'N' in the adapter sequence as wildcards. This is "
-			"needed when you want to search for literal 'N' characters.")
+		help=SUPPRESS_HELP)
+	#	help="Do not treat 'N' in the adapter sequence as wildcards. This is "
+	#	"needed when you want to search for literal 'N' characters.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options for filtering of processed reads")
