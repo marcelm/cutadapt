@@ -19,8 +19,8 @@ def datapath(path):
 	return dpath(os.path.join('data', path))
 
 
-def diff(path1, path2):
-	assert os.system("diff -u {0} {1}".format(path1, path2)) == 0
+def files_equal(path1, path2):
+	return os.system("diff -u {0} {1}".format(path1, path2)) == 0
 
 
 def run(params, expected, inpath, inpath2=None):
@@ -34,7 +34,7 @@ def run(params, expected, inpath, inpath2=None):
 
 	assert cutadapt.main(params) is None
 	# TODO redirect standard output
-	diff(dpath(os.path.join('cut', expected)), dpath('tmp.fastaq'))
+	assert files_equal(dpath(os.path.join('cut', expected)), dpath('tmp.fastaq'))
 	os.remove(dpath('tmp.fastaq'))
 	# TODO diff log files
 	#echo "Running $CA $1 data/$3 ${second}"
@@ -69,13 +69,13 @@ def test_lowercase():
 def test_rest():
 	'''-r/--rest-file'''
 	run(['-b', 'ADAPTER', '-r', dpath('rest.tmp')], "rest.fa", "rest.fa")
-	diff(datapath('rest.txt'), dpath('rest.tmp'))
+	assert files_equal(datapath('rest.txt'), dpath('rest.tmp'))
 	os.remove(dpath('rest.tmp'))
 
 
 def test_restfront():
 	run(['-g', 'ADAPTER', '-r', dpath('rest.tmp')], "restfront.fa", "rest.fa")
-	diff(datapath('restfront.txt'), dpath('rest.tmp'))
+	assert files_equal(datapath('restfront.txt'), dpath('rest.tmp'))
 	os.remove(dpath('rest.tmp'))
 
 
@@ -112,14 +112,14 @@ def test_minimum_length():
 def test_too_short():
 	'''--too-short-output'''
 	run("-c -m 5 -a 330201030313112312 --too-short-output tooshort.tmp.fa", "minlen.fa", "lengths.fa")
-	diff(datapath('tooshort.fa'), "tooshort.tmp.fa")
+	assert files_equal(datapath('tooshort.fa'), "tooshort.tmp.fa")
 	os.remove('tooshort.tmp.fa')
 
 
 def test_too_short_no_primer():
 	'''--too-short-output and --trim-primer'''
 	run("-c -m 5 -a 330201030313112312 --trim-primer --too-short-output tooshort.tmp.fa", "minlen.noprimer.fa", "lengths.fa")
-	diff(datapath('tooshort.noprimer.fa'), "tooshort.tmp.fa")
+	assert files_equal(datapath('tooshort.noprimer.fa'), "tooshort.tmp.fa")
 	os.remove('tooshort.tmp.fa')
 
 
@@ -131,7 +131,7 @@ def test_maximum_length():
 def test_too_long():
 	'''--too-long-output'''
 	run("-c -M 5 --too-long-output toolong.tmp.fa -a 330201030313112312", "maxlen.fa", "lengths.fa")
-	diff(datapath('toolong.fa'), "toolong.tmp.fa")
+	assert files_equal(datapath('toolong.fa'), "toolong.tmp.fa")
 	os.remove('toolong.tmp.fa')
 
 
@@ -285,7 +285,7 @@ def test_strip_suffix():
 def test_info_file():
 	infotmp = dpath("infotmp.txt")
 	run(["--info-file", infotmp, '-a', 'adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT'], "illumina.fastq", "illumina.fastq.gz")
-	diff(dpath(os.path.join('cut', 'illumina.info.txt')), infotmp)
+	assert files_equal(dpath(os.path.join('cut', 'illumina.info.txt')), infotmp)
 	os.remove(infotmp)
 
 
@@ -340,7 +340,7 @@ def test_paired_end():
 	pairedtmp = dpath("paired-tmp.fastq")
 	# the -m 14 filters out one read, which should then also be filtered out in the second output file
 	run(['-a', 'TTAGACATAT', '-m', '14', '--paired-output', pairedtmp], 'paired.m14.1.fastq', 'paired.1.fastq', 'paired.2.fastq')
-	diff(dpath(os.path.join('cut', 'paired.m14.2.fastq')), pairedtmp)
+	assert files_equal(dpath(os.path.join('cut', 'paired.m14.2.fastq')), pairedtmp)
 	os.remove(pairedtmp)
 
 
@@ -374,7 +374,7 @@ def test_no_zero_cap():
 def test_untrimmed_output():
 	tmp = dpath('untrimmed.tmp.fastq')
 	run(['-a', 'TTAGACATATCTCCGTCG', '--untrimmed-output', tmp], 'small.trimmed.fastq', 'small.fastq')
-	diff(dpath(os.path.join('cut', 'small.untrimmed.fastq')), tmp)
+	assert files_equal(dpath(os.path.join('cut', 'small.untrimmed.fastq')), tmp)
 	os.remove(tmp)
 
 
@@ -389,10 +389,10 @@ def test_untrimmed_paired_output():
 	params = ['--quiet', '-a', 'TTAGACATAT', '-o', tmp1, '-p', tmp2, '--untrimmed-output', untrimmed1, '--untrimmed-paired-output', untrimmed2, paired1, paired2]
 	assert cutadapt.main(params) is None
 
-	diff(dpath(os.path.join('cut', 'paired-untrimmed.1.fastq')), untrimmed1)
-	diff(dpath(os.path.join('cut', 'paired-untrimmed.2.fastq')), untrimmed2)
-	diff(dpath(os.path.join('cut', 'paired-trimmed.1.fastq')), tmp1)
-	diff(dpath(os.path.join('cut', 'paired-trimmed.2.fastq')), tmp2)
+	assert files_equal(dpath(os.path.join('cut', 'paired-untrimmed.1.fastq')), untrimmed1)
+	assert files_equal(dpath(os.path.join('cut', 'paired-untrimmed.2.fastq')), untrimmed2)
+	assert files_equal(dpath(os.path.join('cut', 'paired-trimmed.1.fastq')), tmp1)
+	assert files_equal(dpath(os.path.join('cut', 'paired-trimmed.2.fastq')), tmp2)
 	os.remove(tmp1)
 	os.remove(tmp2)
 	os.remove(untrimmed1)
