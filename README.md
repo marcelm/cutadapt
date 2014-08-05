@@ -55,7 +55,7 @@ Use without installation
 ------------------------
 
 Build the C extension module (you can try to skip this step -- a compiled
-version of the module for Linux x86 is already included):
+version of the module for Linux x86_64 is already included):
 
     python setup.py build_ext -i
 
@@ -77,12 +77,8 @@ If you want to use cutadapt within the web-based Galaxy platform
 Galaxy support was contributed by Lance Parsons.
 
 
-How to use, examples
-====================
-
-Please also see the command-line help:
-
-    cutadapt --help
+Basic usage
+===========
 
 The basic command-line for cutadapt is:
 
@@ -91,23 +87,31 @@ The basic command-line for cutadapt is:
 The adapter sequence is given with the `-a` option. Replace
 `AACCGGTT` with your actual adapter sequence.
 
-input.fastq is a file with reads. The result will be written
+`input.fastq` is a file with reads. The result will be written
 to standard output. Use redirection with `>` (or the `-o` option) to
 write the output to a file.
 
-cutadapt also writes a report after it has finished processing the
+cutadapt prints out a report after it has finished processing the
 reads. If you use `-o`, the report is sent to standard output and to
 stderr otherwise.
 
-By default, the output file contains all reads, even those
+By default, the output file contains all reads, including those
 that did not contain an adapter. (See also the `--discard` option.)
 
 The following examples refer to basespace reads. See the "Colorspace"
 section on how to use cutadapt with SOLiD reads.
 
+Only a few command-line options are explained in this document. To see all
+options, run:
 
-Illumina data
--------------
+    cutadapt --help
+
+In particular, see the explanation for the different types of adapters that
+are supported.
+
+
+Trimming FASTQ files
+--------------------
 
 Assuming your sequencing data is available as a FASTQ file, use this
 command line:
@@ -126,6 +130,18 @@ to be used (gzip compression is auto-detected by looking at the file name):
 If your Python installation includes support for bzip2 compression, then
 bzip2-compressed files are also supported and recognized by their extension
 `.bz2`.
+
+
+Adapters in FASTA files
+-----------------------
+
+To read a list of adapter sequences from a FASTA file, specify the file in the
+following way:
+
+	cutadapt -a file:adapters.fasta input.fastq > output.fastq
+
+All of the sequences in the file `adapters.fasta` will be used as 3' adapters.
+As always, only the best matching adapter will be trimmed from each read.
 
 
 Named adapters
@@ -623,6 +639,9 @@ Changes
 
 v1.5
 ----
+* Adapter sequences can now be read from a FASTA file. For example, write
+  `-a file:adapters.fasta` to read 3' adapters from `adapters.fasta`. This works
+  also for `-b` and `-g`.
 * Add the option `--mask-adapter`, which can be used to not remove adapters,
   but to instead mask them with `N` characters. Thanks to Vittorio Zamboni
   for contributing this feature!

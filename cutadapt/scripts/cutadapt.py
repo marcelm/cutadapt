@@ -534,12 +534,20 @@ def gather_adapters(back, anywhere, front):
 	"""
 	for adapter_list, where in ((back, BACK), (anywhere, ANYWHERE), (front, FRONT)):
 		for seq in adapter_list:
-			name, seq = parse_adapter_name(seq)
-			w = where
-			if w == FRONT and seq.startswith('^'):
-				seq = seq[1:]
-				w = PREFIX
-			yield (name, seq, w)
+			if seq.startswith('file:'):
+				# read adapter sequences from a file
+				path = seq[5:]
+				with seqio.FastaReader(path) as fasta:
+					for record in fasta:
+						name = record.name.split(' ', 1)[0]
+						yield (name, record.sequence, where)
+			else:
+				name, seq = parse_adapter_name(seq)
+				w = where
+				if w == FRONT and seq.startswith('^'):
+					seq = seq[1:]
+					w = PREFIX
+				yield (name, seq, w)
 
 
 def get_option_parser():
@@ -808,15 +816,21 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	adapters = []
 	ADAPTER_CLASS = ColorspaceAdapter if options.colorspace else Adapter
 
-	for name, seq, where in gather_adapters(options.adapters, options.anywhere, options.front):
-		if not seq:
-			parser.error("The adapter sequence is empty")
-		if not options.indels and where != PREFIX:
-			parser.error("Not allowing indels is currently supported only for anchored 5' adapters.")
-		adapter = ADAPTER_CLASS(seq, where, options.error_rate,
-			options.overlap, options.match_read_wildcards,
-			options.match_adapter_wildcards, name=name, indels=options.indels)
-		adapters.append(adapter)
+	try:
+		for name, seq, where in gather_adapters(options.adapters, options.anywhere, options.front):
+			if not seq:
+				parser.error("The adapter sequence is empty")
+			if not options.indels and where != PREFIX:
+				parser.error("Not allowing indels is currently supported only for anchored 5' adapters.")
+			adapter = ADAPTER_CLASS(seq, where, options.error_rate,
+				options.overlap, options.match_read_wildcards,
+				options.match_adapter_wildcards, name=name, indels=options.indels)
+			adapters.append(adapter)
+	except IOError as e:
+		if e.errno == errno.ENOENT:
+			print("Error:", e, file=sys.stderr)
+			sys.exit(1)
+		raise
 
 	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
 		too_short_outfile, too_long_outfile, options.discard_trimmed,

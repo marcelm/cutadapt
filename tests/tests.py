@@ -400,4 +400,4 @@ def test_untrimmed_paired_output():
 
 
 def test_adapter_file():
-	run('-a file:' + dpath('adapter.fasta'), 'illumina.fastq', 'illumina.fastq.gz')
+	run('-a file:' + datapath('adapter.fasta'), 'illumina.fastq', 'illumina.fastq.gz')
