@@ -497,20 +497,20 @@ Format of the info file
 When the `--info-file` command-line parameter is given, detailed information
 about the found adapters is written to the given file. The output is a
 tab-separated text file. Each line corresponds to one read of the input file.
-The columns are:
+The fields are:
 
 1. Read name
 2. Number of errors
 3. 0-based start coordinate of the adapter match
 4. 0-based end coordinate of the adapter match
-5. Sequence of the read before the adapter match
+5. Sequence of the read to the left of the adapter match (can be empty)
 6. Sequence of the read that was matched to the adapter
-7. Sequence of the read after the adapter match
+7. Sequence of the read to the right of the adapter match (can be empty)
 8. Name of the found adapter.
 
-The concatenation of the fields 5-6 yields the full read sequence. The adapter
-name that should be used in column 8 can be given by writing `-a name=sequence`
-instead of just `-a sequence`. Adapters without a name are numbered starting from 1.
+The concatenation of the fields 5-7 yields the full read sequence. The adapter
+name for column 8 can be given by writing `-a name=sequence` instead of just
+`-a sequence`. Adapters without a name are numbered starting from 1.
 
 If no adapter was found, the format is as follows:
 * Read name
@@ -518,7 +518,8 @@ If no adapter was found, the format is as follows:
 * The read sequence
 
 When parsing that file, be aware that additional columns may be added in the
-future. Also, in the current version, when the `--times` option is set to a
+future. Note also that some fields can be empty, resulting in consecutive tabs
+within a line. Also, in the current version, when the `--times` option is set to a
 value other than 1 (the default value), multiple lines are written to the info
 file for each read.
 
@@ -617,10 +618,10 @@ Bowtie
 Quality values of colorspace reads are sometimes negative. Bowtie gets
 confused and prints this message:
 > Encountered a space parsing the quality string for read xyz
-To avoid this problem, use the `--zero-cap` option (or the short
-version `-z`), which converts negative quality values to zero. Since
-BWA has a similar problem (it crashes) the option is automatically
-enabled when `--bwa` is used.
+
+BWA also has a problem with such data. Cutadapt therefore converts
+negative quality values to zero in colorspace data.
+Use the option `--no-zero-cap` option to turn this off.
 
 
 Changes
