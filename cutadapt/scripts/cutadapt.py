@@ -669,8 +669,8 @@ def get_option_parser():
 			"If LENGTH is positive, the bases are removed from the beginning of each read. "
 			"If LENGTH is negative, the bases are removed from the end of each read.")
 	group.add_option("-q", "--quality-cutoff", type=int, default=0, metavar="CUTOFF",
-		help="Trim low-quality ends from reads before adapter removal. "
-			"The algorithm is the same as the one used by BWA "
+		help="Trim low-quality bases from 3' ends of reads before adapter "
+			"removal. The algorithm is the same as the one used by BWA "
 			"(Subtract CUTOFF from all qualities; "
 			"compute partial sums from all indices to the end of the "
 			"sequence; cut sequence at the index at which the sum "
