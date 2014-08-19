@@ -66,6 +66,7 @@ import sys
 import time
 import errno
 from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
+from collections import namedtuple
 
 from cutadapt import seqio, __version__, check_importability
 
@@ -85,6 +86,8 @@ class HelpfulOptionParser(OptionParser):
 		self.print_help(sys.stderr)
 		self.exit(2, "\n%s: error: %s\n" % (self.get_prog_name(), msg))
 
+
+Statistics = namedtuple('Statistics', 'total_bp n quality_trimmed_bases')
 
 def print_error_ranges(adapter_length, error_rate):
 	print("No. of allowed errors:")
@@ -419,13 +422,24 @@ class RepeatedAdapterCutter(object):
 		return read
 
 
+def qtrimmed(modifiers):
+	"""
+	Look for a QualityTrimmer in the given list of modifiers and return its
+	trimmed_bases attribute. If not found, return -1.
+	"""
+	for m in modifiers:
+		if isinstance(m, QualityTrimmer):
+			return m.trimmed_bases
+	return -1
+
+
 def process_single_reads(reader, modifiers,
 		readfilter, trimmed_outfile, untrimmed_outfile):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
 
-	Return a tuple (number_of_processed_reads, number_of_processed_basepairs)
+	Return a Statistics object.
 	"""
 	n = 0  # no. of processed reads
 	total_bp = 0
@@ -444,18 +458,7 @@ def process_single_reads(reader, modifiers,
 			continue
 		read.write(trimmed_outfile if read.trimmed else untrimmed_outfile, twoheaders)
 
-	# TODO remainder of this function
-	class Stats:
-		pass
-	stats = Stats()
-	stats.total_bp = total_bp
-	stats.n = n
-	stats.quality_trimmed_bases = -1
-	for m in modifiers:
-		if isinstance(m, QualityTrimmer):
-			stats.quality_trimmed_bases = m.trimmed_bases
-			break
-	return stats
+	return Statistics(total_bp=total_bp, n=n, quality_trimmed_bases=qtrimmed(modifiers))
 
 
 def process_paired_reads(paired_reader, modifiers,
@@ -497,19 +500,7 @@ def process_paired_reads(paired_reader, modifiers,
 			read1.write(untrimmed1_outfile, twoheaders1)
 			read2.write(untrimmed2_outfile, twoheaders2)
 
-	# TODO remainder of this function
-	class Stats:
-		pass
-	stats = Stats()
-	stats.total_bp = total1_bp
-	stats.n = n
-	stats.quality_trimmed_bases = -1
-	for m in modifiers:
-		if isinstance(m, QualityTrimmer):
-			stats.quality_trimmed_bases = m.trimmed_bases
-			break
-	return stats
-
+	return Statistics(total_bp=total1_bp, n=n, quality_trimmed_bases=qtrimmed(modifiers))
 
 def parse_adapter_name(seq):
 	"""
