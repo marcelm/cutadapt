@@ -161,25 +161,25 @@ class UnknownFileType(Exception):
 	"""
 	Raised when SequenceReader could not autodetect the file type.
 	"""
-	pass
 
 
 def SequenceReader(file, colorspace=False, fileformat=None):
 	"""
 	Reader for FASTA and FASTQ files that autodetects the file format.
-	Returns either an instance of FastaReader or of FastqReader,
+
+	Return either an instance of FastaReader or of FastqReader,
 	depending on file type.
 
-	The autodetection can be skipped by setting fileformat to the string
-	'fasta' or 'fastq'
+	The autodetection can be skipped by setting fileformat to one of the strings
+	'fasta', 'fastq', 'sra-fastq'.
 
-	file is a filename or a file-like object.
-	If file is a filename, then .gz and .bz2 files are supported.
-	If the file name is available, the file type is detected
-	by looking at the file name.
-	If the file name is not available (for example, reading
-	from standard input), then the file is read and the file
-	type determined from the content.
+	file is a file path or a file-like object.
+
+	If file is a path, then .gz and .bz2 files are supported.
+
+	If possible, the file type is detected by looking at the file name. If the
+	file name is not available (for example, reading from standard input), then
+	the file is read and the file type determined from the content.
 	"""
 	fastq_reader = ColorspaceFastqReader if colorspace else FastqReader
 	fasta_reader = ColorspaceFastaReader if colorspace else FastaReader
