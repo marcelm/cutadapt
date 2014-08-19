@@ -426,8 +426,8 @@ class PairedSequenceReader(object):
 	properly paired.
 	"""
 	def __init__(self, file1, file2, colorspace=False, fileformat=None):
-		self.reader1 = SequenceReader(file1)
-		self.reader2 = SequenceReader(file2)
+		self.reader1 = SequenceReader(file1, colorspace, fileformat)
+		self.reader2 = SequenceReader(file2, colorspace, fileformat)
 		self.delivers_qualities = self.reader1.delivers_qualities
 
 	def __iter__(self):
