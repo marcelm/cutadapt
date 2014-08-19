@@ -874,6 +874,9 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		else:
 			stats = process_single_reads(reader, modifiers, readfilter,
 				trimmed_outfile, untrimmed_outfile)
+	except KeyboardInterrupt as e:
+		print("Interrupted", file=sys.stderr)
+		sys.exit(1)
 	except IOError as e:
 		if e.errno == errno.EPIPE:
 			sys.exit(1)
