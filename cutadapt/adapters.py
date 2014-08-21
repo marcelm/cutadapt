@@ -146,6 +146,9 @@ class Adapter(object):
 		self.errors_front = defaultdict(lambda: defaultdict(int))
 		self.errors_back = defaultdict(lambda: defaultdict(int))
 
+		self.aligner = align.Aligner(self.sequence, self.max_error_rate,
+			self.where, self.wildcard_flags)
+
 	def __repr__(self):
 		match_read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)
 		return '<Adapter(name="{name}", sequence="{sequence}", where={where}, '\
@@ -179,8 +182,7 @@ class Adapter(object):
 			if not self.indels:
 				alignment = align.compare_prefixes(self.sequence, read_seq, self.wildcard_flags)
 			else:
-				alignment = align.globalalign_locate(self.sequence, read_seq,
-					self.max_error_rate, self.where, self.wildcard_flags)
+				alignment = self.aligner.locate(read_seq)
 			# TODO line-based profiling tells me that the following line
 			# is slow (takes 30% of match()'s running time)
 			match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
@@ -228,6 +230,7 @@ class ColorspaceAdapter(Adapter):
 			self.sequence = colorspace.encode(self.sequence)[1:]
 		if self.where in (PREFIX, FRONT) and not has_nucleotide_seq:
 			raise ValueError("A 5' colorspace adapter needs to be given in nucleotide space")
+		self.aligner.reference = self.sequence
 
 	def match(self, read):
 		"""Return AdapterMatch instance"""
@@ -236,6 +239,7 @@ class ColorspaceAdapter(Adapter):
 		# create artificial adapter that includes a first color that encodes the
 		# transition from primer base into adapter
 		asequence = colorspace.ENCODE[read.primer + self.nucleotide_sequence[0:1]] + self.sequence
+
 		pos = 0 if read.sequence.startswith(asequence) else -1
 		if pos >= 0:
 			match = AdapterMatch(
@@ -243,11 +247,11 @@ class ColorspaceAdapter(Adapter):
 				len(asequence), 0, self._front_flag, self, read)
 		else:
 			# try approximate matching
-			alignment = align.globalalign_locate(asequence, read.sequence,
-				self.max_error_rate, self.where, self.wildcard_flags)
+			self.aligner.reference = asequence
+			alignment = self.aligner.locate(read.sequence)
 			match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
 
-		# TODO globalalign_locate should be modified to allow the following
+		# TODO Aligner.locate should be modified to allow the following
 		# assertion.
 		# assert length == 0 or match.errors / length <= self.max_error_rate
 		if match.length < self.min_overlap or match.errors / match.length > self.max_error_rate:

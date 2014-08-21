@@ -28,4 +28,4 @@ GLOBAL = 0
 SEMIGLOBAL = START_WITHIN_SEQ1 | START_WITHIN_SEQ2 | STOP_WITHIN_SEQ1 | STOP_WITHIN_SEQ2
 
 
-from cutadapt._align import globalalign_locate, compare_prefixes
+from cutadapt._align import Aligner, compare_prefixes, locate

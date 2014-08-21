@@ -1,13 +1,13 @@
 from __future__ import print_function, division, absolute_import
 
-from cutadapt.align import (globalalign_locate, compare_prefixes,
+from cutadapt.align import (locate, compare_prefixes,
 	ALLOW_WILDCARD_SEQ1, ALLOW_WILDCARD_SEQ1)
 from cutadapt.adapters import BACK
 
 def test_polya():
 	s = b'AAAAAAAAAAAAAAAAA'
 	t = b'ACAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
-	result = globalalign_locate(s, t, 0.0, BACK)
+	result = locate(s, t, 0.0, BACK)
 	#start_s, stop_s, start_t, stop_t, matches, cost = result
 	assert result == (0, len(s), 4, 4 + len(s), len(s), 0)
 

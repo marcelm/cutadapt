@@ -1,5 +1,4 @@
-# kate: syntax Python;
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 
 DEF START_WITHIN_SEQ1 = 1
 DEF START_WITHIN_SEQ2 = 2
@@ -22,10 +21,9 @@ ctypedef struct Entry:
 	int origin   # where the alignment originated: negative for positions within seq1, positive for pos. within seq2
 
 
-def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
+cdef class Aligner:
 	"""
-	globalalign_locate(string1, string2, max_error_rate, flags=SEMIGLOBAL)
-	    -> (start1, stop1, start2, stop2, matches, errors)
+	TODO documentation still uses s1 (reference) and s2 (query).
 
 	Locate one string within another by computing an optimal semiglobal
 	alignment between string1 and string2.
@@ -75,153 +73,207 @@ def globalalign_locate(char* s1, char* s2, double max_error_rate, int flags = SE
 
 	It is always the case that at least one of start1 and start2 is zero.
 	"""
-	cdef int m = len(s1)
-	cdef int n = len(s2)
+	cdef int m
+	cdef Entry* column  # one column of the DP matrix
+	cdef double max_error_rate
+	cdef int flags
+	cdef int degenerate
+	cdef bytes reference
 
-	"""
-	DP Matrix:
-	           s2 (j)
-	        ----------> n
-	       |
-	s1 (i) |
-	       |
-	       V
-	       m
-	"""
-	# only a single column of the DP matrix is stored
-	cdef Entry* column = <Entry*> PyMem_Malloc((m+1) * sizeof(Entry))
-	if not column:
-		return MemoryError()
-	cdef int i, j, best_i, best_j, best_cost, best_matches, best_origin
+	def __cinit__(self, char* reference, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
+		self.m = len(reference)
+		self.column = <Entry*> PyMem_Malloc((self.m + 1) * sizeof(Entry))
+		if not self.column:
+			raise MemoryError()
+		self.reference = reference
+		self.degenerate = degenerate
+		self.flags = flags
+		self.max_error_rate = max_error_rate
 
-	# initialize first column
-	for i in range(0, m+1):
-		column[i].matches = 0
-		column[i].cost = 0 if (flags & START_WITHIN_SEQ1) else (i * DELETION_COST)
-		column[i].origin = -i if (flags & START_WITHIN_SEQ1) else 0
+	property reference:
+		def __get__(self):
+			return self.reference
 
-	best_i = m
-	best_j = 0
-	best_cost = column[m].cost
-	best_matches = 0
-	best_origin = column[m].origin
+		def __set__(self, char* reference):
+			mem = <Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(Entry))
+			if not mem:
+				raise MemoryError()
+			self.column = mem
+			self.reference = reference
+			self.m = len(reference)
 
-	# maximum no. of errors
-	cdef int k = <int> (max_error_rate * m)
-	cdef int last = k + 1
+	def locate(self, char* query):
+		"""
+		locate(query) -> (refstart, refstop, querystart, querystop, matches, errors)
 
-	cdef int match
-	cdef int cost_diag
-	cdef int cost_deletion
-	cdef int cost_insertion
-	cdef int origin, cost, matches
-	cdef int length
-	cdef int wildcard1 = degenerate & ALLOW_WILDCARD_SEQ1
-	cdef int wildcard2 = degenerate & ALLOW_WILDCARD_SEQ2
-	cdef Entry tmp_entry
+		Find the query within the reference associated with this aligner. The
+		intervals (querystart, querystop) and (refstart, refstop) give the
+		location of the match.
 
-	if flags & START_WITHIN_SEQ1:
-		last = m
+		That is, the substrings query[querystart:querystop] and
+		self.reference[refstart:refstop] were found to align best to each other,
+		with the given number of matches and the given number of errors.
 
-	# determine largest column we need to compute
-	cdef int max_n = n
-	if not (flags & START_WITHIN_SEQ2):
-		# costs can only get worse after column m
-		max_n = min(max_n, m+k)
-	# iterate over columns
-	for j in range(1, max_n+1):
-		# remember first entry
-		tmp_entry = column[0]
+		The alignment itself is not returned.
+		"""
+		cdef char* s1 = self.reference
+		cdef char* s2 = query
+		cdef int n = len(s2)
+		cdef int m = self.m
+		cdef Entry* column = self.column
+		cdef double max_error_rate = self.max_error_rate
+		cdef int flags = self.flags
+		cdef int degenerate = self.degenerate
 
-		# fill in first entry in this column TODO move out of loop
-		if flags & START_WITHIN_SEQ2:
-			column[0].cost = 0
-			column[0].origin = j
-			column[0].matches = 0
-		else:
-			column[0].cost = j * INSERTION_COST
-			column[0].origin = 0
-			column[0].matches = 0
-		for i in range(1, last + 1):
-			if s1[i-1] == s2[j-1] or \
-					(wildcard1 and s1[i-1] == WILDCARD_CHAR) or \
-					(wildcard2 and s2[j-1] == WILDCARD_CHAR):
-				match = 1
+		"""
+		DP Matrix:
+		           s2 (j)
+		         ----------> n
+		       |
+		s1 (i) |
+		       |
+		       V
+		      m
+		"""
+		cdef int i, j, best_i, best_j, best_cost, best_matches, best_origin
+
+		# initialize first column
+		for i in range(0, m+1):
+			column[i].matches = 0
+			column[i].cost = 0 if (flags & START_WITHIN_SEQ1) else (i * DELETION_COST)
+			column[i].origin = -i if (flags & START_WITHIN_SEQ1) else 0
+
+		best_i = m
+		best_j = 0
+		best_cost = column[m].cost
+		best_matches = 0
+		best_origin = column[m].origin
+
+		# maximum no. of errors
+		cdef int k = <int> (max_error_rate * m)
+
+		# Ukkonen's trick: index of the last cell that is at most k.
+		cdef int last = k + 1
+
+		cdef int match
+		cdef int cost_diag
+		cdef int cost_deletion
+		cdef int cost_insertion
+		cdef int origin, cost, matches
+		cdef int length
+		cdef int wildcard1 = degenerate & ALLOW_WILDCARD_SEQ1
+		cdef int wildcard2 = degenerate & ALLOW_WILDCARD_SEQ2
+		cdef Entry tmp_entry
+
+		if flags & START_WITHIN_SEQ1:
+			last = m
+
+		# determine largest column we need to compute
+		cdef int max_n = n
+		if not (flags & START_WITHIN_SEQ2):
+			# costs can only get worse after column m
+			max_n = min(max_n, m+k)
+		# iterate over columns
+		for j in range(1, max_n+1):
+			# remember first entry
+			tmp_entry = column[0]
+
+			# fill in first entry in this column TODO move out of loop
+			if flags & START_WITHIN_SEQ2:
+				column[0].cost = 0
+				column[0].origin = j
+				column[0].matches = 0
 			else:
-				match = 0
+				column[0].cost = j * INSERTION_COST
+				column[0].origin = 0
+				column[0].matches = 0
+			for i in range(1, last + 1):
+				if s1[i-1] == s2[j-1] or \
+						(wildcard1 and s1[i-1] == WILDCARD_CHAR) or \
+						(wildcard2 and s2[j-1] == WILDCARD_CHAR):
+					match = 1
+				else:
+					match = 0
 
-			cost_diag = tmp_entry.cost + (MATCH_COST if match else MISMATCH_COST)
-			cost_deletion = column[i].cost + DELETION_COST
-			cost_insertion = column[i-1].cost + INSERTION_COST
+				cost_diag = tmp_entry.cost + (MATCH_COST if match else MISMATCH_COST)
+				cost_deletion = column[i].cost + DELETION_COST
+				cost_insertion = column[i-1].cost + INSERTION_COST
 
-			if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
-				# MATCH or MISMATCH
-				cost = cost_diag
-				origin = tmp_entry.origin
-				matches = tmp_entry.matches + match
-			elif cost_insertion <= cost_deletion:
-				# INSERTION
-				cost = cost_insertion
-				origin = column[i-1].origin
-				matches = column[i-1].matches
+				if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
+					# MATCH or MISMATCH
+					cost = cost_diag
+					origin = tmp_entry.origin
+					matches = tmp_entry.matches + match
+				elif cost_insertion <= cost_deletion:
+					# INSERTION
+					cost = cost_insertion
+					origin = column[i-1].origin
+					matches = column[i-1].matches
+				else:
+					# DELETION
+					cost = cost_deletion
+					origin = column[i].origin
+					matches = column[i].matches
+
+				# remember current cell for next iteration
+				tmp_entry = column[i]
+
+				column[i].cost = cost
+				column[i].origin = origin
+				column[i].matches = matches
+
+			while column[last].cost > k:
+				last -= 1
+			if last < m:
+				last += 1
 			else:
-				# DELETION
-				cost = cost_deletion
-				origin = column[i].origin
+				# found
+				# if requested, find best match in last row
+				if flags & STOP_WITHIN_SEQ2:
+					# length of the aligned part of string1
+					length = m + min(column[m].origin, 0)
+					cost = column[m].cost
+					matches = column[m].matches
+					if cost <= length * max_error_rate and (matches > best_matches or (matches == best_matches and cost < best_cost)):
+						# update
+						best_matches = matches
+						best_cost = cost
+						best_origin = column[m].origin
+						best_i = m
+						best_j = j
+			# column finished
+
+		if max_n == n and flags & STOP_WITHIN_SEQ1:
+			# search in last column # TODO last?
+			for i in range(0, m+1):
+				length = i + min(column[i].origin, 0)
+				cost = column[i].cost
 				matches = column[i].matches
-
-			# remember current cell for next iteration
-			tmp_entry = column[i]
-
-			column[i].cost = cost
-			column[i].origin = origin
-			column[i].matches = matches
-
-		while column[last].cost > k:
-			last -= 1
-		if last < m:
-			last += 1
-		else:
-			# found
-			# if requested, find best match in last row
-			if flags & STOP_WITHIN_SEQ2:
-				# length of the aligned part of string1
-				length = m + min(column[m].origin, 0)
-				cost = column[m].cost
-				matches = column[m].matches
 				if cost <= length * max_error_rate and (matches > best_matches or (matches == best_matches and cost < best_cost)):
-					# update
+					# update best
 					best_matches = matches
 					best_cost = cost
-					best_origin = column[m].origin
-					best_i = m
-					best_j = j
-		# column finished
+					best_origin = column[i].origin
+					best_i = i
+					best_j = n
 
-	if max_n == n and flags & STOP_WITHIN_SEQ1:
-		# search in last column # TODO last?
-		for i in range(0, m+1):
-			length = i + min(column[i].origin, 0)
-			cost = column[i].cost
-			matches = column[i].matches
-			if cost <= length * max_error_rate and (matches > best_matches or (matches == best_matches and cost < best_cost)):
-				# update best
-				best_matches = matches
-				best_cost = cost
-				best_origin = column[i].origin
-				best_i = i
-				best_j = n
+		cdef int start1, start2
+		if best_origin >= 0:
+			start1 = 0
+			start2 = best_origin
+		else:
+			start1 = -best_origin
+			start2 = 0
 
-	PyMem_Free(column)
-	cdef int start1, start2
-	if best_origin >= 0:
-		start1 = 0
-		start2 = best_origin
-	else:
-		start1 = -best_origin
-		start2 = 0
+		return (start1, best_i, start2, best_j, best_matches, best_cost)
 
-	return (start1, best_i, start2, best_j, best_matches, best_cost)
+	def __dealloc__(self):
+		PyMem_Free(self.column)
+
+
+def locate(char* reference, char* query, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
+	aligner = Aligner(reference, max_error_rate, flags, degenerate)
+	return aligner.locate(query)
 
 
 def compare_prefixes(char* s1, char* s2, int degenerate = 0):
