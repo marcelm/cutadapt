@@ -207,20 +207,11 @@ cdef class Aligner:
 			# remember first entry
 			tmp_entry = column[0]
 
-			# fill in first entry in this column TODO move out of loop
-			assert column[0].matches == 0
+			# fill in first entry in this column
 			if start_in_query:
-				assert column[0].cost == 0
-				assert column[0].origin == j-1
-				column[0].cost = 0
 				column[0].origin = j
-				column[0].matches = 0
 			else:
-				assert column[0].cost == j-1
-				assert column[0].origin == 0
 				column[0].cost = j * INSERTION_COST
-				column[0].origin = 0
-				column[0].matches = 0
 			for i in range(1, last + 1):
 				if s1[i-1] == s2[j-1] or \
 						(wildcard1 and s1[i-1] == WILDCARD_CHAR) or \
