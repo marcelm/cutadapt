@@ -117,22 +117,26 @@ cdef class Aligner:
 		"""
 		cdef char* s1 = self.reference
 		cdef char* s2 = query
-		cdef int n = len(s2)
+		cdef char* ref = self.reference  # s1.   s2 = query.
+		cdef int n = len(query)
 		cdef int m = self.m
 		cdef Entry* column = self.column
 		cdef double max_error_rate = self.max_error_rate
-		cdef int flags = self.flags
-		cdef int degenerate = self.degenerate
-
+		cdef bint start_in_ref = self.flags & START_WITHIN_SEQ1
+		cdef bint start_in_query = self.flags & START_WITHIN_SEQ2
+		cdef bint stop_in_ref = self.flags & STOP_WITHIN_SEQ1
+		cdef bint stop_in_query = self.flags & STOP_WITHIN_SEQ2
+		cdef bint wildcard1 = self.degenerate & ALLOW_WILDCARD_SEQ1
+		cdef bint wildcard2 = self.degenerate & ALLOW_WILDCARD_SEQ2
 		"""
 		DP Matrix:
-		           s2 (j)
+		           query (j)
 		         ----------> n
-		       |
-		s1 (i) |
-		       |
-		       V
-		      m
+		        |
+		ref (i) |
+		        |
+		        V
+		       m
 		"""
 		cdef int i, j
 
@@ -142,10 +146,10 @@ cdef class Aligner:
 		# Determine largest and smallest column we need to compute
 		cdef int max_n = n
 		cdef int min_n = 0
-		if not (flags & START_WITHIN_SEQ2):
+		if not start_in_query:
 			# costs can only get worse after column m
 			max_n = min(n, m + k)
-		if not (flags & STOP_WITHIN_SEQ2):
+		if not stop_in_query:
 			min_n = max(0, n - m - k)
 
 		# Fill column min_n.
@@ -158,17 +162,17 @@ cdef class Aligner:
 
 		# TODO (later)
 		# fill out columns only until 'last'
-		if not (flags & START_WITHIN_SEQ1) and not (flags & START_WITHIN_SEQ2):
+		if not start_in_ref and not start_in_query:
 			for i in range(0, m + 1):
 				column[i].matches = 0
 				column[i].cost = max(i, min_n)
 				column[i].origin = 0
-		elif (flags & START_WITHIN_SEQ1) and not (flags & START_WITHIN_SEQ2):
+		elif start_in_ref and not start_in_query:
 			for i in range(0, m + 1):
 				column[i].matches = 0
 				column[i].cost = min_n
 				column[i].origin = min(0, min_n - i)
-		elif not (flags & START_WITHIN_SEQ1) and (flags & START_WITHIN_SEQ2):
+		elif not start_in_ref and start_in_query:
 			for i in range(0, m + 1):
 				column[i].matches = 0
 				column[i].cost = i
@@ -187,7 +191,7 @@ cdef class Aligner:
 
 		# Ukkonen's trick: index of the last cell that is less than k.
 		cdef int last = k + 1
-		if flags & START_WITHIN_SEQ1:
+		if start_in_ref:
 			last = m
 
 		cdef int match
@@ -196,8 +200,6 @@ cdef class Aligner:
 		cdef int cost_insertion
 		cdef int origin, cost, matches
 		cdef int length
-		cdef int wildcard1 = degenerate & ALLOW_WILDCARD_SEQ1
-		cdef int wildcard2 = degenerate & ALLOW_WILDCARD_SEQ2
 		cdef Entry tmp_entry
 
 		# iterate over columns
@@ -206,11 +208,16 @@ cdef class Aligner:
 			tmp_entry = column[0]
 
 			# fill in first entry in this column TODO move out of loop
-			if flags & START_WITHIN_SEQ2:
+			assert column[0].matches == 0
+			if start_in_query:
+				assert column[0].cost == 0
+				assert column[0].origin == j-1
 				column[0].cost = 0
 				column[0].origin = j
 				column[0].matches = 0
 			else:
+				assert column[0].cost == j-1
+				assert column[0].origin == 0
 				column[0].cost = j * INSERTION_COST
 				column[0].origin = 0
 				column[0].matches = 0
@@ -256,7 +263,7 @@ cdef class Aligner:
 				last += 1
 			else:
 				# Found. If requested, find best match in last row
-				if flags & STOP_WITHIN_SEQ2:
+				if stop_in_query:
 					# length of the aligned part of string1
 					length = m + min(column[m].origin, 0)
 					cost = column[m].cost
@@ -270,7 +277,7 @@ cdef class Aligner:
 						best_j = j
 			# column finished
 
-		if max_n == n and flags & STOP_WITHIN_SEQ1:
+		if max_n == n and stop_in_ref:
 			# search in last column # TODO last?
 			for i in range(0, m+1):
 				length = i + min(column[i].origin, 0)
