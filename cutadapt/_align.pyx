@@ -1,5 +1,4 @@
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
-
 DEF START_WITHIN_SEQ1 = 1
 DEF START_WITHIN_SEQ2 = 2
 DEF STOP_WITHIN_SEQ1 = 4
@@ -135,25 +134,61 @@ cdef class Aligner:
 		       V
 		      m
 		"""
-		cdef int i, j, best_i, best_j, best_cost, best_matches, best_origin
-
-		# initialize first column
-		for i in range(0, m+1):
-			column[i].matches = 0
-			column[i].cost = 0 if (flags & START_WITHIN_SEQ1) else (i * DELETION_COST)
-			column[i].origin = -i if (flags & START_WITHIN_SEQ1) else 0
-
-		best_i = m
-		best_j = 0
-		best_cost = column[m].cost
-		best_matches = 0
-		best_origin = column[m].origin
+		cdef int i, j
 
 		# maximum no. of errors
 		cdef int k = <int> (max_error_rate * m)
 
-		# Ukkonen's trick: index of the last cell that is at most k.
+		# Determine largest and smallest column we need to compute
+		cdef int max_n = n
+		cdef int min_n = 0
+		if not (flags & START_WITHIN_SEQ2):
+			# costs can only get worse after column m
+			max_n = min(n, m + k)
+		if not (flags & STOP_WITHIN_SEQ2):
+			min_n = max(0, n - m - k)
+
+		# Fill column min_n.
+		#
+		# Four cases:
+		# not startin1, not startin2: c(i,j) = max(i,j); origin(i, j) = 0
+		#     startin1, not startin2: c(i,j) = j       ; origin(i, j) = min(0, j - i)
+		# not startin1,     startin2: c(i,j) = i       ; origin(i, j) =
+		#     startin1,     startin2: c(i,j) = min(i,j)
+
+		# TODO (later)
+		# fill out columns only until 'last'
+		if not (flags & START_WITHIN_SEQ1) and not (flags & START_WITHIN_SEQ2):
+			for i in range(0, m + 1):
+				column[i].matches = 0
+				column[i].cost = max(i, min_n)
+				column[i].origin = 0
+		elif (flags & START_WITHIN_SEQ1) and not (flags & START_WITHIN_SEQ2):
+			for i in range(0, m + 1):
+				column[i].matches = 0
+				column[i].cost = min_n
+				column[i].origin = min(0, min_n - i)
+		elif not (flags & START_WITHIN_SEQ1) and (flags & START_WITHIN_SEQ2):
+			for i in range(0, m + 1):
+				column[i].matches = 0
+				column[i].cost = i
+				column[i].origin = max(0, min_n - i)
+		else:
+			for i in range(0, m + 1):
+				column[i].matches = 0
+				column[i].cost = min(i, min_n)
+				column[i].origin = min_n - i
+
+		cdef int best_i = m
+		cdef int best_j = 0
+		cdef int best_cost = column[m].cost
+		cdef int best_matches = 0
+		cdef int best_origin = column[m].origin
+
+		# Ukkonen's trick: index of the last cell that is less than k.
 		cdef int last = k + 1
+		if flags & START_WITHIN_SEQ1:
+			last = m
 
 		cdef int match
 		cdef int cost_diag
@@ -165,16 +200,8 @@ cdef class Aligner:
 		cdef int wildcard2 = degenerate & ALLOW_WILDCARD_SEQ2
 		cdef Entry tmp_entry
 
-		if flags & START_WITHIN_SEQ1:
-			last = m
-
-		# determine largest column we need to compute
-		cdef int max_n = n
-		if not (flags & START_WITHIN_SEQ2):
-			# costs can only get worse after column m
-			max_n = min(max_n, m+k)
 		# iterate over columns
-		for j in range(1, max_n+1):
+		for j in range(min_n + 1, max_n + 1):
 			# remember first entry
 			tmp_entry = column[0]
 
@@ -221,14 +248,14 @@ cdef class Aligner:
 				column[i].cost = cost
 				column[i].origin = origin
 				column[i].matches = matches
-
-			while column[last].cost > k:
+			while last >= 0 and column[last].cost > k:
 				last -= 1
+			# last can be -1 here, but will be incremented next.
+			# TODO if last is -1, can we stop searching?
 			if last < m:
 				last += 1
 			else:
-				# found
-				# if requested, find best match in last row
+				# Found. If requested, find best match in last row
 				if flags & STOP_WITHIN_SEQ2:
 					# length of the aligned part of string1
 					length = m + min(column[m].origin, 0)
