@@ -194,7 +194,6 @@ cdef class Aligner:
 		if start_in_ref:
 			last = m
 
-		cdef int match
 		cdef int cost_diag
 		cdef int cost_deletion
 		cdef int cost_insertion
@@ -216,29 +215,32 @@ cdef class Aligner:
 				if s1[i-1] == s2[j-1] or \
 						(wildcard1 and s1[i-1] == WILDCARD_CHAR) or \
 						(wildcard2 and s2[j-1] == WILDCARD_CHAR):
-					match = 1
-				else:
-					match = 0
 
-				cost_diag = tmp_entry.cost + (MATCH_COST if match else MISMATCH_COST)
-				cost_deletion = column[i].cost + DELETION_COST
-				cost_insertion = column[i-1].cost + INSERTION_COST
-
-				if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
-					# MATCH or MISMATCH
-					cost = cost_diag
+					# Characters match: This cannot be an indel.
+					cost = tmp_entry.cost
 					origin = tmp_entry.origin
-					matches = tmp_entry.matches + match
-				elif cost_insertion <= cost_deletion:
-					# INSERTION
-					cost = cost_insertion
-					origin = column[i-1].origin
-					matches = column[i-1].matches
+					matches = tmp_entry.matches + 1
 				else:
-					# DELETION
-					cost = cost_deletion
-					origin = column[i].origin
-					matches = column[i].matches
+					# Characters do not match.
+					cost_diag = tmp_entry.cost + 1
+					cost_deletion = column[i].cost + DELETION_COST
+					cost_insertion = column[i-1].cost + INSERTION_COST
+
+					if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
+						# MISMATCH
+						cost = cost_diag
+						origin = tmp_entry.origin
+						matches = tmp_entry.matches
+					elif cost_insertion <= cost_deletion:
+						# INSERTION
+						cost = cost_insertion
+						origin = column[i-1].origin
+						matches = column[i-1].matches
+					else:
+						# DELETION
+						cost = cost_deletion
+						origin = column[i].origin
+						matches = column[i].matches
 
 				# remember current cell for next iteration
 				tmp_entry = column[i]
