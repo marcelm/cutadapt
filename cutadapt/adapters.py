@@ -14,6 +14,9 @@ ANYWHERE = align.SEMIGLOBAL
 
 
 class AdapterMatch(object):
+	"""
+	TODO creating instances of this class is relatively slow and responsible for quite some runtime.
+	"""
 	__slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'front', 'adapter', 'read', 'length']
 	def __init__(self, astart, astop, rstart, rstop, matches, errors, front, adapter, read):
 		self.astart = astart
@@ -181,13 +184,17 @@ class Adapter(object):
 			# try approximate matching
 			if not self.indels:
 				alignment = align.compare_prefixes(self.sequence, read_seq, self.wildcard_flags)
+				astart, astop, rstart, rstop, matches, errors = alignment
+				match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
 			else:
 				alignment = self.aligner.locate(read_seq)
-			# TODO line-based profiling tells me that the following line
-			# is slow (takes 30% of match()'s running time)
-			match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
+				astart, astop, rstart, rstop, matches, errors = alignment
+				length = astop - astart
+				if length < self.min_overlap or errors / length > self.max_error_rate:
+					return None
+				return AdapterMatch(astart, astop, rstart, rstop, matches, errors, self._front_flag, self, read)
 
-		# TODO globalalign_locate should be modified to allow the following
+		# TODO Aligner.locate should be modified to allow the following
 		# assertion.
 		# assert length == 0 or match.errors / length <= self.max_error_rate
 		if match.length < self.min_overlap or match.errors / match.length > self.max_error_rate:
