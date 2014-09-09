@@ -884,10 +884,12 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	except seqio.FormatError as e:
 		print("Error:", e, file=sys.stderr)
 		sys.exit(1)
+
 	# close open files
-	for f in [options.rest_file, options.wildcard_file, options.info_file,
+	for f in [trimmed_outfile, untrimmed_outfile, trimmed_paired_outfile,
+			untrimmed_paired_outfile, options.rest_file, options.wildcard_file, options.info_file,
 			too_short_outfile, too_long_outfile, options.info_file]:
-		if f is not None:
+		if f is not None and f is not sys.stdin and f is not sys.stdout:
 			f.close()
 
 	if not options.quiet:

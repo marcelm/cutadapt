@@ -25,6 +25,25 @@ else:
 	buffered_writer = io.BufferedWriter
 
 
+class GzipWriter:
+	def __init__(self, path):
+		self.outfile = open(path, 'w')
+		try:
+			self.process = Popen(['gzip'], stdin=PIPE, stdout=self.outfile)
+		except IOError as e:
+			self.outfile.close()
+			raise
+
+	def write(self, arg):
+		self.process.stdin.write(arg)
+
+	def close(self):
+		self.process.stdin.close()
+		c = self.process.wait()
+		if c != 0:
+			raise IOError("Output gzip process terminated with exit code {}".format(c))
+
+
 def xopen(filename, mode='r'):
 	"""
 	Replacement for the "open" function that can also open files that have
@@ -55,11 +74,7 @@ def xopen(filename, mode='r'):
 					return buffered_reader(gzip.open(filename, mode))
 			else:
 				try:
-					f = open(filename, 'w')
-					# TODO
-					# f is not closed when the returned
-					# file-like object is closed.
-					return Popen(['gzip'], stdin=PIPE, stdout=f).stdin
+					return GzipWriter(filename)
 				except IOError:
 					return buffered_writer(gzip.open(filename, mode))
 	else:
