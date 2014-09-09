@@ -126,6 +126,31 @@ def print_histogram(d, adapter_length, n, error_rate, errors):
 	print()
 
 
+def print_adjacent_bases(bases, sequence):
+	"""
+	Print a summary of the bases preceding removed adapter sequences.
+	Print a warning if one of the bases is overrepresented.
+
+	Return whether a warning was printed.
+	"""
+	print('Bases preceding removed adapters:')
+	total = sum(bases.values())
+	warnbase = None
+	for base in ['A', 'C', 'G', 'T', '']:
+		b = base if base != '' else 'none/other'
+		fraction = 1.0 * bases[base] / total
+		print('  {}: {:.1%}'.format(b, fraction))
+		if fraction > 0.8 and b != '':
+			warnbase = b
+	if warnbase is not None:
+		print('WARNING:')
+		print('    The adapter is preceded by "{}" extremely often.'.format(warnbase))
+		print('    The provided adapter sequence may be incomplete.')
+		print('    To fix the problem, add "{}" to the beginning of the adapter sequence.'.format(warnbase))
+	print()
+	return warnbase is not None
+
+
 def print_statistics(adapters, time, stats, trim, reads_matched,
 		error_rate, too_short, too_long, args, file=None):
 	"""Print summary to file"""
@@ -162,6 +187,7 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 		print("     Time per read: {0:10.3F} ms".format(1000. * time / n))
 	print()
 
+	warning = False
 	for index, adapter in enumerate(adapters):
 		total_front = sum(adapter.lengths_front.values())
 		total_back = sum(adapter.lengths_back.values())
@@ -195,9 +221,14 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 			assert where == BACK
 			print()
 			print_error_ranges(len(adapter), adapter.max_error_rate)
+			warning = warning or print_adjacent_bases(adapter.adjacent_bases, adapter.sequence)
 			print("Overview of removed sequences")
 			print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate, adapter.errors_back)
 
+	if warning:
+		print('WARNING:')
+		print('    One or more of your adapter sequences may be incomplete.')
+		print('    Please see the detailed output above.')
 	if n == 0:
 		print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
 	sys.stdout = old_stdout

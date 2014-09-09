@@ -621,11 +621,20 @@ confused and prints this message:
 
 BWA also has a problem with such data. Cutadapt therefore converts
 negative quality values to zero in colorspace data.
-Use the option `--no-zero-cap` option to turn this off.
+Use the option `--no-zero-cap` to turn this off.
 
 
 Changes
 =======
+
+v1.6
+----
+
+* For 3' adapters, statistics about the bases preceding the trimmed adapter
+  are collected and printed. If one of the bases is overrepresented, a warning
+  is shown since this points to an incomplete adapter sequence. This happens,
+  for example, when a TruSeq adapter is used but the A overhang is not taken
+  into account when running cutadapt.
 
 v1.5
 ----

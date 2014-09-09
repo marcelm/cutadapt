@@ -148,6 +148,7 @@ class Adapter(object):
 		self.lengths_back = defaultdict(int)
 		self.errors_front = defaultdict(lambda: defaultdict(int))
 		self.errors_back = defaultdict(lambda: defaultdict(int))
+		self.adjacent_bases = { 'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0 }
 
 		self.aligner = align.Aligner(self.sequence, self.max_error_rate,
 			self.where, self.wildcard_flags)
@@ -220,6 +221,10 @@ class Adapter(object):
 		# TODO move away
 		self.lengths_back[len(match.read) - match.rstart] += 1
 		self.errors_back[len(match.read) - match.rstart][match.errors] += 1
+		adjacent_base = match.read.sequence[match.rstart-1:match.rstart]
+		if adjacent_base not in 'ACGT':
+			adjacent_base = ''
+		self.adjacent_bases[adjacent_base] += 1
 		return match.read[:match.rstart]
 
 	def __len__(self):
