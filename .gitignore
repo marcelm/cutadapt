@@ -11,3 +11,4 @@ galaxy/package/
 .settings
 cutadapt/_*.c
 cutadapt/*.so
+doc/_build
