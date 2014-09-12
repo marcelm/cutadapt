@@ -133,8 +133,10 @@ def print_adjacent_bases(bases, sequence):
 
 	Return whether a warning was printed.
 	"""
-	print('Bases preceding removed adapters:')
 	total = sum(bases.values())
+	if total == 0:
+		return False
+	print('Bases preceding removed adapters:')
 	warnbase = None
 	for base in ['A', 'C', 'G', 'T', '']:
 		b = base if base != '' else 'none/other'
@@ -142,13 +144,15 @@ def print_adjacent_bases(bases, sequence):
 		print('  {}: {:.1%}'.format(b, fraction))
 		if fraction > 0.8 and b != '':
 			warnbase = b
-	if warnbase is not None:
+	if total >= 20 and warnbase is not None:
 		print('WARNING:')
 		print('    The adapter is preceded by "{}" extremely often.'.format(warnbase))
 		print('    The provided adapter sequence may be incomplete.')
 		print('    To fix the problem, add "{}" to the beginning of the adapter sequence.'.format(warnbase))
+		print()
+		return True
 	print()
-	return warnbase is not None
+	return False
 
 
 def print_statistics(adapters, time, stats, trim, reads_matched,
