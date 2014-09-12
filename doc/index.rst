@@ -3,6 +3,7 @@
 .. toctree::
    :maxdepth: 2
 
+   installation
    guide
    changes
 
