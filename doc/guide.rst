@@ -29,9 +29,7 @@ subfolder. Galaxy support was contributed by Lance Parsons.
 Basic usage
 ===========
 
-The basic command-line for cutadapt is:
-
-::
+The basic command-line for cutadapt is::
 
     cutadapt -a AACCGGTT input.fastq > output.fastq
 
@@ -53,9 +51,7 @@ The following examples refer to basespace reads. See the "Colorspace"
 section on how to use cutadapt with SOLiD reads.
 
 Only a few command-line options are explained in this document. To see
-all options, run:
-
-::
+all options, run::
 
     cutadapt --help
 
@@ -66,23 +62,17 @@ Trimming FASTQ files
 --------------------
 
 Assuming your sequencing data is available as a FASTQ file, use this
-command line:
-
-::
+command line::
 
     cutadapt -a ADAPTER-SEQUENCE input.fastq > output.fastq
 
-gz-compressed input is supported:
-
-::
+gz-compressed input is supported::
 
     cutadapt -a ADAPTER-SEQUENCE input.fastq.gz > output.fastq
 
 gz-compressed output is also supported, but the -o parameter (output
-file) needs to be used (gzip compression is auto-detected by looking at
-the file name):
-
-::
+file) needs to be used since gzip compression is auto-detected by inspecting
+the file name::
 
     cutadapt -a ADAPTER-SEQUENCE -o output.fastq.gz input.fastq.gz
 
@@ -94,9 +84,7 @@ Adapters in FASTA files
 -----------------------
 
 To read a list of adapter sequences from a FASTA file, specify the file
-in the following way:
-
-::
+in the following way::
 
     cutadapt -a file:adapters.fasta input.fastq > output.fastq
 
@@ -109,9 +97,7 @@ Named adapters
 
 You can give names to the adapters. The names are shown in addition to
 the sequences themselves in the statistics overview when the program has
-finished trimming the reads. You can use it like this:
-
-::
+finished trimming the reads. You can use it like this::
 
     cutadapt -a My_adapter=ACGTAA input.fastq > output.fastq
 
@@ -122,13 +108,11 @@ sequence header is used as the adapter name.
 Wildcards
 ---------
 
-Wildcard characters ``N`` (which match any nucleotide) in the adapter
-sequence are supported. This is useful for trimming an adapter with a
-variable barcode:
+The wildcard character ``N`` in the adapter sequence is supported. It matches
+any nucleotide. This is useful for trimming adapters that have a variable
+barcode embedded in them::
 
-::
-
-    cutadapt -a ACGTAANNNNTTAGC input.fastq > output.fastq
+    cutadapt -a ACGTAANNNNTTAGC -o output.fastq input.fastq
 
 Wildcard characters in the reads are also supported, but this must be
 enabled with ``--match-read-wildcards``.
@@ -138,9 +122,7 @@ FASTA file
 
 Cut an adapter from reads given in a FASTA file. Try to remove an
 adapter three times (this is usually not needed), use the default error
-rate of 10%, write result to ``output.fa``:
-
-::
+rate of 10%, write result to ``output.fa``::
 
     cutadapt -n 3 -a TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG input.fa > output.fa
 
@@ -151,9 +133,7 @@ As many adapters as desired can be given to the program by using the
 ``-a``, ``-b`` or ``-g`` in any combination, for example, five ``-a``
 adapters and two ``-g`` adapters. All adapters will be searched for, but
 only the best matching one will be trimmed from each read (but see the
-``--times`` option).
-
-::
+``--times`` option)::
 
     cutadapt -b TGAGACACGCA -g AGGCACACAGGG input.fastq > output.fastq
 
@@ -179,15 +159,11 @@ unconditionally remove bases from the beginning or end of each read. If
 the given length is positive, the bases are removed from the beginning
 of each read. If it is negative, the bases are removed from the end.
 
-Remove the first seven bases of each read:
-
-::
+Remove the first seven bases of each read::
 
     cutadapt -u 7 -o trimmed.fastq reads.fastq
 
-Remove the last seven bases of each read:
-
-::
+Remove the last seven bases of each read::
 
     cutadapt -u -7 -o trimmed.fastq reads.fastq
 
@@ -206,9 +182,7 @@ and ``ADAPTER_REV`` from the reverse reads (second file).
 
 If you do not use any of the filtering options that discard reads, such
 as ``--discard``, ``--minimum-length`` or ``--maximum-length``, then run
-cutadapt on each file separately:
-
-::
+cutadapt on each file separately::
 
     cutadapt -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
     cutadapt -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
@@ -217,9 +191,7 @@ You can use the options that are listed under 'Additional modifications'
 in cutadapt's help output without problems. For example, if you want to
 quality-trim the first read in each pair with a threshold of 10, and the
 second read in each pair with a threshold of 15, then the commands could
-be:
-
-::
+be::
 
     cutadapt -q 10 -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
     cutadapt -q 15 -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
@@ -228,22 +200,16 @@ However, if you use one of the filtering options that discard reads,
 then you need to give both input read files to cutadapt and the
 ``--paired-output`` option is needed to keep the two files synchronized.
 First trim the forward read, writing output to temporary files (we also
-add some quality trimming):
-
-::
+add some quality trimming)::
 
     cutadapt -q 10 -a ADAPTER_FWD --minimum-length 20 -o tmp.1.fastq -p tmp.2.fastq reads.1.fastq reads.2.fastq
 
 The ``-p`` is an abbreviation for ``--paired-output``. Then trim the
-reverse read, using the temporary files as input:
-
-::
+reverse read, using the temporary files as input::
 
     cutadapt -q 15 -a ADAPTER_REV --minimum-length 20 -o trimmed.2.fastq -p trimmed.1.fastq tmp.2.fastq tmp.1.fastq
 
-Finally, remove the temporary files:
-
-::
+Finally, remove the temporary files::
 
     rm tmp.1.fastq tmp.2.fastq
 
@@ -261,15 +227,11 @@ files contains more reads than the other or if the read names in the two
 files do not match. Only the part of the read name before the first
 space is considered. If the read name ends with ``/1`` or ``/2``, then
 that is also ignored. For example, two FASTQ headers that would be
-considered to denote properly paired reads are:
-
-::
+considered to denote properly paired reads are::
 
     @my_read/1 a comment
 
-and
-
-::
+and::
 
     @my_read/2 another comment
 
@@ -281,25 +243,19 @@ steps.
 
 Trim read 1 with ``A`` + the “TruSeq Indexed Adapter”. Use only the
 prefix of the adapter sequence that is common to all Indexed Adapter
-sequences:
-
-::
+sequences::
 
     cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -o trimmed.1.fastq.gz reads.1.fastq.gz
 
-Trim read 2 with the reverse complement of the ”TruSeq Universal
-Adapter”:
-
-::
+Trim read 2 with the reverse complement of the “TruSeq Universal
+Adapter”::
 
     cutadapt -a AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -o trimmed.2.fastq.gz reads.2.fastq.gz
 
 See also the section about paired-end adapter trimming above.
 
 If you want to simplify this a bit, you can also use ``AGATCGGAAGAGC``
-as the adapter sequence in both cases:
-
-::
+as the adapter sequence in both cases::
 
     cutadapt -a AGATCGGAAGAGC -o trimmed.1.fastq.gz reads.1.fastq.gz
     cutadapt -a AGATCGGAAGAGC -o trimmed.2.fastq.gz reads.2.fastq.gz
@@ -311,18 +267,14 @@ De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understand
 Adapters
 ========
 
-These are some 454 adapters:
-
-::
+These are some 454 adapters::
 
     A1:   5'- TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA
     A2:   5'- TGAGACAGGGAGGGAACAGATGGGACACGCAGGGATGAGATGGA
     B1:   5'- CCTATCCCCTGTGTGCCTTGCCTATCCCCTGTTGCGTGTCTCA
     B2:   5'- TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG
 
-This is an AB SOLiD adapter (in color space) used in the SREK protocol:
-
-::
+This is an AB SOLiD adapter (in color space) used in the SREK protocol::
 
     330201030313112312
 
@@ -341,18 +293,14 @@ Partial adapter matches
 Cutadapt correctly deals with partial adapter matches, and also with any
 trailing sequences after the adapter. As an example, suppose your
 adapter sequence is "ADAPTER" (specified via the ``-a`` or ``--adapter``
-command-line parameter). If you have these input sequences:
-
-::
+command-line parameter). If you have these input sequences::
 
     MYSEQUENCEADAPTER
     MYSEQUENCEADAP
     MYSEQUENCEADAPTERSOMETHINGELSE
 
 All of them will be trimmed to "MYSEQUENCE". If the sequence starts with
-an adapter, like this:
-
-::
+an adapter, like this::
 
     ADAPTERSOMETHING
 
@@ -370,9 +318,7 @@ If you specify an adapter with the ``-g`` (``--front``) parameter, the
 adapter may overlap the beginning of the read or occur anywhere within
 it. If it appears within the read, the sequence that precedes it will
 also be trimmed in addition to the adapter. For example, with
-``-g ADAPTER``, these sequences:
-
-::
+``-g ADAPTER``, these sequences::
 
     HELLOADAPTERTHERE
     APTERTHERE
@@ -380,9 +326,7 @@ also be trimmed in addition to the adapter. For example, with
 will both be trimmed to ``THERE``. To avoid this, you can prefix the
 adapter with the character ``^``. This will restrict the search, forcing
 the adapter to be a prefix of the read. With ``-g ^ADAPTER``, only reads
-like this will be trimmed:
-
-::
+like this will be trimmed::
 
     ADAPTERHELLO
 
@@ -404,9 +348,7 @@ If, on the other hand, your adapter can also be ligated to the 5' end
 different alignment algorithm (so-called semiglobal alignment), which
 allows any type of overlap between the adapter and the sequence. In
 particular, the adapter may appear only partially in the beginning of
-the read, like this:
-
-::
+the read, like this::
 
     PTERMYSEQUENCE
 
@@ -417,9 +359,7 @@ following it is removed. Otherwise, the adapter is considered to be a 5'
 adapter and it is removed from the read.
 
 Here are some examples, which may make this clearer (left: read, right:
-trimmed read):
-
-::
+trimmed read)::
 
     MYSEQUENCEADAPTER -> MYSEQUENCE (3' adapter)
     MADAPTER -> M (3' adapter)
@@ -436,17 +376,13 @@ Interpreting the statistics output
 ==================================
 
 After every run, cutadapt prints out per-adapter statistics. The output
-starts with something like this:
-
-::
+starts with something like this::
 
     Adapter 'ACGTACGTACGTTAGCTAGC', length 20, was trimmed 2402 times.
 
 The meaning of this should be obvious.
 
-The next piece of information is this:
-
-::
+The next piece of information is this::
 
     No. of allowed errors:
     0-9 bp: 0; 10-19 bp: 1; 20 bp: 2
@@ -459,9 +395,7 @@ and matches of length 20 can have 2 errors.
 
 Finally, a table is output that gives more detailed information about
 the lengths of the removed sequences. The following is only an excerpt;
-some rows are left out:
-
-::
+some rows are left out::
 
     Overview of removed sequences
     length  count   expect  max.err error counts
@@ -495,9 +429,7 @@ length is 100, the adapter was found in the beginning of 397 reads and
 therefore those reads were trimmed to a length of zero.
 
 The table may also be useful in case the given adapter sequence contains
-an error. In that case, it may look like this:
-
-::
+an error. In that case, it may look like this::
 
     ...
     length  count   expect  max.err error counts
@@ -568,9 +500,7 @@ In colorspace mode, the adapter sequences given to the ``-a``, ``-b``
 and ``-g`` options can be given both as colors or as nucleotides. If
 given as nucleotides, they will automatically be converted to
 colorspace. For example, to trim an adapter from ``solid.csfasta`` and
-``solid.qual``, use this command-line:
-
-::
+``solid.qual``, use this command-line::
 
     cutadapt -c -a CGCCTTGGCCGTACAGCAG solid.csfasta solid.qual > output.fastq
 
@@ -626,25 +556,19 @@ Colorspace examples
 To cut an adapter from SOLiD data given in ``solid.csfasta`` and
 ``solid.qual``, to produce MAQ- and BWA-compatible output, allow the
 default of 10% errors and write the resulting FASTQ file to
-output.fastq:
-
-::
+output.fastq::
 
     cutadapt --bwa -a CGCCTTGGCCGTACAGCAG solid.csfasta solid.qual > output.fastq
 
 Instead of redirecting standard output with ``>``, the ``-o`` option can
 be used. This also shows that you can give the adapter in colorspace and
-how to use a different error rate:
-
-::
+how to use a different error rate::
 
     cutadapt --bwa -e 0.15 -a 330201030313112312 -o output.fastq solid.csfasta solid.qual
 
 This does the same as above, but produces BFAST-compatible output,
 strips the \_F3 suffix from read names and adds the prefix "abc:" to
-them:
-
-::
+them::
 
     cutadapt -c -e 0.15 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
 
@@ -675,10 +599,8 @@ To Do / Ideas
 -  refactor read\_sequences (use classes)
 -  put write\_read into a Fast(a\|q)Writer class?
 -  allow .txt input/output
--  test on Windows
 -  check whether input is FASTQ although -f fasta is given
 -  close on StopIteration
 -  search for adapters in the order in which they are given on the
    command line
 -  more tests for the alignment algorithm
-
