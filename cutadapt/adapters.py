@@ -33,6 +33,10 @@ class AdapterMatch(object):
 		# in the read.
 		self.length = self.astop - self.astart
 
+	def __str__(self):
+		return 'AdapterMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
+			self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
+
 	def _guess_is_front(self):
 		"""
 		Return whether this is guessed to be a front adapter.
