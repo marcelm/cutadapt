@@ -9,4 +9,4 @@ cutadapt removes adapter sequences from high-throughput sequencing data.
   the ``doc/`` subdirectory in the repository.
 * `Issue Tracking <https://code.google.com/p/cutadapt/issues/list>`_
 
-cutadapt is licensed under the MIT license.
+cutadapt is available under the MIT license.
