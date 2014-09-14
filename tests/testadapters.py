@@ -5,15 +5,15 @@ from cutadapt.adapters import Adapter, AdapterMatch, BACK
 
 def test_issue_52():
 	adapter = Adapter(
-		sequence=b"GAACTCCAGTCACNNNNN",
+		sequence='GAACTCCAGTCACNNNNN',
 		where=BACK,
 		max_error_rate=0.1,
 		min_overlap=5,
 		match_read_wildcards=False,
 		match_adapter_wildcards=True)
-	read = Sequence(name="abc", sequence=b'CCCCAGAACTACAGTCCCGGC')
+	read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
 	am = AdapterMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, front=None, adapter=adapter, read=read)
-	assert am.wildcards() == b'GGC'
+	assert am.wildcards() == 'GGC'
 	"""
 	The result above should actually be 'CGGC' since the correct
 	alignment is this one:
@@ -25,3 +25,29 @@ def test_issue_52():
 	Since we do not keep the alignment, guessing 'GGC' is the best we
 	can currently do.
 	"""
+
+
+def test_issue_80():
+	# This issue turned out to not be an actual issue with the alignment
+	# algorithm. The following alignment is found because it has more matches
+	# than the 'obvious' one:
+	#
+	# TCGTATGCCGTCTTC
+	# =========X==XX=
+	# TCGTATGCCCTC--C
+	#
+	# This is correct, albeit a little surprising, since an alignment without
+	# indels would have only two errors.
+
+	adapter = Adapter(
+		sequence="TCGTATGCCGTCTTC",
+		where=BACK,
+		max_error_rate=0.2,
+		min_overlap=3,
+		match_read_wildcards=False,
+		match_adapter_wildcards=False)
+	read = Sequence(name="seq2", sequence="TCGTATGCCCTCC")
+	result = adapter.match(read)
+	assert result.errors == 3, result
+	assert result.astart == 0, result
+	assert result.astop == 15, result
