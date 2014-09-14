@@ -14,9 +14,7 @@ Installation
 ------------
 
 The easiest way to install cutadapt is via the ``pip`` command if that
-is available on your system:
-
-::
+is available on your system::
 
     pip install --user cutadapt
 
@@ -25,9 +23,8 @@ that this directory is on your ``$PATH``.
 
 If you have already downloaded and unpacked the ``.tar.gz`` file, then
 installation is done like this (replace "python" with "python3" to
-install the Python 3 version):
+install the Python 3 version)::
 
-::
 
     python setup.py install --user
 
@@ -39,22 +36,15 @@ Use without installation
 ------------------------
 
 Build the C extension module (you can try to skip this step -- a
-compiled version of the module for Linux x86\_64 is already included):
-
-::
+compiled version of the module for Linux x86\_64 is already included)::
 
     python setup.py build_ext -i
 
-Then simply run the script from where it is, similar to this:
-
-::
+Then simply run the script from where it is, similar to this::
 
     bin/cutadapt --help
 
 If you get any errors, first try to explicitly request a specific Python
-version by running cutadapt like this:
-
-::
+version by running cutadapt like this::
 
     python2.7 bin/cutadapt --help
-
