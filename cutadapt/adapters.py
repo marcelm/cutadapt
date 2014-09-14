@@ -3,7 +3,6 @@ import sys
 from collections import defaultdict
 from cutadapt import align, colorspace
 from cutadapt.seqio import ColorspaceSequence
-from cutadapt.compat import str_to_bytes, PY3
 
 # Constants for the find_best_alignment function.
 # The function is called with SEQ1 as the adapter, SEQ2 as the read.
@@ -50,7 +49,7 @@ class AdapterMatch(object):
 		#return not (match.rstart > 0 and match.astart == 0)
 		return self.rstart == 0
 
-	def wildcards(self, wildcard_char=ord('N') if PY3 else b'N'):
+	def wildcards(self, wildcard_char='N'):
 		"""
 		Return a string that contains, for each wildcard character,
 		the character that it matches. For example, if the adapter
@@ -61,7 +60,7 @@ class AdapterMatch(object):
 		"""
 		wildcards = [ self.read.sequence[self.rstart + i:self.rstart + i + 1] for i in range(self.length)
 			if self.adapter.sequence[self.astart + i] == wildcard_char and self.rstart + i < len(self.read.sequence) ]
-		return b''.join(wildcards)
+		return ''.join(wildcards)
 
 	def rest(self):
 		"""
@@ -118,18 +117,14 @@ class Adapter(object):
 			self.name = name
 			self.name_is_generated = False
 
-		if isinstance(sequence, str) and PY3:
-			self.sequence = str_to_bytes(sequence).upper()
-		else:
-			self.sequence = sequence.upper()
-		self.sequence = self.sequence.replace(b'U', b'T')
+		self.sequence = sequence.upper().replace('U', 'T')
 		self.where = where
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
 		self.indels = indels
 		assert where != FRONT or self.indels
 		self.wildcard_flags = 0
-		self.match_adapter_wildcards = match_adapter_wildcards and b'N' in self.sequence
+		self.match_adapter_wildcards = match_adapter_wildcards and 'N' in self.sequence
 		if match_read_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
 		if self.match_adapter_wildcards:
@@ -239,7 +234,7 @@ class ColorspaceAdapter(Adapter):
 	def __init__(self, *args, **kwargs):
 		super(ColorspaceAdapter, self).__init__(*args, **kwargs)
 		has_nucleotide_seq = False
-		if set(self.sequence) <= set(b'ACGT'):
+		if set(self.sequence) <= set('ACGT'):
 			# adapter was given in basespace
 			self.nucleotide_sequence = self.sequence
 			has_nucleotide_seq = True

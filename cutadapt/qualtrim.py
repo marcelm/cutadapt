@@ -25,7 +25,7 @@ def quality_trim_index(qualities, cutoff, base=33):
 	max_qual = 0
 	max_i = len(qualities)
 	for i in reversed(xrange(max_i)):
-		q = ord(qualities[i:i+1]) - base
+		q = ord(qualities[i]) - base
 		s += cutoff - q
 		if s < 0:
 			break

@@ -6,7 +6,7 @@ PY3 = sys.version > '3'
 
 
 if PY3:
-	maketrans = bytes.maketrans
+	maketrans = str.maketrans
 	basestring = str
 	zip = zip
 	next = next
@@ -22,6 +22,7 @@ if PY3:
 			return s.decode('ascii')
 		else:
 			return s
+	from io import StringIO
 
 else:
 	def bytes_to_str(s):
@@ -39,3 +40,4 @@ else:
 	from string import maketrans
 	basestring = basestring
 	from itertools import izip as zip
+	from StringIO import StringIO

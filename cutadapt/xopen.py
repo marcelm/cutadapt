@@ -60,11 +60,14 @@ def xopen(filename, mode='r'):
 	if filename.endswith('.bz2'):
 		if bz2 is None:
 			raise ImportError("Cannot open bz2 files: The bz2 module is not available")
-		return bz2.BZ2File(filename, mode)
+		if PY3:
+			return io.TextIOWrapper(bz2.BZ2File(filename, mode))
+		else:
+			return bz2.BZ2File(filename, mode)
 
 	elif filename.endswith('.gz'):
 		if PY3:
-			return gzip.open(filename, mode)
+			return io.TextIOWrapper(gzip.open(filename, mode))
 		else:
 			if 'r' in mode:
 				try:

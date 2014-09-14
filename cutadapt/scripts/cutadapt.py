@@ -77,7 +77,7 @@ from cutadapt.xopen import xopen
 from cutadapt.adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, ANYWHERE
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter)
-from cutadapt.compat import next, bytes_to_str
+from cutadapt.compat import next
 
 
 class HelpfulOptionParser(OptionParser):
@@ -202,9 +202,9 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 		print("=" * 3, "Adapter", index + 1, "=" * 3)
 		print()
 		if not adapter.name_is_generated:
-			name = "'{0}' ({1})".format(adapter.name, bytes_to_str(adapter.sequence))
+			name = "'{0}' ({1})".format(adapter.name, adapter.sequence)
 		else:
-			name = "'{0}'".format(bytes_to_str(adapter.sequence))
+			name = "'{0}'".format(adapter.sequence)
 		print("Adapter {0}, length {1}, was trimmed {2} times.".format(name, len(adapter.sequence), total))
 		if where == ANYWHERE:
 			print(total_front, "times, it overlapped the 5' end of a read")
@@ -305,7 +305,7 @@ class RestFileWriter(object):
 	def write(self, match):
 		rest = match.rest()
 		if len(rest) > 0:
-			print(bytes_to_str(rest), match.read.name, file=self.file)
+			print(rest, match.read.name, file=self.file)
 
 
 class RepeatedAdapterCutter(object):
@@ -363,9 +363,9 @@ class RepeatedAdapterCutter(object):
 				match.errors,
 				match.rstart,
 				match.rstop,
-				bytes_to_str(seq[0:match.rstart]),
-				bytes_to_str(seq[match.rstart:match.rstop]),
-				bytes_to_str(seq[match.rstop:]),
+				seq[0:match.rstart],
+				seq[match.rstart:match.rstop],
+				seq[match.rstop:],
 				match.adapter.name,
 				sep='\t', file=self.info_file
 			)
@@ -395,7 +395,7 @@ class RepeatedAdapterCutter(object):
 			assert match.length - match.errors > 0
 
 			if self.wildcard_file:  # FIXME move to cut() or somewhere else
-				print(bytes_to_str(match.wildcards()), read.name, file=self.wildcard_file)
+				print(match.wildcards(), read.name, file=self.wildcard_file)
 
 			matches.append(match)
 			if t != self.times - 1:
@@ -425,7 +425,7 @@ class RepeatedAdapterCutter(object):
 			if self.mask_adapter:
 				# add N from last modification
 				masked_sequence = read.sequence
-				for match in sorted(matches, reverse=True):
+				for match in sorted(matches, reverse=True, key=lambda m: m.astart):
 					ns = 'N' * (len(match.read.sequence) -
 								len(match.adapter.trimmed(match).sequence))
 					# add N depending on match position
