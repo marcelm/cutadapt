@@ -3,21 +3,6 @@
 from __future__ import print_function, division, absolute_import
 from .xopen import xopen
 
-from cpython.version cimport PY_MAJOR_VERSION
-PY3 = PY_MAJOR_VERSION >= 3
-
-cdef bytes str_to_bytes(object s):
-	if PY3:
-		return s.encode('ascii')
-	else:
-		return s
-
-cdef str bytes_to_str(object s):
-	if PY3:
-		return s.decode('ascii')
-	else:
-		return s
-
 ## TODO the following method and class are copied here from seqio.py to avoid circular imports for now
 
 def _shorten(s, n=20):
@@ -39,11 +24,11 @@ cdef class Sequence(object):
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 	cdef:
 		public str name
-		public bytes sequence
-		public bytes qualities
+		public str sequence
+		public str qualities
 		public bint trimmed
 
-	def __init__(self, str name, bytes sequence, bytes qualities=None, bint trimmed=False):
+	def __init__(self, str name, str sequence, str qualities=None, bint trimmed=False):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
@@ -81,19 +66,14 @@ cdef class Sequence(object):
 			raise NotImplementedError()
 
 	def write(self, outfile, bint twoheaders=False):
-		cdef bytes name
-		name = str_to_bytes(self.name)
 		if self.qualities is not None:
-			s = b'@' + name + b'\n' + self.sequence + b'\n+'
+			s = '@' + self.name + '\n' + self.sequence + '\n+'
 			if twoheaders:
-				s += name
-			s += b'\n' + self.qualities + b'\n'
+				s += self.name
+			s += '\n' + self.qualities + '\n'
 		else:
-			s = b'>' + name + b'\n' + self.sequence + b'\n'
-		if PY3:
-			outfile.buffer.write(s)
-		else:
-			outfile.write(s)
+			s = '>' + self.name + '\n' + self.sequence + '\n'
+		outfile.write(s)
 
 
 class FastqReader(object):
@@ -109,7 +89,7 @@ class FastqReader(object):
 		n quality values. When this is True, there must be n+1 characters in the sequence and n quality values.
 		"""
 		if isinstance(file, basestring):
-			file = xopen(file, 'rb')
+			file = xopen(file, 'r')
 		self.fp = file
 		self.twoheaders = False
 		self.sequence_class = sequence_class
@@ -121,18 +101,18 @@ class FastqReader(object):
 		qualities is a string and it contains the unmodified, encoded qualities.
 		"""
 		cdef int i = 0
-		cdef bytes line, name, qualities, sequence
+		cdef str line, name, qualities, sequence
 
 		for line in self.fp:
 			if i % 4 == 0:
-				if not line.startswith(b'@'):
+				if not line.startswith('@'):
 					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
-				name = line.rstrip(b'\r\n')[1:]
+				name = line.rstrip('\r\n')[1:]
 			elif i % 4 == 1:
-				sequence = line.rstrip(b'\r\n')
+				sequence = line.rstrip('\r\n')
 			elif i % 4 == 2:
-				line = line.rstrip(b'\r\n')
-				if not line.startswith(b'+'):
+				line = line.rstrip('\r\n')
+				if not line.startswith('+'):
 					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
 				if len(line) > 1:
 					self.twoheaders = True
@@ -142,10 +122,10 @@ class FastqReader(object):
 							"({1!r} != {2!r}).\n"
 							"The second sequence description must be either empty "
 							"or equal to the first description.".format(i+1,
-								bytes_to_str(name), bytes_to_str(line.rstrip()[1:])))
+								name, line.rstrip()[1:]))
 			elif i % 4 == 3:
-				qualities = line.rstrip(b'\r\n')
-				yield self.sequence_class(bytes_to_str(name), sequence, qualities)
+				qualities = line.rstrip('\r\n')
+				yield self.sequence_class(name, sequence, qualities)
 			i += 1
 
 	def __enter__(self):

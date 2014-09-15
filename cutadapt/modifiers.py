@@ -1,6 +1,6 @@
 import re
 from cutadapt.qualtrim import quality_trim_index
-from cutadapt.compat import PY3, maketrans
+from cutadapt.compat import maketrans
 
 
 class UnconditionalCutter(object):
@@ -68,7 +68,7 @@ class DoubleEncoder(object):
 	Double-encode colorspace reads, using characters ACGTN to represent colors.
 	"""
 	def __init__(self):
-		self.double_encode_trans = maketrans(b'0123.', b'ACGTN')
+		self.double_encode_trans = maketrans('0123.', 'ACGTN')
 
 	def __call__(self, read):
 		read = read[:]
@@ -82,10 +82,7 @@ class ZeroCapper(object):
 	"""
 	def __init__(self, quality_base=33):
 		qb = quality_base
-		if PY3:
-			self.zero_cap_trans = maketrans(bytes(range(qb)), bytes([qb] * qb))
-		else:
-			self.zero_cap_trans = maketrans(''.join(map(chr, range(qb))), chr(qb) * qb)
+		self.zero_cap_trans = maketrans(''.join(map(chr, range(qb))), chr(qb) * qb)
 
 	def __call__(self, read):
 		read = read[:]
@@ -96,7 +93,7 @@ class ZeroCapper(object):
 def PrimerTrimmer(read):
 	"""Trim primer base from colorspace reads"""
 	read = read[1:]
-	read.primer = b''
+	read.primer = ''
 	return read
 
 

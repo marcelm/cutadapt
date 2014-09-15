@@ -11,7 +11,7 @@ DEF INSERTION_COST = 1
 DEF DELETION_COST = 1
 DEF MATCH_COST = 0
 DEF MISMATCH_COST = 1
-DEF WILDCARD_CHAR = b'N'
+DEF WILDCARD_CHAR = 'N'
 
 # structure for a DP matrix entry
 ctypedef struct Entry:
@@ -79,12 +79,12 @@ cdef class Aligner:
 	cdef int degenerate
 	cdef bytes reference
 
-	def __cinit__(self, char* reference, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
+	def __cinit__(self, str reference, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
 		self.m = len(reference)
 		self.column = <Entry*> PyMem_Malloc((self.m + 1) * sizeof(Entry))
 		if not self.column:
 			raise MemoryError()
-		self.reference = reference
+		self.reference = reference.encode('ascii')
 		self.degenerate = degenerate
 		self.flags = flags
 		self.max_error_rate = max_error_rate
@@ -93,15 +93,15 @@ cdef class Aligner:
 		def __get__(self):
 			return self.reference
 
-		def __set__(self, char* reference):
+		def __set__(self, str reference):
 			mem = <Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(Entry))
 			if not mem:
 				raise MemoryError()
 			self.column = mem
-			self.reference = reference
+			self.reference = reference.encode('ascii')
 			self.m = len(reference)
 
-	def locate(self, char* query):
+	def locate(self, str query):
 		"""
 		locate(query) -> (refstart, refstop, querystart, querystop, matches, errors)
 
@@ -116,10 +116,10 @@ cdef class Aligner:
 		The alignment itself is not returned.
 		"""
 		cdef char* s1 = self.reference
-		cdef char* s2 = query
-		cdef char* ref = self.reference  # s1.   s2 = query.
-		cdef int n = len(query)
+		cdef bytes query_bytes = query.encode('ascii')
+		cdef char* s2 = query_bytes
 		cdef int m = self.m
+		cdef int n = len(query)
 		cdef Entry* column = self.column
 		cdef double max_error_rate = self.max_error_rate
 		cdef bint start_in_ref = self.flags & START_WITHIN_SEQ1
@@ -298,12 +298,12 @@ cdef class Aligner:
 		PyMem_Free(self.column)
 
 
-def locate(char* reference, char* query, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
+def locate(str reference, str query, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
 	aligner = Aligner(reference, max_error_rate, flags, degenerate)
 	return aligner.locate(query)
 
 
-def compare_prefixes(char* s1, char* s2, int degenerate = 0):
+def compare_prefixes(str s1, str s2, int degenerate = 0):
 	"""
 	Find out whether two strings have a common prefix, allowing mismatches.
 

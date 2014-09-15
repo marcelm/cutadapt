@@ -3,15 +3,14 @@ from __future__ import print_function, division, absolute_import
 import sys
 from os.path import splitext
 from cutadapt.xopen import xopen
-from cutadapt.compat import zip, str_to_bytes, bytes_to_str, basestring, PY3, force_str
+from cutadapt.compat import zip, basestring
 
 __author__ = "Marcel Martin"
 
 def _shorten(s, n=20):
-	"""Shorten string or bytes s to at most n characters, appending "..." if necessary."""
+	"""Shorten string s to at most n characters, appending "..." if necessary."""
 	if s is None:
 		return None
-	s = force_str(s)
 	if len(s) > n:
 		s = s[:n-3] + '...'
 	return s
@@ -55,18 +54,14 @@ class Sequence(object):
 		return not self.__eq__(other)
 
 	def write(self, outfile, twoheaders=False):
-		name = str_to_bytes(self.name)
 		if self.qualities is not None:
-			s = b'@' + name + b'\n' + self.sequence + b'\n+'
+			s = '@' + self.name + '\n' + self.sequence + '\n+'
 			if twoheaders:
-				s += name
-			s += b'\n' + self.qualities + b'\n'
+				s += self.name
+			s += '\n' + self.qualities + '\n'
 		else:
-			s = b'>' + name + b'\n' + self.sequence + b'\n'
-		if PY3:
-			outfile.buffer.write(s)
-		else:
-			outfile.write(s)
+			s = '>' + name + '\n' + self.sequence + '\n'
+		outfile.write(s)
 
 
 try:
@@ -87,7 +82,7 @@ class ColorspaceSequence(Sequence):
 		else:
 			self.primer = primer
 		super(ColorspaceSequence, self).__init__(name, sequence, qualities, trimmed)
-		if not self.primer in (b'A', b'C', b'G', b'T'):
+		if not self.primer in ('A', 'C', 'G', 'T'):
 			raise ValueError("primer base is {0!r}, but it should be one of A, C, G, T".format(self.primer))
 		if qualities is not None and len(self.sequence) != len(qualities):
 			rname = _shorten(name)
@@ -105,18 +100,14 @@ class ColorspaceSequence(Sequence):
 		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None, self.primer)
 
 	def write(self, outfile, twoheaders=False):
-		name = str_to_bytes(self.name)
 		if self.qualities is not None:
-			s = b'@' + name + b'\n' + self.primer + self.sequence + b'\n+'
+			s = '@' + self.name + '\n' + self.primer + self.sequence + '\n+'
 			if twoheaders:
-				s += name
-			s += b'\n' + self.qualities + b'\n'
+				s += self.name
+			s += '\n' + self.qualities + '\n'
 		else:
-			s = b'>' + name + b'\n' + self.primer + self.sequence + b'\n'
-		if PY3:
-			outfile.buffer.write(s)
-		else:
-			outfile.write(s)
+			s = '>' + self.name + '\n' + self.primer + self.sequence + '\n'
+		outfile.write(s)
 
 
 def sra_colorspace_sequence(name, sequence, qualities):
@@ -146,8 +137,8 @@ class FileWithPrependedLine(object):
 		file is an already opened file-like object.
 		line is a single string (newline will be appended if not included)
 		"""
-		if not line.endswith(b'\n'):
-			line += b'\n'
+		if not line.endswith('\n'):
+			line += '\n'
 		self.first_line = line
 		self.file = file
 
@@ -197,17 +188,12 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 
 	name = None
 	if file == "-":
-		if PY3:
-			file = sys.stdin.buffer
-		else:
-			file = sys.stdin
+		file = sys.stdin
 	elif isinstance(file, basestring):
 		name = file
 	elif hasattr(file, "name"):
 		# Assume that 'file' is an open file
 		name = file.name
-		if not 'b' in file.mode:
-			raise ValueError('file must be opened in binary mode')
 
 	if name is not None:
 		if name.endswith('.gz'):
@@ -226,12 +212,12 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 	# No name available.
 	# and autodetect its type by reading from it.
 	for line in file:
-		if line.startswith(b'#'):
+		if line.startswith('#'):
 			# Skip comment lines (needed for csfasta)
 			continue
-		if line.startswith(b'>'):
+		if line.startswith('>'):
 			return fasta_reader(FileWithPrependedLine(file, line))
-		if line.startswith(b'@'):
+		if line.startswith('@'):
 			return fastq_reader(FileWithPrependedLine(file, line))
 	raise UnknownFileType("File is neither FASTQ nor FASTA.")
 
@@ -250,7 +236,7 @@ class FastaReader(object):
 		keep_linebreaks -- whether to keep the newline characters in the sequence
 		"""
 		if isinstance(file, basestring):
-			file = xopen(file, "rb")
+			file = xopen(file)
 		self.fp = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = False
@@ -262,22 +248,20 @@ class FastaReader(object):
 		# TODO this can be quadratic since += is used for the sequence string
 		"""
 		name = None
-		seq = bytes()
-		delim = b'\n' if PY3 else '\n'
-		recordstart = ord('>') if PY3 else '>'
+		seq = ''
 		for line in self.fp:
 			# strip() should also take care of DOS line breaks
 			line = line.strip()
-			if line and line[0] == recordstart:
+			if line and line[0] == '>':
 				if name is not None:
-					assert seq.find(delim) == -1
+					assert seq.find('\n') == -1
 					yield self.sequence_class(name, seq, None)
-				name = bytes_to_str(line[1:])
-				seq = bytes()
+				name = line[1:]
+				seq = ''
 			else:
 				seq += line
 		if name is not None:
-			assert seq.find(delim) == -1
+			assert seq.find('\n') == -1
 			yield self.sequence_class(name, seq, None)
 
 	def __enter__(self):
@@ -307,7 +291,7 @@ class FastqReader(object):
 		ColorspaceSequence.
 		"""
 		if isinstance(file, basestring):
-			file = xopen(file, "rb")
+			file = xopen(file)
 		self.fp = file
 		self.twoheaders = False
 		self.sequence_class = sequence_class
@@ -320,14 +304,14 @@ class FastqReader(object):
 		"""
 		for i, line in enumerate(self.fp):
 			if i % 4 == 0:
-				if not line.startswith(b'@'):
+				if not line.startswith('@'):
 					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
 				name = line.strip()[1:]
 			elif i % 4 == 1:
 				sequence = line.strip()
 			elif i % 4 == 2:
 				line = line.strip()
-				if not line.startswith(b'+'):
+				if not line.startswith('+'):
 					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
 				if len(line) > 1:
 					self.twoheaders = True
@@ -337,10 +321,10 @@ class FastqReader(object):
 							"({1!r} != {2!r}).\n"
 							"The second sequence description must be either empty "
 							"or equal to the first description.".format(
-								i+1, bytes_to_str(name), bytes_to_str(line.rstrip()[1:])))
+								i+1, name, line.rstrip()[1:]))
 			elif i % 4 == 3:
-				qualities = line.rstrip(b'\n\r')
-				yield self.sequence_class(bytes_to_str(name), sequence, qualities)
+				qualities = line.rstrip('\n\r')
+				yield self.sequence_class(name, sequence, qualities)
 
 	def __enter__(self):
 		if self.fp is None:
@@ -390,16 +374,10 @@ class FastaQualReader(object):
 		"""
 		# conversion dictionary: maps strings to the appropriate ASCII-encoded character
 		conv = dict()
-		if PY3:
-			for i in range(-5, 256 - 33):
-				conv[str(i).encode('ascii')] = i + 33
-			q2a = lambda x: bytes(x)
-		else:
-			for i in range(-5, 256 - 33):
-				conv[str(i)] = chr(i + 33)
-			q2a = lambda x: b''.join(x)
+		for i in range(-5, 256 - 33):
+			conv[str(i)] = chr(i + 33)
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
-			qualities = q2a([conv[value] for value in qualread.sequence.split()])
+			qualities = ''.join([conv[value] for value in qualread.sequence.split()])
 			if fastaread.name != qualread.name:
 				raise ValueError("The read names in the FASTA and QUAL file do not match ({0!r} != {1!r})".format(fastaread.name, qualread.name))
 			assert fastaread.name == qualread.name
