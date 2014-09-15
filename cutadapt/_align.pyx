@@ -77,14 +77,14 @@ cdef class Aligner:
 	cdef double max_error_rate
 	cdef int flags
 	cdef int degenerate
-	cdef str reference
+	cdef bytes reference
 
 	def __cinit__(self, str reference, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
 		self.m = len(reference)
 		self.column = <Entry*> PyMem_Malloc((self.m + 1) * sizeof(Entry))
 		if not self.column:
 			raise MemoryError()
-		self.reference = reference
+		self.reference = reference.encode('ascii')
 		self.degenerate = degenerate
 		self.flags = flags
 		self.max_error_rate = max_error_rate
@@ -98,7 +98,7 @@ cdef class Aligner:
 			if not mem:
 				raise MemoryError()
 			self.column = mem
-			self.reference = reference
+			self.reference = reference.encode('ascii')
 			self.m = len(reference)
 
 	def locate(self, str query):
@@ -115,11 +115,11 @@ cdef class Aligner:
 
 		The alignment itself is not returned.
 		"""
-		cdef str s1 = self.reference
-		cdef str s2 = query
-		cdef str ref = self.reference  # s1.   s2 = query.
-		cdef int n = len(query)
+		cdef char* s1 = self.reference
+		cdef bytes query_bytes = query.encode('ascii')
+		cdef char* s2 = query_bytes
 		cdef int m = self.m
+		cdef int n = len(query)
 		cdef Entry* column = self.column
 		cdef double max_error_rate = self.max_error_rate
 		cdef bint start_in_ref = self.flags & START_WITHIN_SEQ1
