@@ -434,6 +434,6 @@ class PairedSequenceReader(object):
 			if name2[-2:-1] == '/':
 				name2 = name2[:-2]
 			if name1 != name2:
-				raise FormatError("Reads are improperly paired. Read name '{}' in file 1 not equal to '{}' in file 2.".format(name1, name2))
+				raise FormatError("Reads are improperly paired. Read name '{0}' in file 1 not equal to '{1}' in file 2.".format(name1, name2))
 			yield (r1, r2)
 
