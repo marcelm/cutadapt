@@ -1,34 +1,54 @@
 Installation
 ============
 
+Quickstart
+----------
+
+The easiest way to install cutadapt is to use ``pip`` on the command line::
+
+    pip install --user cutadapt
+
+This will download the software from `PyPI (the Python packaging
+index) <https://pypi.python.org/pypi/cutadapt/>`_, and
+install the cutadapt binary into ``$HOME/.local/bin``. You can then run the
+program::
+
+    ~/.local/bin/cutadapt --help
+
+If you want to avoid typing the full path, add the directory
+``$HOME/.local/bin`` to your ``$PATH`` environment variable.
+
+If the above does not work, keep reading.
+
+
 Dependencies
 ------------
 
-cutadapt works with Python 2.6, 2.7, 3.3 and 3.4. Cutadapt runs fastest under
-Python 2.7. For installation from sources, a C compiler needs to be
+Cutadapt requires this software to be installed:
+* One of Python 2.6, 2.7, 3.3 and 3.4. Python 2.7 is a bit faster than the other
+  versions.
+* A C compiler.
+
+For installation from sources, a C compiler needs to be
 installed. The program has been developed and tested on Ubuntu.
 
 Installation
 ------------
 
-The easiest way to install cutadapt is via the ``pip`` command if that
-is available on your system::
-
-    pip install --user cutadapt
-
-This installs the cutadapt binary into ``$HOME/.local/bin``. Make sure
-that this directory is on your ``$PATH``.
-
 If you have already downloaded and unpacked the ``.tar.gz`` file, then
 installation is done like this (replace "python" with "python3" to
 install the Python 3 version)::
 
-
     python setup.py install --user
 
-If you get an error about a missing ``Python.h`` file, then make sure
-that the ``python-dev`` package is installed (or ``python3-dev`` for
-Python 3).
+If you get an error message::
+
+    error: command 'gcc' failed with exit status 1
+
+Then check the lines above. If it says something about a missing ``Python.h``
+file, then you need to install the Python development packages. The
+appropriate package is called ``python-dev`` in Ubuntu (or ``python3-dev``
+for Python 3).
 
 Use without installation
 ------------------------
