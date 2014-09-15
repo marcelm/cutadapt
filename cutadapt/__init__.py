@@ -15,7 +15,7 @@ modules with the following command:
 
     {} setup.py build_ext -i
 
-See the README file for alternative ways of installing the program.
+See the documentation for alternative ways of installing the program.
 
 The original error message follows.
 """.format(sys.executable))
