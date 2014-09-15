@@ -4,11 +4,9 @@ Installation
 Dependencies
 ------------
 
-cutadapt needs Python 2.6 or later (this includes Python 3). Python 2.6
-supported is not tested thoroughly and is also slower than later
-versions. For installation from sources, a C compiler needs to be
-installed. The program has been developed and tested on Ubuntu and
-OpenSuSE.
+cutadapt works with Python 2.6, 2.7, 3.3 and 3.4. Cutadapt runs fastest under
+Python 2.7. For installation from sources, a C compiler needs to be
+installed. The program has been developed and tested on Ubuntu.
 
 Installation
 ------------

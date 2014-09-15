@@ -284,8 +284,12 @@ Algorithm
 cutadapt uses a modified semi-global alignment algorithm. For speed, the
 algorithm is implemented as a Cython extension module in ``_align.pyx``.
 
-Cutadapt’s processing speed is currently not dominated by the alignment
-algorithm, but by parsing the input and writing the output.
+Cutadapt’s processing speed is not dominated by the alignment algorithm, but by
+parsing the input and writing the output.
+
+Details about the alignment algorithm are available in Chapter 2 of my PhD
+thesis `Algorithms and tools for the analysis of high throughput DNA sequencing
+data <http://hdl.handle.net/2003/31824>`_.
 
 Partial adapter matches
 -----------------------
@@ -310,6 +314,7 @@ When the allowed error rate is sufficiently high (set with parameter
 ``-e``), errors in the adapter sequence are allowed. For example,
 ``ADABTER`` (1 mismatch), ``ADAPTR`` (1 deletion), and ``ADAPPTER`` (1
 insertion) will all be recognized if the error rate is set to 0.15.
+
 
 Anchoring 5' adapters
 ---------------------
