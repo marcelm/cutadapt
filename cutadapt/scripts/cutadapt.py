@@ -129,7 +129,8 @@ def print_histogram(d, adapter_length, n, error_rate, errors):
 def print_adjacent_bases(bases, sequence):
 	"""
 	Print a summary of the bases preceding removed adapter sequences.
-	Print a warning if one of the bases is overrepresented.
+	Print a warning if one of the bases is overrepresented and there are
+	at least 20 preceding bases available.
 
 	Return whether a warning was printed.
 	"""
@@ -206,6 +207,9 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 		else:
 			name = "'{0}'".format(adapter.sequence)
 		print("Adapter {0}, length {1}, was trimmed {2} times.".format(name, len(adapter.sequence), total))
+		if total == 0:
+			print()
+			continue
 		if where == ANYWHERE:
 			print(total_front, "times, it overlapped the 5' end of a read")
 			print(total_back, "times, it overlapped the 3' end or was within the read")
