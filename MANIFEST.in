@@ -1,6 +1,12 @@
-include README.md
+# documentation
+include README.rst
+include CHANGES.rst
 include CITATION
 include LICENSE
+include doc/*.rst
+include doc/conf.py
+include doc/Makefile
+
 include cutadapt/_align.so
 include cutadapt/_align.c
 include cutadapt/_qualtrim.so
