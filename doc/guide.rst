@@ -109,14 +109,160 @@ order to specify that standard input or output should be used. For example::
 
     tail -n 4 input.fastq | cutadapt -a AACCGGTT - > output.fastq
 
-This is a contrived example, in which only the very last read in the input
-file is trimmed (since ``tail -n 4`` prints out only the last four lines of
-``input.fastq``).
+Since ``tail -n 4`` prints out only the last four lines of ``input.fastq``,
+cutadapt will work only on a single read.
 
-Note that if you want to have gzip-compressed output, you need to use the ``-o``
-option since cutadapt needs to know the file name of the output file.
+In most cases, you should probably use ``-`` at most once for an input file and
+at most once for an output file, in order not to get mixed output.
 
-.. note:: The documentation is currently being worked on. Text until here has been re-written.
+You cannot combine ``-`` and gzip compression since option since cutadapt needs
+to know the file name of the output or input file. Always use ``-o`` with
+an explicit name, for example, if you want to have a gzip-compressed output
+file.
+
+One last "trick" is to use ``/dev/null`` as an output file name. This special
+file discards everything you send into it. If you only want to see the
+statistics output, for example, and do not care about the trimmed reads at all,
+you could use something like this::
+
+    cutadapt -a AACCGGTT -o /dev/null input.fastq
+
+
+Adapter types
+=============
+
+Cutadapt supports trimming of four different kinds of adapters.
+
+3' adapters
+-----------
+
+A 3' adapter is a piece of DNA ligated to the 3' end of the DNA fragment you
+are interested in. The sequencer starts the sequencing process at the 5' end of
+the fragment. When the read length is longer than the length of the DNA
+fragment, then the sequencer proceeds into the adapter sequence. The final read
+that it outputs will then have a part of the adapter in the end. Or, if the adapter
+was short and the read length quite long, then the adapter will be somewhere
+within the read (followed by other bases).
+
+For example, assume your fragment of interest is *MYSEQUENCE* and the adapter is
+*ADAPTER*. Depending on the read length, you will get reads that look like this::
+
+    MYSEQUEN
+    MYSEQUENCEADAP
+    MYSEQUENCEADAPTER
+    MYSEQUENCEADAPTERSOMETHINGELSE
+
+.. note::
+    The documentation is currently being worked on. Text until here has
+    been re-written. Text below may be not in the correct order or incomplete.
+
+
+Partial adapter matches
+-----------------------
+
+Cutadapt correctly deals with partial adapter matches, and also with any
+trailing sequences after the adapter. As an example, suppose your
+adapter sequence is "ADAPTER" (specified via the ``-a`` or ``--adapter``
+command-line parameter). If you have these input sequences::
+
+    MYSEQUENCEADAPTER
+    MYSEQUENCEADAP
+    MYSEQUENCEADAPTERSOMETHINGELSE
+
+All of them will be trimmed to "MYSEQUENCE". If the sequence starts with
+an adapter, like this::
+
+    ADAPTERSOMETHING
+
+It will be empty after trimming.
+
+When the allowed error rate is sufficiently high (set with parameter
+``-e``), errors in the adapter sequence are allowed. For example,
+``ADABTER`` (1 mismatch), ``ADAPTR`` (1 deletion), and ``ADAPPTER`` (1
+insertion) will all be recognized if the error rate is set to 0.15.
+
+
+
+From the FAQ: Why does the -g option delete adapters even if they occur at the end or within the read?
+------------------------------------------------------------------------------------------------------
+
+The only difference between the ``-a`` and ``-g`` options is that ``-g`` finds
+the adapter anywhere within the read and removes everything *before* it. If you
+expect the read to begin with the adapter, then add the character ``^`` before
+the adapter sequence on the command line. For example::
+
+    cutadapt -g ^ADAPTER -o output.fastq input.fastq
+
+
+Anchoring 5' adapters
+---------------------
+
+If you specify an adapter with the ``-g`` (``--front``) parameter, the
+adapter may overlap the beginning of the read or occur anywhere within
+it. If it appears within the read, the sequence that precedes it will
+also be trimmed in addition to the adapter. For example, with
+``-g ADAPTER``, these sequences::
+
+    HELLOADAPTERTHERE
+    APTERTHERE
+
+will both be trimmed to ``THERE``. To avoid this, you can prefix the
+adapter with the character ``^``. This will restrict the search, forcing
+the adapter to be a prefix of the read. With ``-g ^ADAPTER``, only reads
+like this will be trimmed::
+
+    ADAPTERHELLO
+
+Allowing adapters anywhere
+--------------------------
+
+Cutadapt assumes that any adapter specified via the ``-a`` (or
+``--adapter``) parameter was ligated to the 3' end of the sequence. This
+is the correct assumption for at least the SOLiD and Illumina small RNA
+protocols and probably others. The assumption is enforced by the
+alignment algorithm, which only finds the adapter when its starting
+position is within the read. In other words, the 5' base of the adapter
+must appear within the read. The adapter and all bases following it are
+removed.
+
+If, on the other hand, your adapter can also be ligated to the 5' end
+(on purpose or by accident), you should tell cutadapt so by using the
+``-b`` (or ``--anywhere``) parameter. It will then use a slightly
+different alignment algorithm (so-called semiglobal alignment), which
+allows any type of overlap between the adapter and the sequence. In
+particular, the adapter may appear only partially in the beginning of
+the read, like this::
+
+    PTERMYSEQUENCE
+
+The decision which part of the read to remove is made as follows: If
+there is at least one base before the found adapter, then the adapter is
+considered to be a 3' adapter and the adapter itself and everything
+following it is removed. Otherwise, the adapter is considered to be a 5'
+adapter and it is removed from the read.
+
+Here are some examples, which may make this clearer (left: read, right:
+trimmed read)::
+
+    MYSEQUENCEADAPTER -> MYSEQUENCE (3' adapter)
+    MADAPTER -> M (3' adapter)
+    ADAPTERMYSEQUENCE -> MYSEQUENCE (5' adapter)
+    PTERMYSEQUENCE -> MYSEQUENCE (5' adapter)
+
+The regular algorithm (``-a``) would trim the first two examples in the
+same way, but trim the third to an empty sequence and trim the fourth
+not at all.
+
+The ``-b`` parameter currently does not work with color space data.
+
+
+
+
+
+
+
+
+
 
 
 By default, the output file contains all reads, including those that did
@@ -133,8 +279,38 @@ run::
 In particular, see the explanation for the different types of adapters
 that are supported.
 
+
+
 Trimming multiple adapters
 ==========================
+
+How does cutadapt decide which adapter to trim when multiple adapters are provided?
+-----------------------------------------------------------------------------------
+
+When multiple adapters are provided on the command line via the ``-a``, ``-b``
+or ``-g`` parameters, all adapters are first matched to the read.
+
+Adapter matches where the overlap length is too small or where the error rate is
+too high are removed from further consideration. Among the remaining matches,
+the criterion for deciding which match is best is the *number of matching
+bases*. If there is a tie, the first adapter wins. The order of adapters is the
+order in which they are given on the command line.
+
+Percentage identity would be another possible criterion, but the idea was to
+prefer long over short matches. For that, the absolute number of matching bases
+is more appropriate.
+
+
+Multiple adapters
+-----------------
+
+As many adapters as desired can be given to the program by using the
+``-a``, ``-b`` or ``-g`` in any combination, for example, five ``-a``
+adapters and two ``-g`` adapters. All adapters will be searched for, but
+only the best matching one will be trimmed from each read (but see the
+``--times`` option)::
+
+    cutadapt -b TGAGACACGCA -g AGGCACACAGGG input.fastq > output.fastq
 
 Adapters in FASTA files
 -----------------------
@@ -182,16 +358,6 @@ rate of 10%, write result to ``output.fa``::
 
     cutadapt -n 3 -a TGAGACACGCAACAGGGGAAAGGCAAGGCACACAGGGGATAGG input.fa > output.fa
 
-Multiple adapters
------------------
-
-As many adapters as desired can be given to the program by using the
-``-a``, ``-b`` or ``-g`` in any combination, for example, five ``-a``
-adapters and two ``-g`` adapters. All adapters will be searched for, but
-only the best matching one will be trimmed from each read (but see the
-``--times`` option)::
-
-    cutadapt -b TGAGACACGCA -g AGGCACACAGGG input.fastq > output.fastq
 
 Quality trimming
 ----------------
@@ -347,91 +513,6 @@ Details about the alignment algorithm are available in Chapter 2 of my PhD
 thesis `Algorithms and tools for the analysis of high throughput DNA sequencing
 data <http://hdl.handle.net/2003/31824>`_.
 
-Partial adapter matches
------------------------
-
-Cutadapt correctly deals with partial adapter matches, and also with any
-trailing sequences after the adapter. As an example, suppose your
-adapter sequence is "ADAPTER" (specified via the ``-a`` or ``--adapter``
-command-line parameter). If you have these input sequences::
-
-    MYSEQUENCEADAPTER
-    MYSEQUENCEADAP
-    MYSEQUENCEADAPTERSOMETHINGELSE
-
-All of them will be trimmed to "MYSEQUENCE". If the sequence starts with
-an adapter, like this::
-
-    ADAPTERSOMETHING
-
-It will be empty after trimming.
-
-When the allowed error rate is sufficiently high (set with parameter
-``-e``), errors in the adapter sequence are allowed. For example,
-``ADABTER`` (1 mismatch), ``ADAPTR`` (1 deletion), and ``ADAPPTER`` (1
-insertion) will all be recognized if the error rate is set to 0.15.
-
-
-Anchoring 5' adapters
----------------------
-
-If you specify an adapter with the ``-g`` (``--front``) parameter, the
-adapter may overlap the beginning of the read or occur anywhere within
-it. If it appears within the read, the sequence that precedes it will
-also be trimmed in addition to the adapter. For example, with
-``-g ADAPTER``, these sequences::
-
-    HELLOADAPTERTHERE
-    APTERTHERE
-
-will both be trimmed to ``THERE``. To avoid this, you can prefix the
-adapter with the character ``^``. This will restrict the search, forcing
-the adapter to be a prefix of the read. With ``-g ^ADAPTER``, only reads
-like this will be trimmed::
-
-    ADAPTERHELLO
-
-Allowing adapters anywhere
---------------------------
-
-Cutadapt assumes that any adapter specified via the ``-a`` (or
-``--adapter``) parameter was ligated to the 3' end of the sequence. This
-is the correct assumption for at least the SOLiD and Illumina small RNA
-protocols and probably others. The assumption is enforced by the
-alignment algorithm, which only finds the adapter when its starting
-position is within the read. In other words, the 5' base of the adapter
-must appear within the read. The adapter and all bases following it are
-removed.
-
-If, on the other hand, your adapter can also be ligated to the 5' end
-(on purpose or by accident), you should tell cutadapt so by using the
-``-b`` (or ``--anywhere``) parameter. It will then use a slightly
-different alignment algorithm (so-called semiglobal alignment), which
-allows any type of overlap between the adapter and the sequence. In
-particular, the adapter may appear only partially in the beginning of
-the read, like this::
-
-    PTERMYSEQUENCE
-
-The decision which part of the read to remove is made as follows: If
-there is at least one base before the found adapter, then the adapter is
-considered to be a 3' adapter and the adapter itself and everything
-following it is removed. Otherwise, the adapter is considered to be a 5'
-adapter and it is removed from the read.
-
-Here are some examples, which may make this clearer (left: read, right:
-trimmed read)::
-
-    MYSEQUENCEADAPTER -> MYSEQUENCE (3' adapter)
-    MADAPTER -> M (3' adapter)
-    ADAPTERMYSEQUENCE -> MYSEQUENCE (5' adapter)
-    PTERMYSEQUENCE -> MYSEQUENCE (5' adapter)
-
-The regular algorithm (``-a``) would trim the first two examples in the
-same way, but trim the third to an empty sequence and trim the fourth
-not at all.
-
-The ``-b`` parameter currently does not work with color space data.
 
 Interpreting the statistics output
 ==================================

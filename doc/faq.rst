@@ -19,28 +19,4 @@ trimmed.
 
 The default value for ``--overlap`` is 3.
 
-How does cutadapt decide which adapter to trim when multiple adapters are provided?
------------------------------------------------------------------------------------
 
-When multiple adapters are provided on the command line via the ``-a``, ``-b``
-or ``-g`` parameters, all adapters are first matched to the read.
-
-Adapter matches where the overlap length is too small or where the error rate is
-too high are removed from further consideration. Among the remaining matches,
-the criterion for deciding which match is best is the *number of matching
-bases*. If there is a tie, the first adapter wins. The order of adapters is the
-order in which they are given on the command line.
-
-Percentage identity would be another possible criterion, but the idea was to
-prefer long over short matches. For that, the absolute number of matching bases
-is more appropriate.
-
-Why does the -g option delete adapters even if they occur at the end or within the read?
-----------------------------------------------------------------------------------------
-
-The only difference between the ``-a`` and ``-g`` options is that ``-g`` finds
-the adapter anywhere within the read and removes everything *before* it. If you
-expect the read to begin with the adapter, then add the character ``^`` before
-the adapter sequence on the command line. For example::
-
-    cutadapt -g ^ADAPTER -o output.fastq input.fastq
