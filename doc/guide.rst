@@ -1,3 +1,4 @@
+========
 cutadapt
 ========
 
@@ -29,20 +30,94 @@ subfolder. Galaxy support was contributed by Lance Parsons.
 Basic usage
 ===========
 
-The basic command-line for cutadapt is::
+If you just want to trim a 3' adapter, the basic command-line for cutadapt is::
+
+    cutadapt -a AACCGGTT -o output.fastq input.fastq
+
+The sequence of the adapter is given with the ``-a`` option. Of course, you
+need to replace ``AACCGGTT`` with your actual adapter sequence. Reads are read
+from the input file ``input.fastq`` and written to the output file
+``output.fastq``.
+
+Cutadapt searches for the adapter in all reads and removes it when it finds it.
+All reads that were present in the input file will also be present in the output
+file, some of them trimmed, some of them not. Even reads that were trimmed
+entirely (because the adapter was found in the very beginning) are output. All
+of this can be changed with command-line options, explained further down.
+
+A report is printed after cutadapt has finished processing the reads.
+
+
+Input and output file formats
+-----------------------------
+
+Input files for cutadapt need to be in one the these formats:
+* FASTA (file name extensions: ``.fasta``, ``.fa``, ``.fna``, ``.csfasta``, ``.csfa``
+* FASTQ (extensions: ``.fastq``, ``.fq``)
+* A pair of a FASTA file and a ``.(cs)qual`` file
+The latter format is (or was) used for colorspace data from the SOLiD
+instruments.
+
+The input file format is recognized from the file name extension (those given in
+parentheses in the list above). You can also explicitly specify which format
+the input has by using the ``--format`` option.
+
+The output format is the same as the input format, except for the FASTA/QUAL
+pairs -- those will always be converted to FASTQ. Also, cutadapt does not check
+the output file name: If you input FASTQ data, but use ``-o output.fasta``, then
+the output file will actually be in FASTQ format.
+
+
+Compressed input and output
+---------------------------
+
+Cutadapt supports compressed input and output files. Whether an input file
+needs to be decompressed or an output file needs to be compressed is detected
+automatically by inspecting the file name: If it ends in ``.gz``, then gzip
+compression is assumed. You can therefore run cutadapt like this and it works
+as expected::
+
+    cutadapt -a AACCGGTT -o output.fastq.gz input.fastq.gz
+
+Note that the all of cutadapt's options that expect a file name support this.
+
+If your Python installation includes support for bzip2 compression, then
+bzip2-compressed files are also supported and recognized by their
+extension ``.bz2``.
+
+(If you are interested in LZMA compression (``.xz`` and ``.lzma``), contact me.)
+
+
+Standard input and output
+-------------------------
+
+If no output file is specified via the ``-o`` option, then the output is sent to
+the standard output stream.
+
+Instead of the example command line from above, you can therefore also write::
 
     cutadapt -a AACCGGTT input.fastq > output.fastq
 
-The adapter sequence is given with the ``-a`` option. Replace
-``AACCGGTT`` with your actual adapter sequence.
+There is one difference in behavior if you use cutadapt without ``-o``: The
+report is sent to the standard error stream instead of standard output. You
+can redirect it to a file like this::
 
-``input.fastq`` is a file with reads. The result will be written to
-standard output. Use redirection with ``>`` (or the ``-o`` option) to
-write the output to a file.
+    cutadapt -a AACCGGTT input.fastq > output.fastq 2> report.txt
 
-cutadapt prints out a report after it has finished processing the reads.
-If you use ``-o``, the report is sent to standard output and to stderr
-otherwise.
+Anywhere cutadapt expects a file name, you can also write a dash (``-``) in
+order to specify that standard input or output should be used. For example::
+
+    tail -n 4 input.fastq | cutadapt -a AACCGGTT - > output.fastq
+
+This is a contrived example, in which only the very last read in the input
+file is trimmed (since ``tail -n 4`` prints out only the last four lines of
+``input.fastq``).
+
+Note that if you want to have gzip-compressed output, you need to use the ``-o``
+option since cutadapt needs to know the file name of the output file.
+
+.. note:: The documentation is currently being worked on. Text until here has been re-written.
+
 
 By default, the output file contains all reads, including those that did
 not contain an adapter. (See also the ``--discard`` option.)
@@ -50,35 +125,16 @@ not contain an adapter. (See also the ``--discard`` option.)
 The following examples refer to basespace reads. See the "Colorspace"
 section on how to use cutadapt with SOLiD reads.
 
-Only a few command-line options are explained in this document. To see
-all options, run::
+Not all command-line options are explained in this document. To see all options,
+run::
 
     cutadapt --help
 
 In particular, see the explanation for the different types of adapters
 that are supported.
 
-Trimming FASTQ files
---------------------
-
-Assuming your sequencing data is available as a FASTQ file, use this
-command line::
-
-    cutadapt -a ADAPTER-SEQUENCE input.fastq > output.fastq
-
-gz-compressed input is supported::
-
-    cutadapt -a ADAPTER-SEQUENCE input.fastq.gz > output.fastq
-
-gz-compressed output is also supported, but the -o parameter (output
-file) needs to be used since gzip compression is auto-detected by inspecting
-the file name::
-
-    cutadapt -a ADAPTER-SEQUENCE -o output.fastq.gz input.fastq.gz
-
-If your Python installation includes support for bzip2 compression, then
-bzip2-compressed files are also supported and recognized by their
-extension ``.bz2``.
+Trimming multiple adapters
+==========================
 
 Adapters in FASTA files
 -----------------------
