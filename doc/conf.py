@@ -53,6 +53,7 @@ copyright = u'2010-2014, Marcel Martin'
 # built documents.
 
 from cutadapt import __version__
+
 #
 # The short X.Y version.
 version = __version__
@@ -103,6 +104,13 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'default'
+try:
+	from better import better_theme_path
+	html_theme_path = [better_theme_path]
+	html_theme = 'better'
+except ImportError:
+	pass
+
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
