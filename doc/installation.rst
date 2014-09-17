@@ -1,3 +1,4 @@
+============
 Installation
 ============
 
@@ -25,7 +26,8 @@ Dependencies
 ------------
 
 Cutadapt requires this software to be installed:
-* One of Python 2.6, 2.7, 3.3 and 3.4. Python 2.7 is a bit faster than the other
+
+* One of Python 2.6, 2.7, 3.3 or 3.4. Python 2.7 is a bit faster than the other
   versions.
 * A C compiler.
 
@@ -45,7 +47,7 @@ If you get an error message::
 
     error: command 'gcc' failed with exit status 1
 
-Then check the lines above. If it says something about a missing ``Python.h``
+Then check the entire error message. If it says something about a missing ``Python.h``
 file, then you need to install the Python development packages. The
 appropriate package is called ``python-dev`` in Ubuntu (or ``python3-dev``
 for Python 3).

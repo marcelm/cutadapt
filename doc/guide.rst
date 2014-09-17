@@ -1,31 +1,6 @@
-========
-cutadapt
-========
-
-cutadapt removes adapter sequences from DNA high-throughput sequencing
-data. This is necessary when the reads are longer than the molecule that
-is sequenced, such as in microRNA data.
-
-cutadapt is implemented in Python. It comes with an extension module
-written in Cython that implements the alignment algorithm.
-
-License
--------
-
-cutadapt is licensed under the MIT license (see the file ``LICENSE``).
-
-Project homepage
-----------------
-
-See http://code.google.com/p/cutadapt/ . Please use the Google code
-issue tracker for bug reports and feature requests.
-
-Galaxy
-------
-
-If you want to use cutadapt within the web-based Galaxy platform
-(http://galaxy.psu.edu/), please see the README file in the galaxy/
-subfolder. Galaxy support was contributed by Lance Parsons.
+==========
+User guide
+==========
 
 Basic usage
 ===========
@@ -52,9 +27,11 @@ Input and output file formats
 -----------------------------
 
 Input files for cutadapt need to be in one the these formats:
-* FASTA (file name extensions: ``.fasta``, ``.fa``, ``.fna``, ``.csfasta``, ``.csfa``
+
+* FASTA (file name extensions: ``.fasta``, ``.fa``, ``.fna``, ``.csfasta``, ``.csfa``)
 * FASTQ (extensions: ``.fastq``, ``.fq``)
 * A pair of a FASTA file and a ``.(cs)qual`` file
+
 The latter format is (or was) used for colorspace data from the SOLiD
 instruments.
 
@@ -92,9 +69,8 @@ Standard input and output
 -------------------------
 
 If no output file is specified via the ``-o`` option, then the output is sent to
-the standard output stream.
-
-Instead of the example command line from above, you can therefore also write::
+the standard output stream. Instead of the example command line from above, you
+can therefore also write::
 
     cutadapt -a AACCGGTT input.fastq > output.fastq
 
@@ -109,8 +85,8 @@ order to specify that standard input or output should be used. For example::
 
     tail -n 4 input.fastq | cutadapt -a AACCGGTT - > output.fastq
 
-Since ``tail -n 4`` prints out only the last four lines of ``input.fastq``,
-cutadapt will work only on a single read.
+The ``tail -n 4`` prints out only the last four lines of ``input.fastq``, which
+are then piped into cutadapt. Thus, cutadapt will work only on a single read.
 
 In most cases, you should probably use ``-`` at most once for an input file and
 at most once for an output file, in order not to get mixed output.
@@ -500,20 +476,6 @@ This is an AB SOLiD adapter (in color space) used in the SREK protocol::
 
     330201030313112312
 
-Algorithm
-=========
-
-cutadapt uses a modified semi-global alignment algorithm. For speed, the
-algorithm is implemented as a Cython extension module in ``_align.pyx``.
-
-Cutadapt’s processing speed is not dominated by the alignment algorithm, but by
-parsing the input and writing the output.
-
-Details about the alignment algorithm are available in Chapter 2 of my PhD
-thesis `Algorithms and tools for the analysis of high throughput DNA sequencing
-data <http://hdl.handle.net/2003/31824>`_.
-
-
 Interpreting the statistics output
 ==================================
 
@@ -621,128 +583,63 @@ consecutive tabs within a line. Also, in the current version, when the
 ``--times`` option is set to a value other than 1 (the default value),
 multiple lines are written to the info file for each read.
 
-Colorspace
-==========
 
-Cutadapt was designed to work with colorspace reads from the ABi SOLiD
-sequencer. Colorspace trimming is activated by the ``--colorspace``
-option (or use ``-c`` for short). The input reads can be given either:
+Details about the alignment algorithm
+=====================================
 
--  in a FASTA file
--  in a FASTQ file
--  in a ``.csfasta`` and a ``.qual`` file (this is the native SOLiD
-   format).
+Since the publication of the `EMBnet journal application note about
+cutadapt <http://dx.doi.org/10.14806/ej.17.1.200>`_, the alignment algorithm
+used for finding adapters has changed significantly. This new algorithm is
+described in this section.
+An even more detailed description of the algorithm is available in Chapter 2
+of my PhD thesis `Algorithms and tools for the analysis of high-throughput DNA
+sequencing data <http://hdl.handle.net/2003/31824>`_.
 
-In all cases, the colors must be represented by the characters 0, 1, 2,
-3. Example input files are in the cutadapt distribution at
-``tests/data/solid.*``. The ``.csfasta``/``.qual`` file format is
-automatically assumed if two input files are given to cutadapt.
+The algorithm is based on semiglobal alignment, also called free-shift,
+ends-free or overlap alignment.
 
-In colorspace mode, the adapter sequences given to the ``-a``, ``-b``
-and ``-g`` options can be given both as colors or as nucleotides. If
-given as nucleotides, they will automatically be converted to
-colorspace. For example, to trim an adapter from ``solid.csfasta`` and
-``solid.qual``, use this command-line::
+.. note:: Still working on this section.
 
-    cutadapt -c -a CGCCTTGGCCGTACAGCAG solid.csfasta solid.qual > output.fastq
+The new alignment algorithm checks the error rate while aligning and only
+reports alignments that do not have too many errors.
 
-In case you know the colorspace adapter sequence, you can also write
-``330201030313112312`` instead of ``CGCCTTGGCCGTACAGCAG`` and the result
-is the same.
+maximizing matches -- example: read TCGTATGCCCTCC and adapter TCGTATGCCGTCTTC, max. error rate 20%.
 
-Ambiguity in colorspace
------------------------
+Here is the alignment that one would expect:
 
-The ambiguity of colorspace encoding leads to some effects to be aware
-of when trimming 3' adapters from colorspace reads. For example, when
-trimming the adapter ``AACTC``, cutadapt searches for its
-colorspace-encoded version ``0122``. But also ``TTGAG``, ``CCAGA`` and
-``GGTCT`` have an encoding of ``0122``. This means that effectively four
-different adapter sequences are searched and trimmed at the same time.
-There is no way around this, unless the decoded sequence were available,
-but that is usually only the case after read mapping.
+TCGTATGCCCTCC   (read)
+=========X==X
+TCGTATGCCGTCTTC (adapter)
 
-The effect should usually be quite small. The number of false positives
-is multiplied by four, but with a sufficiently large overlap (3 or 4 is
-already enough), this is still only around 0.2 bases lost per read on
-average. If inspecting k-mer frequencies or using small overlaps, you
-need to be aware of the effect, however.
+But it turns out that the actual alignment that is found is this one:
 
-Double-encoding, BWA and MAQ
-----------------------------
+TCGTATGCCGTCTTC
+=========X==XX=
+TCGTATGCCCTC--C
 
-The read mappers MAQ and BWA (and possibly others) need their colorspace
-input reads to be in a so-called "double encoding". This simply means
-that they cannot deal with the characters 0, 1, 2, 3 in the reads, but
-require that the letters A, C, G, T be used for colors. For example, the
-colorspace sequence ``0011321`` would be ``AACCTGC`` in double-encoded
-form. This is not the same as conversion to basespace! The read is still
-in colorspace, only letters are used instead of digits. If that sounds
-confusing, that is because it is.
+Since it has length 15 and contains three errors, the error rate is 3/15=20%.
 
-Note that MAQ is unmaintained and should not be used in new projects.
+To understand why that alignment was chosen, one needs to know that cutadapt
+doesn't really care about the actual number of errors as long as the alignment
+has not more errors than the maximum error rate allows (20% in your case). The
+alignment algorithm doesn't try to find an alignment with few errors, but
+instead it tries to find one with many matches. And in this case, the first
+alignment has 11 matches, and the second one has 12.
 
-BWA’s colorspace support was dropped in versions more recent than 0.5.9,
-but that version works well.
+This is sometimes a bit surprising, but consistent with the way the algorithm
+was designed to behave.
 
-When you want to trim reads that will be mapped with BWA or MAQ, you can
-use the ``--bwa`` option, which enables colorspace mode (``-c``),
-double-encoding (``-d``), primer trimming (``-t``), all of which are
-required for BWA, in addition to some other useful options.
+As an explanation, the problem lies in the maximum error rate:
+Users should be able to specify that as a parameter because it is quite easy to
+understand.
+The problem then is that one cannot optimize for 'as few errors as possible'
+since an alignment in which the read and the adapter do not overlap at all is
+always optimal (since it has zero errors). Typically, this is solved by using
+alignment scores, which are not as intuitive.
+Instead, the number of matches is optimized, but still under the constraint that
+the actual error rate may not go above the specified maximum error rate.
 
-The ``--maq`` option is an alias for ``--bwa``.
-
-Colorspace examples
--------------------
-
-To cut an adapter from SOLiD data given in ``solid.csfasta`` and
-``solid.qual``, to produce MAQ- and BWA-compatible output, allow the
-default of 10% errors and write the resulting FASTQ file to
-output.fastq::
-
-    cutadapt --bwa -a CGCCTTGGCCGTACAGCAG solid.csfasta solid.qual > output.fastq
-
-Instead of redirecting standard output with ``>``, the ``-o`` option can
-be used. This also shows that you can give the adapter in colorspace and
-how to use a different error rate::
-
-    cutadapt --bwa -e 0.15 -a 330201030313112312 -o output.fastq solid.csfasta solid.qual
-
-This does the same as above, but produces BFAST-compatible output,
-strips the \_F3 suffix from read names and adds the prefix "abc:" to
-them::
-
-    cutadapt -c -e 0.15 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
-
-Bowtie
-------
-
-Quality values of colorspace reads are sometimes negative. Bowtie gets
-confused and prints this message:
-
-    Encountered a space parsing the quality string for read xyz
-
-BWA also has a problem with such data. Cutadapt therefore converts
-negative quality values to zero in colorspace data. Use the option
-``--no-zero-cap`` to turn this off.
-
-To Do / Ideas
-=============
-
--  show average error rate
--  In color space and probably also for Illumina data, gapped alignment
-   is not necessary
--  use ``str.format`` instead of ``%``
--  allow to change scores at runtime (using command-line parameters)
--  multi-threading
--  ``--progress``
--  run pylint, pychecker
--  length histogram
--  refactor read\_sequences (use classes)
--  put write\_read into a Fast(a\|q)Writer class?
--  allow .txt input/output
--  check whether input is FASTQ although -f fasta is given
--  close on StopIteration
--  search for adapters in the order in which they are given on the
-   command line
--  more tests for the alignment algorithm
+One other important point to note is that this particularity doesn't influence
+the trimming result: Try to run cutadapt with the maximum error rate reduced to
+0.16. This prevents the second alignment with 3 errors to be found and suddenly
+the reported number of errors in the info file is down to 2.
