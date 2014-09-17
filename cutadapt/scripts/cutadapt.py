@@ -268,6 +268,11 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 		return seqio.SequenceReader(seqfilename, colorspace, fileformat)
 
 
+# TODO
+# convert this into something that gets a read and outputs it to the appropriate file
+# (handle also trimmed output and untrimmed output here)
+# get rid of discard_trimmed and discard_untrimmed variables, just allow 
+# untrimmed_output and trimmed_output to be None
 class ReadFilter(object):
 	"""Filter reads according to length and according to whether any adapter matches."""
 
@@ -508,7 +513,7 @@ def process_paired_reads(paired_reader, modifiers,
 	
 	Note that all trimming is only done on the first read of each pair!
 
-	Return a tuple (number_of_processed_reads, number_of_processed_basepairs)
+	Return a Statistics object.
 	"""
 	n = 0  # no. of processed reads
 	total1_bp = 0
@@ -541,6 +546,7 @@ def process_paired_reads(paired_reader, modifiers,
 
 	return Statistics(total_bp=total1_bp, n=n, quality_trimmed_bases=qtrimmed(modifiers))
 
+
 def parse_adapter_name(seq):
 	"""
 	Parse an adapter given as 'name=adapt' into 'name' and 'adapt'.
@@ -559,7 +565,7 @@ def gather_adapters(back, anywhere, front):
 	"""
 	Yield (name, seq, where) tuples from which Adapter instances can be built.
 	This generator deals with the notation for anchored 5' adapters and also
-	understands the file: syntax for reading adapters from an external FASTA
+	understands the ``file:`` syntax for reading adapters from an external FASTA
 	file.
 	"""
 	for adapter_list, where in ((back, BACK), (anywhere, ANYWHERE), (front, FRONT)):
