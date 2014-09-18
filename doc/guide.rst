@@ -91,10 +91,10 @@ are then piped into cutadapt. Thus, cutadapt will work only on a single read.
 In most cases, you should probably use ``-`` at most once for an input file and
 at most once for an output file, in order not to get mixed output.
 
-You cannot combine ``-`` and gzip compression since option since cutadapt needs
-to know the file name of the output or input file. Always use ``-o`` with
-an explicit name, for example, if you want to have a gzip-compressed output
-file.
+You cannot combine ``-`` and gzip compression since cutadapt needs to know the 
+file name of the output or input file. if you want to have a gzip-compressed 
+output file, use ``-o`` with
+an explicit name.
 
 One last "trick" is to use ``/dev/null`` as an output file name. This special
 file discards everything you send into it. If you only want to see the
@@ -107,18 +107,27 @@ you could use something like this::
 Adapter types
 =============
 
-Cutadapt supports trimming of four different kinds of adapters.
+Cutadapt supports trimming of four different kinds of adapters:
+
+======================== ===================
+Adapter type             Command-line option
+======================== ===================
+3' adapter               ``-a ADAPTER``
+5' adapter               ``-g ADAPTER``
+anchored 5' adapter      ``-g ^ADAPTER``
+3' or 5' (both possible) ``-b ADAPTER``
+======================== ===================
+
 
 3' adapters
 -----------
 
 A 3' adapter is a piece of DNA ligated to the 3' end of the DNA fragment you
 are interested in. The sequencer starts the sequencing process at the 5' end of
-the fragment. When the read length is longer than the length of the DNA
-fragment, then the sequencer proceeds into the adapter sequence. The final read
-that it outputs will then have a part of the adapter in the end. Or, if the adapter
-was short and the read length quite long, then the adapter will be somewhere
-within the read (followed by other bases).
+the fragment and sequences into the adapter if the read length is large enough.
+The read that it outputs will then have a part of the adapter in the 
+end. Or, if the adapter was short and the read length quite long, then the 
+adapter will be somewhere within the read (followed by other bases).
 
 For example, assume your fragment of interest is *MYSEQUENCE* and the adapter is
 *ADAPTER*. Depending on the read length, you will get reads that look like this::
@@ -128,29 +137,33 @@ For example, assume your fragment of interest is *MYSEQUENCE* and the adapter is
     MYSEQUENCEADAPTER
     MYSEQUENCEADAPTERSOMETHINGELSE
 
+Use cutadapt's ``-a ADAPTER`` option to remove this type of adapter. This will be
+the result::
+
+    MYSEQUEN
+    MYSEQUENCE
+    MYSEQUENCE
+    MYSEQUENCE
+
+As can be seen, cutadapt correctly deals with partial adapter matches, and also with any
+trailing sequences after the adapter. Cutadapt deals with 3' adapters by removing the adapter
+itself and any sequence that may follow. If the sequence starts with
+an adapter, like this::
+
+    ADAPTERSOMETHING
+
+Then it will be empty after trimming. Note that, by default, empty reads are not discarded and will appear in the output.
+
+
+
+
 .. note::
     The documentation is currently being worked on. Text until here has
     been re-written. Text below may be not in the correct order or incomplete.
 
 
-Partial adapter matches
------------------------
-
-Cutadapt correctly deals with partial adapter matches, and also with any
-trailing sequences after the adapter. As an example, suppose your
-adapter sequence is "ADAPTER" (specified via the ``-a`` or ``--adapter``
-command-line parameter). If you have these input sequences::
-
-    MYSEQUENCEADAPTER
-    MYSEQUENCEADAP
-    MYSEQUENCEADAPTERSOMETHINGELSE
-
-All of them will be trimmed to "MYSEQUENCE". If the sequence starts with
-an adapter, like this::
-
-    ADAPTERSOMETHING
-
-It will be empty after trimming.
+Error-tolerant adapter finding
+------------------------------
 
 When the allowed error rate is sufficiently high (set with parameter
 ``-e``), errors in the adapter sequence are allowed. For example,
