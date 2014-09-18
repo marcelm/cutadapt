@@ -613,6 +613,22 @@ ends-free or overlap alignment.
 
 .. note:: Still working on this section.
 
+
+The alignment uses unit costs, which means that mismatches, insertions and deletions are
+counted as one error.
+
+
+An optimal alignment fulfills all of these criteria:
+
+- its error_rate is at most max_error_rate
+- Among those alignments with error_rate <= max_error_rate, the alignment contains
+  a maximal number of matches (there is no alignment with more matches).
+- If there are multiple alignments with the same no. of matches, then one that
+  has minimal no. of errors is chosen.
+- If there are still multiple candidates, choose the alignment that starts at the
+  leftmost position within the read.
+
+
 The new alignment algorithm checks the error rate while aligning and only
 reports alignments that do not have too many errors.
 
