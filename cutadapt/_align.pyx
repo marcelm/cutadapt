@@ -1,4 +1,5 @@
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
+
 DEF START_WITHIN_SEQ1 = 1
 DEF START_WITHIN_SEQ2 = 2
 DEF STOP_WITHIN_SEQ1 = 4
@@ -59,11 +60,14 @@ cdef class Aligner:
 	The error rate is: errors / length where length is (stop1 - start1).
 
 	An optimal alignment fulfills all of these criteria:
+
 	- its error_rate is at most max_error_rate
 	- Among those alignments with error_rate <= max_error_rate, the alignment contains
-	a maximal number of matches (there is no alignment with more matches).
+	  a maximal number of matches (there is no alignment with more matches).
 	- If there are multiple alignments with the same no. of matches, then one that
-	has minimal no. of errors is chosen.
+	  has minimal no. of errors is chosen.
+	- If there are still multiple candidates, choose the alignment that starts at the
+	  leftmost position within the read.
 
 	The alignment itself is not returned, only the tuple
 	(start1, stop1, start2, stop2, matches, errors), where the first four fields have the
@@ -254,20 +258,19 @@ cdef class Aligner:
 			# TODO if last is -1, can we stop searching?
 			if last < m:
 				last += 1
-			else:
-				# Found. If requested, find best match in last row
-				if stop_in_query:
-					# length of the aligned part of string1
-					length = m + min(column[m].origin, 0)
-					cost = column[m].cost
-					matches = column[m].matches
-					if cost <= length * max_error_rate and (matches > best_matches or (matches == best_matches and cost < best_cost)):
-						# update
-						best_matches = matches
-						best_cost = cost
-						best_origin = column[m].origin
-						best_i = m
-						best_j = j
+			elif stop_in_query:
+				# Found a match. If requested, find best match in last row.
+				# length of the aligned part of string1
+				length = m + min(column[m].origin, 0)
+				cost = column[m].cost
+				matches = column[m].matches
+				if cost <= length * max_error_rate and (matches > best_matches or (matches == best_matches and cost < best_cost)):
+					# update
+					best_matches = matches
+					best_cost = cost
+					best_origin = column[m].origin
+					best_i = m
+					best_j = j
 			# column finished
 
 		if max_n == n and stop_in_ref:
