@@ -281,9 +281,9 @@ class ColorspaceAdapter(Adapter):
 			return read[match.rstop:]
 		base_after_adapter = colorspace.DECODE[self.nucleotide_sequence[-1:] + color_after_adapter]
 		new_first_color = colorspace.ENCODE[read.primer + base_after_adapter]
-		seq = new_first_color + read.sequence[(match.rstop + 1):]
-		qual = read.qualities[match.rstop:] if read.qualities else None
-		return ColorspaceSequence(read.name, seq, qual, read.primer)
+		read.sequence = new_first_color + read.sequence[(match.rstop + 1):]
+		read.qualities = read.qualities[match.rstop:] if read.qualities else None
+		return read
 
 	def _trimmed_back(self, match):
 		"""Return a trimmed read"""
@@ -291,8 +291,7 @@ class ColorspaceAdapter(Adapter):
 		adjusted_rstart = max(match.rstart - 1, 0)
 		self.lengths_back[len(match.read) - adjusted_rstart] += 1
 		self.errors_back[len(match.read) - adjusted_rstart][match.errors] += 1
-		read = match.read[:adjusted_rstart]
-		return read
+		return match.read[:adjusted_rstart]
 
 	def __repr__(self):
 		return '<ColorspaceAdapter(sequence={0!r}, where={1})>'.format(self.sequence, self.where)

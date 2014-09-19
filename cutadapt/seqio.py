@@ -19,11 +19,12 @@ def _shorten(s, n=20):
 class Sequence(object):
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
-	def __init__(self, name, sequence, qualities=None, trimmed=False):
+	def __init__(self, name, sequence, qualities=None, twoheaders=False, trimmed=False):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
+		self.twoheaders = twoheaders
 		self.trimmed = trimmed
 		if qualities is not None:
 			if len(qualities) != len(sequence):
@@ -33,8 +34,12 @@ class Sequence(object):
 
 	def __getitem__(self, key):
 		"""slicing"""
-		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None,
-		    trimmed=self.trimmed)
+		return self.__class__(
+			self.name,
+			self.sequence[key],
+			self.qualities[key] if self.qualities is not None else None,
+		    self.twoheaders,
+		    self.trimmed)
 
 	def __repr__(self):
 		qstr = ''
@@ -53,14 +58,14 @@ class Sequence(object):
 	def __ne__(self, other):
 		return not self.__eq__(other)
 
-	def write(self, outfile, twoheaders=False):
+	def write(self, outfile):
 		if self.qualities is not None:
 			s = '@' + self.name + '\n' + self.sequence + '\n+'
-			if twoheaders:
+			if self.twoheaders:
 				s += self.name
 			s += '\n' + self.qualities + '\n'
 		else:
-			s = '>' + name + '\n' + self.sequence + '\n'
+			s = '>' + self.name + '\n' + self.sequence + '\n'
 		outfile.write(s)
 
 
@@ -71,8 +76,7 @@ except ImportError:
 
 
 class ColorspaceSequence(Sequence):
-
-	def __init__(self, name, sequence, qualities, primer=None, trimmed=False):
+	def __init__(self, name, sequence, qualities, primer=None, twoheaders=False, trimmed=False):
 		# In colorspace, the first character is the last nucleotide of the primer base
 		# and the second character encodes the transition from the primer base to the
 		# first real base of the read.
@@ -81,7 +85,7 @@ class ColorspaceSequence(Sequence):
 			sequence = sequence[1:]
 		else:
 			self.primer = primer
-		super(ColorspaceSequence, self).__init__(name, sequence, qualities, trimmed)
+		super(ColorspaceSequence, self).__init__(name, sequence, qualities, twoheaders, trimmed)
 		if not self.primer in ('A', 'C', 'G', 'T'):
 			raise ValueError("primer base is {0!r}, but it should be one of A, C, G, T".format(self.primer))
 		if qualities is not None and len(self.sequence) != len(qualities):
@@ -97,12 +101,18 @@ class ColorspaceSequence(Sequence):
 		return '<ColorspaceSequence(name={0!r}, primer={1!r}, sequence={2!r}{3})>'.format(_shorten(self.name), self.primer, _shorten(self.sequence), qstr)
 
 	def __getitem__(self, key):
-		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None, self.primer)
+		return self.__class__(
+			self.name,
+			self.sequence[key],
+			self.qualities[key] if self.qualities is not None else None,
+			self.primer,
+			self.twoheaders,
+			self.trimmed)
 
-	def write(self, outfile, twoheaders=False):
+	def write(self, outfile):
 		if self.qualities is not None:
 			s = '@' + self.name + '\n' + self.primer + self.sequence + '\n+'
-			if twoheaders:
+			if self.twoheaders:
 				s += self.name
 			s += '\n' + self.qualities + '\n'
 		else:
@@ -110,9 +120,9 @@ class ColorspaceSequence(Sequence):
 		outfile.write(s)
 
 
-def sra_colorspace_sequence(name, sequence, qualities):
+def sra_colorspace_sequence(name, sequence, qualities, twoheaders):
 	"""Factory for an SRA colorspace sequence (which has one quality value too many)"""
-	return ColorspaceSequence(name, sequence, qualities[1:])
+	return ColorspaceSequence(name, sequence, qualities[1:], twoheaders=twoheaders)
 
 
 class FormatError(Exception):
@@ -293,7 +303,6 @@ class FastqReader(object):
 		if isinstance(file, basestring):
 			file = xopen(file)
 		self.fp = file
-		self.twoheaders = False
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
@@ -314,7 +323,7 @@ class FastqReader(object):
 				if not line.startswith('+'):
 					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
 				if len(line) > 1:
-					self.twoheaders = True
+					twoheaders = True
 					if not line[1:] == name:
 						raise FormatError(
 							"At line {0}: Sequence descriptions in the FASTQ file do not match "
@@ -322,9 +331,11 @@ class FastqReader(object):
 							"The second sequence description must be either empty "
 							"or equal to the first description.".format(
 								i+1, name, line.rstrip()[1:]))
+				else:
+					twoheaders = False
 			elif i % 4 == 3:
 				qualities = line.rstrip('\n\r')
-				yield self.sequence_class(name, sequence, qualities)
+				yield self.sequence_class(name, sequence, qualities, twoheaders=twoheaders)
 
 	def __enter__(self):
 		if self.fp is None:

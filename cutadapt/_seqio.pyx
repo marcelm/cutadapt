@@ -27,12 +27,14 @@ cdef class Sequence(object):
 		public str sequence
 		public str qualities
 		public bint trimmed
+		public bint twoheaders
 
-	def __init__(self, str name, str sequence, str qualities=None, bint trimmed=False):
+	def __init__(self, str name, str sequence, str qualities=None, bint twoheaders=False, bint trimmed=False):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
+		self.twoheaders = twoheaders
 		self.trimmed = trimmed
 		if qualities is not None:
 			if len(qualities) != len(sequence):
@@ -42,7 +44,12 @@ cdef class Sequence(object):
 
 	def __getitem__(self, key):
 		"""slicing"""
-		return self.__class__(self.name, self.sequence[key], self.qualities[key] if self.qualities is not None else None, self.trimmed)
+		return self.__class__(
+			self.name,
+			self.sequence[key],
+			self.qualities[key] if self.qualities is not None else None,
+			self.twoheaders,
+			self.trimmed)
 
 	def __repr__(self):
 		qstr = ''
@@ -65,10 +72,10 @@ cdef class Sequence(object):
 		else:
 			raise NotImplementedError()
 
-	def write(self, outfile, bint twoheaders=False):
+	def write(self, outfile):
 		if self.qualities is not None:
 			s = '@' + self.name + '\n' + self.sequence + '\n+'
-			if twoheaders:
+			if self.twoheaders:
 				s += self.name
 			s += '\n' + self.qualities + '\n'
 		else:
@@ -91,7 +98,6 @@ class FastqReader(object):
 		if isinstance(file, basestring):
 			file = xopen(file, 'r')
 		self.fp = file
-		self.twoheaders = False
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
@@ -102,6 +108,7 @@ class FastqReader(object):
 		"""
 		cdef int i = 0
 		cdef str line, name, qualities, sequence
+		cdef bint twoheaders
 
 		for line in self.fp:
 			if i % 4 == 0:
@@ -115,7 +122,7 @@ class FastqReader(object):
 				if not line.startswith('+'):
 					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
 				if len(line) > 1:
-					self.twoheaders = True
+					twoheaders = True
 					if not line[1:] == name:
 						raise FormatError(
 							"At line {0}: Sequence descriptions in the FASTQ file don't match "
@@ -123,9 +130,11 @@ class FastqReader(object):
 							"The second sequence description must be either empty "
 							"or equal to the first description.".format(i+1,
 								name, line.rstrip()[1:]))
+				else:
+					twoheaders = False
 			elif i % 4 == 3:
 				qualities = line.rstrip('\r\n')
-				yield self.sequence_class(name, sequence, qualities)
+				yield self.sequence_class(name, sequence, qualities, twoheaders=twoheaders)
 			i += 1
 
 	def __enter__(self):

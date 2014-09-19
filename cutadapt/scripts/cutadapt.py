@@ -262,42 +262,76 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 
 
 # TODO
-# convert this into something that gets a read and outputs it to the appropriate file
-# (handle also trimmed output and untrimmed output here)
 # get rid of discard_trimmed and discard_untrimmed variables, just allow 
 # untrimmed_output and trimmed_output to be None
-class ReadFilter(object):
-	"""Filter reads according to length and according to whether any adapter matches."""
+class ProcessedReadWriter(object):
+	"""
+	Write reads that have been processed (adapter trimming, quality trimming and
+	so on) to the proper output file(s).
 
-	def __init__(self, minimum_length, maximum_length, too_short_outfile, too_long_outfile, discard_trimmed, discard_untrimmed):
+	Filter reads according to length and according to whether any adapter matches.
+	"""
+
+	def __init__(self,
+			minimum_length,
+			maximum_length,
+			too_short_outfile,
+			too_long_outfile,
+			discard_trimmed,
+			discard_untrimmed,
+			trimmed_outfile,
+			trimmed_paired_outfile,
+			untrimmed_outfile,
+			untrimmed_paired_outfile):
+		
 		self.minimum_length = minimum_length
 		self.maximum_length = maximum_length
 		self.too_short_outfile = too_short_outfile
 		self.too_long_outfile = too_long_outfile
 		self.discard_trimmed = discard_trimmed
 		self.discard_untrimmed = discard_untrimmed
+		self.trimmed_outfile = trimmed_outfile
+		self.untrimmed_outfile = untrimmed_outfile
+		self.trimmed_paired_outfile = trimmed_paired_outfile
+		self.untrimmed_paired_outfile = untrimmed_paired_outfile
 		self.too_long = 0
 		self.too_short = 0
 
-	def keep(self, read):
+	def write(self, read1, read2=None):
 		"""
-		Return whether to keep the given read.
+		Write this read to the proper file.
+
+		If read2 is not None, this is a paired-end read.
 		"""
-		if self.discard_trimmed and read.trimmed:
-			return False
-		if self.discard_untrimmed and not read.trimmed:
-			return False
-		if len(read.sequence) < self.minimum_length:
+		if self.discard_trimmed and read1.trimmed:
+			return
+		if self.discard_untrimmed and not read1.trimmed:
+			return
+		if len(read1.sequence) < self.minimum_length:
 			self.too_short += 1
 			if self.too_short_outfile is not None:
-				read.write(self.too_short_outfile)
-			return False
-		elif len(read.sequence) > self.maximum_length:
+				read1.write(self.too_short_outfile)
+			return
+		if len(read1.sequence) > self.maximum_length:
 			self.too_long += 1
 			if self.too_long_outfile is not None:
-				read.write(self.too_long_outfile)
-			return False
-		return True
+				read1.write(self.too_long_outfile)
+			return
+		
+		if read2 is None:
+			# single end
+			if read1.trimmed:
+				read1.write(self.trimmed_outfile)
+			else:
+				read1.write(self.untrimmed_outfile)
+		else:
+			# paired-end
+			if read1.trimmed:
+				read1.write(self.trimmed_outfile)
+				read2.write(self.trimmed_paired_outfile)
+			else:
+				read1.write(self.untrimmed_outfile)
+				read2.write(self.untrimmed_paired_outfile)
 
 
 class RestFileWriter(object):
@@ -470,8 +504,7 @@ def qtrimmed(modifiers):
 	return -1
 
 
-def process_single_reads(reader, modifiers,
-		readfilter, trimmed_outfile, untrimmed_outfile):
+def process_single_reads(reader, modifiers, read_writer):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -486,20 +519,12 @@ def process_single_reads(reader, modifiers,
 		total_bp += len(read.sequence)
 		for modifier in modifiers:
 			read = modifier(read)
-		if twoheaders is None:
-			try:
-				twoheaders = reader.twoheaders
-			except AttributeError:
-				twoheaders = False
-		if not readfilter.keep(read):
-			continue
-		read.write(trimmed_outfile if read.trimmed else untrimmed_outfile, twoheaders)
+		read_writer.write(read)
 
 	return Statistics(total_bp=total_bp, n=n, quality_trimmed_bases=qtrimmed(modifiers))
 
 
-def process_paired_reads(paired_reader, modifiers,
-		readfilter, trimmed1_outfile, trimmed2_outfile, untrimmed1_outfile, untrimmed2_outfile):
+def process_paired_reads(paired_reader, modifiers, read_writer):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -518,24 +543,7 @@ def process_paired_reads(paired_reader, modifiers,
 		total2_bp += len(read2.sequence)
 		for modifier in modifiers:
 			read1 = modifier(read1)
-		if twoheaders1 is None:
-			try:
-				twoheaders1 = paired_reader.reader1.twoheaders
-			except AttributeError:
-				twoheaders1 = False
-		if twoheaders2 is None:
-			try:
-				twoheaders2 = paired_reader.reader2.twoheaders
-			except AttributeError:
-				twoheaders2 = False
-		if not readfilter.keep(read1):
-			continue
-		if read1.trimmed:
-			read1.write(trimmed1_outfile, twoheaders1)
-			read2.write(trimmed2_outfile, twoheaders2)
-		else:
-			read1.write(untrimmed1_outfile, twoheaders1)
-			read2.write(untrimmed2_outfile, twoheaders2)
+		read_writer.write(read1, read2)
 
 	return Statistics(total_bp=total1_bp, n=n, quality_trimmed_bases=qtrimmed(modifiers))
 
@@ -812,6 +820,18 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	too_long_outfile = None  # too long reads go here
 	if options.too_long_output is not None:
 		too_long_outfile = xopen(options.too_long_output, 'w')
+
+	read_writer = ProcessedReadWriter(
+		options.minimum_length,
+		options.maximum_length,
+		too_short_outfile,
+		too_long_outfile,
+		options.discard_trimmed,
+		options.discard_untrimmed,
+		trimmed_outfile, trimmed_paired_outfile,
+		untrimmed_outfile, untrimmed_paired_outfile
+		)
+
 	if options.maq:
 		options.colorspace = True
 		options.double_encode = True
@@ -860,9 +880,6 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 			sys.exit(1)
 		raise
 
-	readfilter = ReadFilter(options.minimum_length, options.maximum_length,
-		too_short_outfile, too_long_outfile, options.discard_trimmed,
-		options.discard_untrimmed)
 	start_time = time.clock()
 
 	if input_paired_filename:
@@ -904,12 +921,9 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 
 	try:
 		if input_paired_filename:
-			stats = process_paired_reads(reader, modifiers, readfilter,
-				trimmed_outfile, trimmed_paired_outfile,
-				untrimmed_outfile, untrimmed_paired_outfile)
+			stats = process_paired_reads(reader, modifiers, read_writer)
 		else:
-			stats = process_single_reads(reader, modifiers, readfilter,
-				trimmed_outfile, untrimmed_outfile)
+			stats = process_single_reads(reader, modifiers, read_writer)
 	except KeyboardInterrupt as e:
 		print("Interrupted", file=sys.stderr)
 		sys.exit(1)
@@ -933,7 +947,7 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		stat_file = sys.stderr if options.output is None else None
 		print_statistics(adapters, time.clock() - start_time, stats,
 			options.trim, adapter_cutter.reads_matched if adapter_cutter else 0,
-			options.error_rate, readfilter.too_short, readfilter.too_long, cmdlineargs, file=stat_file)
+			options.error_rate, read_writer.too_short, read_writer.too_long, cmdlineargs, file=stat_file)
 
 
 if __name__ == '__main__':
