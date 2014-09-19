@@ -408,3 +408,8 @@ def test_explicit_format_with_paired():
 	run(['--format=fastq', '-a', 'TTAGACATAT', '-m', '14', '-p', pairedtmp], 'paired.m14.1.fastq', 'paired.1.txt', 'paired.2.txt')
 	assert files_equal(dpath(os.path.join('cut', 'paired.m14.2.fastq')), pairedtmp)
 	os.remove(pairedtmp)
+
+
+def test_no_trimming():
+	# make sure that this doesn't divide by zero
+	cutadapt.main(['-a', 'XXXXX', '-o', '/dev/null', '-p', '/dev/null', datapath('paired.1.fastq'), datapath('paired.2.fastq')])
