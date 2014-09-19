@@ -489,8 +489,8 @@ This is an AB SOLiD adapter (in color space) used in the SREK protocol::
 
     330201030313112312
 
-Interpreting the statistics output
-==================================
+How to reading the report
+=========================
 
 After every run, cutadapt prints out per-adapter statistics. The output
 starts with something like this::
