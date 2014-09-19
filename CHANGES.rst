@@ -9,6 +9,11 @@ v1.6
   is shown since this points to an incomplete adapter sequence. This happens,
   for example, when a TruSeq adapter is used but the A overhang is not taken
   into account when running cutadapt.
+* Duo to code cleanup, there is a change in behavior: If you use
+  ``--discard-trimmed`` or ``--discard-untrimmed`` in combination with
+  ``--too-short-output`` or ``--too-long-output``, then cutadapt now writes also
+  the discarded reads to the output files given by the ``--too-short`` or
+  ``--too-long`` options. If anyone complains, I will consider reverting this.
 
 v1.5
 ----

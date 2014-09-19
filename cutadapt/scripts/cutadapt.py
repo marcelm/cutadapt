@@ -47,7 +47,7 @@ Some other available features are:
   * Trimming a fixed number of bases
   * Quality trimming
   * Trimming paired-end reads
-  * Trimming colorspace reads
+  * Trimming color space reads
   * Filtering reads by various criteria
 
 See http://cutadapt.readthedocs.org/ for the full documentation.
@@ -261,9 +261,6 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 		return seqio.SequenceReader(seqfilename, colorspace, fileformat)
 
 
-# TODO
-# get rid of discard_trimmed and discard_untrimmed variables, just allow 
-# untrimmed_output and trimmed_output to be None
 class ProcessedReadWriter(object):
 	"""
 	Write reads that have been processed (adapter trimming, quality trimming and
@@ -277,8 +274,6 @@ class ProcessedReadWriter(object):
 			maximum_length,
 			too_short_outfile,
 			too_long_outfile,
-			discard_trimmed,
-			discard_untrimmed,
 			trimmed_outfile,
 			trimmed_paired_outfile,
 			untrimmed_outfile,
@@ -288,8 +283,6 @@ class ProcessedReadWriter(object):
 		self.maximum_length = maximum_length
 		self.too_short_outfile = too_short_outfile
 		self.too_long_outfile = too_long_outfile
-		self.discard_trimmed = discard_trimmed
-		self.discard_untrimmed = discard_untrimmed
 		self.trimmed_outfile = trimmed_outfile
 		self.untrimmed_outfile = untrimmed_outfile
 		self.trimmed_paired_outfile = trimmed_paired_outfile
@@ -303,35 +296,37 @@ class ProcessedReadWriter(object):
 
 		If read2 is not None, this is a paired-end read.
 		"""
-		if self.discard_trimmed and read1.trimmed:
-			return
-		if self.discard_untrimmed and not read1.trimmed:
-			return
 		if len(read1.sequence) < self.minimum_length:
 			self.too_short += 1
 			if self.too_short_outfile is not None:
 				read1.write(self.too_short_outfile)
+			# TODO read2 is silently discarded
 			return
 		if len(read1.sequence) > self.maximum_length:
 			self.too_long += 1
 			if self.too_long_outfile is not None:
 				read1.write(self.too_long_outfile)
+			# TODO read2 is silently discarded
 			return
-		
+
 		if read2 is None:
 			# single end
-			if read1.trimmed:
+			if read1.trimmed and self.trimmed_outfile:
 				read1.write(self.trimmed_outfile)
-			else:
+			if not read1.trimmed and self.untrimmed_outfile:
 				read1.write(self.untrimmed_outfile)
 		else:
-			# paired-end
+			# paired end
 			if read1.trimmed:
-				read1.write(self.trimmed_outfile)
-				read2.write(self.trimmed_paired_outfile)
+				if self.trimmed_outfile:
+					read1.write(self.trimmed_outfile)
+				if self.trimmed_paired_outfile:
+					read2.write(self.trimmed_paired_outfile)
 			else:
-				read1.write(self.untrimmed_outfile)
-				read2.write(self.untrimmed_paired_outfile)
+				if self.untrimmed_outfile:
+					read1.write(self.untrimmed_outfile)
+				if self.untrimmed_paired_outfile:
+					read2.write(self.untrimmed_paired_outfile)
 
 
 class RestFileWriter(object):
@@ -587,6 +582,57 @@ def gather_adapters(back, anywhere, front):
 				yield (name, seq, w)
 
 
+def trimmed_and_untrimmed_files(
+		default_output,
+		output_path,
+		untrimmed_path,
+		discard_trimmed,
+		discard_untrimmed
+		):
+	"""
+	Figure out (from command-line parameters) where trimmed and untrimmed reads
+	should be written.
+
+	Return a pair (trimmed, untrimmed). The values are either open file-like
+	objects or None, in which case no output should be produced. The objects may
+	be identical (for example: (sys.stdout, sys.stdout)).
+
+	The parameters are sorted: Later parameters have higher precedence.
+
+	default_output -- If nothing else is specified below, this file-like object
+		is returned for both trimmed and untrimmed output.
+	output_path -- Path to output file for both trimmed and untrimmed output.
+	untrimmed_path -- Path to an output file for untrimmed reads.
+	discard_trimmed -- bool, override earlier options.
+	discard_untrimmed -- bool, overrides earlier options.
+	"""
+	
+	if discard_trimmed:
+		if discard_untrimmed:
+			untrimmed = None
+		elif untrimmed_path is not None:
+			untrimmed = xopen(untrimmed_path, 'w')
+		elif output_path is not None:
+			untrimmed = xopen(output_path, 'w')
+		else:
+			untrimmed = default_output
+		return (None, untrimmed)
+	if discard_untrimmed:
+		trimmed = default_output
+		if output_path is not None:
+			trimmed = xopen(output_path, 'w')
+		return (trimmed, None)
+	
+	trimmed = default_output
+	untrimmed = default_output
+	if output_path is not None:
+		trimmed = untrimmed = xopen(output_path, 'w')
+	if untrimmed_path is not None:
+		untrimmed = xopen(untrimmed_path, 'w')
+	
+	return (trimmed, untrimmed)
+
+
 def get_option_parser():
 	parser = CutadaptOptionParser(usage=__doc__, version=__version__)
 
@@ -669,18 +715,17 @@ def get_option_parser():
 			"output and send the summary report to standard output. "
 			"The format is FASTQ if qualities are available, FASTA "
 			"otherwise. (default: standard output)")
-	group.add_option('-p', "--paired-output", default=None, metavar="FILE",
+	group.add_option("-p", "--paired-output", default=None, metavar="FILE",
 		help="Write reads from the paired-end input to FILE.")
 	group.add_option("--info-file", metavar="FILE",
 		help="Write information about each read and its adapter matches into FILE. "
-			"See the README for the file format.")
+			"See the documentation for the file format.")
 	group.add_option("-r", "--rest-file", default=None, metavar="FILE",
 		help="When the adapter matches in the middle of a read, write the "
-			"rest (after the adapter) into FILE. Use - for standard output.")
+			"rest (after the adapter) into FILE.")
 	group.add_option("--wildcard-file", default=None, metavar="FILE",
-		help="When the adapter has wildcard bases ('N's) write adapter bases matching wildcard "
-			 "positions to FILE. Use - for standard output. "
-			 "When there are indels in the alignment, this may occasionally "
+		help="When the adapter has wildcard bases ('N's), write adapter bases matching wildcard "
+			 "positions to FILE. When there are indels in the alignment, this may occasionally "
 			 "not be quite accurate.")
 	group.add_option("--too-short-output", default=None, metavar="FILE",
 		help="Write reads that are too short (according to length specified by -m) to FILE. (default: discard reads)")
@@ -752,12 +797,12 @@ def get_option_parser():
 	return parser
 
 
-def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
+def main(cmdlineargs=None, default_outfile=sys.stdout):
 	"""
 	Main function that evaluates command-line parameters and iterates
 	over all reads.
 
-	trimmed_outfile is the default output file to which trimmed reads
+	default_outfile is the default output file to which trimmed reads
 	are sent. It can be overriden by using the '-o' parameter.
 	"""
 	parser = get_option_parser()
@@ -802,17 +847,19 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 	if options.format is not None and quality_filename is not None:
 		parser.error("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
 
-	if options.output is not None:
-		trimmed_outfile = xopen(options.output, 'w')
-	trimmed_paired_outfile = None
-	if options.paired_output:
-		trimmed_paired_outfile = xopen(options.paired_output, 'w')
-	untrimmed_outfile = trimmed_outfile  # reads without adapters go here
-	untrimmed_paired_outfile = trimmed_paired_outfile
-	if options.untrimmed_output is not None:
-		untrimmed_outfile = xopen(options.untrimmed_output, 'w')
-	if options.untrimmed_paired_output is not None:
-		untrimmed_paired_outfile = xopen(options.untrimmed_paired_output, 'w')
+	trimmed_outfile, untrimmed_outfile = trimmed_and_untrimmed_files(
+		default_outfile,
+		options.output,
+		options.untrimmed_output,
+		options.discard_trimmed,
+		options.discard_untrimmed)
+
+	trimmed_paired_outfile, untrimmed_paired_outfile = trimmed_and_untrimmed_files(
+		None,  # applies when not trimming paired-end data
+		options.paired_output,
+		options.untrimmed_paired_output,
+		options.discard_trimmed,
+		options.discard_untrimmed)
 
 	too_short_outfile = None  # too short reads go here
 	if options.too_short_output is not None:
@@ -826,11 +873,9 @@ def main(cmdlineargs=None, trimmed_outfile=sys.stdout):
 		options.maximum_length,
 		too_short_outfile,
 		too_long_outfile,
-		options.discard_trimmed,
-		options.discard_untrimmed,
 		trimmed_outfile, trimmed_paired_outfile,
 		untrimmed_outfile, untrimmed_paired_outfile
-		)
+	)
 
 	if options.maq:
 		options.colorspace = True
