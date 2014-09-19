@@ -63,6 +63,7 @@ See the README file for more help and examples."""
 from __future__ import print_function, division, absolute_import
 
 import sys
+import platform
 import time
 import errno
 from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
@@ -165,7 +166,7 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 	n = stats.n
 	total_bp = stats.total_bp
 	quality_trimmed = stats.quality_trimmed_bases
-	print("cutadapt version", __version__)
+	print("You are running cutadapt", __version__, "with Python", platform.python_version())
 	print("Command line parameters:", " ".join(args))
 	print("Maximum error rate: {0:.2%}".format(error_rate))
 	print("   No. of adapters:", len(adapters))
