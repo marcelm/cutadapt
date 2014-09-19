@@ -143,7 +143,7 @@ def print_adjacent_bases(bases, sequence):
 	for base in ['A', 'C', 'G', 'T', '']:
 		b = base if base != '' else 'none/other'
 		fraction = 1.0 * bases[base] / total
-		print('  {}: {:.1%}'.format(b, fraction))
+		print('  {0}: {1:.1%}'.format(b, fraction))
 		if fraction > 0.8 and b != '':
 			warnbase = b
 	if total >= 20 and warnbase is not None:

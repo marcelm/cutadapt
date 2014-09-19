@@ -26,7 +26,7 @@ def files_equal(path1, path2):
 def run(params, expected, inpath, inpath2=None):
 	if type(params) is str:
 		params = params.split()
-	params = ['--quiet'] + params
+	#params = ['--quiet'] + params
 	params += ['-o', dpath('tmp.fastaq') ] # TODO not parallelizable
 	params += [ datapath(inpath) ]
 	if inpath2:
