@@ -23,42 +23,36 @@
 # THE SOFTWARE.
 
 """
+cutadapt version %version
+Copyright (C) 2010-2014 Marcel Martin <marcel.martin@scilifelab.se>
 
-    %prog -a ADAPTER [options] <FASTA/FASTQ FILE>
+cutadapt removes adapter sequences from high-throughput sequencing reads.
 
-Reads a FASTA or FASTQ file, finds and removes adapters,
-and writes the changed sequence to standard output.
+Usage:
+    cutadapt -a ADAPTER [options] [-o output.fastq] input.fastq
 
-Use a dash "-" as file name to read from standard input
-(FASTA/FASTQ is autodetected).
+Replace "ADAPTER" with the actual sequence of your 3' adapter. The sequence may
+contain 'N' wildcard characters. The reverse complement is *not* automatically
+searched. All reads from input.fastq will be written to output.fastq with the
+adapter sequence removed. Adapter matching is error-tolerant. Multiple adapter
+sequences can be given (use further -a options), but only the best-matching
+adapter will be removed.
 
-If two file names are given, the first must be a .fasta or .csfasta
-file and the second must be a .qual file. This is the file format
-used by some 454 software and by the SOLiD sequencer.
-If you have color space data, you still need to provide the -c option
-to correctly deal with color space!
+Input may also be in FASTA format. Compressed input and output is supported and
+auto-detected from the file name (.gz or .bz2). Use the file name '-' for
+standard input/output. Without the -o option, output is sent to standard output.
 
-When two file names are given and the --paired-output (or -p) option is used,
-then the two files contain paired-end reads. See the README!
+Some other available features are:
+  * Trimming of 5' adapters and "mixed" 5'/3' adapters
+  * Trimming a fixed number of bases
+  * Quality trimming
+  * Trimming paired-end reads
+  * Trimming colorspace reads
+  * Filtering reads by various criteria
 
-If the name of any input or output file ends with '.gz' or '.bz2', it is
-assumed to be gzip-/bzip2-compressed.
-
-If you want to search for the reverse complement of an adapter, you must
-provide an additional adapter sequence using another -a, -b or -g parameter.
-
-If the input sequences are in color space, the adapter
-can be given in either color space (as a string of digits 0, 1, 2, 3) or in
-nucleotide space.
-
-EXAMPLE
-
-Assuming your sequencing data is available as a FASTQ file, use this
-command line:
-
-$ cutadapt -a ADAPTER-SEQUENCE input.fastq > output.fastq
-
-See the README file for more help and examples."""
+See http://cutadapt.readthedocs.org/ for the full documentation.
+Use "cutadapt --help" to see all command-line options.
+"""
 
 from __future__ import print_function, division, absolute_import
 
@@ -81,11 +75,9 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 from cutadapt.compat import next
 
 
-class HelpfulOptionParser(OptionParser):
-	"""An OptionParser that prints full help on errors."""
-	def error(self, msg):
-		self.print_help(sys.stderr)
-		self.exit(2, "\n%s: error: %s\n" % (self.get_prog_name(), msg))
+class CutadaptOptionParser(OptionParser):
+	def get_usage(self):
+		return self.usage.lstrip().replace('%version', __version__)
 
 
 Statistics = namedtuple('Statistics', 'total_bp n quality_trimmed_bases')
@@ -588,7 +580,7 @@ def gather_adapters(back, anywhere, front):
 
 
 def get_option_parser():
-	parser = HelpfulOptionParser(usage=__doc__, version=__version__)
+	parser = CutadaptOptionParser(usage=__doc__, version=__version__)
 
 	parser.add_option("-f", "--format", default=None,
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
@@ -636,8 +628,6 @@ def get_option_parser():
 	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
 		default=True, dest='match_adapter_wildcards',
 		help=SUPPRESS_HELP)
-	#	help="Do not treat 'N' in the adapter sequence as wildcards. This is "
-	#	"needed when you want to search for literal 'N' characters.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options for filtering of processed reads")
