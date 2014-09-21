@@ -12,7 +12,7 @@ written in Cython that implements the alignment algorithm.
 License
 -------
 
-cutadapt is available under the MIT license (see the file ``LICENSE``).
+cutadapt is available under the terms of the MIT license (see the file ``LICENSE``).
 
 Galaxy
 ------
