@@ -3,9 +3,18 @@
 # test reading from standard input
 from __future__ import print_function, division, absolute_import
 
-import os
+import sys, os
 from nose.tools import raises
+from contextlib import contextmanager
 from cutadapt.scripts import cutadapt
+
+@contextmanager
+def redirect_stderr():
+	"Send stderr to stdout. Nose doesn't capture stderr, yet."
+	old_stderr = sys.stderr
+	sys.stderr = sys.stdout
+	yield
+	sys.stderr = old_stderr
 
 
 def dpath(path):
@@ -313,26 +322,36 @@ def test_paired_separate():
 
 
 @raises(SystemExit)
+def test_no_args():
+	with redirect_stderr():
+		cutadapt.main()
+
+
+@raises(SystemExit)
 def test_paired_end_missing_file():
-	cutadapt.main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
+	with redirect_stderr():
+		cutadapt.main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
 
 
 @raises(SystemExit)
 def test_first_too_short():
 	# paired-truncated.1.fastq is paired.1.fastq without the last read
-	cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired-truncated.1.fastq'), datapath('paired.2.fastq')])
+	with redirect_stderr():
+		cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired-truncated.1.fastq'), datapath('paired.2.fastq')])
 
 
 @raises(SystemExit)
 def test_second_too_short():
 	# paired-truncated.2.fastq is paired.2.fastq without the last read
-	cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired.1.fastq'), datapath('paired-truncated.2.fastq')])
+	with redirect_stderr():
+		cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired.1.fastq'), datapath('paired-truncated.2.fastq')])
 
 
 @raises(SystemExit)
 def test_unmatched_read_names():
 	# paired-swapped.1.fastq: paired.1.fastq with reads 2 and 3 swapped
-	cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired-swapped.1.fastq'), datapath('paired.2.fastq')])
+	with redirect_stderr():
+		cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired-swapped.1.fastq'), datapath('paired.2.fastq')])
 
 
 def test_paired_end():
