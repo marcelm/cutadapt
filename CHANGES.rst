@@ -14,6 +14,8 @@ v1.6
   ``--too-short-output`` or ``--too-long-output``, then cutadapt now writes also
   the discarded reads to the output files given by the ``--too-short`` or
   ``--too-long`` options. If anyone complains, I will consider reverting this.
+* Galaxy support files are now in `a separate
+  repository <https://bitbucket.org/lance_parsons/cutadapt_galaxy_wrapper>`_.
 
 v1.5
 ----

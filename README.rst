@@ -9,17 +9,7 @@ is sequenced, such as in microRNA data.
 cutadapt is implemented in Python. It comes with an extension module
 written in Cython that implements the alignment algorithm.
 
-License
--------
-
 cutadapt is available under the terms of the MIT license (see the file ``LICENSE``).
-
-Galaxy
-------
-
-If you want to use cutadapt within the web-based `Galaxy
-platform <http://galaxy.psu.edu/>`_, please see the README file in the ``galaxy/``
-subfolder in the repository. Galaxy support was contributed by Lance Parsons.
 
 Links
 -----
@@ -30,3 +20,5 @@ Links
   Offline documentation is available in the ``doc/`` subdirectory in the repository
   and in the downloaded tar distribution.
 * `Report issues to the Google code bug tracker <https://code.google.com/p/cutadapt/issues/list>`_
+* `A cutadapt wrapper for the Galaxy platform <https://bitbucket.org/lance_parsons/cutadapt_galaxy_wrapper>`_,
+  written by Lance Parsons.
