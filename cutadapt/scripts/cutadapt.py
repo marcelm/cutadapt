@@ -193,13 +193,12 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 		where = adapter.where
 		assert where == ANYWHERE or (where == BACK and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
 
-		print("=" * 3, "Adapter", index + 1, "=" * 3)
-		print()
+		name = str(adapter.name)
 		if not adapter.name_is_generated:
-			name = "'{0}' ({1})".format(adapter.name, adapter.sequence)
-		else:
-			name = "'{0}'".format(adapter.sequence)
-		print("Adapter {0}, length {1}, was trimmed {2} times.".format(name, len(adapter.sequence), total))
+			name = "'{0}'".format(name)
+		print("=" * 3, "Adapter", name, "=" * 3)
+		print()
+		print("Sequence: {0}; Length: {1}; Trimmed: {2} times.".format(adapter.sequence, len(adapter.sequence), total))
 		if total == 0:
 			print()
 			continue
