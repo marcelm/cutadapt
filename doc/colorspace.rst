@@ -1,5 +1,5 @@
-Working with colorspace data
-============================
+Colorspace reads
+================
 
 Cutadapt was designed to work with colorspace reads from the ABi SOLiD
 sequencer. Colorspace trimming is activated by the ``--colorspace``
@@ -45,6 +45,7 @@ already enough), this is still only around 0.2 bases lost per read on
 average. If inspecting k-mer frequencies or using small overlaps, you
 need to be aware of the effect, however.
 
+
 Double-encoding, BWA and MAQ
 ----------------------------
 
@@ -69,6 +70,7 @@ required for BWA, in addition to some other useful options.
 
 The ``--maq`` option is an alias for ``--bwa``.
 
+
 Colorspace examples
 -------------------
 
@@ -90,6 +92,7 @@ strips the \_F3 suffix from read names and adds the prefix "abc:" to
 them::
 
     cutadapt -c -e 0.15 -a 330201030313112312 -x abc: --strip-f3 solid.csfasta solid.qual > output.fastq
+
 
 Bowtie
 ------
