@@ -713,76 +713,61 @@ The alignment algorithm
 
 Since the publication of the `EMBnet journal application note about
 cutadapt <http://dx.doi.org/10.14806/ej.17.1.200>`_, the alignment algorithm
-used for finding adapters has changed significantly. This new algorithm is
-described in this section.
-An even more detailed description of the algorithm is available in Chapter 2
-of my PhD thesis `Algorithms and tools for the analysis of high-throughput DNA
-sequencing data <http://hdl.handle.net/2003/31824>`_.
+used for finding adapters has changed significantly. An overview of this new
+algorithm is given in this section. An even more detailed description is
+available in Chapter 2 of my PhD thesis `Algorithms and tools for the analysis
+of high-throughput DNA sequencing data <http://hdl.handle.net/2003/31824>`_.
 
 The algorithm is based on *semiglobal alignment*, also called *free-shift*,
-*ends-free* or *overlap* alignment.
+*ends-free* or *overlap* alignment. In a regular (global) alignment, the
+two sequences are compared from end to end and all differences occuring over
+that length are counted. In semiglobal alignment, the sequences are allowed to
+freely shift relative to each other and differences are only penalized in the
+overlapping region between them::
 
+      FANTASTIC
+   ELEFANT
 
-.. note::
-    The documentation is currently being worked on. Text until here has
-    been re-written. Text below may be not in the correct order or incomplete.
+The prefix ``ELE`` and the suffix ``ASTIC`` do not have a counterpart in the
+respective other row, but this is not counted as an error. The overlap ``FANT``
+has a length of four characters.
 
+Traditionally, *alignment scores* are used to find an optimal overlap aligment:
+This means that the scoring function assigns a positive value to matches,
+while mismatches, insertions and deletions get negative values. The optimal
+alignment is then the one that has the maximal total score. Usage of scores
+has the disadvantage that they are not at all intuitive: What does a total score
+of *x* mean? Is that good or bad? How should a threshold be chosen in order to
+avoid finding alignments with too many errors?
 
-The alignment uses unit costs, which means that mismatches, insertions and deletions are
-counted as one error.
+For cutadapt, the adapter alignment algorithm uses *unit costs* instead.
+Mismatches, insertions and deletions are therefore counted as one error, which
+is easier to understand and always to specify a single parameter for the
+algorithm (the maximum error rate) in order to describe how many errors are
+acceptable.
 
+There is a problem with this: When using costs instead of scores, we would like
+to minimize the total costs in order to find an optimal alignment. But then the
+best alignment would always be the one in which the two sequences do not overlap
+at all! This would be correct, but meaningless for the purpose of finding an
+adapter sequence.
 
-An optimal alignment fulfills all of these criteria:
+The optimization criteria are therefore a bit different. The basic idea is to
+consider the alignment optimal that maximizes the overlap between the two
+sequences, as long as the allowed error rate is not exceeded.
 
-- its error_rate is at most max_error_rate
-- Among those alignments with error_rate <= max_error_rate, the alignment contains
-  a maximal number of matches (there is no alignment with more matches).
-- If there are multiple alignments with the same no. of matches, then one that
-  has minimal no. of errors is chosen.
-- If there are still multiple candidates, choose the alignment that starts at the
-  leftmost position within the read.
+Conceptually, the procedure is as follows:
 
+1. Consider all possible overlaps between the two sequences and compute an
+  alignment for each, minimizing the total number of errors in each one.
+2. Keep only those alignments that do not exceed the specified maximum error
+  rate.
+3. Then, keep only those alignments that have a maximal number of matches
+  (that is, there is no alignment with more matches).
+4. If there are multiple alignments with the same number of matches, then keep
+  only those that have the smallest error rate.
+5. If there are still multiple candidates left, choose the alignment that starts
+  at the leftmost position within the read.
 
-The new alignment algorithm checks the error rate while aligning and only
-reports alignments that do not have too many errors.
-
-maximizing matches -- example: read TCGTATGCCCTCC and adapter TCGTATGCCGTCTTC, max. error rate 20%.
-
-Here is the alignment that one would expect:
-
-TCGTATGCCCTCC   (read)
-=========X==X
-TCGTATGCCGTCTTC (adapter)
-
-But it turns out that the actual alignment that is found is this one:
-
-TCGTATGCCGTCTTC
-=========X==XX=
-TCGTATGCCCTC--C
-
-Since it has length 15 and contains three errors, the error rate is 3/15=20%.
-
-To understand why that alignment was chosen, one needs to know that cutadapt
-doesn't really care about the actual number of errors as long as the alignment
-has not more errors than the maximum error rate allows (20% in your case). The
-alignment algorithm doesn't try to find an alignment with few errors, but
-instead it tries to find one with many matches. And in this case, the first
-alignment has 11 matches, and the second one has 12.
-
-This is sometimes a bit surprising, but consistent with the way the algorithm
-was designed to behave.
-
-As an explanation, the problem lies in the maximum error rate:
-Users should be able to specify that as a parameter because it is quite easy to
-understand.
-The problem then is that one cannot optimize for 'as few errors as possible'
-since an alignment in which the read and the adapter do not overlap at all is
-always optimal (since it has zero errors). Typically, this is solved by using
-alignment scores, which are not as intuitive.
-Instead, the number of matches is optimized, but still under the constraint that
-the actual error rate may not go above the specified maximum error rate.
-
-One other important point to note is that this particularity doesn't influence
-the trimming result: Try to run cutadapt with the maximum error rate reduced to
-0.16. This prevents the second alignment with 3 errors to be found and suddenly
-the reported number of errors in the info file is down to 2.
+In Step 1, the different adapter types are taken into account: Only those
+overlaps that are actually allowed by the adapter type are actually considered.

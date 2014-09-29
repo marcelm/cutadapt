@@ -6,9 +6,6 @@ cutadapt removes adapter sequences from high-throughput sequencing
 data. This is necessary when the reads are longer than the molecule that
 is sequenced, such as in microRNA data.
 
-cutadapt is implemented in Python. It comes with an extension module
-written in Cython that implements the alignment algorithm.
-
 cutadapt is available under the terms of the MIT license (see the file ``LICENSE``).
 
 Links

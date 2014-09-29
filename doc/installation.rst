@@ -12,7 +12,7 @@ The easiest way to install cutadapt is to use ``pip`` on the command line::
 This will download the software from `PyPI (the Python packaging
 index) <https://pypi.python.org/pypi/cutadapt/>`_, and
 install the cutadapt binary into ``$HOME/.local/bin``. You can then run the
-program::
+program like this::
 
     ~/.local/bin/cutadapt --help
 
@@ -31,8 +31,9 @@ Cutadapt requires this software to be installed:
   versions.
 * A C compiler.
 
-For installation from sources, a C compiler needs to be
-installed. The program has been developed and tested on Ubuntu.
+Under Ubuntu, you may need to install the packages ``build-essential`` and
+``python-dev``.
+
 
 Installation
 ------------
@@ -51,6 +52,7 @@ Then check the entire error message. If it says something about a missing ``Pyth
 file, then you need to install the Python development packages. The
 appropriate package is called ``python-dev`` in Ubuntu (or ``python3-dev``
 for Python 3).
+
 
 Use without installation
 ------------------------

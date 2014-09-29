@@ -74,7 +74,7 @@ v1.2
 ----
 * At least 25% faster processing of .csfasta/.qual files due to faster parser.
 * Between 10% and 30% faster writing of gzip-compressed output files.
-* Support 5' adapters in color space, even when no primer trimming is requested.
+* Support 5' adapters in colorspace, even when no primer trimming is requested.
 * Add the ``--info-file`` option, which has a line for each found adapter.
 * Named adapters are possible. Usage: ``-a My_Adapter=ACCGTA`` assigns the name "My_adapter".
 * Improve alignment algorithm for better poly-A trimming when there are sequencing errors.
@@ -157,7 +157,7 @@ v0.9.2
   problems with other Python modules. Thanks to Steve Lianoglou for
   pointing this out to me!
 * ignore case (ACGT vs acgt) when comparing the adapter with the read sequence
-* .FASTA/.QUAL files (not necessarily color space) can now be read (some
+* .FASTA/.QUAL files (not necessarily colorspace) can now be read (some
   454 software uses this format)
 * Move some functions into their own modules
 * lots of refactoring: replace the fasta module with a much nicer seqio module.
