@@ -580,8 +580,8 @@ Adapter”::
 
 See also the section about paired-end adapter trimming above.
 
-If you want to simplify this a bit, you can also use ``AGATCGGAAGAGC``
-as the adapter sequence in both cases::
+If you want to simplify this a bit, you can also use the common prefix
+``AGATCGGAAGAGC`` as the adapter sequence in both cases::
 
     cutadapt -a AGATCGGAAGAGC -o trimmed.1.fastq.gz reads.1.fastq.gz
     cutadapt -a AGATCGGAAGAGC -o trimmed.2.fastq.gz reads.2.fastq.gz
@@ -589,6 +589,49 @@ as the adapter sequence in both cases::
 The adapter sequences can be found in the document `Illumina TruSeq
 Adapters
 De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf>`__.
+
+
+.. _bisulfite:
+
+Bisulfite sequencing (RRBS)
+===========================
+
+When trimming reads that come from a library prepared with the RRBS (reduced
+representation bisulfit sequencing) protocol, the last two 3' bases must be
+removed in addition to the adapter itself. This can be achieved by using not
+the adapter sequence itself, but by adding two wildcard characters to its
+beginning. If the adapter sequence is ``ADAPTER``, the command for trimming
+should be::
+
+    cutadapt -a NNADAPTER -o output.fastq input.fastq
+
+Details can be found in `Babraham bioinformatics' "Brief guide to
+RRBS" <http://www.bioinformatics.babraham.ac.uk/projects/bismark/RRBS_Guide.pdf>`_.
+A summary follows.
+
+During RRBS library preparation, DNA is digested with the restriction enzyme
+MspI, generating a two-base overhang on the 5' end (``GC``). MspI recognizes
+the sequence ``CCGG`` and cuts
+between ``C`` and ``CGG``. A double-stranded DNA fragment is cut in this way::
+
+    5'-NNNC|CGGNNN-3'
+    3'-NNNGGC|CNNN-5'
+
+The fragment between two MspI restriction sites looks like this::
+
+    5'-CGGNNN...NNNC-3'
+      3'-CNNN...NNNGGC-5'
+
+Before sequencing (or PCR) adapters can be ligated, the missing base positions
+must be filled in with GTP and CTP::
+
+    5'-ADAPTER-CGGNNN...NNNCcg-ADAPTER-3'
+    3'-ADAPTER-gcCNNN...NNNGGC-ADAPTER-5'
+
+The filled-in bases, marked in lowercase above, do not contain any original
+methylation information, and must therefore not be used for methylation calling.
+By prefixing the adapter sequence with ``NN``, the bases will be automatically
+stripped during adapter trimming.
 
 
 Cutadapt's output
@@ -759,15 +802,15 @@ sequences, as long as the allowed error rate is not exceeded.
 Conceptually, the procedure is as follows:
 
 1. Consider all possible overlaps between the two sequences and compute an
-  alignment for each, minimizing the total number of errors in each one.
+   alignment for each, minimizing the total number of errors in each one.
 2. Keep only those alignments that do not exceed the specified maximum error
-  rate.
+   rate.
 3. Then, keep only those alignments that have a maximal number of matches
-  (that is, there is no alignment with more matches).
+   (that is, there is no alignment with more matches).
 4. If there are multiple alignments with the same number of matches, then keep
-  only those that have the smallest error rate.
+   only those that have the smallest error rate.
 5. If there are still multiple candidates left, choose the alignment that starts
-  at the leftmost position within the read.
+   at the leftmost position within the read.
 
 In Step 1, the different adapter types are taken into account: Only those
 overlaps that are actually allowed by the adapter type are actually considered.
