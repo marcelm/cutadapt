@@ -610,7 +610,7 @@ RRBS" <http://www.bioinformatics.babraham.ac.uk/projects/bismark/RRBS_Guide.pdf>
 A summary follows.
 
 During RRBS library preparation, DNA is digested with the restriction enzyme
-MspI, generating a two-base overhang on the 5' end (``GC``). MspI recognizes
+MspI, generating a two-base overhang on the 5' end (``CG``). MspI recognizes
 the sequence ``CCGG`` and cuts
 between ``C`` and ``CGG``. A double-stranded DNA fragment is cut in this way::
 
