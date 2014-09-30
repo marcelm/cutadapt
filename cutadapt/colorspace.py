@@ -49,7 +49,7 @@ def _initialize_dicts():
 def encode(s):
 	"""
 	Given a sequence of nucleotides, convert them to
-	color space. Only uppercase characters are allowed.
+	colorspace. Only uppercase characters are allowed.
 	>>> encode("ACGGTC")
 	"A13012"
 	"""

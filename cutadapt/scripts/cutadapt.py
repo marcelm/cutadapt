@@ -47,7 +47,7 @@ Some other available features are:
   * Trimming a fixed number of bases
   * Quality trimming
   * Trimming paired-end reads
-  * Trimming color space reads
+  * Trimming colorspace reads
   * Filtering reads by various criteria
 
 See http://cutadapt.readthedocs.org/ for the full documentation.
@@ -240,7 +240,7 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 	* seqfilename in FASTA format (qualityfilename must be None)
 	* seqfilename in FASTQ format (qualityfilename must be None)
 	* seqfilename in .csfasta format and qualityfilename in .qual format
-	  (SOLiD color space)
+	  (SOLiD colorspace)
 
 	Return a generator over tuples (description, sequence, qualities).
 	qualities is None if no qualities are available.
@@ -766,14 +766,14 @@ def get_option_parser():
 	group.add_option("-c", "--colorspace", action='store_true', default=False,
 		help="Colorspace mode: Also trim the color that is adjacent to the found adapter.")
 	group.add_option("-d", "--double-encode", action='store_true', default=False,
-		help="When in color space, double-encode colors (map 0,1,2,3,4 to A,C,G,T,N).")
+		help="When in colorspace, double-encode colors (map 0,1,2,3,4 to A,C,G,T,N).")
 	group.add_option("-t", "--trim-primer", action='store_true', default=False,
-		help="When in color space, trim primer base and the first color "
+		help="When in colorspace, trim primer base and the first color "
 			"(which is the transition to the first nucleotide)")
 	group.add_option("--strip-f3", action='store_true', default=False,
-		help="For color space: Strip the _F3 suffix of read names")
+		help="For colorspace: Strip the _F3 suffix of read names")
 	group.add_option("--maq", "--bwa", action='store_true', default=False,
-		help="MAQ- and BWA-compatible color space output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
+		help="MAQ- and BWA-compatible colorspace output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
 	group.add_option("--length-tag", default=None, metavar="TAG",
 		help="Search for TAG followed by a decimal number in the name of the read "
 			"(description/comment field of the FASTA or FASTQ file). Replace the "
@@ -885,11 +885,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if options.zero_cap is None:
 		options.zero_cap = options.colorspace
 	if options.trim_primer and not options.colorspace:
-		parser.error("Trimming the primer makes only sense in color space.")
+		parser.error("Trimming the primer makes only sense in colorspace.")
 	if options.double_encode and not options.colorspace:
-		parser.error("Double-encoding makes only sense in color space.")
+		parser.error("Double-encoding makes only sense in colorspace.")
 	if options.anywhere and options.colorspace:
-		parser.error("Using --anywhere with color space reads is currently not supported (if you think this may be useful, contact the author).")
+		parser.error("Using --anywhere with colorspace reads is currently not supported (if you think this may be useful, contact the author).")
 	if not (0 <= options.error_rate <= 1.):
 		parser.error("The maximum error rate must be between 0 and 1.")
 	if options.overlap < 1:

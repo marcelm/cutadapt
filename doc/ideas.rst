@@ -7,7 +7,7 @@ improvements.
 
 
 -  show average error rate
--  In color space and probably also for Illumina data, gapped alignment
+-  In colorspace and probably also for Illumina data, gapped alignment
    is not necessary
 -  use ``str.format`` instead of ``%``
 -  allow to change scores at runtime (using command-line parameters)

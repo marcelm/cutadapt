@@ -267,7 +267,7 @@ Read before trimming           Read after trimming Detected adapter type
 ``TERMYSEQUENCE``              ``MYSEQUENCE``      5' adapter
 ============================== =================== =====================
 
-The ``-b`` option currently does not work with color space data.
+The ``-b`` option currently does not work with colorspace data.
 
 
 .. _error-tolerance:
