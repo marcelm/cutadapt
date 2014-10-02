@@ -637,6 +637,72 @@ stripped during adapter trimming.
 Cutadapt's output
 =================
 
+
+Where trimmed and untrimmed reads go
+------------------------------------
+
+By default, all processed reads, no matter whether they were trimmed are not,
+are written to the output file specified by the ``-o`` option (or to standard
+output if ``-o`` was not provided). For paired-end reads, the second read in a
+pair is always written to the file specified by the ``-p`` option.
+
+The options described in the following make it possible to redirect the reads
+to other files depending on their length and depending on whether they were
+trimmed or not. However, the basic rule here is that *each read is written to
+at most one file*. You cannot write reads to more than one output file.
+
+In the following, the term "processed read" refers to a read which has been
+quality trimmed (if ``-q`` has been used) and in which all found adapters have
+been removed. A processed read may be identical with the input read if no
+bases were quality-trimmed and no adapters were found.
+
+``--minimum-length N`` or ``-m N``
+    Use this to throw away processed reads shorter than *N* bases.
+
+``--too-short-output FILE``
+    Instead of throwing away the reads that are too short (according to ``-m``),
+    write them to *FILE* (in FASTA/FASTQ format).
+
+``--maximum-length N`` or ``-M N``
+    Use this to throw away processed reads longer than *N* bases.
+
+``--too-long-output FILE``
+    Instead of throwing away the reads that are too long (according to ``-M``),
+    write them to *FILE* (in FASTA/FASTQ format).
+
+``--untrimmed-output FILE``
+    Write all reads without adapters to *FILE* (in FASTA/FASTQ format) instead
+    of writing them to the regular output file.
+
+``--discard-trimmed``
+   Throw away reads in which an adapter was found.
+
+``--discard-untrimmed``
+   Throw away read in which no adapter was found. This has the same effect as
+   specifying ``--untrimmed-output /dev/null``.
+
+The options ``--too-short-output`` and ``--too-long-output`` are applied first.
+This means, for example, that a read that is too long will never end up in the
+``--untrimmed-output`` file when ``--too-long-output`` was given, no matter
+whether it was trimmed or not.
+
+The following options apply only when trimming paired-end data.
+
+``--paired-output FILE`` or ``-p FILE``
+    The second read in a pair is written to *FILE* (in FASTA/FASTQ format), but
+    only if also the first read was written to the first file.
+
+``--untrimmed-paired-output FILE``
+    When the first read in a pair was not trimmed, write the second read to
+    *FILE* instead of writing it to the regular output file. Use this together
+    with ``--untrimmed-output`` when trimming paired-end data.
+
+Note that the option names can be abbreviated as long as it is clear which
+option is meant (unique prefix). For example, instead of ``--untrimmed-output``
+and ``--untrimmed-paired-output``, you can write ``--untrimmed-o`` and
+``--untrimmed-p``.
+
+
 How to read the report
 ----------------------
 
