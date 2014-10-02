@@ -4,6 +4,12 @@ Changes
 
 v1.6
 ----
+* Fix bug: Ensure ``--format=...`` can be used even with paired-end input.
+* Fix bug: Sometimes output files would be incomplete because they were not
+  closed correctly.
+* Alignment algorithm is a tiny bit faster.
+* Extensive work on the documentation. It's now available at
+  https://cutadapt.readthedocs.org/ .
 * For 3' adapters, statistics about the bases preceding the trimmed adapter
   are collected and printed. If one of the bases is overrepresented, a warning
   is shown since this points to an incomplete adapter sequence. This happens,
