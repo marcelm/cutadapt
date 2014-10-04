@@ -124,7 +124,6 @@ and depending on the adapter type:
 |
 
 .. image:: _static/adapters.svg
-    :align: left
 
 |
 
