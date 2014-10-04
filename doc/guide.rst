@@ -118,6 +118,16 @@ Adapter type                                        Command-line option
 :ref:`5' or 3' (both possible) <anywhere-adapters>` ``-b ADAPTER``
 =================================================== ===========================
 
+Here is an illustration of the allowed adapter locations relative to the read
+and depending on the adapter type:
+
+|
+
+.. image:: _static/adapters.svg
+    :align: left
+
+|
+
 By default, all adapters :ref:`are searched error-tolerantly <error-tolerance>`.
 Adapter sequences :ref:`may also contain the "N" wildcard
 character <wildcards>`.
