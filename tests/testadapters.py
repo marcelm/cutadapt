@@ -1,7 +1,8 @@
 from __future__ import print_function, division, absolute_import
+from nose.tools import raises
 
 from cutadapt.seqio import Sequence
-from cutadapt.adapters import Adapter, AdapterMatch, BACK
+from cutadapt.adapters import Adapter, AdapterMatch, ColorspaceAdapter, FRONT, BACK
 
 def test_issue_52():
 	adapter = Adapter(
@@ -51,3 +52,17 @@ def test_issue_80():
 	assert result.errors == 3, result
 	assert result.astart == 0, result
 	assert result.astop == 15, result
+
+
+def test_str():
+	a = Adapter('ACGT', where=BACK, max_error_rate=0.1)
+	str(a)
+	str(a.match(Sequence(name='seq', sequence='TTACGT')))
+	ca = ColorspaceAdapter('0123', where=BACK, max_error_rate=0.1)
+	str(ca)
+
+
+@raises(ValueError)
+def test_color():
+	ColorspaceAdapter('0123', where=FRONT, max_error_rate=0.1)
+
