@@ -390,6 +390,10 @@ Subtract the given cutoff from all qualities; compute partial sums from
 all indices to the end of the sequence; cut sequence at the index at
 which the sum is minimal.
 
+Quality trimming can be done without adapter trimming, so this will work::
+
+    cutadapt -q 10 -o output.fastq input.fastq
+
 
 Trimming paired-end reads
 -------------------------
