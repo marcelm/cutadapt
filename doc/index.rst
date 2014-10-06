@@ -10,7 +10,6 @@ Table of contents
    installation
    guide
    colorspace
-   faq
    ideas
    changes
 

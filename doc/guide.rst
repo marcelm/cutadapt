@@ -337,6 +337,29 @@ Insertions and deletions can be disallowed by using the option
 See also the :ref:`section on details of the alignment algorithm <algorithm>`.
 
 
+Reducing random matches
+-----------------------
+
+Since cutadapt allows partial matches between the read and the adapter sequence,
+short matches can occur by chance, leading to erroneously trimmed bases. For
+example, roughly 25% of all reads end with a base that is identical to the
+first base of the adapter. To reduce the number of falsely trimmed bases,
+the alignment algorithm requires that at least *three bases* match between
+adapter and read. The minimum overlap length can be changed with the
+``--overlap``(short: ``-O``) parameter. Shorter matches are simply
+ignored, and the bases are not trimmed.
+
+Requiring at least three bases to match is quite conservative. Even if no
+minimum overlap was required, we can compute that we lose only about 0.44 bases
+per read on average, see `Section 2.3.3 in my
+thesis <<http://hdl.handle.net/2003/31824>`_. With the default minimum
+overlap length of 3, only about 0.07 bases are lost per read.
+
+When choosing an appropriate minimum overlap length, take into account that
+true adapter matches are also lost when the overlap length is higher than
+1, reducing cutadapt's sensitivity.
+
+
 .. _wildcards:
 
 Wildcards
