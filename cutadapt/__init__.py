@@ -1,7 +1,7 @@
 from __future__ import print_function
 import sys
 
-__version__ = '1.6dev'
+__version__ = '1.6'
 
 def check_importability():
 	try:
