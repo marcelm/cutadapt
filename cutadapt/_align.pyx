@@ -273,9 +273,10 @@ cdef class Aligner:
 					best_j = j
 			# column finished
 
-		if max_n == n and stop_in_ref:
+		if max_n == n:
+			first_i = 0 if stop_in_ref else m
 			# search in last column # TODO last?
-			for i in range(0, m+1):
+			for i in range(first_i, m+1):
 				length = i + min(column[i].origin, 0)
 				cost = column[i].cost
 				matches = column[i].matches
@@ -308,12 +309,13 @@ def locate(str reference, str query, double max_error_rate, int flags = SEMIGLOB
 
 def compare_prefixes(str s1, str s2, int degenerate = 0):
 	"""
-	Find out whether two strings have a common prefix, allowing mismatches.
+	Find out whether one string is the prefix of the other one, allowing
+	mismatches.
 
 	This is used to find an anchored 5' adapter (type 'FRONT') in the 'no indels' mode.
 	This is very simple as only the number of errors needs to be counted.
 
-	This function returns a tuple compatible with what globalalign_locate outputs.
+	This function returns a tuple compatible with what Aligner.locate outputs.
 	"""
 	cdef int m = len(s1)
 	cdef int n = len(s2)
