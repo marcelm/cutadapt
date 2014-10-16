@@ -240,6 +240,12 @@ def test_literal_N2():
 def test_anchored_front():
 	run("-g ^FRONTADAPT", "anchored.fasta", "anchored.fasta")
 
+def test_anchored_back():
+	run("-a BACKADAPTER$", "anchored-back.fasta", "anchored-back.fasta")
+
+def test_anchored_back_no_indels():
+	run("-a BACKADAPTER$ --no-indels", "anchored-back.fasta", "anchored-back.fasta")
+
 def test_solid():
 	run("-c -e 0.122 -a 330201030313112312", "solid.fastq", "solid.fastq")
 

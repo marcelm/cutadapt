@@ -9,6 +9,7 @@ from cutadapt.seqio import ColorspaceSequence
 BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
 FRONT = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.START_WITHIN_SEQ1
 PREFIX = align.STOP_WITHIN_SEQ2
+SUFFIX = align.START_WITHIN_SEQ2
 ANYWHERE = align.SEMIGLOBAL
 
 
@@ -43,10 +44,6 @@ class AdapterMatch(object):
 		The match is assumed to be a front adapter when the first base of
 		the read is involved in the alignment to the adapter.
 		"""
-		# TODO remove
-		# if match.rstart != 0  ==>  match.astart == 0
-		assert self.rstart == 0 or self.astart == 0
-		#return not (match.rstart > 0 and match.astart == 0)
 		return self.rstart == 0
 
 	def wildcards(self, wildcard_char='N'):
@@ -81,9 +78,9 @@ class Adapter(object):
 	In particular, it knows where it should be within the read and how to interpret
 	wildcard characters.
 
-	where --  One of the BACK, FRONT, PREFIX or ANYWHERE constants.
-		If the adapter is located in the middle of the read,
-		the constant influences which part of the read gets removed.
+	where --  One of the BACK, FRONT, PREFIX, SUFFIX or ANYWHERE constants.
+		This influences where the adapter is allowed to appear within in the
+		read and also which part of the read is removed.
 
 	sequence -- The adapter sequence as string. Will be converted to uppercase.
 		Also, Us will be converted to Ts.
@@ -122,7 +119,7 @@ class Adapter(object):
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
 		self.indels = indels
-		assert where != FRONT or self.indels
+		assert where in (PREFIX, SUFFIX) or self.indels
 		self.wildcard_flags = 0
 		self.match_adapter_wildcards = match_adapter_wildcards and 'N' in self.sequence
 		if match_read_wildcards:
@@ -135,13 +132,14 @@ class Adapter(object):
 			FRONT: self._trimmed_front,
 			PREFIX: self._trimmed_front,
 			BACK: self._trimmed_back,
+			SUFFIX: self._trimmed_back,
 			ANYWHERE: self._trimmed_anywhere
 		}
 		self.trimmed = trimmers[where]
 		if where == ANYWHERE:
 			self._front_flag = None  # means: guess
 		else:
-			self._front_flag = where != BACK
+			self._front_flag = where not in (BACK, SUFFIX)
 		# statistics about length of removed sequences
 		self.lengths_front = defaultdict(int)
 		self.lengths_back = defaultdict(int)
@@ -174,6 +172,8 @@ class Adapter(object):
 		if not self.match_adapter_wildcards:
 			if self.where == PREFIX:
 				pos = 0 if read_seq.startswith(self.sequence) else -1
+			elif self.where == SUFFIX:
+				pos = (len(read_seq) - len(self.sequence)) if read_seq.endswith(self.sequence) else -1
 			else:
 				pos = read_seq.find(self.sequence)
 		if pos >= 0:
@@ -183,7 +183,11 @@ class Adapter(object):
 		else:
 			# try approximate matching
 			if not self.indels:
-				alignment = align.compare_prefixes(self.sequence, read_seq, self.wildcard_flags)
+				assert self.where in (PREFIX, SUFFIX)
+				if self.where == PREFIX:
+					alignment = align.compare_prefixes(self.sequence, read_seq, self.wildcard_flags)
+				else:
+					alignment = align.compare_suffixes(self.sequence, read_seq, self.wildcard_flags)
 				astart, astop, rstart, rstop, matches, errors = alignment
 				match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
 			else:

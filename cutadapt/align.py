@@ -6,6 +6,8 @@ from __future__ import print_function, division, absolute_import
 from array import array
 import sys
 
+from cutadapt._align import Aligner, compare_prefixes, locate
+
 # flags for global alignment
 
 # The interpretation of the first flag is:
@@ -21,11 +23,17 @@ STOP_WITHIN_SEQ2 = 8
 ALLOW_WILDCARD_SEQ1 = 1
 ALLOW_WILDCARD_SEQ2 = 2
 
-GLOBAL = 0
-
 # Use this to get regular semiglobal alignment
 # (all gaps in the beginning or end are free)
 SEMIGLOBAL = START_WITHIN_SEQ1 | START_WITHIN_SEQ2 | STOP_WITHIN_SEQ1 | STOP_WITHIN_SEQ2
 
 
-from cutadapt._align import Aligner, compare_prefixes, locate
+def compare_suffixes(s1, s2, degenerate=0):
+	"""
+	Find out whether one string is the suffix of the other one, allowing
+	mismatches. Used to find an anchored 3' adapter when no indels are allowed.
+	"""
+	s1 = s1[::-1]
+	s2 = s2[::-1]
+	_, length, _, _, matches, errors = compare_prefixes(s1, s2, degenerate)
+	return (len(s1) - length, len(s1), len(s2) - length, len(s2), matches, errors)

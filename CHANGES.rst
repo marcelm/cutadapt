@@ -2,6 +2,12 @@
 Changes
 =======
 
+v1.7
+----
+* Anchored 3' adapters are supported. Add ``$`` to the adapter sequence to
+  force the adapter to appear in the end of the read (as a suffix). Closes
+  issue #81.
+
 v1.6
 ----
 * Fix bug: Ensure ``--format=...`` can be used even with paired-end input.

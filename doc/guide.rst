@@ -114,7 +114,8 @@ Adapter type                                        Command-line option
 =================================================== ===========================
 :ref:`3' adapter <three-prime-adapters>`            ``-a ADAPTER``
 :ref:`5' adapter <five-prime-adapters>`             ``-g ADAPTER``
-:ref:`Anchored 5' adapter <anchored-adapters>`      ``-g ^ADAPTER``
+:ref:`Anchored 3' adapter <anchored-3adapters>`      ``-a ADAPTER$``
+:ref:`Anchored 5' adapter <anchored-5adapters>`      ``-g ^ADAPTER``
 :ref:`5' or 3' (both possible) <anywhere-adapters>` ``-b ADAPTER``
 =================================================== ===========================
 
@@ -208,7 +209,7 @@ sequence ends with the adapter. For example, the read ::
 will be empty after trimming.
 
 
-.. _anchored-adapters:
+.. _anchored-5adapters:
 
 Anchored 5' adapters
 --------------------
@@ -240,6 +241,37 @@ high, even this read will be trimmed::
 The ``B`` in the beginnig is seen as an insertion. If you also want to prevent
 this from happening, use the option ``--no-indels`` to disallow insertions and
 deletions entirely.
+
+
+.. _anchored-3adapters:
+
+Anchored 3' adapters
+--------------------
+
+It is also possible to anchor 3' adapters to the end of the read. This is
+rarely necessary, but if you have, for example, merged overlapping paired-end
+reads, then this may be useful. Add the ``$`` character to the end of an
+adapter sequence specified via ``-a`` in order to anchor the adapter to the
+end of the read, such as ``-a ADAPTER$``. The adapter will only be found if it
+as a *suffix* of the read, but errors are still allowed as for 5' adapters.
+You can disable insertions and deletions with ``--no-indels``.
+
+Anchored 3' adapters work as if you had reversed the sequence and used an
+appropriate anchored 5' adapter.
+
+As an example, assume you have these reads::
+
+    MYSEQUENCEADAP
+    MYSEQUENCEADAPTER
+    MYSEQUENCEADAPTERSOMETHINGELSE
+
+Using ``-a ADAPTER$`` will result in::
+
+    MYSEQUENCEADAP
+    MYSEQUENCE
+    MYSEQUENCEADAPTERSOMETHINGELSE
+
+That is, only the middle read is trimmed at all.
 
 
 .. _anywhere-adapters:
@@ -276,7 +308,7 @@ Read before trimming           Read after trimming Detected adapter type
 ``TERMYSEQUENCE``              ``MYSEQUENCE``      5' adapter
 ============================== =================== =====================
 
-The ``-b`` option currently does not work with colorspace data.
+The ``-b`` option does not work with colorspace data.
 
 
 .. _error-tolerance:

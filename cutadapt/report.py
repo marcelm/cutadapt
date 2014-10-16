@@ -7,7 +7,7 @@ import sys
 import platform
 from collections import namedtuple
 from . import __version__
-from .adapters import BACK, FRONT, PREFIX, ANYWHERE
+from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
 
 Statistics = namedtuple('Statistics', 'total_bp n quality_trimmed_bases')
 
@@ -120,7 +120,7 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 		total_back = sum(adapter.lengths_back.values())
 		total = total_front + total_back
 		where = adapter.where
-		assert where == ANYWHERE or (where == BACK and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
+		assert where == ANYWHERE or (where in (BACK, SUFFIX) and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
 
 		name = str(adapter.name)
 		if not adapter.name_is_generated:
@@ -147,7 +147,7 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 			print("Overview of removed sequences")
 			print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate, adapter.errors_front)
 		else:
-			assert where == BACK
+			assert where in (BACK, SUFFIX)
 			print()
 			print_error_ranges(len(adapter), adapter.max_error_rate)
 			warning = warning or print_adjacent_bases(adapter.adjacent_bases, adapter.sequence)

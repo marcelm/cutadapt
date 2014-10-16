@@ -68,7 +68,7 @@ check_importability()
 
 from cutadapt import seqio, __version__
 from cutadapt.xopen import xopen
-from cutadapt.adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, ANYWHERE
+from cutadapt.adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter)
 from cutadapt.report import Statistics, print_statistics
@@ -424,6 +424,9 @@ def gather_adapters(back, anywhere, front):
 				if w == FRONT and seq.startswith('^'):
 					seq = seq[1:]
 					w = PREFIX
+				elif w == BACK and seq.endswith('$'):
+					seq = seq[:-1]
+					w = SUFFIX
 				yield (name, seq, w)
 
 
@@ -496,7 +499,10 @@ def get_option_parser():
 			"FILE (which must be in FASTA format).")
 	group.add_option("-a", "--adapter", action="append", metavar="ADAPTER", dest="adapters", default=[],
 		help="Sequence of an adapter that was ligated to the 3' end. The "
-			"adapter itself and anything that follows is trimmed.")
+			"adapter itself and anything that follows is trimmed. If the "
+			"adapter sequence ends with the '$' character, the adapter is "
+			"anchored to the end of the read. It is only found if it is a "
+			"suffix of the read.")
 	group.add_option("-b", "--anywhere", action="append", metavar="ADAPTER", default=[],
 		help="Sequence of an adapter that was ligated to the 5' or 3' end. If the adapter is found within the read or overlapping the 3' end of the read, the behavior is the same as for the -a option. If the adapter overlaps the 5' end (beginning of the read), the initial portion of the read matching the adapter is trimmed, but anything that follows is kept.")
 	group.add_option("-g", "--front", action="append", metavar="ADAPTER", default=[],
@@ -758,8 +764,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		for name, seq, where in gather_adapters(options.adapters, options.anywhere, options.front):
 			if not seq:
 				parser.error("The adapter sequence is empty")
-			if not options.indels and where != PREFIX:
-				parser.error("Not allowing indels is currently supported only for anchored 5' adapters.")
+			if not options.indels and where not in (PREFIX, SUFFIX):
+				parser.error("Not allowing indels is currently supported only for anchored 5' or 3' adapters.")
 			adapter = ADAPTER_CLASS(seq, where, options.error_rate,
 				options.overlap, options.match_read_wildcards,
 				options.match_adapter_wildcards, name=name, indels=options.indels)
