@@ -384,7 +384,7 @@ ignored, and the bases are not trimmed.
 Requiring at least three bases to match is quite conservative. Even if no
 minimum overlap was required, we can compute that we lose only about 0.44 bases
 per read on average, see `Section 2.3.3 in my
-thesis <<http://hdl.handle.net/2003/31824>`_. With the default minimum
+thesis <http://hdl.handle.net/2003/31824>`_. With the default minimum
 overlap length of 3, only about 0.07 bases are lost per read.
 
 When choosing an appropriate minimum overlap length, take into account that
