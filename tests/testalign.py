@@ -1,6 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
-from cutadapt.align import (locate, compare_prefixes,
+from cutadapt.align import (locate, compare_prefixes, compare_suffixes,
 	ALLOW_WILDCARD_SEQ1, ALLOW_WILDCARD_SEQ1)
 from cutadapt.adapters import BACK
 
@@ -17,3 +17,10 @@ def test_compare_prefixes():
 	assert compare_prefixes('AANAA', 'AACAATTTTTTTTT', ALLOW_WILDCARD_SEQ1) == (0, 5, 0, 5, 5, 0)
 	assert compare_prefixes('AANAA', 'AACAATTTTTTTTT', ALLOW_WILDCARD_SEQ1) == (0, 5, 0, 5, 5, 0)
 	assert compare_prefixes('XAAAAA', 'AAAAATTTTTTTTT') == (0, 6, 0, 6, 4, 2)
+
+
+def test_compare_suffixes():
+	assert compare_suffixes('AAXAA', 'TTTTTTTAAAAA') == (0, 5, 7, 12, 4, 1)
+	assert compare_suffixes('AANAA', 'TTTTTTTAACAA', ALLOW_WILDCARD_SEQ1) == (0, 5, 7, 12, 5, 0)
+	assert compare_suffixes('AANAA', 'TTTTTTTAACAA', ALLOW_WILDCARD_SEQ1) == (0, 5, 7, 12, 5, 0)
+	assert compare_suffixes('AAAAAX', 'TTTTTTTAAAAA') == (0, 6, 6, 12, 4, 2)
