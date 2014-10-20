@@ -82,29 +82,25 @@ cdef class Aligner:
 	cdef int flags
 	cdef bint wildcard_ref
 	cdef bint wildcard_query
-	cdef bytes reference
+	cdef bytes _reference
 
 	def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0):
-		self.m = len(reference)
-		self.column = <Entry*> PyMem_Malloc((self.m + 1) * sizeof(Entry))
-		if not self.column:
-			raise MemoryError()
-		self.reference = reference.encode('ascii')
 		self.max_error_rate = max_error_rate
 		self.flags = flags
 		self.wildcard_ref = degenerate & ALLOW_WILDCARD_SEQ1
 		self.wildcard_query = degenerate & ALLOW_WILDCARD_SEQ2
+		self.reference = reference
 
 	property reference:
 		def __get__(self):
-			return self.reference
+			return self._reference
 
 		def __set__(self, str reference):
 			mem = <Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(Entry))
 			if not mem:
 				raise MemoryError()
 			self.column = mem
-			self.reference = reference.encode('ascii')
+			self._reference = reference.encode('ascii')
 			self.m = len(reference)
 
 	def locate(self, str query):
@@ -121,7 +117,7 @@ cdef class Aligner:
 
 		The alignment itself is not returned.
 		"""
-		cdef char* s1 = self.reference
+		cdef char* s1 = self._reference
 		cdef bytes query_bytes = query.encode('ascii')
 		cdef char* s2 = query_bytes
 		cdef int m = self.m
