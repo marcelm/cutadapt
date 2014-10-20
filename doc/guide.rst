@@ -409,7 +409,7 @@ enabled with ``--match-read-wildcards``.
 
 .. _cut-bases:
 
-Removing a fixed numebr of bases
+Removing a fixed number of bases
 --------------------------------
 
 By using the ``--cut`` option or its abbreviation ``-u``, it is possible to
