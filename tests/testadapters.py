@@ -9,8 +9,8 @@ def test_issue_52():
 		where=BACK,
 		max_error_rate=0.1,
 		min_overlap=5,
-		match_read_wildcards=False,
-		match_adapter_wildcards=True)
+		read_wildcards=False,
+		adapter_wildcards=True)
 	read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
 	am = AdapterMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, front=None, adapter=adapter, read=read)
 	assert am.wildcards() == 'GGC'
@@ -44,8 +44,8 @@ def test_issue_80():
 		where=BACK,
 		max_error_rate=0.2,
 		min_overlap=3,
-		match_read_wildcards=False,
-		match_adapter_wildcards=False)
+		read_wildcards=False,
+		adapter_wildcards=False)
 	read = Sequence(name="seq2", sequence="TCGTATGCCCTCC")
 	result = adapter.match(read)
 	assert result.errors == 3, result

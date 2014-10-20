@@ -57,7 +57,7 @@ def run(params, expected, inpath, inpath2=None):
 
 
 def test_example():
-	run(["-b", "ADAPTER"], 'example.fa', 'example.fa')
+	run(['-b', 'ADAPTER', '-N'], 'example.fa', 'example.fa')
 
 def test_small():
 	run(["-b", "TTAGACATATCTCCGTCG"], 'small.fastq', 'small.fastq')
@@ -77,13 +77,13 @@ def test_lowercase():
 
 def test_rest():
 	'''-r/--rest-file'''
-	run(['-b', 'ADAPTER', '-r', dpath('rest.tmp')], "rest.fa", "rest.fa")
+	run(['-b', 'ADAPTER', '-N', '-r', dpath('rest.tmp')], "rest.fa", "rest.fa")
 	assert files_equal(datapath('rest.txt'), dpath('rest.tmp'))
 	os.remove(dpath('rest.tmp'))
 
 
 def test_restfront():
-	run(['-g', 'ADAPTER', '-r', dpath('rest.tmp')], "restfront.fa", "rest.fa")
+	run(['-g', 'ADAPTER', '-N', '-r', dpath('rest.tmp')], "restfront.fa", "rest.fa")
 	assert files_equal(datapath('restfront.txt'), dpath('rest.tmp'))
 	os.remove(dpath('rest.tmp'))
 
@@ -152,11 +152,11 @@ def test_length_tag():
 
 def test_overlap_a():
 	'''-O/--overlap with -a (-c omitted on purpose)'''
-	run("-O 10 -a 330201030313112312", "overlapa.fa", "overlapa.fa")
+	run("-O 10 -a 330201030313112312 -N", "overlapa.fa", "overlapa.fa")
 
 def test_overlap_b():
 	'''-O/--overlap with -b'''
-	run("-O 10 -b TTAGACATATCTCCGTCG", "overlapb.fa", "overlapb.fa")
+	run("-O 10 -b TTAGACATATCTCCGTCG -N", "overlapb.fa", "overlapb.fa")
 
 def test_qualtrim():
 	'''-q with low qualities'''
@@ -226,9 +226,12 @@ def test_wildcard_N():
 	'''test 'N' wildcard matching with no allowed errors'''
 	run("-e 0 -a GGGGGGG --match-read-wildcards", "wildcardN.fa", "wildcardN.fa")
 
+def test_illumina_adapter_wildcard():
+	run("-a VCCGAMCYUCKHRKDCUBBCNUWNSGHCGU", "illumina.fastq", "illumina.fastq.gz")
+
 def test_adapter_front():
 	'''test adapter in front'''
-	run("--front ADAPTER", "examplefront.fa", "example.fa")
+	run("--front ADAPTER -N", "examplefront.fa", "example.fa")
 
 def test_literal_N():
 	'''test matching literal 'N's'''
@@ -238,13 +241,13 @@ def test_literal_N2():
 	run("-N -O 1 -g NNNNNNNNNNNNNN", "trimN5.fasta", "trimN5.fasta")
 
 def test_anchored_front():
-	run("-g ^FRONTADAPT", "anchored.fasta", "anchored.fasta")
+	run("-g ^FRONTADAPT -N", "anchored.fasta", "anchored.fasta")
 
 def test_anchored_back():
-	run("-a BACKADAPTER$", "anchored-back.fasta", "anchored-back.fasta")
+	run("-a BACKADAPTER$ -N", "anchored-back.fasta", "anchored-back.fasta")
 
 def test_anchored_back_no_indels():
-	run("-a BACKADAPTER$ --no-indels", "anchored-back.fasta", "anchored-back.fasta")
+	run("-a BACKADAPTER$ -N --no-indels", "anchored-back.fasta", "anchored-back.fasta")
 
 def test_solid():
 	run("-c -e 0.122 -a 330201030313112312", "solid.fastq", "solid.fastq")
@@ -438,3 +441,4 @@ def test_explicit_format_with_paired():
 def test_no_trimming():
 	# make sure that this doesn't divide by zero
 	cutadapt.main(['-a', 'XXXXX', '-o', '/dev/null', '-p', '/dev/null', datapath('paired.1.fastq'), datapath('paired.2.fastq')])
+

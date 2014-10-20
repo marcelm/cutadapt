@@ -92,11 +92,10 @@ class Adapter(object):
 	minimum_overlap -- Minimum length of the part of the alignment
 		that matches the adapter.
 
-	match_read_wildcards -- Whether wildcards ('N' characters) in the read
-		are matches (at zero cost).
+	read_wildcards -- Whether IUPAC wildcards in the read are allowed.
 
-	match_adapter_wildcards -- Whether wildcards in the adapter are allowed
-		to match any character in the read (at zero cost).
+	adapter_wildcards -- Whether IUPAC wildcards in the adapter are
+		allowed.
 
 	name -- optional name of the adapter. If not provided, the name is set to a
 		unique number.
@@ -104,7 +103,7 @@ class Adapter(object):
 	automatic_name = 1
 
 	def __init__(self, sequence, where, max_error_rate, min_overlap=3,
-			match_read_wildcards=False, match_adapter_wildcards=False,
+			read_wildcards=False, adapter_wildcards=True,
 			name=None, indels=True):
 		if name is None:
 			self.name = str(self.__class__.automatic_name)
@@ -121,10 +120,10 @@ class Adapter(object):
 		self.indels = indels
 		assert where in (PREFIX, SUFFIX) or self.indels
 		self.wildcard_flags = 0
-		self.match_adapter_wildcards = match_adapter_wildcards and 'N' in self.sequence
-		if match_read_wildcards:
+		self.adapter_wildcards = adapter_wildcards
+		if read_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
-		if self.match_adapter_wildcards:
+		if self.adapter_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ1
 		# redirect to appropriate trimmed() function depending on
 		# adapter type
@@ -151,13 +150,13 @@ class Adapter(object):
 			self.where, self.wildcard_flags)
 
 	def __repr__(self):
-		match_read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)
+		read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)
 		return '<Adapter(name="{name}", sequence="{sequence}", where={where}, '\
 			'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
-			'match_read_wildcards={match_read_wildcards}, '\
-			'match_adapter_wildcards={match_adapter_wildcards}, '\
+			'read_wildcards={read_wildcards}, '\
+			'adapter_wildcards={adapter_wildcards}, '\
 			'indels={indels})>'.format(
-				match_read_wildcards=match_read_wildcards,
+				read_wildcards=read_wildcards,
 				**vars(self))
 
 	def match(self, read):
@@ -169,7 +168,7 @@ class Adapter(object):
 		read_seq = read.sequence.upper()
 		pos = -1
 		# try to find an exact match first unless wildcards are allowed
-		if not self.match_adapter_wildcards:
+		if not self.adapter_wildcards:
 			if self.where == PREFIX:
 				pos = 0 if read_seq.startswith(self.sequence) else -1
 			elif self.where == SUFFIX:

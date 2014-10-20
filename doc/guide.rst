@@ -397,14 +397,27 @@ true adapter matches are also lost when the overlap length is higher than
 Wildcards
 ---------
 
-The wildcard character ``N`` in the adapter sequence is supported. It matches
-any nucleotide. This is useful for trimming adapters that have a variable
-barcode embedded in them::
+All `IUPAC nucleotide codes <http://www.bioinformatics.org/sms/iupac.html>`_
+(wildcard characters) are supported. For example, use an ``N`` in the adapter
+sequence to match any nucleotide in the read, or use ``-a YACGT`` for an adapter
+that matches both ``CACGT`` and ``TACGT``. The wildcard character ``N`` is
+useful for trimming adapters with an embedded variable barcode::
 
     cutadapt -a ACGTAANNNNTTAGC -o output.fastq input.fastq
 
-Wildcard characters in the reads are also supported, but this must be
-enabled with ``--match-read-wildcards``.
+Wildcard characters in the adapter are enabled by default. Use the option ``-N``
+to disable this.
+
+Matching of wildcards in the reads is also possible, but disabled by default
+in order to avoid matches in reads that consist of many (often low-quality)
+``N`` bases. Use ``--match-read-wildcards`` to enable wildcards also in reads.
+
+If wildcards are disabled entirely (that is, you use ``-N`` and *do not* use
+``--match-read-wildcards``, then cutadapt compares characters by ASCII value.
+Thus, both the read and adapter can be arbitrary strings (such as ``SEQUENCE``
+or ``ADAPTER`` as used here in the examples).
+
+Wildcards do not work in colorspace.
 
 
 .. _cut-bases:

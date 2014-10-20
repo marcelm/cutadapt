@@ -23,7 +23,7 @@ improvements.
 -  search for adapters in the order in which they are given on the
    command line
 -  more tests for the alignment algorithm
-
+- allow adapters in ``file:`` to be anchored
 
 Specifying adapters
 -------------------

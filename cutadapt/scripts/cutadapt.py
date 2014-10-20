@@ -757,6 +757,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if options.wildcard_file is not None:
 		options.wildcard_file = xopen(options.wildcard_file, 'w')
 
+	if options.colorspace:
+		if options.match_read_wildcards:
+			parser.error('IUPAC wildcards not supported in colorspace')
+		options.match_adapter_wildcards = False
 	adapters = []
 	ADAPTER_CLASS = ColorspaceAdapter if options.colorspace else Adapter
 

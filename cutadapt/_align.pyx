@@ -21,6 +21,66 @@ ctypedef struct Entry:
 	int origin   # where the alignment originated: negative for positions within seq1, positive for pos. within seq2
 
 
+def _acgt_table():
+	"""
+	Return a translation table that maps A, C, G, T characters to the lower
+	four bits of a byte. Other characters (including possibly IUPAC characters)
+	are mapped to zero.
+
+	Lowercase versions are also translated, and U is treated the same as T.
+	"""
+	d = dict(A=1, C=2, G=4, T=8, U=8)
+	t = bytearray(b'\0') * 256
+	for c, v in d.items():
+		t[ord(c)] = v
+		t[ord(c.lower())] = v
+	return bytes(t)
+
+
+def _iupac_table():
+	"""
+	Return a translation table for IUPAC characters.
+
+	The table maps ASCII-encoded IUPAC nucleotide characters to bytes in which
+	the four least significant bits are used to represent one nucleotide each.
+
+	Whether two characters x and y match can then be checked with the
+	expression "x & y != 0".
+	"""
+	A = 1
+	C = 2
+	G = 4
+	T = 8
+	d = dict(
+		X=0,
+		A=A,
+		C=C,
+		G=G,
+		T=T,
+		U=T,
+		R=A|G,
+		Y=C|T,
+		S=G|C,
+		W=A|T,
+		K=G|T,
+		M=A|C,
+		B=C|G|T,
+		D=A|G|T,
+		H=A|C|T,
+		V=A|C|G,
+		N=A|C|G|T
+	)
+	t = bytearray(b'\0') * 256
+	for c, v in d.items():
+		t[ord(c)] = v
+		t[ord(c.lower())] = v
+	return bytes(t)
+
+
+cdef bytes ACGT_TABLE = _acgt_table()
+cdef bytes IUPAC_TABLE = _iupac_table()
+
+
 cdef class Aligner:
 	"""
 	TODO documentation still uses s1 (reference) and s2 (query).
@@ -75,6 +135,13 @@ cdef class Aligner:
 	errors in the alignment.
 
 	It is always the case that at least one of start1 and start2 is zero.
+
+	IUPAC wildcard characters can be allowed in the reference and the query
+	by setting the appropriate bit in the 'degenerate' flag.
+
+	If neither flag is set, the full ASCII alphabet is used for comparison.
+	If any of the flags is set, all non-IUPAC characters in the sequences
+	compare as 'not equal'.
 	"""
 	cdef int m
 	cdef Entry* column  # one column of the DP matrix
@@ -102,6 +169,10 @@ cdef class Aligner:
 			self.column = mem
 			self._reference = reference.encode('ascii')
 			self.m = len(reference)
+			if self.wildcard_ref:
+				self._reference = self._reference.translate(IUPAC_TABLE)
+			elif self.wildcard_query:
+				self._reference = self._reference.translate(ACGT_TABLE)
 
 	def locate(self, str query):
 		"""
@@ -128,6 +199,14 @@ cdef class Aligner:
 		cdef bint start_in_query = self.flags & START_WITHIN_SEQ2
 		cdef bint stop_in_ref = self.flags & STOP_WITHIN_SEQ1
 		cdef bint stop_in_query = self.flags & STOP_WITHIN_SEQ2
+
+		if self.wildcard_query:
+			query_bytes = query_bytes.translate(IUPAC_TABLE)
+			s2 = query_bytes
+		elif self.wildcard_ref:
+			query_bytes = query_bytes.translate(ACGT_TABLE)
+			s2 = query_bytes
+		cdef bint compare_ascii = not (self.wildcard_query or self.wildcard_ref)
 		"""
 		DP Matrix:
 		           query (j)
@@ -199,6 +278,7 @@ cdef class Aligner:
 		cdef int cost_insertion
 		cdef int origin, cost, matches
 		cdef int length
+		cdef bint characters_equal
 		cdef Entry tmp_entry
 
 		# iterate over columns
@@ -212,10 +292,11 @@ cdef class Aligner:
 			else:
 				column[0].cost = j * INSERTION_COST
 			for i in range(1, last + 1):
-				if s1[i-1] == s2[j-1] or \
-						(self.wildcard_ref and s1[i-1] == WILDCARD_CHAR) or \
-						(self.wildcard_query and s2[j-1] == WILDCARD_CHAR):
-
+				if compare_ascii:
+					characters_equal = (s1[i-1] == s2[j-1])
+				else:
+					characters_equal = (s1[i-1] & s2[j-1]) != 0
+				if characters_equal:
 					# Characters match: This cannot be an indel.
 					cost = tmp_entry.cost
 					origin = tmp_entry.origin
@@ -303,26 +384,50 @@ def locate(str reference, str query, double max_error_rate, int flags = SEMIGLOB
 	return aligner.locate(query)
 
 
-def compare_prefixes(str s1, str s2, int degenerate = 0):
+def compare_prefixes(str ref, str query, int degenerate=0):
 	"""
 	Find out whether one string is the prefix of the other one, allowing
-	mismatches.
+	IUPAC wildcards if the appropriate bit is set in the degenerate flag
+	parameter.
 
 	This is used to find an anchored 5' adapter (type 'FRONT') in the 'no indels' mode.
 	This is very simple as only the number of errors needs to be counted.
 
 	This function returns a tuple compatible with what Aligner.locate outputs.
 	"""
-	cdef int m = len(s1)
-	cdef int n = len(s2)
-	cdef int wildcard_ref = degenerate & ALLOW_WILDCARD_SEQ1
-	cdef int wildcard_query = degenerate & ALLOW_WILDCARD_SEQ2
+	cdef int m = len(ref)
+	cdef int n = len(query)
+	cdef bytes query_bytes = query.encode('ascii')
+	cdef bytes ref_bytes = ref.encode('ascii')
+	cdef char* r_ptr
+	cdef char* q_ptr
+	cdef bint wildcard_ref = degenerate & ALLOW_WILDCARD_SEQ1
+	cdef bint wildcard_query = degenerate & ALLOW_WILDCARD_SEQ2
 	cdef int length = min(m, n)
 	cdef int i, matches = 0
-	for i in range(length):
-		if s1[i] == s2[i] or \
-				(wildcard_ref and s1[i] == WILDCARD_CHAR) or \
-				(wildcard_query and s2[i] == WILDCARD_CHAR):
-			matches += 1
+	cdef bint compare_ascii = False
+
+	if wildcard_ref:
+		ref_bytes = ref_bytes.translate(IUPAC_TABLE)
+	elif wildcard_query:
+		ref_bytes = ref_bytes.translate(ACGT_TABLE)
+	else:
+		compare_ascii = True
+	if wildcard_query:
+		query_bytes = query_bytes.translate(IUPAC_TABLE)
+	elif wildcard_ref:
+		query_bytes = query_bytes.translate(ACGT_TABLE)
+
+	if compare_ascii:
+		for i in range(length):
+			if ref[i] == query[i]:
+				matches += 1
+	else:
+		r_ptr = ref_bytes
+		q_ptr = query_bytes
+		for i in range(length):
+			if (r_ptr[i] & q_ptr[i]) != 0:
+				matches += 1
+
 	# length - matches = no. of errors
 	return (0, length, 0, length, matches, length - matches)

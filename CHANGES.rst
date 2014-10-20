@@ -7,6 +7,12 @@ v1.7
 * Anchored 3' adapters are supported. Add ``$`` to the adapter sequence to
   force the adapter to appear in the end of the read (as a suffix). Closes
   issue #81.
+* IUPAC characters are now supported. By default, this applies only to the
+  adapter sequence. For example, use ``-a YACGT`` for an adapter that matches
+  both ``CACGT`` and ``TACGT`` with zero errors. Disable with ``-N``. IUPAC
+  characters in the read are disabled by default in order to avoid matches in
+  reads that consist of many (low-quality) ``N`` bases. Use
+  ``--match-read-wildcards`` to enable them even in the read.
 
 v1.6
 ----
