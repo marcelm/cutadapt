@@ -80,18 +80,20 @@ cdef class Aligner:
 	cdef Entry* column  # one column of the DP matrix
 	cdef double max_error_rate
 	cdef int flags
-	cdef int degenerate
+	cdef bint wildcard_ref
+	cdef bint wildcard_query
 	cdef bytes reference
 
-	def __cinit__(self, str reference, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
+	def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0):
 		self.m = len(reference)
 		self.column = <Entry*> PyMem_Malloc((self.m + 1) * sizeof(Entry))
 		if not self.column:
 			raise MemoryError()
 		self.reference = reference.encode('ascii')
-		self.degenerate = degenerate
-		self.flags = flags
 		self.max_error_rate = max_error_rate
+		self.flags = flags
+		self.wildcard_ref = degenerate & ALLOW_WILDCARD_SEQ1
+		self.wildcard_query = degenerate & ALLOW_WILDCARD_SEQ2
 
 	property reference:
 		def __get__(self):
@@ -130,8 +132,6 @@ cdef class Aligner:
 		cdef bint start_in_query = self.flags & START_WITHIN_SEQ2
 		cdef bint stop_in_ref = self.flags & STOP_WITHIN_SEQ1
 		cdef bint stop_in_query = self.flags & STOP_WITHIN_SEQ2
-		cdef bint wildcard1 = self.degenerate & ALLOW_WILDCARD_SEQ1
-		cdef bint wildcard2 = self.degenerate & ALLOW_WILDCARD_SEQ2
 		"""
 		DP Matrix:
 		           query (j)
@@ -217,8 +217,8 @@ cdef class Aligner:
 				column[0].cost = j * INSERTION_COST
 			for i in range(1, last + 1):
 				if s1[i-1] == s2[j-1] or \
-						(wildcard1 and s1[i-1] == WILDCARD_CHAR) or \
-						(wildcard2 and s2[j-1] == WILDCARD_CHAR):
+						(self.wildcard_ref and s1[i-1] == WILDCARD_CHAR) or \
+						(self.wildcard_query and s2[j-1] == WILDCARD_CHAR):
 
 					# Characters match: This cannot be an indel.
 					cost = tmp_entry.cost
@@ -319,14 +319,14 @@ def compare_prefixes(str s1, str s2, int degenerate = 0):
 	"""
 	cdef int m = len(s1)
 	cdef int n = len(s2)
-	cdef int wildcard1 = degenerate & ALLOW_WILDCARD_SEQ1
-	cdef int wildcard2 = degenerate & ALLOW_WILDCARD_SEQ2
+	cdef int wildcard_ref = degenerate & ALLOW_WILDCARD_SEQ1
+	cdef int wildcard_query = degenerate & ALLOW_WILDCARD_SEQ2
 	cdef int length = min(m, n)
 	cdef int i, matches = 0
 	for i in range(length):
 		if s1[i] == s2[i] or \
-				(wildcard1 and s1[i] == WILDCARD_CHAR) or \
-				(wildcard2 and s2[i] == WILDCARD_CHAR):
+				(wildcard_ref and s1[i] == WILDCARD_CHAR) or \
+				(wildcard_query and s2[i] == WILDCARD_CHAR):
 			matches += 1
 	# length - matches = no. of errors
 	return (0, length, 0, length, matches, length - matches)
