@@ -147,7 +147,8 @@ class Adapter(object):
 		self.adjacent_bases = { 'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0 }
 
 		self.aligner = align.Aligner(self.sequence, self.max_error_rate,
-			self.where, self.wildcard_flags)
+			flags=self.where, degenerate=self.wildcard_flags,
+			min_overlap=self.min_overlap)
 
 	def __repr__(self):
 		read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)
@@ -188,20 +189,22 @@ class Adapter(object):
 				else:
 					alignment = align.compare_suffixes(self.sequence, read_seq, self.wildcard_flags)
 				astart, astop, rstart, rstop, matches, errors = alignment
-				match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
+				if astop - astart >= self.min_overlap and errors / (astop - astart) <= self.max_error_rate:
+					match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
+				else:
+					match = None
 			else:
 				alignment = self.aligner.locate(read_seq)
-				astart, astop, rstart, rstop, matches, errors = alignment
-				length = astop - astart
-				if length < self.min_overlap or errors / length > self.max_error_rate:
-					return None
-				return AdapterMatch(astart, astop, rstart, rstop, matches, errors, self._front_flag, self, read)
+				if alignment is None:
+					match = None
+				else:
+					astart, astop, rstart, rstop, matches, errors = alignment
+					match = AdapterMatch(astart, astop, rstart, rstop, matches, errors, self._front_flag, self, read)
 
-		# TODO Aligner.locate should be modified to allow the following
-		# assertion.
-		# assert length == 0 or match.errors / length <= self.max_error_rate
-		if match.length < self.min_overlap or match.errors / match.length > self.max_error_rate:
+		if match is None:
 			return None
+		assert match.length > 0 and match.errors / match.length <= self.max_error_rate, match
+		assert match.length >= self.min_overlap
 		return match
 
 	def _trimmed_anywhere(self, match):
@@ -263,13 +266,15 @@ class ColorspaceAdapter(Adapter):
 			# try approximate matching
 			self.aligner.reference = asequence
 			alignment = self.aligner.locate(read.sequence)
-			match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
+			if alignment is not None:
+				match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
+			else:
+				match = None
 
-		# TODO Aligner.locate should be modified to allow the following
-		# assertion.
-		# assert length == 0 or match.errors / length <= self.max_error_rate
-		if match.length < self.min_overlap or match.errors / match.length > self.max_error_rate:
+		if match is None:
 			return None
+		assert match.length > 0 and match.errors / match.length <= self.max_error_rate
+		assert match.length >= self.min_overlap
 		return match
 
 	def _trimmed_front(self, match):

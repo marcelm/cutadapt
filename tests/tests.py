@@ -152,7 +152,7 @@ def test_length_tag():
 
 def test_overlap_a():
 	'''-O/--overlap with -a (-c omitted on purpose)'''
-	run("-O 10 -a 330201030313112312 -N", "overlapa.fa", "overlapa.fa")
+	run("-O 10 -a 330201030313112312 -e 0.0 -N", "overlapa.fa", "overlapa.fa")
 
 def test_overlap_b():
 	'''-O/--overlap with -b'''

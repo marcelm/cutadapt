@@ -15,10 +15,18 @@ DEF MISMATCH_COST = 1
 DEF WILDCARD_CHAR = 'N'
 
 # structure for a DP matrix entry
-ctypedef struct Entry:
+ctypedef struct _Entry:
 	int cost
 	int matches  # no. of matches in this alignment
 	int origin   # where the alignment originated: negative for positions within seq1, positive for pos. within seq2
+
+
+ctypedef struct _Match:
+	int origin
+	int cost
+	int matches
+	int ref_stop
+	int query_stop
 
 
 def _acgt_table():
@@ -144,26 +152,30 @@ cdef class Aligner:
 	compare as 'not equal'.
 	"""
 	cdef int m
-	cdef Entry* column  # one column of the DP matrix
+	cdef _Entry* column  # one column of the DP matrix
 	cdef double max_error_rate
 	cdef int flags
+	cdef int min_overlap
 	cdef bint wildcard_ref
 	cdef bint wildcard_query
 	cdef bytes _reference
 
-	def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0):
+	def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0, int min_overlap=1):
 		self.max_error_rate = max_error_rate
 		self.flags = flags
 		self.wildcard_ref = degenerate & ALLOW_WILDCARD_SEQ1
 		self.wildcard_query = degenerate & ALLOW_WILDCARD_SEQ2
 		self.reference = reference
+		if min_overlap < 1:
+			raise ValueError("minimum overlap must be at least 1")
+		self.min_overlap = min_overlap
 
 	property reference:
 		def __get__(self):
 			return self._reference
 
 		def __set__(self, str reference):
-			mem = <Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(Entry))
+			mem = <_Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(_Entry))
 			if not mem:
 				raise MemoryError()
 			self.column = mem
@@ -193,7 +205,7 @@ cdef class Aligner:
 		cdef char* s2 = query_bytes
 		cdef int m = self.m
 		cdef int n = len(query)
-		cdef Entry* column = self.column
+		cdef _Entry* column = self.column
 		cdef double max_error_rate = self.max_error_rate
 		cdef bint start_in_ref = self.flags & START_WITHIN_SEQ1
 		cdef bint start_in_query = self.flags & START_WITHIN_SEQ2
@@ -262,11 +274,12 @@ cdef class Aligner:
 				column[i].cost = min(i, min_n)
 				column[i].origin = min_n - i
 
-		cdef int best_i = m
-		cdef int best_j = n
-		cdef int best_cost = m + n
-		cdef int best_matches = 0
-		cdef int best_origin = 0
+		cdef _Match best
+		best.ref_stop = m
+		best.query_stop = n
+		best.cost = m + n
+		best.origin = 0
+		best.matches = 0
 
 		# Ukkonen's trick: index of the last cell that is less than k.
 		cdef int last = k + 1
@@ -279,7 +292,7 @@ cdef class Aligner:
 		cdef int origin, cost, matches
 		cdef int length
 		cdef bint characters_equal
-		cdef Entry tmp_entry
+		cdef _Entry tmp_entry
 
 		# iterate over columns
 		for j in range(min_n + 1, max_n + 1):
@@ -341,13 +354,13 @@ cdef class Aligner:
 				length = m + min(column[m].origin, 0)
 				cost = column[m].cost
 				matches = column[m].matches
-				if cost <= length * max_error_rate and (matches > best_matches or (matches == best_matches and cost < best_cost)):
+				if length >= self.min_overlap and cost <= length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
 					# update
-					best_matches = matches
-					best_cost = cost
-					best_origin = column[m].origin
-					best_i = m
-					best_j = j
+					best.matches = matches
+					best.cost = cost
+					best.origin = column[m].origin
+					best.ref_stop = m
+					best.query_stop = j
 			# column finished
 
 		if max_n == n:
@@ -357,30 +370,37 @@ cdef class Aligner:
 				length = i + min(column[i].origin, 0)
 				cost = column[i].cost
 				matches = column[i].matches
-				if cost <= length * max_error_rate and (matches > best_matches or (matches == best_matches and cost < best_cost)):
+				if length >= self.min_overlap and cost <= length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
 					# update best
-					best_matches = matches
-					best_cost = cost
-					best_origin = column[i].origin
-					best_i = i
-					best_j = n
+					best.matches = matches
+					best.cost = cost
+					best.origin = column[i].origin
+					best.ref_stop = i
+					best.query_stop = n
+
+		if best.cost == m + n:
+			# best.cost was initialized with this value.
+			# If it is unchanged, no alignment was found that has
+			# an error rate within the allowed range.
+			return None
 
 		cdef int start1, start2
-		if best_origin >= 0:
+		if best.origin >= 0:
 			start1 = 0
-			start2 = best_origin
+			start2 = best.origin
 		else:
-			start1 = -best_origin
+			start1 = -best.origin
 			start2 = 0
 
-		return (start1, best_i, start2, best_j, best_matches, best_cost)
+		assert best.ref_stop - start1 > 0  # Do not return empty alignments.
+		return (start1, best.ref_stop, start2, best.query_stop, best.matches, best.cost)
 
 	def __dealloc__(self):
 		PyMem_Free(self.column)
 
 
-def locate(str reference, str query, double max_error_rate, int flags = SEMIGLOBAL, int degenerate = 0):
-	aligner = Aligner(reference, max_error_rate, flags, degenerate)
+def locate(str reference, str query, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0, int min_overlap=1):
+	aligner = Aligner(reference, max_error_rate, flags, degenerate, min_overlap)
 	return aligner.locate(query)
 
 

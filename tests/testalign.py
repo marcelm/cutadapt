@@ -79,7 +79,7 @@ def test_wildcards_in_adapter():
 
 	a = 'CCCXTTXATC'
 	result = locate(a, r, 0.0, BACK, degenerate=ALLOW_WILDCARD_SEQ1)
-	assert result[0:2] == (0, 0)
+	assert result is None
 
 
 def test_wildcards_in_read():
@@ -88,7 +88,7 @@ def test_wildcards_in_read():
 		r = 'CATCTGTCC' + s + 'GCCAGGGTTGATTCGGCTGATCTGGCCG'
 		result = locate(a, r, 0.0, BACK, degenerate=ALLOW_WILDCARD_SEQ2)
 		if 'X' in s:
-			assert result[0:2] == (0, 0)
+			assert result is None
 		else:
 			assert result == (0, 10, 9, 19, 10, 0), result
 
@@ -101,3 +101,8 @@ def test_wildcards_in_both():
 			r = 'CATCTGTCC' + s + 'GCCAGGGTTGATTCGGCTGATCTGGCCG'
 			result = locate(a, r, 0.0, BACK, degenerate=ALLOW_WILDCARD_SEQ1|ALLOW_WILDCARD_SEQ2)
 			assert result == (0, 10, 9, 19, 10, 0), result
+
+
+def test_no_match():
+	a = locate('CTGATCTGGCCG', 'AAAAGGG', 0.1, BACK)
+	assert a is None, a
