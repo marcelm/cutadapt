@@ -263,10 +263,10 @@ cdef class Aligner:
 				column[i].origin = min_n - i
 
 		cdef int best_i = m
-		cdef int best_j = 0
-		cdef int best_cost = column[m].cost
+		cdef int best_j = n
+		cdef int best_cost = m + n
 		cdef int best_matches = 0
-		cdef int best_origin = column[m].origin
+		cdef int best_origin = 0
 
 		# Ukkonen's trick: index of the last cell that is less than k.
 		cdef int last = k + 1
