@@ -159,7 +159,7 @@ class Adapter(object):
 				read_wildcards=read_wildcards,
 				**vars(self))
 
-	def match(self, read):
+	def match_to(self, read):
 		"""
 		Try to match this adapter to the given read and return an AdapterMatch instance.
 
@@ -246,10 +246,10 @@ class ColorspaceAdapter(Adapter):
 			raise ValueError("A 5' colorspace adapter needs to be given in nucleotide space")
 		self.aligner.reference = self.sequence
 
-	def match(self, read):
+	def match_to(self, read):
 		"""Return AdapterMatch instance"""
 		if self.where != PREFIX:
-			return super(ColorspaceAdapter, self).match(read)
+			return super(ColorspaceAdapter, self).match_to(read)
 		# create artificial adapter that includes a first color that encodes the
 		# transition from primer base into adapter
 		asequence = colorspace.ENCODE[read.primer + self.nucleotide_sequence[0:1]] + self.sequence

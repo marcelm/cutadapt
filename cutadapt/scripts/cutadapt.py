@@ -216,7 +216,7 @@ class RepeatedAdapterCutter(object):
 		"""
 		best = None
 		for adapter in self.adapters:
-			match = adapter.match(read)
+			match = adapter.match_to(read)
 			if match is None:
 				continue
 

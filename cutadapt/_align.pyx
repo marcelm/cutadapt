@@ -337,7 +337,7 @@ cdef class Aligner:
 				last += 1
 			elif stop_in_query:
 				# Found a match. If requested, find best match in last row.
-				# length of the aligned part of string1
+				# length of the aligned part of the reference
 				length = m + min(column[m].origin, 0)
 				cost = column[m].cost
 				matches = column[m].matches

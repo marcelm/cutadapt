@@ -47,7 +47,7 @@ def test_issue_80():
 		read_wildcards=False,
 		adapter_wildcards=False)
 	read = Sequence(name="seq2", sequence="TCGTATGCCCTCC")
-	result = adapter.match(read)
+	result = adapter.match_to(read)
 	assert result.errors == 3, result
 	assert result.astart == 0, result
 	assert result.astop == 15, result
