@@ -13,6 +13,9 @@ v1.7
   characters in the read are disabled by default in order to avoid matches in
   reads that consist of many (low-quality) ``N`` bases. Use
   ``--match-read-wildcards`` to enable them even in the read.
+* Options ``--minimum-length``/``--maximum-length`` (``-m``/``-M``) can be used
+  standalone. That is, cutadapt can be used to filter reads by length without
+  trimming adapters.
 
 v1.6
 ----

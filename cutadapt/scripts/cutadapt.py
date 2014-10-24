@@ -791,7 +791,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	# build up list of modifiers
 	modifiers = []
-	if not adapters and options.quality_cutoff == 0 and options.cut == 0:
+	if not adapters and options.quality_cutoff == 0 and options.cut == 0 and \
+			options.minimum_length == 0 and options.maximum_length == sys.maxint:
 		parser.error("You need to provide at least one adapter sequence.")
 	if options.cut:
 		modifiers.append(UnconditionalCutter(options.cut))
