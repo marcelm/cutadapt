@@ -50,8 +50,8 @@ Some other available features are:
   * Trimming colorspace reads
   * Filtering reads by various criteria
 
-See http://cutadapt.readthedocs.org/ for the full documentation.
 Use "cutadapt --help" to see all command-line options.
+See http://cutadapt.readthedocs.org/ for the full documentation.
 """
 
 from __future__ import print_function, division, absolute_import
