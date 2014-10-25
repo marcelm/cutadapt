@@ -120,7 +120,7 @@ class Adapter(object):
 		self.indels = indels
 		assert where in (PREFIX, SUFFIX) or self.indels
 		self.wildcard_flags = 0
-		self.adapter_wildcards = adapter_wildcards
+		self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set('ACGT')
 		if read_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
 		if self.adapter_wildcards:

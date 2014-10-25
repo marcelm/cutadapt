@@ -24,7 +24,8 @@ improvements.
 - deprecate ``--rest-file``
 - ``--detect`` prints out best guess which of the given adapters is the correct one
 - alignment algorithm: make a 'banded' version
-
+- it seems the str.find optimization isn't very helpful. In any case, it should be
+  moved into the Aligner class.
 
 Specifying adapters
 -------------------
