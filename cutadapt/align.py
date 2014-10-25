@@ -3,7 +3,6 @@ Alignment module.
 """
 from __future__ import print_function, division, absolute_import
 
-from array import array
 import sys
 
 from cutadapt._align import Aligner, compare_prefixes, locate
