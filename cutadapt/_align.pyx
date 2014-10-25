@@ -361,6 +361,9 @@ cdef class Aligner:
 					best.origin = column[m].origin
 					best.ref_stop = m
 					best.query_stop = j
+					if cost == 0 and matches == m:
+						# exact match, stop early
+						break
 			# column finished
 
 		if max_n == n:
