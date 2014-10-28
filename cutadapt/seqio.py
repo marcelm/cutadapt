@@ -19,13 +19,13 @@ def _shorten(s, n=20):
 class Sequence(object):
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
-	def __init__(self, name, sequence, qualities=None, twoheaders=False, trimmed=False):
+	def __init__(self, name, sequence, qualities=None, twoheaders=False, match=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
 		self.twoheaders = twoheaders
-		self.trimmed = trimmed
+		self.match = match
 		if qualities is not None:
 			if len(qualities) != len(sequence):
 				rname = _shorten(name)
@@ -39,7 +39,7 @@ class Sequence(object):
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
 		    self.twoheaders,
-		    self.trimmed)
+		    self.match)
 
 	def __repr__(self):
 		qstr = ''
@@ -76,7 +76,7 @@ except ImportError:
 
 
 class ColorspaceSequence(Sequence):
-	def __init__(self, name, sequence, qualities, primer=None, twoheaders=False, trimmed=False):
+	def __init__(self, name, sequence, qualities, primer=None, twoheaders=False, match=None):
 		# In colorspace, the first character is the last nucleotide of the primer base
 		# and the second character encodes the transition from the primer base to the
 		# first real base of the read.
@@ -85,7 +85,7 @@ class ColorspaceSequence(Sequence):
 			sequence = sequence[1:]
 		else:
 			self.primer = primer
-		super(ColorspaceSequence, self).__init__(name, sequence, qualities, twoheaders, trimmed)
+		super(ColorspaceSequence, self).__init__(name, sequence, qualities, twoheaders, match)
 		if not self.primer in ('A', 'C', 'G', 'T'):
 			raise ValueError("primer base is {0!r}, but it should be one of A, C, G, T".format(self.primer))
 		if qualities is not None and len(self.sequence) != len(qualities):
@@ -107,7 +107,7 @@ class ColorspaceSequence(Sequence):
 			self.qualities[key] if self.qualities is not None else None,
 			self.primer,
 			self.twoheaders,
-			self.trimmed)
+			self.match)
 
 	def write(self, outfile):
 		if self.qualities is not None:

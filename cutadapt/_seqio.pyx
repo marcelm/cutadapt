@@ -21,21 +21,29 @@ class FormatError(Exception):
 
 
 cdef class Sequence(object):
-	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
+	"""
+	A record in a FASTQ file. Also used for FASTA (then the qualities attribute
+	is None). qualities is a string and it contains the qualities encoded as
+	ascii(qual+33).
+
+	If an adapter has been matched to the sequence, the 'match' attribute is
+	set to the corresponding AdapterMatch instance.
+	"""
 	cdef:
 		public str name
 		public str sequence
 		public str qualities
-		public bint trimmed
+		public object match
 		public bint twoheaders
 
-	def __init__(self, str name, str sequence, str qualities=None, bint twoheaders=False, bint trimmed=False):
+	def __init__(self, str name, str sequence, str qualities=None,
+			  bint twoheaders=False, match=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
 		self.twoheaders = twoheaders
-		self.trimmed = trimmed
+		self.match = match
 		if qualities is not None:
 			if len(qualities) != len(sequence):
 				rname = _shorten(name)
@@ -49,7 +57,7 @@ cdef class Sequence(object):
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
 			self.twoheaders,
-			self.trimmed)
+			self.match)
 
 	def __repr__(self):
 		qstr = ''

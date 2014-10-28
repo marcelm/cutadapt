@@ -156,13 +156,13 @@ class ProcessedReadWriter(object):
 
 		if read2 is None:
 			# single end
-			if read1.trimmed and self.trimmed_outfile:
+			if read1.match is not None and self.trimmed_outfile:
 				read1.write(self.trimmed_outfile)
-			if not read1.trimmed and self.untrimmed_outfile:
+			if read1.match is None and self.untrimmed_outfile:
 				read1.write(self.untrimmed_outfile)
 		else:
 			# paired end
-			if read1.trimmed:
+			if read1.match is not None:
 				if self.trimmed_outfile:
 					read1.write(self.trimmed_outfile)
 				if self.trimmed_paired_outfile:
@@ -312,7 +312,7 @@ class RepeatedAdapterCutter(object):
 				# set masked sequence as sequence with original quality
 				read.sequence = masked_sequence
 				read.qualities = matches[0].read.qualities
-				read.trimmed = True
+				read.match = matches[-1]
 
 				assert len(read.sequence) == old_length
 
@@ -327,9 +327,9 @@ class RepeatedAdapterCutter(object):
 		matches = self.find_match(read)
 		if len(matches) > 0:
 			read = self.cut(matches)
-			read.trimmed = True
+			read.match = matches[-1]
 		else:
-			read.trimmed = False
+			read.match = None
 		return read
 
 
