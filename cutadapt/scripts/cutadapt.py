@@ -191,7 +191,8 @@ class RepeatedAdapterCutter(object):
 	times parameter.
 	"""
 
-	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None, trim=True, rest_writer=None, mask_adapter=False):
+	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None,
+			trim=True, rest_writer=None, mask_adapter=False):
 		"""
 		adapters -- list of Adapter objects
 
@@ -208,7 +209,7 @@ class RepeatedAdapterCutter(object):
 
 	def _best_match(self, read):
 		"""
-		Find the best matching adapter.
+		Find the adapter that matches best.
 
 		read -- The read to which each adapter will be aligned
 
@@ -254,8 +255,8 @@ class RepeatedAdapterCutter(object):
 		need to be applied consecutively to the read.
 		The list is empty if there are no adapter matches.
 
-		The read will be converted to uppercase
-		before it is compared to the adapter sequences.
+		The read is converted to uppercase before it is compared to the adapter
+		sequences.
 		"""
 		matches = []
 
@@ -265,7 +266,6 @@ class RepeatedAdapterCutter(object):
 			if match is None:
 				# nothing found
 				break
-			self._write_info(match)  # FIXME move to cut() or somewhere else
 			assert match.length > 0
 			assert match.errors / match.length <= match.adapter.max_error_rate
 			assert match.length - match.errors > 0
@@ -290,6 +290,8 @@ class RepeatedAdapterCutter(object):
 		if __debug__:
 			old_length = len(read.sequence)
 		assert matches
+		for match in matches:
+			self._write_info(match)
 		if self.trim:
 			# The last match contains a copy of the read it was matched to.
 			# No iteration is necessary.
