@@ -31,8 +31,8 @@ cutadapt removes adapter sequences from high-throughput sequencing reads.
 Usage:
     cutadapt -a ADAPTER [options] [-o output.fastq] input.fastq
 
-Replace "ADAPTER" with the actual sequence of your 3' adapter. The sequence may
-contain 'N' wildcard characters. The reverse complement is *not* automatically
+Replace "ADAPTER" with the actual sequence of your 3' adapter. IUPAC wildcard
+characters are supported. The reverse complement is *not* automatically
 searched. All reads from input.fastq will be written to output.fastq with the
 adapter sequence removed. Adapter matching is error-tolerant. Multiple adapter
 sequences can be given (use further -a options), but only the best-matching
@@ -43,7 +43,7 @@ auto-detected from the file name (.gz or .bz2). Use the file name '-' for
 standard input/output. Without the -o option, output is sent to standard output.
 
 Some other available features are:
-  * Trimming of 5' adapters and "mixed" 5'/3' adapters
+  * Various other adapter types (5' adapters, "mixed" 5'/3' adapters etc.)
   * Trimming a fixed number of bases
   * Quality trimming
   * Trimming paired-end reads
