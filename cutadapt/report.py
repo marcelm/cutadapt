@@ -78,7 +78,7 @@ def print_adjacent_bases(bases, sequence):
 	return False
 
 
-def print_statistics(adapters, time, stats, trim, reads_matched,
+def print_statistics(adapters, time, stats, action, reads_matched,
 		error_rate, too_short, too_long, args, file=None):
 	"""Print summary to file"""
 	old_stdout = sys.stdout
@@ -99,7 +99,7 @@ def print_statistics(adapters, time, stats, trim, reads_matched,
 			trimmed_bp += sum(seqlen * count for (seqlen, count) in d.items())
 
 	if n > 0:
-		operation = "Trimmed" if trim else "Matched"
+		operation = "Trimmed" if action == 'trim' else "Matched"
 		print("     {0} reads: {1:12} ({2:.1%})".format(operation, reads_matched, reads_matched / n))
 		t = [ ("Quality-trimmed", quality_trimmed), ("  Trimmed bases", trimmed_bp)]
 		if quality_trimmed < 0:

@@ -184,7 +184,7 @@ class RestFileWriter(object):
 			print(rest, match.read.name, file=self.file)
 
 
-class RepeatedAdapterCutter(object):
+class AdapterCutter(object):
 	"""
 	Repeatedly find one of multiple adapters in reads.
 	The number of times the search is repeated is specified by the
@@ -192,20 +192,20 @@ class RepeatedAdapterCutter(object):
 	"""
 
 	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None,
-			trim=True, rest_writer=None, mask_adapter=False):
+			rest_writer=None, action='trim'):
 		"""
 		adapters -- list of Adapter objects
 
-		trim -- whether to remove a found adapter from the read
+		action -- What to do with a found adapter: None, 'trim', or 'mask'
 		"""
 		self.adapters = adapters
 		self.times = times
-		self.info_file = info_file
 		self.wildcard_file = wildcard_file
-		self.trim = trim
-		self.reads_matched = 0
+		self.info_file = info_file
 		self.rest_writer = rest_writer
-		self.mask_adapter = mask_adapter
+		self.action = action
+
+		self.reads_matched = 0
 
 	def _best_match(self, read):
 		"""
@@ -251,7 +251,7 @@ class RepeatedAdapterCutter(object):
 		if self.wildcard_file:
 			print(match.wildcards(), match.read.name, file=self.wildcard_file)
 
-	def find_match(self, read):
+	def find_matches(self, read):
 		"""
 		Determine the adapter that best matches the given read.
 		Since the best adapter is searched repeatedly, a list
@@ -294,7 +294,8 @@ class RepeatedAdapterCutter(object):
 		for match in matches:
 			self._write_info(match)
 			self._write_wildcard_file(match)
-		if self.trim:
+
+		if self.action == 'trim' or self.action == 'mask':
 			# The last match contains a copy of the read it was matched to.
 			# No iteration is necessary.
 			read = matches[-1].adapter.trimmed(matches[-1])
@@ -302,23 +303,23 @@ class RepeatedAdapterCutter(object):
 			# if an adapter was found, then the read should now be shorter
 			assert len(read.sequence) < old_length
 
-			if self.mask_adapter:
-				# add N from last modification
-				masked_sequence = read.sequence
-				for match in sorted(matches, reverse=True, key=lambda m: m.astart):
-					ns = 'N' * (len(match.read.sequence) -
-								len(match.adapter.trimmed(match).sequence))
-					# add N depending on match position
-					if match.front:
-						masked_sequence = ns + masked_sequence
-					else:
-						masked_sequence += ns
-				# set masked sequence as sequence with original quality
-				read.sequence = masked_sequence
-				read.qualities = matches[0].read.qualities
-				read.match = matches[-1]
+		if self.action == 'mask':
+			# add N from last modification
+			masked_sequence = read.sequence
+			for match in sorted(matches, reverse=True, key=lambda m: m.astart):
+				ns = 'N' * (len(match.read.sequence) -
+							len(match.adapter.trimmed(match).sequence))
+				# add N depending on match position
+				if match.front:
+					masked_sequence = ns + masked_sequence
+				else:
+					masked_sequence += ns
+			# set masked sequence as sequence with original quality
+			read.sequence = masked_sequence
+			read.qualities = matches[0].read.qualities
+			read.match = matches[-1]
 
-				assert len(read.sequence) == old_length
+			assert len(read.sequence) == old_length
 
 		self.reads_matched += 1  # TODO move to filter class
 
@@ -328,7 +329,7 @@ class RepeatedAdapterCutter(object):
 		return read
 
 	def __call__(self, read):
-		matches = self.find_match(read)
+		matches = self.find_matches(read)
 		if len(matches) > 0:
 			read = self.cut(matches)
 			read.match = matches[-1]
@@ -348,7 +349,7 @@ def qtrimmed(modifiers):
 	return -1
 
 
-def process_single_reads(reader, modifiers, read_writer):
+def process_single_reads(reader, modifiers, writer):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -363,12 +364,12 @@ def process_single_reads(reader, modifiers, read_writer):
 		total_bp += len(read.sequence)
 		for modifier in modifiers:
 			read = modifier(read)
-		read_writer.write(read)
+		writer.write(read)
 
 	return Statistics(total_bp=total_bp, n=n, quality_trimmed_bases=qtrimmed(modifiers))
 
 
-def process_paired_reads(paired_reader, modifiers, read_writer):
+def process_paired_reads(paired_reader, modifiers, writer):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -387,7 +388,7 @@ def process_paired_reads(paired_reader, modifiers, read_writer):
 		total2_bp += len(read2.sequence)
 		for modifier in modifiers:
 			read1 = modifier(read1)
-		read_writer.write(read1, read2)
+		writer.write(read1, read2)
 
 	return Statistics(total_bp=total1_bp, n=n, quality_trimmed_bases=qtrimmed(modifiers))
 
@@ -555,11 +556,11 @@ def get_option_parser():
 			"Reads that are too long even before adapter removal "
 			"are also discarded. In colorspace, an initial primer "
 			"is not counted (default: no limit).")
-	group.add_option("--no-trim", dest='trim', action='store_false', default=True,
+	group.add_option("--no-trim", dest='action', action='store_const', const=None,
 		help="Match and redirect reads to output/untrimmed-output as usual, "
-			"but don't remove the adapters. (Default: trim the adapters)")
-	group.add_option("--mask-adapter", dest='mask_adapter', action='store_true', default=False,
-		help="Mask with 'N' adapter bases instead of trim (default: False)")
+			"but do not remove adapters.")
+	group.add_option("--mask-adapter", dest='action', action='store_const', const='mask',
+		help="Mask adapters with 'N' characters instead of trimming them.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
@@ -646,7 +647,7 @@ def get_option_parser():
 		help="Change negative quality values to zero. This is enabled "
 		"by default when -c/--colorspace is also enabled. Use the above option "
 		"to disable it.")
-	parser.set_defaults(zero_cap=None)
+	parser.set_defaults(zero_cap=None, action='trim')
 	parser.add_option_group(group)
 
 	return parser
@@ -723,7 +724,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if options.too_long_output is not None:
 		too_long_outfile = xopen(options.too_long_output, 'w')
 
-	read_writer = ProcessedReadWriter(
+	writer = ProcessedReadWriter(
 		options.minimum_length,
 		options.maximum_length,
 		too_short_outfile,
@@ -784,7 +785,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			sys.exit(1)
 		raise
 
-	start_time = time.clock()
+	if not adapters and options.quality_cutoff == 0 and options.cut == 0 and \
+			options.minimum_length == 0 and options.maximum_length == sys.maxint:
+		parser.error("You need to provide at least one adapter sequence.")
 
 	if input_paired_filename:
 		reader = seqio.PairedSequenceReader(input_filename, input_paired_filename,
@@ -793,19 +796,16 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		reader = read_sequences(input_filename, quality_filename,
 			colorspace=options.colorspace, fileformat=options.format)
 
-	# build up list of modifiers
+	# Create the processing pipeline as a list of "modifiers".
 	modifiers = []
-	if not adapters and options.quality_cutoff == 0 and options.cut == 0 and \
-			options.minimum_length == 0 and options.maximum_length == sys.maxint:
-		parser.error("You need to provide at least one adapter sequence.")
 	if options.cut:
 		modifiers.append(UnconditionalCutter(options.cut))
 	if options.quality_cutoff > 0:
 		modifiers.append(QualityTrimmer(options.quality_cutoff, options.quality_base))
 	if adapters:
-		adapter_cutter = RepeatedAdapterCutter(adapters, options.times,
-				options.wildcard_file, options.info_file, options.trim,
-				rest_writer, options.mask_adapter)
+		adapter_cutter = AdapterCutter(adapters, options.times,
+				options.wildcard_file, options.info_file,
+				rest_writer, options.action)
 		modifiers.append(adapter_cutter)
 	else:
 		adapter_cutter = None
@@ -824,11 +824,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if options.trim_primer:
 		modifiers.append(PrimerTrimmer)
 
+	start_time = time.clock()
 	try:
 		if input_paired_filename:
-			stats = process_paired_reads(reader, modifiers, read_writer)
+			stats = process_paired_reads(reader, modifiers, writer)
 		else:
-			stats = process_single_reads(reader, modifiers, read_writer)
+			stats = process_single_reads(reader, modifiers, writer)
 	except KeyboardInterrupt as e:
 		print("Interrupted", file=sys.stderr)
 		sys.exit(1)
@@ -851,8 +852,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
 		print_statistics(adapters, time.clock() - start_time, stats,
-			options.trim, adapter_cutter.reads_matched if adapter_cutter else 0,
-			options.error_rate, read_writer.too_short, read_writer.too_long, cmdlineargs, file=stat_file)
+			options.action, adapter_cutter.reads_matched if adapter_cutter else 0,
+			options.error_rate, writer.too_short, writer.too_long, cmdlineargs, file=stat_file)
 
 
 if __name__ == '__main__':
