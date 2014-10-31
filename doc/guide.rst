@@ -891,9 +891,11 @@ If no adapter was found, the format is as follows:
 
 When parsing that file, be aware that additional columns may be added in
 the future. Note also that some fields can be empty, resulting in
-consecutive tabs within a line. Also, in the current version, when the
-``--times`` option is set to a value other than 1 (the default value),
-multiple lines are written to the info file for each read.
+consecutive tabs within a line.
+
+If the ``--times`` option is used and greater than 1, each read can appear
+more than once in the info file. There will be one line for each found adapter,
+all with identical read names.
 
 
 .. _algorithm:
