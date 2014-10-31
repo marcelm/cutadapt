@@ -9,13 +9,10 @@ improvements.
 - show average error rate
 - In colorspace and probably also for Illumina data, gapped alignment
   is not necessary
-- use ``str.format`` instead of ``%``
-- allow to change scores at runtime (using command-line parameters)
 - ``--progress``
 - run pylint, pychecker
 - length histogram
 - check whether input is FASTQ although -f fasta is given
-- close on StopIteration
 - search for adapters in the order in which they are given on the
   command line
 - number reads as given on command line
@@ -26,6 +23,9 @@ improvements.
 - alignment algorithm: make a 'banded' version
 - it seems the str.find optimization isn't very helpful. In any case, it should be
   moved into the Aligner class.
+- allow to remove not the adapter itself, but the sequence before or after it
+- convert adapter to lowercase
+
 
 Specifying adapters
 -------------------
