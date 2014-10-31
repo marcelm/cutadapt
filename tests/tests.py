@@ -10,7 +10,7 @@ from cutadapt.scripts import cutadapt
 
 @contextmanager
 def redirect_stderr():
-	"Send stderr to stdout. Nose doesn't capture stderr, yet."
+	"Send stderr to stdout. Nose doesn't capture stderr."
 	old_stderr = sys.stderr
 	sys.stderr = sys.stdout
 	yield
@@ -19,9 +19,13 @@ def redirect_stderr():
 
 def dpath(path):
 	"""
-	get path to a data file (relative to the directory this test lives in)
+	Get path to a data file (relative to the directory this test lives in)
 	"""
 	return os.path.join(os.path.dirname(__file__), path)
+
+
+def cutpath(path):
+	return dpath(os.path.join('cut', path))
 
 
 def datapath(path):
@@ -43,17 +47,9 @@ def run(params, expected, inpath, inpath2=None):
 
 	assert cutadapt.main(params) is None
 	# TODO redirect standard output
-	assert files_equal(dpath(os.path.join('cut', expected)), dpath('tmp.fastaq'))
+	assert files_equal(cutpath(expected), dpath('tmp.fastaq'))
 	os.remove(dpath('tmp.fastaq'))
 	# TODO diff log files
-	#echo "Running $CA $1 data/$3 ${second}"
-	#if ! $CA $1 "data/$3" -o tmp.fastaq ${second} > tmp.log; then
-		#cat tmp.log
-		#exit 1
-	#fi
-	#sed -i '/Total time/d;/Time per read/d;/cutadapt version/d;/^Command line /d' tmp.log
-	#diff -u cut/$2 tmp.fastaq
-	#diff -u tmp.log log/$2.log
 
 
 def test_example():
@@ -303,7 +299,7 @@ def test_strip_suffix():
 def test_info_file():
 	infotmp = dpath("infotmp.txt")
 	run(["--info-file", infotmp, '-a', 'adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT'], "illumina.fastq", "illumina.fastq.gz")
-	assert files_equal(dpath(os.path.join('cut', 'illumina.info.txt')), infotmp)
+	assert files_equal(cutpath('illumina.info.txt'), infotmp)
 	os.remove(infotmp)
 
 
@@ -368,7 +364,7 @@ def test_paired_end():
 	pairedtmp = dpath("paired-tmp.fastq")
 	# the -m 14 filters out one read, which should then also be filtered out in the second output file
 	run(['-a', 'TTAGACATAT', '-m', '14', '--paired-output', pairedtmp], 'paired.m14.1.fastq', 'paired.1.fastq', 'paired.2.fastq')
-	assert files_equal(dpath(os.path.join('cut', 'paired.m14.2.fastq')), pairedtmp)
+	assert files_equal(cutpath('paired.m14.2.fastq'), pairedtmp)
 	os.remove(pairedtmp)
 
 
@@ -402,7 +398,7 @@ def test_no_zero_cap():
 def test_untrimmed_output():
 	tmp = dpath('untrimmed.tmp.fastq')
 	run(['-a', 'TTAGACATATCTCCGTCG', '--untrimmed-output', tmp], 'small.trimmed.fastq', 'small.fastq')
-	assert files_equal(dpath(os.path.join('cut', 'small.untrimmed.fastq')), tmp)
+	assert files_equal(cutpath('small.untrimmed.fastq'), tmp)
 	os.remove(tmp)
 
 
@@ -417,10 +413,10 @@ def test_untrimmed_paired_output():
 	params = ['--quiet', '-a', 'TTAGACATAT', '-o', tmp1, '-p', tmp2, '--untrimmed-output', untrimmed1, '--untrimmed-paired-output', untrimmed2, paired1, paired2]
 	assert cutadapt.main(params) is None
 
-	assert files_equal(dpath(os.path.join('cut', 'paired-untrimmed.1.fastq')), untrimmed1)
-	assert files_equal(dpath(os.path.join('cut', 'paired-untrimmed.2.fastq')), untrimmed2)
-	assert files_equal(dpath(os.path.join('cut', 'paired-trimmed.1.fastq')), tmp1)
-	assert files_equal(dpath(os.path.join('cut', 'paired-trimmed.2.fastq')), tmp2)
+	assert files_equal(cutpath('paired-untrimmed.1.fastq'), untrimmed1)
+	assert files_equal(cutpath('paired-untrimmed.2.fastq'), untrimmed2)
+	assert files_equal(cutpath('paired-trimmed.1.fastq'), tmp1)
+	assert files_equal(cutpath('paired-trimmed.2.fastq'), tmp2)
 	os.remove(tmp1)
 	os.remove(tmp2)
 	os.remove(untrimmed1)
@@ -434,7 +430,7 @@ def test_adapter_file():
 def test_explicit_format_with_paired():
 	pairedtmp = dpath("paired-tmp.fastq")
 	run(['--format=fastq', '-a', 'TTAGACATAT', '-m', '14', '-p', pairedtmp], 'paired.m14.1.fastq', 'paired.1.txt', 'paired.2.txt')
-	assert files_equal(dpath(os.path.join('cut', 'paired.m14.2.fastq')), pairedtmp)
+	assert files_equal(cutpath('paired.m14.2.fastq'), pairedtmp)
 	os.remove(pairedtmp)
 
 
