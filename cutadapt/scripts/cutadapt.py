@@ -251,6 +251,10 @@ class AdapterCutter(object):
 		if self.wildcard_file:
 			print(match.wildcards(), match.read.name, file=self.wildcard_file)
 
+	def _write_rest(self, match):
+		if self.rest_writer:
+			self.rest_writer.write(match)
+
 	def find_matches(self, read):
 		"""
 		Determine the adapter that best matches the given read.
@@ -285,25 +289,22 @@ class AdapterCutter(object):
 
 		matches -- a list of AdapterMatch instances
 		"""
-		# TODO move these lines out of here
-		read = matches[0].read
-
-		if __debug__:
-			old_length = len(read.sequence)
 		assert matches
+		if __debug__:
+			read = matches[0].read
+			old_length = len(read.sequence)
+
 		for match in matches:
 			self._write_info(match)
 			self._write_wildcard_file(match)
+		self._write_rest(matches[-1])
 
-		if self.action == 'trim' or self.action == 'mask':
-			# The last match contains a copy of the read it was matched to.
-			# No iteration is necessary.
+		if self.action == 'trim':
+			# The last match has a copy of the read it was matched to.
 			read = matches[-1].adapter.trimmed(matches[-1])
-
-			# if an adapter was found, then the read should now be shorter
-			assert len(read.sequence) < old_length
-
-		if self.action == 'mask':
+			assert len(read.sequence) < old_length, "Trimmed read isn't shorter than original"
+		elif self.action == 'mask':
+			read = matches[-1].adapter.trimmed(matches[-1])
 			# add N from last modification
 			masked_sequence = read.sequence
 			for match in sorted(matches, reverse=True, key=lambda m: m.astart):
@@ -322,10 +323,6 @@ class AdapterCutter(object):
 			assert len(read.sequence) == old_length
 
 		self.reads_matched += 1  # TODO move to filter class
-
-		if self.rest_writer:
-			self.rest_writer.write(matches[-1])
-
 		return read
 
 	def __call__(self, read):
