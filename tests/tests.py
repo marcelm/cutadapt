@@ -172,7 +172,7 @@ def test_quality_trim_only():
 
 def test_twoadapters():
 	'''two adapters'''
-	run("-b CTCGAGAATTCTGGATCCTC -b GAGGATCCAGAATTCTCGAGTT", "twoadapters.fasta", "twoadapters.fasta")
+	run("-a AATTTCAGGAATT -a GTTCTCTAGTTCT", "twoadapters.fasta", "twoadapters.fasta")
 
 def test_bwa():
 	'''MAQ-/BWA-compatible output'''
@@ -438,3 +438,14 @@ def test_no_trimming():
 	# make sure that this doesn't divide by zero
 	cutadapt.main(['-a', 'XXXXX', '-o', '/dev/null', '-p', '/dev/null', datapath('paired.1.fastq'), datapath('paired.2.fastq')])
 
+
+def test_demultiplex():
+	multiout = dpath('tmp-demulti.{name}.fasta')
+	params = ['-a', 'first=AATTTCAGGAATT', '-a', 'second=GTTCTCTAGTTCT', '-o', multiout, datapath('twoadapters.fasta')]
+	assert cutadapt.main(params) is None
+	assert files_equal(cutpath('twoadapters.first.fasta'), multiout.format(name='first'))
+	assert files_equal(cutpath('twoadapters.second.fasta'), multiout.format(name='second'))
+	assert files_equal(cutpath('twoadapters.unknown.fasta'), multiout.format(name='unknown'))
+	os.remove(multiout.format(name='first'))
+	os.remove(multiout.format(name='second'))
+	os.remove(multiout.format(name='unknown'))

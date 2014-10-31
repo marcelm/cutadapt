@@ -700,6 +700,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if options.format is not None and quality_filename is not None:
 		parser.error("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
 
+	if options.output is not None and '{name}' in options.output:
+		BROKEN
+
 	trimmed_outfile, untrimmed_outfile = trimmed_and_untrimmed_files(
 		default_outfile,
 		options.output,
