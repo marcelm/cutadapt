@@ -621,10 +621,10 @@ def get_option_parser():
 	group.add_option("--quiet", default=False, action='store_true',
 		help="Do not print a report at the end.")
 	group.add_option("-o", "--output", default=None, metavar="FILE",
-		help="Write the modified sequences to this file instead of standard "
-			"output and send the summary report to standard output. "
-			"The format is FASTQ if qualities are available, FASTA "
-			"otherwise. (default: standard output)")
+		help="Write modified reads to FILE. FASTQ or FASTA format is chosen "
+			"depending on input. The summary report is sent to standard output. "
+			"Use '{name}' in FILE to demultiplex reads into multiple "
+			"files. (default: trimmed reads are written to standard output)")
 	group.add_option("-p", "--paired-output", default=None, metavar="FILE",
 		help="Write reads from the paired-end input to FILE.")
 	group.add_option("--info-file", metavar="FILE",

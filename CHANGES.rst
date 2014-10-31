@@ -16,6 +16,13 @@ v1.7
 * Options ``--minimum-length``/``--maximum-length`` (``-m``/``-M``) can be used
   standalone. That is, cutadapt can be used to filter reads by length without
   trimming adapters.
+* Support for demultiplexing was added. That is, reads can be written to different
+  files depending on which adapter was found. To use this, include the string
+  ``{name}`` in the name of the output file and give each adapter a name.
+  The path is then interpreted as a template and each trimmed read is written
+  to the path in which {name} is replaced with the name of the adapter that
+  was found in the read. This is currently only supported for single-end reads.
+
 
 v1.6
 ----
