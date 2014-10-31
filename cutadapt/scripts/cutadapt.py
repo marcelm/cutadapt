@@ -247,6 +247,10 @@ class RepeatedAdapterCutter(object):
 				sep='\t', file=self.info_file
 			)
 
+	def _write_wildcard_file(self, match):
+		if self.wildcard_file:
+			print(match.wildcards(), match.read.name, file=self.wildcard_file)
+
 	def find_match(self, read):
 		"""
 		Determine the adapter that best matches the given read.
@@ -270,9 +274,6 @@ class RepeatedAdapterCutter(object):
 			assert match.errors / match.length <= match.adapter.max_error_rate
 			assert match.length - match.errors > 0
 
-			if self.wildcard_file:  # FIXME move to cut() or somewhere else
-				print(match.wildcards(), read.name, file=self.wildcard_file)
-
 			matches.append(match)
 			if t != self.times - 1:
 				read = match.adapter.trimmed(match)
@@ -292,6 +293,7 @@ class RepeatedAdapterCutter(object):
 		assert matches
 		for match in matches:
 			self._write_info(match)
+			self._write_wildcard_file(match)
 		if self.trim:
 			# The last match contains a copy of the read it was matched to.
 			# No iteration is necessary.
