@@ -65,7 +65,7 @@ def print_adjacent_bases(bases, sequence):
 		b = base if base != '' else 'none/other'
 		fraction = 1.0 * bases[base] / total
 		print('  {0}: {1:.1%}'.format(b, fraction))
-		if fraction > 0.8 and b != '':
+		if fraction > 0.8 and base != '':
 			warnbase = b
 	if total >= 20 and warnbase is not None:
 		print('WARNING:')
