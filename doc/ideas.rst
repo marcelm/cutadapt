@@ -37,6 +37,7 @@ new adapter types in the feature.
 .. csv-table::
 
     back,``-a ADAPTER``,``-a ADAPTER`` or ``-a ...ADAPTER``
+    suffix,``-a ADAPTER$``,``-a ...ADAPTER$``
     front,``-g ADAPTER``,``-a ADAPTER...``
     prefix,``-g ^ADAPTER``,``-a ^ADAPTER...``
     anywhere,``-b ADAPTER``, ``-a ...ADAPTER...`` ???
@@ -44,3 +45,6 @@ new adapter types in the feature.
 
 Or add only ``-a ADAPTER...`` as an alias for ``-g ^ADAPTER`` and
 ``-a ...ADAPTER`` as an alias for ``-a ADAPTER``.
+
+Another idea: Allow something such as ``-a ADAP$TER`` or ``-a ADAPTER$NNN``.
+This would be a different way of setting the minimum overlap (but per adapter).
