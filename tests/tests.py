@@ -426,6 +426,11 @@ def test_untrimmed_paired_output():
 def test_adapter_file():
 	run('-a file:' + datapath('adapter.fasta'), 'illumina.fastq', 'illumina.fastq.gz')
 
+def test_adapter_file_5p_anchored():
+	run('-N -g file:' + datapath('prefix-adapter.fasta'), 'anchored.fasta', 'anchored.fasta')
+
+def test_adapter_file_3p_anchored():
+	run('-N -a file:' + datapath('suffix-adapter.fasta'), 'anchored-back.fasta', 'anchored-back.fasta')
 
 def test_explicit_format_with_paired():
 	pairedtmp = dpath("paired-tmp.fastq")
