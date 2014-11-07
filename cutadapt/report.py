@@ -11,6 +11,14 @@ from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
 
 Statistics = namedtuple('Statistics', 'total_bp n quality_trimmed_bases')
 
+ADAPTER_TYPES = {
+	BACK: "regular 3'",
+	FRONT: "regular 5'",
+	PREFIX: "anchored 5'",
+	SUFFIX: "anchored 3'",
+	ANYWHERE: "variable 5'/3'"
+}
+
 def print_error_ranges(adapter_length, error_rate):
 	print("No. of allowed errors:")
 	prev = 0
@@ -127,7 +135,9 @@ def print_statistics(adapters, time, stats, action, reads_matched,
 			name = "'{0}'".format(name)
 		print("=" * 3, "Adapter", name, "=" * 3)
 		print()
-		print("Sequence: {0}; Length: {1}; Trimmed: {2} times.".format(adapter.sequence, len(adapter.sequence), total))
+		print("Sequence: {0}; Type: {1}; Length: {2}; Trimmed: {3} times.".
+			format(adapter.sequence, ADAPTER_TYPES[adapter.where],
+				len(adapter.sequence), total))
 		if total == 0:
 			print()
 			continue
