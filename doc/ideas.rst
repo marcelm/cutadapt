@@ -25,6 +25,7 @@ improvements.
   moved into the Aligner class.
 - allow to remove not the adapter itself, but the sequence before or after it
 - convert adapter to lowercase
+- warn when given adapter sequence contains non-A/C/G/T/U characters
 
 
 Specifying adapters

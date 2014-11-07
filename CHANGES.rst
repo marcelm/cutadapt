@@ -4,7 +4,7 @@ Changes
 
 v1.7
 ----
-* Anchored 3' adapters are supported. Add ``$`` to the adapter sequence to
+* Anchored 3' adapters are supported. Append ``$`` to the adapter sequence to
   force the adapter to appear in the end of the read (as a suffix). Closes
   issue #81.
 * IUPAC characters are now supported. By default, this applies only to the
@@ -22,7 +22,7 @@ v1.7
   The path is then interpreted as a template and each trimmed read is written
   to the path in which {name} is replaced with the name of the adapter that
   was found in the read. This is currently only supported for single-end reads.
-
+* Fix bug: Adapters read from a FASTA can now be anchored.
 
 v1.6
 ----

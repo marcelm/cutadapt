@@ -432,6 +432,15 @@ def test_adapter_file_5p_anchored():
 def test_adapter_file_3p_anchored():
 	run('-N -a file:' + datapath('suffix-adapter.fasta'), 'anchored-back.fasta', 'anchored-back.fasta')
 
+
+def test_adapter_file_5p_anchored_no_indels():
+	run('-N --no-indels -g file:' + datapath('prefix-adapter.fasta'), 'anchored.fasta', 'anchored.fasta')
+
+
+def test_adapter_file_3p_anchored_no_indels():
+	run('-N --no-indels -a file:' + datapath('suffix-adapter.fasta'), 'anchored-back.fasta', 'anchored-back.fasta')
+
+
 def test_explicit_format_with_paired():
 	pairedtmp = dpath("paired-tmp.fastq")
 	run(['--format=fastq', '-a', 'TTAGACATAT', '-m', '14', '-p', pairedtmp], 'paired.m14.1.fastq', 'paired.1.txt', 'paired.2.txt')
