@@ -777,7 +777,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		writers.append(too_short_filter)
 	too_long_outfile = None  # too long reads go here
 	too_long_filter = None
-	if options.maximum_length < sys.maxint:
+	if options.maximum_length < sys.maxsize:
 		if options.too_long_output is not None:
 			too_long_outfile = xopen(options.too_long_output, 'w')
 		else:
@@ -874,7 +874,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		raise
 
 	if not adapters and options.quality_cutoff == 0 and options.cut == 0 and \
-			options.minimum_length == 0 and options.maximum_length == sys.maxint:
+			options.minimum_length == 0 and options.maximum_length == sys.maxsize:
 		parser.error("You need to provide at least one adapter sequence.")
 
 	if input_paired_filename:
