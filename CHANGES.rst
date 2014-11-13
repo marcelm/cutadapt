@@ -22,6 +22,8 @@ v1.7
   The path is then interpreted as a template and each trimmed read is written
   to the path in which {name} is replaced with the name of the adapter that
   was found in the read. This is currently only supported for single-end reads.
+* Option ``--cut`` (``-u``) can now be specified twice, once for each end of the
+  read. Thanks to Rasmus Borup Hansen for the patch!
 * Fix bug: Adapters read from a FASTA can now be anchored.
 
 v1.6

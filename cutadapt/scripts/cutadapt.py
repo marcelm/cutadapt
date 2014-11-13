@@ -661,10 +661,11 @@ def get_option_parser():
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
-	group.add_option("-u", "--cut", type=int, default=0, metavar="LENGTH",
+	group.add_option("-u", "--cut", action='append', type=int, metavar="LENGTH",
 		help="Remove bases from the beginning or end of each read. "
 			"If LENGTH is positive, the bases are removed from the beginning of each read. "
-			"If LENGTH is negative, the bases are removed from the end of each read.")
+			"If LENGTH is negative, the bases are removed from the end of each read. "
+			"This option can be specified twice if the LENGTHs have different signs.")
 	group.add_option("-q", "--quality-cutoff", type=int, default=0, metavar="CUTOFF",
 		help="Trim low-quality bases from 3' ends of reads before adapter "
 			"removal. The algorithm is the same as the one used by BWA "
@@ -887,7 +888,14 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	# Create the processing pipeline as a list of "modifiers".
 	modifiers = []
 	if options.cut:
-		modifiers.append(UnconditionalCutter(options.cut))
+		if len(options.cut) > 2:
+			parser.error("You cannot remove bases from more than two ends.")
+		if len(options.cut) == 2 and options.cut[0] * options.cut[1] > 0:
+			parser.error("You cannot remove bases from the same end twice.")
+		for cut in options.cut:
+			if cut != 0:
+				modifiers.append(UnconditionalCutter(cut))
+
 	if options.quality_cutoff > 0:
 		modifiers.append(QualityTrimmer(options.quality_cutoff, options.quality_base))
 	if adapters:
