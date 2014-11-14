@@ -49,3 +49,18 @@ Or add only ``-a ADAPTER...`` as an alias for ``-g ^ADAPTER`` and
 
 Another idea: Allow something such as ``-a ADAP$TER`` or ``-a ADAPTER$NNN``.
 This would be a different way of setting the minimum overlap (but per adapter).
+
+
+Paired-end trimming
+-------------------
+
+* Add -A, -B, -G parameters
+* Use a paired-end read merger, then remove adapters with -a and -g
+* Should minimum overlap be sum of the two overlaps in each read?
+
+
+Single-letter command-line options
+----------------------------------
+
+Remaining characters: All uppercase letters except M, N, O
+Lowercase letters: i, j, k, l, s, w
