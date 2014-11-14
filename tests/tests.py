@@ -359,7 +359,7 @@ def test_unmatched_read_names():
 		cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired-swapped.1.fastq'), datapath('paired.2.fastq')])
 
 
-def test_paired_end():
+def test_paired_end_legacy():
 	'''--paired-output'''
 	pairedtmp = dpath("paired-tmp.fastq")
 	# the -m 14 filters out one read, which should then also be filtered out in the second output file
