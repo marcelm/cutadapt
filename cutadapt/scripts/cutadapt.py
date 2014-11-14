@@ -519,7 +519,6 @@ def trimmed_and_untrimmed_files(
 	discard_trimmed -- bool, overrides earlier options.
 	discard_untrimmed -- bool, overrides earlier options.
 	"""
-	
 	if discard_trimmed:
 		if discard_untrimmed:
 			untrimmed = None
@@ -594,10 +593,10 @@ def get_option_parser():
 			"This reduces the no. of bases trimmed purely due to short random "
 			"adapter matches (default: %default).")
 	group.add_option("--match-read-wildcards", action="store_true", default=False,
-		help="Allow 'N's in the read as matches to the adapter (default: %default).")
+		help="Allow IUPAC wildcards in reads (default: %default).")
 	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
 		default=True, dest='match_adapter_wildcards',
-		help=SUPPRESS_HELP)
+		help="Do not interpret IUPAC wildcards in adapters.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options for filtering of processed reads")
