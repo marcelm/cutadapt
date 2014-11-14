@@ -67,7 +67,8 @@ from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
 
 from cutadapt import seqio, __version__
 from cutadapt.xopen import xopen
-from cutadapt.adapters import Adapter, ColorspaceAdapter, BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
+from cutadapt.adapters import (Adapter, ColorspaceAdapter, gather_adapters,
+	BACK, FRONT, PREFIX, SUFFIX, ANYWHERE)
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter)
 from cutadapt.report import Statistics, print_statistics
@@ -142,12 +143,8 @@ class TooLongReadFilter(object):
 
 class ProcessedReadWriter(object):
 	"""
-	Write reads that have been processed (adapter trimming, quality trimming and
-	so on) to the proper output file(s).
-
-	Filter reads according to length and according to whether any adapter matches.
+	Write trimmed and untrimmed reads to the proper output file(s).
 	"""
-
 	def __init__(self,
 			trimmed_outfile,
 			trimmed_paired_outfile,
@@ -257,16 +254,13 @@ class AdapterCutter(object):
 		self.info_file = info_file
 		self.rest_writer = rest_writer
 		self.action = action
-
 		self.reads_matched = 0
 
 	def _best_match(self, read):
 		"""
-		Find the adapter that matches best.
+		Find the best matching adapter in the given read.
 
-		read -- The read to which each adapter will be aligned
-
-		Return an AdapterMatch instance or None if there are no matches.
+		Return either an AdapterMatch instance or None if there are no matches.
 		"""
 		best = None
 		for adapter in self.adapters:
@@ -444,55 +438,6 @@ def process_paired_reads(paired_reader, modifiers, writers):
 				break
 
 	return Statistics(total_bp=total1_bp, n=n, quality_trimmed_bases=qtrimmed(modifiers))
-
-
-def parse_adapter_name(seq):
-	"""
-	Parse an adapter given as 'name=adapt' into 'name' and 'adapt'.
-	"""
-	fields = seq.split('=', 1)
-	if len(fields) > 1:
-		name, seq = fields
-		name = name.strip()
-	else:
-		name = None
-	seq = seq.strip()
-	return name, seq
-
-
-def parse_adapter(sequence, where):
-	"""
-	Recognize anchored adapter sequences and return a corrected tuple
-	(sequence, where).
-	"""
-	if where == FRONT and sequence.startswith('^'):
-		return (sequence[1:],  PREFIX)
-	if where == BACK and sequence.endswith('$'):
-		return (sequence[:-1], SUFFIX)
-	return (sequence, where)
-
-
-def gather_adapters(back, anywhere, front):
-	"""
-	Yield (name, seq, where) tuples from which Adapter instances can be built.
-	This generator deals with the notation for anchored 5' adapters and also
-	understands the ``file:`` syntax for reading adapters from an external FASTA
-	file.
-	"""
-	for adapter_list, where in ((back, BACK), (anywhere, ANYWHERE), (front, FRONT)):
-		for seq in adapter_list:
-			if seq.startswith('file:'):
-				# read adapter sequences from a file
-				path = seq[5:]
-				with seqio.FastaReader(path) as fasta:
-					for record in fasta:
-						name = record.name.split(' ', 1)[0]
-						seq, w = parse_adapter(record.sequence, where)
-						yield (name, seq, w)
-			else:
-				name, seq = parse_adapter_name(seq)
-				seq, w = parse_adapter(seq, where)
-				yield (name, seq, w)
 
 
 def trimmed_and_untrimmed_files(
@@ -861,7 +806,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			if not seq:
 				parser.error("The adapter sequence is empty")
 			if not options.indels and where not in (PREFIX, SUFFIX):
-				parser.error("Not allowing indels is currently supported only for anchored 5' or 3' adapters.")
+				parser.error("Not allowing indels is currently supported only for anchored 5' and 3' adapters.")
 			adapter = ADAPTER_CLASS(seq, where, options.error_rate,
 				options.overlap, options.match_read_wildcards,
 				options.match_adapter_wildcards, name=name, indels=options.indels)

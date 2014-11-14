@@ -2,7 +2,7 @@ from __future__ import print_function, division, absolute_import
 import sys
 from collections import defaultdict
 from cutadapt import align, colorspace
-from cutadapt.seqio import ColorspaceSequence
+from cutadapt.seqio import ColorspaceSequence, FastaReader
 
 # Constants for the find_best_alignment function.
 # The function is called with SEQ1 as the adapter, SEQ2 as the read.
@@ -11,6 +11,55 @@ FRONT = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.START_WITHIN_SE
 PREFIX = align.STOP_WITHIN_SEQ2
 SUFFIX = align.START_WITHIN_SEQ2
 ANYWHERE = align.SEMIGLOBAL
+
+
+def parse_adapter_name(seq):
+	"""
+	Parse an adapter given as 'name=adapt' into 'name' and 'adapt'.
+	"""
+	fields = seq.split('=', 1)
+	if len(fields) > 1:
+		name, seq = fields
+		name = name.strip()
+	else:
+		name = None
+	seq = seq.strip()
+	return name, seq
+
+
+def parse_adapter(sequence, where):
+	"""
+	Recognize anchored adapter sequences and return a corrected tuple
+	(sequence, where).
+	"""
+	if where == FRONT and sequence.startswith('^'):
+		return (sequence[1:],  PREFIX)
+	if where == BACK and sequence.endswith('$'):
+		return (sequence[:-1], SUFFIX)
+	return (sequence, where)
+
+
+def gather_adapters(back, anywhere, front):
+	"""
+	Yield (name, seq, where) tuples from which Adapter instances can be built.
+	This generator deals with the notation for anchored 5' adapters and also
+	understands the ``file:`` syntax for reading adapters from an external FASTA
+	file.
+	"""
+	for adapter_list, where in ((back, BACK), (anywhere, ANYWHERE), (front, FRONT)):
+		for seq in adapter_list:
+			if seq.startswith('file:'):
+				# read adapter sequences from a file
+				path = seq[5:]
+				with FastaReader(path) as fasta:
+					for record in fasta:
+						name = record.name.split(' ', 1)[0]
+						seq, w = parse_adapter(record.sequence, where)
+						yield (name, seq, w)
+			else:
+				name, seq = parse_adapter_name(seq)
+				seq, w = parse_adapter(seq, where)
+				yield (name, seq, w)
 
 
 class AdapterMatch(object):
