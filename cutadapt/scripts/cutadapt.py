@@ -150,7 +150,6 @@ class ProcessedReadWriter(object):
 			trimmed_paired_outfile,
 			untrimmed_outfile,
 			untrimmed_paired_outfile):
-		
 		self.trimmed_outfile = trimmed_outfile
 		self.untrimmed_outfile = untrimmed_outfile
 		self.trimmed_paired_outfile = trimmed_paired_outfile
@@ -493,7 +492,7 @@ def trimmed_and_untrimmed_files(
 def get_option_parser():
 	parser = CutadaptOptionParser(usage=__doc__, version=__version__)
 
-	parser.add_option("-f", "--format", default=None,
+	parser.add_option("-f", "--format",
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files (default: auto-detect "
 			"from file name extension).")
@@ -502,17 +501,18 @@ def get_option_parser():
 		description="Each of the following three parameters (-a, -b, -g) can be used "
 			"multiple times and in any combination to search for an entire set of "
 			"adapters of possibly different types. Only the best matching "
-			"adapter will be trimmed from each read (but see the --times option). "
+			"adapter is trimmed from each read (but see the --times option). "
 			"Instead of giving an adapter directly, you can also write "
 			"file:FILE and the adapter sequences will be read from the given "
 			"FILE (which must be in FASTA format).")
-	group.add_option("-a", "--adapter", action="append", metavar="ADAPTER", dest="adapters", default=[],
+	group.add_option("-a", "--adapter", action="append", default=[], metavar="ADAPTER",
+		dest="adapters",
 		help="Sequence of an adapter that was ligated to the 3' end. The "
 			"adapter itself and anything that follows is trimmed. If the "
 			"adapter sequence ends with the '$' character, the adapter is "
 			"anchored to the end of the read and only found if it is a "
 			"suffix of the read.")
-	group.add_option("-g", "--front", action="append", metavar="ADAPTER", default=[],
+	group.add_option("-g", "--front", action="append", default=[], metavar="ADAPTER",
 		help="Sequence of an adapter that was ligated to the 5' end. If the "
 		"adapter sequence starts with the character '^', the adapter is "
 		"'anchored'. An anchored adapter must appear in its entirety at the "
@@ -520,7 +520,7 @@ def get_option_parser():
 		"appear partially at the 5' end, or it may occur within the read. If it is "
 		"found within a read, the sequence preceding the adapter is also trimmed. "
 		"In all cases, the adapter itself is trimmed.")
-	group.add_option("-b", "--anywhere", action="append", metavar="ADAPTER", default=[],
+	group.add_option("-b", "--anywhere", action="append", default=[], metavar="ADAPTER",
 		help="Sequence of an adapter that was ligated to the 5' or 3' end. If "
 			"the adapter is found within the read or overlapping the 3' end of "
 			"the read, the behavior is the same as for the -a option. If the "
@@ -528,12 +528,12 @@ def get_option_parser():
 			"portion of the read matching the adapter is trimmed, but anything "
 			"that follows is kept.")
 	group.add_option("-e", "--error-rate", type=float, default=0.1,
-		help="Maximum allowed error rate (no. of errors divided by the length of the matching region) (default: %default)")
+		help="Maximum allowed error rate (no. of errors divided by the length "
+			"of the matching region) (default: %default)")
 	group.add_option("--no-indels", action='store_false', dest='indels', default=True,
-		help="Do not allow indels in the alignments, that is, allow only "
-			"mismatches. This option is currently only supported for anchored "
-			"5' adapters ('-g ^ADAPTER') (default: both mismatches and indels "
-			"are allowed)")
+		help="Do not allow indels in the alignments (allow only mismatches). "
+			"Currently only supported for anchored adapters. (default: allow "
+			"both mismatches and indels)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
 		help="Try to remove adapters at most COUNT times. Useful when an "
 			"adapter gets appended multiple times (default: %default).")
@@ -575,7 +575,7 @@ def get_option_parser():
 	group = OptionGroup(parser, "Options that influence what gets output to where")
 	group.add_option("--quiet", default=False, action='store_true',
 		help="Do not print a report at the end.")
-	group.add_option("-o", "--output", default=None, metavar="FILE",
+	group.add_option("-o", "--output", metavar="FILE",
 		help="Write modified reads to FILE. FASTQ or FASTA format is chosen "
 			"depending on input. The summary report is sent to standard output. "
 			"Use '{name}' in FILE to demultiplex reads into multiple "
@@ -585,31 +585,29 @@ def get_option_parser():
 	group.add_option("--info-file", metavar="FILE",
 		help="Write information about each read and its adapter matches into FILE. "
 			"See the documentation for the file format.")
-	group.add_option("-r", "--rest-file", default=None, metavar="FILE",
+	group.add_option("-r", "--rest-file", metavar="FILE",
 		help="When the adapter matches in the middle of a read, write the "
 			"rest (after the adapter) into FILE.")
-	group.add_option("--wildcard-file", default=None, metavar="FILE",
-		help="When the adapter has wildcard bases ('N's), write adapter bases matching wildcard "
-			 "positions to FILE. When there are indels in the alignment, this may occasionally "
-			 "not be quite accurate.")
-	group.add_option("--too-short-output", default=None, metavar="FILE",
+	group.add_option("--wildcard-file", metavar="FILE",
+		help="When the adapter has wildcard bases ('N's), write adapter bases "
+			"matching wildcard positions to FILE. When there are indels in the "
+			"alignment, this will often not be accurate.")
+	group.add_option("--too-short-output", metavar="FILE",
 		help="Write reads that are too short (according to length specified by -m) to FILE. (default: discard reads)")
-	group.add_option("--too-long-output", default=None, metavar="FILE",
+	group.add_option("--too-long-output", metavar="FILE",
 		help="Write reads that are too long (according to length specified by -M) to FILE. (default: discard reads)")
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
-		help="Write reads that do not contain the adapter to FILE, instead "
-			"of writing them to the regular output file. (Default: output "
-			"to same file as trimmed reads.)")
+		help="Write reads that do not contain the adapter to FILE. (default: "
+			"output to same file as trimmed reads)")
 	group.add_option("--untrimmed-paired-output", default=None, metavar="FILE",
 		help="Write the second read in a pair to this FILE when no adapter "
 			"was found in the first read. Use this option together with "
 			"--untrimmed-output when trimming paired-end reads. (Default: output "
 			"to same file as trimmed reads.)")
-	group.add_option
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
-	group.add_option("-u", "--cut", action='append', type=int, metavar="LENGTH",
+	group.add_option("-u", "--cut", action='append', default=[], type=int, metavar="LENGTH",
 		help="Remove bases from the beginning or end of each read. "
 			"If LENGTH is positive, the bases are removed from the beginning of each read. "
 			"If LENGTH is negative, the bases are removed from the end of each read. "
@@ -641,7 +639,7 @@ def get_option_parser():
 		help="For colorspace: Strip the _F3 suffix of read names")
 	group.add_option("--maq", "--bwa", action='store_true', default=False,
 		help="MAQ- and BWA-compatible colorspace output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
-	group.add_option("--length-tag", default=None, metavar="TAG",
+	group.add_option("--length-tag", metavar="TAG",
 		help="Search for TAG followed by a decimal number in the name of the read "
 			"(description/comment field of the FASTA or FASTQ file). Replace the "
 			"decimal number with the correct length of the trimmed read. "
@@ -707,7 +705,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error("FASTA and QUAL file given, but the FASTA file must be first.")
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
-		parser.error("The input file format must be either 'fasta', 'fastq' or 'sra-fastq' (not '{0}').".format(options.format))
+		parser.error("The input file format must be either 'fasta', 'fastq' or "
+			"'sra-fastq' (not '{0}').".format(options.format))
 
 	# TODO should this really be an error?
 	if options.format is not None and quality_filename is not None:
