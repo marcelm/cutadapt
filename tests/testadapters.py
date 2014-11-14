@@ -57,7 +57,7 @@ def test_issue_80():
 def test_str():
 	a = Adapter('ACGT', where=BACK, max_error_rate=0.1)
 	str(a)
-	str(a.match(Sequence(name='seq', sequence='TTACGT')))
+	str(a.match_to(Sequence(name='seq', sequence='TTACGT')))
 	ca = ColorspaceAdapter('0123', where=BACK, max_error_rate=0.1)
 	str(ca)
 
