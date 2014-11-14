@@ -668,8 +668,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	Main function that evaluates command-line parameters and iterates
 	over all reads.
 
-	default_outfile is the default output file to which trimmed reads
-	are sent. It can be overriden by using the '-o' parameter.
+	default_outfile is the file to which trimmed reads are sent if the ``-o``
+	parameter is not used.
 	"""
 	parser = get_option_parser()
 	if cmdlineargs is None:
