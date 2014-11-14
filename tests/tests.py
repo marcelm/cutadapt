@@ -327,6 +327,12 @@ def test_paired_separate():
 
 
 @raises(SystemExit)
+def test_qualfile_only():
+	with redirect_stderr():
+		cutadapt.main(['file.qual'])
+
+
+@raises(SystemExit)
 def test_no_args():
 	with redirect_stderr():
 		cutadapt.main()
