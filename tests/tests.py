@@ -366,3 +366,19 @@ def test_demultiplex():
 	os.remove(multiout.format(name='first'))
 	os.remove(multiout.format(name='second'))
 	os.remove(multiout.format(name='unknown'))
+
+
+def test_paired_end():
+	'''-p and -A'''
+	with temporary_path("paired.1.fastq") as p1:
+		with temporary_path("paired.2.fastq") as p2:
+			params = [
+				'-a', 'TTAGACATAT',
+				'-A', 'CAGTGGAGTA',
+				'-m', '14',
+				'-o', p1, '-p', p2,
+				datapath('paired.1.fastq'), datapath('paired.2.fastq') 
+			]
+			assert cutadapt.main(params) is None
+			assert files_equal(cutpath('paired.1.fastq'), p1)
+			assert files_equal(cutpath('paired.2.fastq'), p2)
