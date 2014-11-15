@@ -15,6 +15,7 @@ include cutadapt/_seqio.c
 include cutadapt/_seqio.so
 include bin/_preamble.py
 include tests/test*.py
+include tests/utils.py
 graft tests/data
 graft tests/cut
 graft galaxy
