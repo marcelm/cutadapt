@@ -4,27 +4,27 @@ Changes
 
 v1.7
 ----
-* Anchored 3' adapters are supported. Append ``$`` to the adapter sequence to
-  force the adapter to appear in the end of the read (as a suffix). Closes
-  issue #81.
 * IUPAC characters are now supported. By default, this applies only to the
   adapter sequence. For example, use ``-a YACGT`` for an adapter that matches
   both ``CACGT`` and ``TACGT`` with zero errors. Disable with ``-N``. IUPAC
   characters in the read are disabled by default in order to avoid matches in
   reads that consist of many (low-quality) ``N`` bases. Use
   ``--match-read-wildcards`` to enable them even in the read.
-* Options ``--minimum-length``/``--maximum-length`` (``-m``/``-M``) can be used
-  standalone. That is, cutadapt can be used to filter reads by length without
-  trimming adapters.
-* Support for demultiplexing was added. That is, reads can be written to different
-  files depending on which adapter was found. To use this, include the string
-  ``{name}`` in the name of the output file and give each adapter a name.
+* Support for demultiplexing was added. This means that reads can be written to
+  different files depending on which adapter was found. To use this, include the
+  string ``{name}`` in the name of the output file and give each adapter a name.
   The path is then interpreted as a template and each trimmed read is written
   to the path in which {name} is replaced with the name of the adapter that
   was found in the read. This is currently only supported for single-end reads.
+* Add support for anchored 3' adapters. Append ``$`` to the adapter sequence to
+  force the adapter to appear in the end of the read (as a suffix). Closes
+  issue #81.
 * Option ``--cut`` (``-u``) can now be specified twice, once for each end of the
   read. Thanks to Rasmus Borup Hansen for the patch!
-* Fix bug: Adapters read from a FASTA can now be anchored.
+* Options ``--minimum-length``/``--maximum-length`` (``-m``/``-M``) can be used
+  standalone. That is, cutadapt can be used to filter reads by length without
+  trimming adapters.
+* Fix bug: Adapters read from a FASTA file can now be anchored.
 
 v1.6
 ----
