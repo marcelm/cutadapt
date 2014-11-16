@@ -31,6 +31,9 @@ cutadapt removes adapter sequences from high-throughput sequencing reads.
 Usage:
     cutadapt -a ADAPTER [options] [-o output.fastq] input.fastq
 
+For paired-end reads:
+    cutadapt -a ADAPT1 -A ADAPT2 [options] -o out1.fastq -p out2.fastq in1.fastq in2.fastq
+
 Replace "ADAPTER" with the actual sequence of your 3' adapter. IUPAC wildcard
 characters are supported. The reverse complement is *not* automatically
 searched. All reads from input.fastq will be written to output.fastq with the
