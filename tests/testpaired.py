@@ -26,7 +26,9 @@ def test_paired_separate():
 def test_paired_end_legacy():
 	'''--paired-output, not using -A/-B/-G'''
 	# the -m 14 filters out one read, which should then also be filtered out in the second output file
-	run_paired('-a TTAGACATAT -m 14',
+	# -q 10 should not change anything: qualities in file 1 are high enough,
+	# qualities in file 2 should not be inspected.
+	run_paired('-a TTAGACATAT -m 14 -q 10',
 		in1='paired.1.fastq', in2='paired.2.fastq',
 		expected1='paired.m14.1.fastq', expected2='paired.m14.2.fastq'
 	)
@@ -69,7 +71,7 @@ def test_no_trimming():
 
 
 @raises(SystemExit)
-def test_paired_end_missing_file():
+def test_missing_file():
 	with redirect_stderr():
 		cutadapt.main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
 
@@ -113,8 +115,13 @@ def test_unmatched_read_names():
 			cutadapt.main('-a XX --paired-output out.fastq'.split() + [swapped, datapath('paired.2.fastq')])
 
 
-#TODO Ensure -q is not applied to second read in a pair in legacy mode
-#TODO Ensure -m is not applied to second read in a pair in legacy mode
+def test_legacy_minlength():
+	'''Ensure -m is not applied to second read in a pair in legacy mode'''
+	run_paired('-a XXX -m 27',
+		in1='paired.1.fastq', in2='paired.2.fastq',
+		expected1='paired-m27.1.fastq', expected2='paired-m27.2.fastq'
+	)
+
 
 def test_paired_end():
 	'''single-pass paired-end with -m'''

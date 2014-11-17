@@ -110,16 +110,23 @@ def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
 
 
 class TooShortReadFilter(object):
-	def __init__(self, minimum_length, too_short_outfile):
+	def __init__(self, minimum_length, too_short_outfile, check_second=True):
+		"""
+		check_second -- whether the second read in a pair is also checked for
+		its length. If True, the read is discarded if *any* of the two reads are
+		too short.
+		"""
 		self.too_short_outfile = too_short_outfile
 		self.minimum_length = minimum_length
 		self.too_short = 0
+		self.check_second = check_second
 
 	def __call__(self, read1, read2=None):
 		"""
 		Return whether the read was written somewhere.
 		"""
-		if len(read1.sequence) < self.minimum_length:
+		if len(read1.sequence) < self.minimum_length or (read2 is not None and
+				self.check_second and len(read2.sequence) < self.minimum_length):
 			self.too_short += 1
 			if self.too_short_outfile is not None:
 				read1.write(self.too_short_outfile)
@@ -129,13 +136,20 @@ class TooShortReadFilter(object):
 
 
 class TooLongReadFilter(object):
-	def __init__(self, maximum_length, too_long_outfile):
+	def __init__(self, maximum_length, too_long_outfile, check_second=True):
+		"""
+		check_second -- whether the second read in a pair is also checked for
+		its length. If True, the read is discarded if *any* of the two reads are
+		too long.
+		"""
 		self.too_long_outfile = too_long_outfile
 		self.maximum_length = maximum_length
 		self.too_long = 0
+		self.check_second = check_second
 
 	def __call__(self, read1, read2=None):
-		if len(read1.sequence) > self.maximum_length:
+		if len(read1.sequence) > self.maximum_length or (read2 is not None and
+				self.check_second and len(read2.sequence) > self.minimum_length):
 			self.too_long += 1
 			if self.too_long_outfile is not None:
 				read1.write(self.too_long_outfile)
@@ -695,20 +709,22 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error("Too many parameters.")
 	input_filename = args[0]
 
-	# There are three different 'modes':
-	# - Single-read trimming (neither -p nor -A/-G/-B given)
-	# - Legacy paired-end trimming (-p given, but not -A/-G/-B)
-	# - New paired-end trimming (-p and -A/-G/-B given)
-	paired = (options.paired_output or options.adapters2 or options.front2 or
-		options.anywhere2)
+	# Find out which 'mode' we need to use.
+	# Default: single-read trimming (neither -p nor -A/-G/-B given)
+	paired = False
+	if options.paired_output:
+		# Modify first read only, keep second in sync (-p given, but not -A/-G/-B).
+		# This exists for backwards compatibility ('legacy mode').
+		paired = 'first'
+	if options.adapters2 or options.front2 or options.anywhere2:
+		# Full paired-end trimming when both -p and -A/-G/-B given
+		# Also the read modifications (such as quality trimming) are applied
+		# to second read.
+		paired = 'both'
 
 	if paired and len(args) == 1:
 		parser.error("When paired-end trimming is enabled via -A/-G/-B or -p, "
 			"two input files are required.")
-	if paired and not options.paired_output:
-		parser.error("When paired-end trimming is enabled via -A/-G/-B, "
-			"a second output file needs to be specified via -p (--paired-output).")
-
 	if paired:
 		input_paired_filename = args[1]
 	else:
@@ -719,21 +735,25 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		else:
 			quality_filename = None
 
-	if paired and bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
-		parser.error("When trimming paired-end reads, you must use either none "
-			"or both of the --untrimmed-output/--untrimmed-paired-output options.")
-	if not paired and options.untrimmed_paired_output:
-		parser.error("Option --untrimmed-paired-output can only be used when "
-			"trimming paired-end reads (with option -p).")
-	if not paired and input_filename.endswith('.qual'):
-		parser.error("Need a FASTA file in addition to the QUAL file.")
+	if paired:
+		if not options.paired_output:
+			parser.error("When paired-end trimming is enabled via -A/-G/-B, "
+				"a second output file needs to be specified via -p (--paired-output).")
+		if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
+			parser.error("When trimming paired-end reads, you must use either none "
+				"or both of the --untrimmed-output/--untrimmed-paired-output options.")
+	else:
+		if options.untrimmed_paired_output:
+			parser.error("Option --untrimmed-paired-output can only be used when "
+				"trimming paired-end reads (with option -p).")
+		if input_filename.endswith('.qual'):
+			parser.error("Need a FASTA file in addition to the QUAL file.")
+		if options.format is not None and quality_filename is not None:
+			parser.error("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
 		parser.error("The input file format must be either 'fasta', 'fastq' or "
 			"'sra-fastq' (not '{0}').".format(options.format))
-
-	if not paired and options.format is not None and quality_filename is not None:
-		parser.error("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
 
 	writers = []
 	too_short_outfile = None  # too short reads go here
@@ -744,7 +764,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			too_short_outfile = xopen(options.too_short_output, 'w')
 		else:
 			too_short_outfile = None
-		too_short_filter = TooShortReadFilter(options.minimum_length, too_short_outfile)
+		too_short_filter = TooShortReadFilter(options.minimum_length,
+			too_short_outfile, paired=='both')
 		writers.append(too_short_filter)
 	too_long_outfile = None  # too long reads go here
 	too_long_filter = None
@@ -753,7 +774,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			too_long_outfile = xopen(options.too_long_output, 'w')
 		else:
 			too_long_outfile = None
-		too_long_filter = TooLongReadFilter(options.maximum_length, too_long_outfile)
+		too_long_filter = TooLongReadFilter(options.maximum_length,
+			too_long_outfile, check_second=paired=='both')
 		writers.append(too_long_filter)
 
 	demultiplexer = None
@@ -908,14 +930,13 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		modifiers_both.append(ZeroCapper(quality_base=options.quality_base))
 	if options.trim_primer:
 		modifiers_both.append(PrimerTrimmer)
-
 	modifiers.extend(modifiers_both)
 
 	# For paired-end data, create a second processing pipeline.
 	# However, if no second-read adapters were given (via -A/-G/-B), we need to
 	# be backwards compatible and *no modifications* are done to the second read.
 	modifiers2 = []
-	if paired and adapters2:
+	if paired == 'both':
 		if options.cut:
 			# TODO
 			parser.error("Do not use -u with paired-end data.")
