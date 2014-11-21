@@ -614,7 +614,8 @@ output files depending on which adapter was found in them. To use this, include
 the string ``{name}`` in the name of the output file and give each adapter a name.
 The path is then interpreted as a template and each trimmed read is written
 to the path in which ``{name}`` is replaced with the name of the adapter that
-was found in the read.
+was found in the read. Reads in which no adapter was found will be written to a
+file in which ``{name}`` is replaced with ``unknown``.
 
 .. note:
     Demultiplexing is currently only supported for single-end reads. Paired-end
@@ -624,15 +625,16 @@ Example::
 
     cutadapt -a one=TATA -a two=GCGC -o trimmed-{name}.fastq.gz input.fastq.gz
 
-This command will create the two files ``trimmed-one.fastq.gz`` and
-``trimmed-two.fastq.gz``. You can :ref:`also provide adapter sequences in a FASTA
-file <multiple-adapters>`.
+This command will create the three files ``demulti-one.fastq.gz``,
+``demulti-two.fastq.gz`` and ``demulti-unknown.fastq.gz``. You can :ref:`also
+provide adapter sequences in a FASTA file <multiple-adapters>`.
 
 In order to not trim the input files at all, but to only do multiplexing, use
 option ``--no-trim``. And if you want to output the reads in which no
-adapters were found somewhere, use the ``--untrimmed-output`` parameter with a
-file name. Here is an example that uses both parameters and reads the adapters from
-a FASTA file (note that ``--untrimmed-output`` can be abbreviated)::
+adapters were found to a different file, use the ``--untrimmed-output``
+parameter with a file name. Here is an example that uses both parameters and
+reads the adapters from a FASTA file (note that ``--untrimmed-output`` can be
+abbreviated)::
 
     cutadapt -a file:barcodes.fasta --no-trim --untrimmed-o untrimmed.fastq.gz -o trimmed-{name}.fastq.gz input.fastq.gz
 
