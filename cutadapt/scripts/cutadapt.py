@@ -686,6 +686,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	quality_filename = None
 	input_paired_filename = None
 	if len(args) == 2:
+		if args[0].endswith('.qual'):
+			parser.error("The QUAL file must be the second argument.")
 		if args[1].endswith('.qual'):
 			quality_filename = args[1]
 		else:
@@ -701,8 +703,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if options.untrimmed_paired_output and not options.paired_output:
 		parser.error("Option --untrimmed-paired-output can only be used when "
 			"trimming paired-end reads (with option --paired-output).")
-	if input_filename.endswith('.qual') and quality_filename.endswith('fasta'):
-		parser.error("FASTA and QUAL file given, but the FASTA file must be first.")
+	if input_filename.endswith('.qual'):
+		parser.error("Need a FASTA file in addition to the QUAL file.")
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
 		parser.error("The input file format must be either 'fasta', 'fastq' or "
