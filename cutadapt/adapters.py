@@ -53,7 +53,7 @@ def gather_adapters(back, anywhere, front):
 				path = seq[5:]
 				with FastaReader(path) as fasta:
 					for record in fasta:
-						name = record.name.split(' ', 1)[0]
+						name = record.name.split(None, 1)[0]
 						seq, w = parse_adapter(record.sequence, where)
 						yield (name, seq, w)
 			else:

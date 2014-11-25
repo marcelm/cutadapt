@@ -438,8 +438,8 @@ class PairedSequenceReader(object):
 			except StopIteration:
 				raise FormatError("Reads are improperly paired. There are more reads in file 1 than in file 2.")
 
-			name1 = r1.name.split(' ')[0]
-			name2 = r2.name.split(' ')[0]
+			name1 = r1.name.split(None, 1)[0]
+			name2 = r2.name.split(None, 1)[0]
 			if name1[-2:-1] == '/':
 				name1 = name1[:-2]
 			if name2[-2:-1] == '/':
