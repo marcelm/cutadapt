@@ -4,18 +4,15 @@ Changes
 
 v1.7
 ----
-* IUPAC characters are now supported. By default, this applies only to the
-  adapter sequence. For example, use ``-a YACGT`` for an adapter that matches
-  both ``CACGT`` and ``TACGT`` with zero errors. Disable with ``-N``. IUPAC
-  characters in the read are disabled by default in order to avoid matches in
-  reads that consist of many (low-quality) ``N`` bases. Use
-  ``--match-read-wildcards`` to enable them even in the read.
+* IUPAC characters are now supported. For example, use ``-a YACGT`` for an
+  adapter that matches both ``CACGT`` and ``TACGT`` with zero errors. Disable
+  with ``-N``. By default, IUPAC characters in the read are not interpreted in
+  order to avoid matches in reads that consist of many (low-quality) ``N``
+  bases. Use ``--match-read-wildcards`` to enable them also in the read.
 * Support for demultiplexing was added. This means that reads can be written to
-  different files depending on which adapter was found. To use this, include the
-  string ``{name}`` in the name of the output file and give each adapter a name.
-  The path is then interpreted as a template and each trimmed read is written
-  to the path in which {name} is replaced with the name of the adapter that
-  was found in the read. This is currently only supported for single-end reads.
+  different files depending on which adapter was found. See `the section in the
+  documentation <http://cutadapt.readthedocs.org/en/latest/guide.html#demultiplexing>`_
+  for how to use it. This is currently only supported for single-end reads.
 * Add support for anchored 3' adapters. Append ``$`` to the adapter sequence to
   force the adapter to appear in the end of the read (as a suffix). Closes
   issue #81.

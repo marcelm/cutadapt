@@ -214,7 +214,7 @@ class Demultiplexer(object):
 					self.files[name] = xopen(self.template.format(name=name), 'w')
 				read1.write(self.files[name])
 		else:
-			assert False, "Not supported"
+			assert False, "Not supported"  # pragma: no cover
 
 	def close(self):
 		for f in self.files.values():
