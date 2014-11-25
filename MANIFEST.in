@@ -6,7 +6,7 @@ include LICENSE
 include doc/*.rst
 include doc/conf.py
 include doc/Makefile
-
+include cutadapt/*.pyx
 include cutadapt/_align.so
 include cutadapt/_align.c
 include cutadapt/_qualtrim.so
