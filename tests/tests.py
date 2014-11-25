@@ -291,7 +291,7 @@ def test_qualfile_only():
 @raises(SystemExit)
 def test_no_args():
 	with redirect_stderr():
-		cutadapt.main()
+		cutadapt.main([])
 
 
 @raises(SystemExit)
