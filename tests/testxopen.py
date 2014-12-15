@@ -9,12 +9,21 @@ from utils import temporary_path
 base = "tests/data/small.fastq"
 files = [ base + ext for ext in ['', '.gz', '.bz2' ] ]
 
-def test_xopen():
+def test_xopen_text():
 	for name in files:
-		f = xopen(name, 'r')
+		f = xopen(name, 'rt')
 		lines = list(f)
 		assert len(lines) == 12
 		assert lines[5] == 'AGCCGCTANGACGGGTTGGCCCTTAGACGTATCT\n', name
+		f.close()
+
+
+def test_xopen_binary():
+	for name in files:
+		f = xopen(name, 'rb')
+		lines = list(f)
+		assert len(lines) == 12
+		assert lines[5] == b'AGCCGCTANGACGGGTTGGCCCTTAGACGTATCT\n', name
 		f.close()
 
 
@@ -33,7 +42,6 @@ def create_truncated_file(path):
 def test_truncated_gz():
 	with temporary_path('truncated.gz') as path:
 		create_truncated_file(path)
-
 		f = xopen(path, 'r')
 		f.read()
 		f.close()
@@ -48,3 +56,4 @@ def test_truncated_gz_iter():
 		for line in f:
 			pass
 		f.close()
+

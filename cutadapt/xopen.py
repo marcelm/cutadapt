@@ -2,20 +2,18 @@
 Open compressed files transparently.
 """
 from __future__ import print_function, division, absolute_import
+__author__ = 'Marcel Martin'
 
 import gzip
 import sys
 import io
 from subprocess import Popen, PIPE
-from cutadapt.compat import PY3, basestring
+from .compat import PY3, basestring
 
 try:
 	import bz2
 except ImportError:
 	bz2 = None
-
-__author__ = 'Marcel Martin'
-
 
 if sys.version_info < (2, 7):
 	buffered_reader = lambda x: x
@@ -86,22 +84,52 @@ def xopen(filename, mode='r'):
 	does not work, then gzip.open() is used (the gzip module is slower than
 	the pipe to the gzip program). If the filename ends with .bz2, it's
 	opened as a bz2.BZ2File. Otherwise, the regular open() is used.
+
+	mode can be: 'rt', 'rb', 'wt', or 'wb'
+	Instead of 'rt' and 'wt', 'r' and 'w' can be used as abbreviations.
+
+	In Python 2, the 't' and 'b' characters are ignored.
 	"""
-	assert isinstance(filename, basestring)
+	if mode == 'r':
+		mode = 'rt'
+	elif mode == 'w':
+		mode = 'wt'
+	if mode not in ('rt', 'rb', 'wt', 'wb'):
+		raise ValueError("mode '{0}' not supported".format(mode))
+	if not PY3:
+		mode = mode[0]
+	if not isinstance(filename, basestring):
+		raise ValueError("the filename must be a string")
+
+	# standard input and standard output handling
 	if filename == '-':
-		return sys.stdin if 'r' in mode else sys.stdout
+		if not PY3:
+			return sys.stdin if 'r' in mode else sys.stdout
+		return dict(
+			rt=sys.stdin,
+			wt=sys.stdout,
+			rb=sys.stdin.buffer,
+			wb=sys.stdout.buffer)[mode]
+
 	if filename.endswith('.bz2'):
 		if bz2 is None:
 			raise ImportError("Cannot open bz2 files: The bz2 module is not available")
 		if PY3:
-			return io.TextIOWrapper(bz2.BZ2File(filename, mode))
+			if 't' in mode:
+				return io.TextIOWrapper(bz2.BZ2File(filename, mode[0]))
+			else:
+				return bz2.BZ2File(filename, mode)
 		else:
 			return bz2.BZ2File(filename, mode)
 
 	elif filename.endswith('.gz'):
 		if PY3:
-			return io.TextIOWrapper(gzip.open(filename, mode))
+			if 't' in mode:
+				return io.TextIOWrapper(gzip.open(filename, mode[0]))
+			else:
+				return gzip.open(filename, mode)
 		else:
+			# rb/rt are equivalent in Py2
 			if 'r' in mode:
 				try:
 					return GzipReader(filename)
