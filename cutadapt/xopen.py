@@ -127,7 +127,10 @@ def xopen(filename, mode='r'):
 			if 't' in mode:
 				return io.TextIOWrapper(gzip.open(filename, mode[0]))
 			else:
-				return gzip.open(filename, mode)
+				if 'r' in mode:
+					return io.BufferedReader(gzip.open(filename, mode))
+				else:
+					return io.BufferedWriter(gzip.open(filename, mode))
 		else:
 			# rb/rt are equivalent in Py2
 			if 'r' in mode:
