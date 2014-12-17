@@ -1,7 +1,7 @@
 from __future__ import print_function
 import sys
 
-__version__ = '1.7.1'
+__version__ = '1.8dev'
 
 def check_importability():  # pragma: no cover
 	try:
