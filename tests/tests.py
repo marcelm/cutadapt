@@ -115,10 +115,6 @@ def test_qualtrim():
 	'''-q with low qualities'''
 	run("-q 10 -a XXXXXX", "lowqual.fastq", "lowqual.fastq")
 
-def test_qualtrim_csfastaqual():
-	'''-q with csfasta/qual files'''
-	run("-c -q 10", "solidqual.fastq", "solid.csfasta", 'solid.qual')
-
 def test_qualbase():
 	'''-q with low qualities, using ascii(quality+64) encoding'''
 	run("-q 10 --quality-base 64 -a XXXXXX", "illumina64.fastq", "illumina64.fastq")
@@ -131,21 +127,9 @@ def test_twoadapters():
 	'''two adapters'''
 	run("-a AATTTCAGGAATT -a GTTCTCTAGTTCT", "twoadapters.fasta", "twoadapters.fasta")
 
-def test_bwa():
-	'''MAQ-/BWA-compatible output'''
-	run("-c -e 0.12 -a 330201030313112312 -x 552: --maq", "solidmaq.fastq", "solid.csfasta", 'solid.qual')
-
-def test_bfast():
-	'''BFAST-compatible output'''
-	run("-c -e 0.12 -a 330201030313112312 -x abc: --strip-f3", "solidbfast.fastq", "solid.csfasta", 'solid.qual')
-
 def test_polya():
 	'''poly-A tails'''
 	run("-m 24 -O 10 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "polya.fasta", "polya.fasta")
-
-def test_trim_095():
-	'''some reads properly trimmed since cutadapt 0.9.5'''
-	run("-c -e 0.122 -a 330201030313112312", "solid.fasta", "solid.fasta")
 
 def test_mask_adapter():
 	'''mask adapter with N (reads maintain the same length)'''
@@ -203,44 +187,6 @@ def test_anchored_back():
 def test_anchored_back_no_indels():
 	run("-a BACKADAPTER$ -N --no-indels", "anchored-back.fasta", "anchored-back.fasta")
 
-def test_solid():
-	run("-c -e 0.122 -a 330201030313112312", "solid.fastq", "solid.fastq")
-
-def test_solid_basespace_adapter():
-	'''colorspace adapter given in basespace'''
-	run("-c -e 0.122 -a CGCCTTGGCCGTACAGCAG", "solid.fastq", "solid.fastq")
-
-def test_solid5p():
-	'''test 5' colorspace adapter'''
-	# this is not a real adapter, just a random string
-	# in colorspace: C0302201212322332333
-	run("-c -e 0.1 --trim-primer -g CCGGAGGTCAGCTCGCTATA", "solid5p.fasta", "solid5p.fasta")
-
-def test_solid5p_prefix_notrim():
-	'''test anchored 5' colorspace adapter, no primer trimming'''
-	run("-c -e 0.1 -g ^CCGGAGGTCAGCTCGCTATA", "solid5p-anchored.notrim.fasta", "solid5p.fasta")
-
-def test_solid5p_prefix():
-	'''test anchored 5' colorspace adapter'''
-	run("-c -e 0.1 --trim-primer -g ^CCGGAGGTCAGCTCGCTATA", "solid5p-anchored.fasta", "solid5p.fasta")
-
-def test_solid5p_fastq():
-	'''test 5' colorspace adapter'''
-	# this is not a real adapter, just a random string
-	# in colorspace: C0302201212322332333
-	run("-c -e 0.1 --trim-primer -g CCGGAGGTCAGCTCGCTATA", "solid5p.fastq", "solid5p.fastq")
-
-def test_solid5p_prefix_notrim_fastq():
-	'''test anchored 5' colorspace adapter, no primer trimming'''
-	run("-c -e 0.1 -g ^CCGGAGGTCAGCTCGCTATA", "solid5p-anchored.notrim.fastq", "solid5p.fastq")
-
-def test_solid5p_prefix_fastq():
-	'''test anchored 5' colorspace adapter'''
-	run("-c -e 0.1 --trim-primer -g ^CCGGAGGTCAGCTCGCTATA", "solid5p-anchored.fastq", "solid5p.fastq")
-
-def test_sra_fastq():
-	'''test SRA-formatted colorspace FASTQ'''
-	run("-c -e 0.1 --format sra-fastq -a CGCCTTGGCCGTACAGCAG", "sra.fastq", "sra.fastq")
 
 def test_issue_46():
 	'''issue 46 - IndexError with --wildcard-file'''
@@ -354,10 +300,6 @@ def test_unconditional_cut_back():
 
 def test_unconditional_cut_both():
 	run('-u -5 -u 5', 'unconditional-both.fastq', 'small.fastq')
-
-
-def test_no_zero_cap():
-	run("--no-zero-cap -c -e 0.122 -a CGCCTTGGCCGTACAGCAG", "solid-no-zerocap.fastq", "solid.fastq")
 
 
 def test_untrimmed_output():
