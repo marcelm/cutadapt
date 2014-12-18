@@ -1,8 +1,8 @@
 from __future__ import print_function, division, absolute_import
 
 from cutadapt.colorspace import encode, decode
-
-from utils import run
+from cutadapt.scripts.cutadapt import main
+from utils import run, datapath
 
 # If there are any unknown characters in the test sequence,
 # round tripping will only work if all characters after the
@@ -64,6 +64,12 @@ def test_decode():
 def test_qualtrim_csfastaqual():
 	'''-q with csfasta/qual files'''
 	run("-c -q 10", "solidqual.fastq", "solid.csfasta", 'solid.qual')
+
+
+def test_E3M():
+	'''Read the E3M dataset'''
+	# not really colorspace, but fasta/qual
+	main(['-o', '/dev/null', datapath("E3M.fasta"), datapath("E3M.qual")])
 
 
 def test_bwa():

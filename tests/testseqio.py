@@ -27,6 +27,13 @@ def test_fastqreader():
 	assert reads == simple_fastq
 
 
+def test_fastareader_keeplinebreaks():
+	with seqio.FastaReader("tests/data/simple.fasta", keep_linebreaks=True) as f:
+		reads = list(f)
+	assert reads[0] == simple_fasta[0]
+	assert reads[1].sequence == 'SEQUEN\nCE2'
+
+
 @raises(seqio.FormatError)
 def test_fastq_wrongformat():
 	with seqio.FastqReader("tests/data/withplus.fastq") as f:
