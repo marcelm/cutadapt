@@ -236,43 +236,38 @@ class FastaReader(object):
 	"""
 	Reader for FASTA files.
 	"""
-	def __init__(self, file, wholefile=False, keep_linebreaks=False, sequence_class=Sequence):
+	def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence):
 		"""
 		file is a filename or a file-like object.
-		If file is a filename, then .gz files are supported.
-		If wholefile is True, then it is ok to read the entire file
-		into memory. This is faster when there are many newlines in
-		the file, but may obviously need a lot of memory.
-		keep_linebreaks -- whether to keep the newline characters in the sequence
+		If file is a filename, then it is passed to xopen().
+
+		keep_linebreaks -- whether to keep newline characters in the sequence
 		"""
 		if isinstance(file, basestring):
 			file = xopen(file)
 		self.fp = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = False
+		self._delimiter = '\n' if keep_linebreaks else ''
 
 	def __iter__(self):
 		"""
 		Read next entry from the file (single entry at a time).
-
-		# TODO this can be quadratic since += is used for the sequence string
 		"""
 		name = None
-		seq = ''
+		seq = []
 		for line in self.fp:
 			# strip() should also take care of DOS line breaks
 			line = line.strip()
 			if line and line[0] == '>':
 				if name is not None:
-					assert seq.find('\n') == -1
-					yield self.sequence_class(name, seq, None)
+					yield self.sequence_class(name, self._delimiter.join(seq), None)
 				name = line[1:]
-				seq = ''
+				seq = []
 			else:
-				seq += line
+				seq.append(line)
 		if name is not None:
-			assert seq.find('\n') == -1
-			yield self.sequence_class(name, seq, None)
+			yield self.sequence_class(name, self._delimiter.join(seq), None)
 
 	def __enter__(self):
 		if self.fp is None:
@@ -284,8 +279,8 @@ class FastaReader(object):
 
 
 class ColorspaceFastaReader(FastaReader):
-	def __init__(self, file, wholefile=False, keep_linebreaks=False):
-		super(ColorspaceFastaReader, self).__init__(file, wholefile, keep_linebreaks, sequence_class=ColorspaceSequence)
+	def __init__(self, file, keep_linebreaks=False):
+		super(ColorspaceFastaReader, self).__init__(file, keep_linebreaks, sequence_class=ColorspaceSequence)
 
 
 class FastqReader(object):
@@ -388,6 +383,8 @@ class FastaQualReader(object):
 		for i in range(-5, 256 - 33):
 			conv[str(i)] = chr(i + 33)
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
+			print('qualread:', qualread.sequence)
+			print('split:', qualread.sequence.split())
 			qualities = ''.join([conv[value] for value in qualread.sequence.split()])
 			if fastaread.name != qualread.name:
 				raise ValueError("The read names in the FASTA and QUAL file do not match ({0!r} != {1!r})".format(fastaread.name, qualread.name))
