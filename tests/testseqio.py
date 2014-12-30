@@ -40,6 +40,35 @@ def test_fastq_wrongformat():
 		reads = list(f)
 
 
+@raises(seqio.FormatError)
+def test_too_many_qualities():
+	seqio.Sequence(name="name", sequence="ACGT", qualities="#####")
+
+
+@raises(seqio.FormatError)
+def test_too_many_qualities_colorspace():
+	seqio.ColorspaceSequence(name="name", sequence="T0123", qualities="#####")
+
+
+@raises(seqio.FormatError)
+def test_invalid_primer():
+	seqio.ColorspaceSequence(name="name", sequence="K0123", qualities="####")
+
+
+@raises(seqio.FormatError)
+def test_mismatching_read_names():
+	fasta = StringIO(">name\nACG")
+	qual = StringIO(">nome\n3 5 7")
+	list(seqio.FastaQualReader(fasta, qual))
+
+
+@raises(seqio.FormatError)
+def test_invalid_quality_value():
+	fasta = StringIO(">name\nACG")
+	qual = StringIO(">name\n3 xx 7")
+	list(seqio.FastaQualReader(fasta, qual))
+
+
 def test_sequence_reader():
 	# test the autodetection
 	with seqio.SequenceReader("tests/data/simple.fastq") as f:

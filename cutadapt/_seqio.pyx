@@ -3,7 +3,15 @@
 from __future__ import print_function, division, absolute_import
 from .xopen import xopen
 
-## TODO the following method and class are copied here from seqio.py to avoid circular imports for now
+# TODO
+# the following function and class cannot be imported from seqio.py
+# since we would get circular imports
+
+class FormatError(Exception):
+	"""
+	Raised when an input file (FASTA or FASTQ) is malformatted.
+	"""
+
 
 def _shorten(s, n=20):
 	"""Shorten string s to at most n characters, appending "..." if necessary."""
@@ -12,12 +20,6 @@ def _shorten(s, n=20):
 	if len(s) > n:
 		s = s[:n-3] + '...'
 	return s
-
-
-class FormatError(Exception):
-	"""
-	Raised when an input file (FASTA or FASTQ) is malformatted.
-	"""
 
 
 cdef class Sequence(object):
@@ -47,7 +49,7 @@ cdef class Sequence(object):
 		if qualities is not None:
 			if len(qualities) != len(sequence):
 				rname = _shorten(name)
-				raise ValueError("In read named {0!r}: length of quality sequence and length of read do not match ({1}!={2})".format(
+				raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length of read ({2}) do not match".format(
 					rname, len(qualities), len(sequence)))
 
 	def __getitem__(self, key):

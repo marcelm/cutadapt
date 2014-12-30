@@ -7,6 +7,13 @@ from cutadapt.compat import zip, basestring
 
 __author__ = "Marcel Martin"
 
+
+class FormatError(Exception):
+	"""
+	Raised when an input file (FASTA or FASTQ) is malformatted.
+	"""
+
+
 def _shorten(s, n=20):
 	"""Shorten string s to at most n characters, appending "..." if necessary."""
 	if s is None:
@@ -29,7 +36,7 @@ class Sequence(object):
 		if qualities is not None:
 			if len(qualities) != len(sequence):
 				rname = _shorten(name)
-				raise ValueError("In read named {0!r}: length of quality sequence and length of read do not match ({1}!={2})".format(
+				raise FormatError("In read named {0!r}: Length of quality sequence ({1}) and length of read ({2}) do not match".format(
 					rname, len(qualities), len(sequence)))
 
 	def __getitem__(self, key):
@@ -85,14 +92,14 @@ class ColorspaceSequence(Sequence):
 			sequence = sequence[1:]
 		else:
 			self.primer = primer
+		if qualities is not None and len(sequence) != len(qualities):
+			rname = _shorten(name)
+			raise FormatError("In read named {0!r}: length of colorspace quality "
+				"sequence ({1}) and length of read ({2}) do not match (primer "
+				"is: {3!r})".format(rname, len(qualities), len(sequence), self.primer))
 		super(ColorspaceSequence, self).__init__(name, sequence, qualities, twoheaders, match)
 		if not self.primer in ('A', 'C', 'G', 'T'):
-			raise ValueError("primer base is {0!r}, but it should be one of A, C, G, T".format(self.primer))
-		if qualities is not None and len(self.sequence) != len(qualities):
-			rname = _shorten(name)
-			raise ValueError("In read named {0!r}: length of colorspace quality "
-				"sequence and length of read do not match (primer: {1!r}, "
-				"lengths: {2}!={3})".format(rname, self.primer, len(qualities), len(sequence)))
+			raise FormatError("primer base is {0!r}, but it should be one of A, C, G, T".format(self.primer))
 
 	def __repr__(self):
 		qstr = ''
@@ -123,12 +130,6 @@ class ColorspaceSequence(Sequence):
 def sra_colorspace_sequence(name, sequence, qualities, twoheaders):
 	"""Factory for an SRA colorspace sequence (which has one quality value too many)"""
 	return ColorspaceSequence(name, sequence, qualities[1:], twoheaders=twoheaders)
-
-
-class FormatError(Exception):
-	"""
-	Raised when an input file (FASTA or FASTQ) is malformatted.
-	"""
 
 
 class FileWithPrependedLine(object):
@@ -309,14 +310,14 @@ class FastqReader(object):
 		for i, line in enumerate(self.fp):
 			if i % 4 == 0:
 				if not line.startswith('@'):
-					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
+					raise FormatError("At line {0}: Expected a line starting with '+'".format(i+1))
 				name = line.strip()[1:]
 			elif i % 4 == 1:
 				sequence = line.strip()
 			elif i % 4 == 2:
 				line = line.strip()
 				if not line.startswith('+'):
-					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
+					raise FormatError("At line {0}: Expected a line starting with '+'".format(i+1))
 				if len(line) > 1:
 					twoheaders = True
 					if not line[1:] == name:
@@ -363,11 +364,11 @@ class FastaQualReader(object):
 	"""
 	def __init__(self, fastafile, qualfile, sequence_class=Sequence):
 		"""
-		fastafile and qualfile are filenames file-like objects.
-		If file is a filename, then .gz files are supported.
+		fastafile and qualfile are filenames or file-like objects.
+		If a filename is used, then .gz files are recognized.
 
-		colorspace -- Usually (when this is False), there must be n characters in the sequence and
-		n quality values. When this is True, there must be n+1 characters in the sequence and n quality values.
+		The objects returned when iteritng over this file are instances of the
+		given sequence_class.
 		"""
 		self.fastareader = FastaReader(fastafile)
 		self.qualreader = FastaReader(qualfile, keep_linebreaks=True)
@@ -383,9 +384,12 @@ class FastaQualReader(object):
 		for i in range(-5, 256 - 33):
 			conv[str(i)] = chr(i + 33)
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
-			qualities = ''.join([conv[value] for value in qualread.sequence.split()])
 			if fastaread.name != qualread.name:
-				raise ValueError("The read names in the FASTA and QUAL file do not match ({0!r} != {1!r})".format(fastaread.name, qualread.name))
+				raise FormatError("The read names in the FASTA and QUAL file do not match ({0!r} != {1!r})".format(fastaread.name, qualread.name))
+			try:
+				qualities = ''.join([conv[value] for value in qualread.sequence.split()])
+			except KeyError as e:
+				raise FormatError("Within read named {0!r}: Found invalid quality value {1}".format(fastaread.name, e))
 			assert fastaread.name == qualread.name
 			yield self.sequence_class(fastaread.name, fastaread.sequence, qualities)
 
