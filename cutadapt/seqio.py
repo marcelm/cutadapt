@@ -383,8 +383,6 @@ class FastaQualReader(object):
 		for i in range(-5, 256 - 33):
 			conv[str(i)] = chr(i + 33)
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
-			print('qualread:', qualread.sequence)
-			print('split:', qualread.sequence.split())
 			qualities = ''.join([conv[value] for value in qualread.sequence.split()])
 			if fastaread.name != qualread.name:
 				raise ValueError("The read names in the FASTA and QUAL file do not match ({0!r} != {1!r})".format(fastaread.name, qualread.name))
