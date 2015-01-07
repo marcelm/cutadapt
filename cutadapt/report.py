@@ -77,9 +77,9 @@ def print_adjacent_bases(bases, sequence):
 			warnbase = b
 	if total >= 20 and warnbase is not None:
 		print('WARNING:')
-		print('    The adapter is preceded by "{}" extremely often.'.format(warnbase))
+		print('    The adapter is preceded by "{0}" extremely often.'.format(warnbase))
 		print('    The provided adapter sequence may be incomplete.')
-		print('    To fix the problem, add "{}" to the beginning of the adapter sequence.'.format(warnbase))
+		print('    To fix the problem, add "{0}" to the beginning of the adapter sequence.'.format(warnbase))
 		print()
 		return True
 	print()

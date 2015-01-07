@@ -83,7 +83,7 @@ class AdapterMatch(object):
 		self.length = self.astop - self.astart
 
 	def __str__(self):
-		return 'AdapterMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
+		return 'AdapterMatch(astart={0}, astop={1}, rstart={2}, rstop={3}, matches={4}, errors={5})'.format(
 			self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
 
 	def _guess_is_front(self):
