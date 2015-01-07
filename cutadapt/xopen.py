@@ -39,9 +39,42 @@ class GzipWriter:
 
 	def close(self):
 		self.process.stdin.close()
-		c = self.process.wait()
-		if c != 0:
-			raise IOError("Output gzip process terminated with exit code {}".format(c))
+		retcode = self.process.wait()
+		if retcode != 0:
+			raise IOError("Output gzip process terminated with exit code {0}".format(retcode))
+
+
+class GzipReader:
+	def __init__(self, path):
+		self.process = Popen(['gzip', '-cd', path], stdout=PIPE)
+
+	def close(self):
+		retcode = self.process.poll()
+		if retcode is None:
+			# still running
+			self.process.terminate()
+		self._raise_if_error()
+
+	def __iter__(self):
+		for line in self.process.stdout:
+			yield line
+		self._raise_if_error()
+
+	def _raise_if_error(self):
+		"""
+		Raise EOFError if process if process is not running anymore and the
+		exit code is nonzero.
+		"""
+		retcode = self.process.poll()
+		if retcode is not None and retcode != 0:
+			raise EOFError("gzip process returned non-zero exit code {0}. Is the input file truncated or corrupt?".format(retcode))
+
+	def read(self, *args):
+		data = self.process.stdout.read(*args)
+		if len(args) == 0:
+			# wait for process to terminate until we check the exit code
+			self.process.wait()
+		self._raise_if_error()
 
 
 def xopen(filename, mode='r'):
@@ -71,7 +104,7 @@ def xopen(filename, mode='r'):
 		else:
 			if 'r' in mode:
 				try:
-					return Popen(['gzip', '-cd', filename], stdout=PIPE).stdout
+					return GzipReader(filename)
 				except IOError:
 					# gzip not installed
 					return buffered_reader(gzip.open(filename, mode))

@@ -882,7 +882,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		if e.errno == errno.EPIPE:
 			sys.exit(1)
 		raise
-	except seqio.FormatError as e:
+	except (seqio.FormatError, EOFError) as e:
 		print("Error:", e, file=sys.stderr)
 		sys.exit(1)
 
