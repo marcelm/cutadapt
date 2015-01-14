@@ -6,7 +6,7 @@ from __future__ import print_function, division, absolute_import
 import sys, os
 from nose.tools import raises
 from cutadapt.scripts import cutadapt
-from utils import run, files_equal, datapath, cutpath, redirect_stderr, temporary_path
+from .utils import run, files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
 
 def test_example():

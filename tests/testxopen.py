@@ -4,7 +4,7 @@ from cutadapt.xopen import xopen
 import gzip
 import os
 import random
-from utils import temporary_path
+from .utils import temporary_path
 
 base = "tests/data/small.fastq"
 files = [ base + ext for ext in ['', '.gz', '.bz2' ] ]
