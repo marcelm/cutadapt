@@ -92,8 +92,8 @@ the input file.
 In most cases, you should probably use ``-`` at most once for an input file and
 at most once for an output file, in order not to get mixed output.
 
-You cannot combine ``-`` and gzip compression since cutadapt needs to know the 
-file name of the output or input file. if you want to have a gzip-compressed 
+You cannot combine ``-`` and gzip compression since cutadapt needs to know the
+file name of the output or input file. if you want to have a gzip-compressed
 output file, use ``-o`` with an explicit name.
 
 One last "trick" is to use ``/dev/null`` as an output file name. This special
@@ -146,8 +146,8 @@ each read.
 A 3' adapter is a piece of DNA ligated to the 3' end of the DNA fragment you
 are interested in. The sequencer starts the sequencing process at the 5' end of
 the fragment and sequences into the adapter if the read is long enough.
-The read that it outputs will then have a part of the adapter in the 
-end. Or, if the adapter was short and the read length quite long, then the 
+The read that it outputs will then have a part of the adapter in the
+end. Or, if the adapter was short and the read length quite long, then the
 adapter will be somewhere within the read (followed by other bases).
 
 For example, assume your fragment of interest is *MYSEQUENCE* and the adapter is
@@ -679,6 +679,8 @@ request <https://code.google.com/p/cutadapt/issues/detail?id=34>`_, and
 comment on it if you would like to see this implemented.
 
 
+.. _truseq:
+
 Illumina TruSeq
 ===============
 
@@ -707,6 +709,45 @@ If you want to simplify this a bit, you can also use the common prefix
 The adapter sequences can be found in the document `Illumina TruSeq
 Adapters
 De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf>`__.
+
+
+
+.. _warnbase:
+
+Warning about incomplete adapter sequences
+------------------------------------------
+
+Sometimes cutadapt’s report ends with these lines::
+
+    WARNING:
+        One or more of your adapter sequences may be incomplete.
+        Please see the detailed output above.
+
+Further up, you’ll see a message like this::
+
+    Bases preceding removed adapters:
+      A: 95.5%
+      C: 1.0%
+      G: 1.6%
+      T: 1.6%
+      none/other: 0.3%
+    WARNING:
+        The adapter is preceded by "A" extremely often.
+        The provided adapter sequence may be incomplete.
+        To fix the problem, add "A" to the beginning of the adapter sequence.
+
+This means that in 95.5% of the cases in which an adapter was removed from a
+read, the base coming *before* that was an ``A``. If your DNA fragments are
+not random, such as in amplicon sequencing, then this is to be expected and
+the warning can be ignored. If the DNA fragments are supposed to be random,
+then the message may be genuine: The adapter sequence may be incomplete and
+should include an additional ``A`` in the beginning.
+
+This warning exists because some documents list the Illumina TruSeq adapters
+as starting with ``GATCGGA...``. While that is technically correct, the
+library preparation actually results in an additional ``A`` before that
+sequence, which also needs to be removed. See the :ref:`previous
+section <truseq>` for the correct sequence.
 
 
 .. _bisulfite:
