@@ -18,4 +18,3 @@ include tests/test*.py
 include tests/utils.py
 graft tests/data
 graft tests/cut
-graft galaxy
