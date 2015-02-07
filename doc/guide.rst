@@ -453,14 +453,40 @@ correctly, the quality values must be encoded as ascii(phred quality +
 33). If they are encoded as ascii(phred quality + 64), you need to add
 ``--quality-base=64`` to the command line.
 
+Quality trimming can be done without adapter trimming, so this will work::
+
+    cutadapt -q 10 -o output.fastq input.fastq
+
+
+Quality trimming algorithm
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The trimming algorithm is the same as the one used by BWA. That is:
 Subtract the given cutoff from all qualities; compute partial sums from
 all indices to the end of the sequence; cut sequence at the index at
 which the sum is minimal.
 
-Quality trimming can be done without adapter trimming, so this will work::
+The basic idea is to remove all bases starting from the end of the read whose
+quality is smaller than the given threshold. This is refined a bit by allowing
+some good-quality bases among the bad-quality ones.
 
-    cutadapt -q 10 -o output.fastq input.fastq
+Assume you use a threshold of 10 and have these quality values:
+
+42, 40, 26, 27, 8, 7, 11, 4, 2, 3
+
+Subtracting the threshold gives:
+
+32, 30, 16, 17, -2, -3, 1, -6, -8, -7
+
+Then sum up the numbers, starting from the end (partial sums). Stop early if
+the sum is greater than zero:
+
+(70), (38), 8, -8, -25, -23, -20, -21, -15, -7
+
+The numbers in parentheses are not computed (because 8 is greater than zero),
+but shown here for completeness. The position of the minimum (-25) is used as
+the trimming position. Therefore, the read is trimmed to the first four bases,
+which have quality values 41, 40, 25, 27.
 
 
 Trimming paired-end reads
