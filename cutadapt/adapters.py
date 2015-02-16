@@ -1,3 +1,7 @@
+# coding: utf-8
+"""
+Adapters
+"""
 from __future__ import print_function, division, absolute_import
 import sys
 from collections import defaultdict

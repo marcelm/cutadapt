@@ -2,6 +2,24 @@
 Changes
 =======
 
+
+v1.8
+----
+
+* Support single-pass paired-end trimming with the new ``-A``/``-G``/``-B``
+  parameters. These work just like their -a/-g/-b counterparts, but they specify
+  adapters that are removed from the *second read* in a pair.
+
+  Also, if you start using one of those options, the read modification options
+  such as ``-q`` (quality trimming) are applied to *both* reads. For backwards
+  compatibility, read modifications are applied to the first read only if
+  neither of -A/-G/-B is used. See `the
+  documentation <http://cutadapt.readthedocs.org/en/latest/guide.html#paired-end>`_
+  for details.
+
+  This feature has not been extensively tested, so please give feedback if
+  something does not work.
+
 v1.7
 ----
 * IUPAC characters are now supported. For example, use ``-a YACGT`` for an

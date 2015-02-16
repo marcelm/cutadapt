@@ -489,18 +489,88 @@ the trimming position. Therefore, the read is trimmed to the first four bases,
 which have quality values 41, 40, 25, 27.
 
 
-Trimming paired-end reads
--------------------------
+.. _paired-end:
 
-Cutadapt supports trimming of paired-end reads, but currently two passes over
-the data are required.
+Trimming paired-end reads
+=========================
+
+Cutadapt supports trimming of paired-end reads. Starting with cutadapt 1.8,
+both reads in a pair can be trimmed at the same time. It is no longer necessary
+to run cutadapt twice.
 
 Assume the input is in ``reads.1.fastq`` and ``reads.2.fastq`` and that
 ``ADAPTER_FWD`` should be trimmed from the forward reads (first file)
 and ``ADAPTER_REV`` from the reverse reads (second file).
 
+The basic command-line is (``-p`` is the short form of ``--paired-output``)::
+
+    cutadapt -a ADAPTER_FWD -A ADAPTER_REV -o out.1.fastq -p out.2.fastq reads.1.fastq reads.2.fastq
+
+The option ``-A`` is used here to specify an adapter sequence that cutadapt
+should remove from the second read in each pair. There are also the options
+``-G`` and ``-B``. All of them work just like their lowercase counterparts,
+except that the adapter is searched for in the second read in each paired-end
+read.
+
+While it is possible to run cutadapt on the two files separately, processing
+both files at the same time is highly recommended since cutadapt can check
+for problems in your input files only when they are processed together.
+
+When you use ``-p``/``--paired-output``, cutadapt checks whether the files are
+properly paired. An error is raised if one of the files contains more reads than
+the other or if the read names in the two files do not match. Only the part of
+the read name before the first space is considered. If the read name ends with
+``/1`` or ``/2``, then that is also ignored. For example, two FASTQ headers that
+would be considered to denote properly paired reads are::
+
+    @my_read/1 a comment
+
+and::
+
+    @my_read/2 another comment
+
+As soon as you start to use one of the filtering options that discard reads, it
+is mandatory you process both files at the same time to make sure that the also
+the output files are kept synchronized: If a read is removed from one of the
+files, cutadapt will ensure it is also removed from the other file.
+
+The following problems still exist:
+
+* Statistics are only printed for the first read.
+* The ``--info-file`` only includes information for the first read.
+* Demultiplexing is not yet supported with paired-end data.
+
+The following options are applied to the first read in a pair only:
+
+* ``-u``
+* ``--wildcard-file``
+* ``--info-file`` is only written for first read
+* ``--rest-file`` only applies to first read
+
+These options apply to both reads:
+
+* ``-q``
+* ``--quality-base``
+* ``--times`` applies to both sets of adapters
+* ``--no-trim``
+* ``--mask``
+* ``--length-tag``
+* ``--prefix``, ``--suffix``
+* ``--strip-f3``
+* ``--colorspace``, ``--bwa``, ``-z``, ``--no-zero-cap``, ``--double-encode``,
+  ``--trim-primer``
+
+
+Legacy paired-end read trimming
+-------------------------------
+
+.. note::
+    This section describes the way paired-end trimming was done
+    in cutadapt 1.7 and older, where the ``-A``, ``-G``, ``-B`` options were not
+    available. It is less safe and more complicated, but you can still use it.
+
 If you do not use any of the filtering options that discard reads, such
-as ``--discard``, ``--minimum-length`` or ``--maximum-length``, then run
+as ``--discard``, ``--minimum-length`` or ``--maximum-length``, you can run
 cutadapt on each file separately::
 
     cutadapt -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
@@ -515,16 +585,13 @@ be::
     cutadapt -q 10 -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
     cutadapt -q 15 -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
 
-However, if you use one of the filtering options that discard reads,
-then you need to give both input read files to cutadapt and the
-``--paired-output`` option is needed to keep the two files synchronized.
+
 First trim the forward read, writing output to temporary files (we also
 add some quality trimming)::
 
     cutadapt -q 10 -a ADAPTER_FWD --minimum-length 20 -o tmp.1.fastq -p tmp.2.fastq reads.1.fastq reads.2.fastq
 
-The ``-p`` is an abbreviation for ``--paired-output``. Then trim the
-reverse read, using the temporary files as input::
+Then trim the reverse read, using the temporary files as input::
 
     cutadapt -q 15 -a ADAPTER_REV --minimum-length 20 -o trimmed.2.fastq -p trimmed.1.fastq tmp.2.fastq tmp.1.fastq
 
@@ -540,19 +607,7 @@ discarded, then the matching read in the second file is also filtered
 and not written to the output given by ``--paired-output`` in order to
 keep both output files synchronized.
 
-When you use ``-p``/``--paired-output``, then cutadapt also checks
-whether the files are properly paired. An error is raised if one of the
-files contains more reads than the other or if the read names in the two
-files do not match. Only the part of the read name before the first
-space is considered. If the read name ends with ``/1`` or ``/2``, then
-that is also ignored. For example, two FASTQ headers that would be
-considered to denote properly paired reads are::
 
-    @my_read/1 a comment
-
-and::
-
-    @my_read/2 another comment
 
 
 .. _multiple-adapters:

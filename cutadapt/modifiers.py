@@ -1,3 +1,5 @@
+# coding: utf-8
+from __future__ import print_function, division, absolute_import
 import re
 from cutadapt.qualtrim import quality_trim_index
 from cutadapt.compat import maketrans
