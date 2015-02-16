@@ -69,7 +69,7 @@ def test_qualtrim_csfastaqual():
 
 def test_E3M():
 	'''Read the E3M dataset'''
-	# not really colorspace, but fasta/qual
+	# not really colorspace, but a fasta/qual file pair
 	main(['-o', '/dev/null', datapath("E3M.fasta"), datapath("E3M.qual")])
 
 

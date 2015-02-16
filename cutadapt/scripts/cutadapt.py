@@ -879,7 +879,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	if not adapters and not adapters2 and options.quality_cutoff == 0 and \
 			options.cut == [] and options.minimum_length == 0 and \
-			options.maximum_length == sys.maxsize:
+			options.maximum_length == sys.maxsize and \
+			quality_filename is None:
 		parser.error("You need to provide at least one adapter sequence.")
 
 	try:
