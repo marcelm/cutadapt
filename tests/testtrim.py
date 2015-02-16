@@ -9,14 +9,14 @@ def test_cs_5p():
 	read = ColorspaceSequence("name", "0123", "DEFG", "T")
 	adapter = ColorspaceAdapter("CG", PREFIX, 0.1)
 	cutter = AdapterCutter([adapter])
-	matches = cutter.find_matches(read)
+	trimmed_read = cutter(read)
 	# no assertion here, just make sure the above code runs without
 	# an exception
 
 
 def test_statistics():
-	read = Sequence('name', 'AAAACCCCGGGG')
-	adapters = [Adapter('CCCC', BACK, 0.1), Adapter('TTTT', BACK, 0.1)]
+	read = Sequence('name', 'AAAACCCCAAAA')
+	adapters = [Adapter('CCCC', BACK, 0.1)]
 	cutter = AdapterCutter(adapters, times=3)
 	trimmed_read = cutter(read)
 	# TODO make this a lot simpler
