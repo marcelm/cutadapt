@@ -56,11 +56,12 @@ class GzipReader:
 	def __iter__(self):
 		for line in self.process.stdout:
 			yield line
+		self.process.wait()
 		self._raise_if_error()
 
 	def _raise_if_error(self):
 		"""
-		Raise EOFError if process if process is not running anymore and the
+		Raise EOFError if process is not running anymore and the
 		exit code is nonzero.
 		"""
 		retcode = self.process.poll()
@@ -69,7 +70,7 @@ class GzipReader:
 
 	def read(self, *args):
 		data = self.process.stdout.read(*args)
-		if len(args) == 0:
+		if len(args) == 0 or args[0] <= 0:
 			# wait for process to terminate until we check the exit code
 			self.process.wait()
 		self._raise_if_error()

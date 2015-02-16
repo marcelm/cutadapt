@@ -52,9 +52,7 @@ def test_truncated_gz():
 def test_truncated_gz_iter():
 	with temporary_path('truncated.gz') as path:
 		create_truncated_file(path)
-
 		f = xopen(path, 'r')
 		for line in f:
 			pass
 		f.close()
-
