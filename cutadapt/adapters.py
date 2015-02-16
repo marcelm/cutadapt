@@ -178,8 +178,7 @@ class Adapter(object):
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
 		if self.adapter_wildcards:
 			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ1
-		# redirect to appropriate trimmed() function depending on
-		# adapter type
+		# redirect trimmed() to appropriate function depending on adapter type
 		trimmers = {
 			FRONT: self._trimmed_front,
 			PREFIX: self._trimmed_front,
@@ -342,9 +341,10 @@ class ColorspaceAdapter(Adapter):
 			return read[match.rstop:]
 		base_after_adapter = colorspace.DECODE[self.nucleotide_sequence[-1:] + color_after_adapter]
 		new_first_color = colorspace.ENCODE[read.primer + base_after_adapter]
-		read.sequence = new_first_color + read.sequence[(match.rstop + 1):]
-		read.qualities = read.qualities[match.rstop:] if read.qualities else None
-		return read
+		new_read = read[:]
+		new_read.sequence = new_first_color + read.sequence[(match.rstop + 1):]
+		new_read.qualities = read.qualities[match.rstop:] if read.qualities else None
+		return new_read
 
 	def _trimmed_back(self, match):
 		"""Return a trimmed read"""

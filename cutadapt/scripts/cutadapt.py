@@ -160,36 +160,39 @@ class AdapterCutter(object):
 				best = match
 		return best
 
-	def _write_info(self, match):
-		"""write one line to the info file"""
+	def _write_info(self, matches):
+		"""
+		Write to the info, wildcard and rest files.
 		# TODO move to separate class
+		"""
+		if self.rest_writer:
+			self.rest_writer.write(matches[-1])
+
+		if self.wildcard_file:
+			for match in matches:
+				print(match.wildcards(), match.read.name, file=self.wildcard_file)
+
 		if not self.info_file:
 			return
-		seq = match.read.sequence
-		if match is None:
-			print(match.read.name, -1, seq, sep='\t', file=self.info_file)
-		else:
-			print(
-				match.read.name,
-				match.errors,
-				match.rstart,
-				match.rstop,
-				seq[0:match.rstart],
-				seq[match.rstart:match.rstop],
-				seq[match.rstop:],
-				match.adapter.name,
-				sep='\t', file=self.info_file
-			)
+		# TODO write only one line, even for multiple matches
+		for match in matches:
+			seq = match.read.sequence
+			if match is None:
+				print(match.read.name, -1, seq, sep='\t', file=self.info_file)
+			else:
+				print(
+					match.read.name,
+					match.errors,
+					match.rstart,
+					match.rstop,
+					seq[0:match.rstart],
+					seq[match.rstart:match.rstop],
+					seq[match.rstop:],
+					match.adapter.name,
+					sep='\t', file=self.info_file
+				)
 
-	def _write_wildcard_file(self, match):
-		if self.wildcard_file:
-			print(match.wildcards(), match.read.name, file=self.wildcard_file)
-
-	def _write_rest(self, match):
-		if self.rest_writer:
-			self.rest_writer.write(match)
-
-	def find_matches(self, read):
+	def __call__(self, read):
 		"""
 		Determine the adapter that best matches the given read.
 		Since the best adapter is searched repeatedly, a list
@@ -199,6 +202,10 @@ class AdapterCutter(object):
 
 		The read is converted to uppercase before it is compared to the adapter
 		sequences.
+
+		Cut found adapters from a single read. Return modified read.
+
+		matches -- a list of AdapterMatch instances
 		"""
 		matches = []
 
@@ -213,32 +220,22 @@ class AdapterCutter(object):
 			assert match.length - match.errors > 0
 
 			matches.append(match)
-			if t != self.times - 1:
-				read = match.adapter.trimmed(match)
-		return matches
+			read = match.adapter.trimmed(match)
 
-	def cut(self, matches):
-		"""
-		Cut found adapters from a single read. Return modified read.
+		if not matches:
+			read.match = None
+			return read
 
-		matches -- a list of AdapterMatch instances
-		"""
-		assert matches
 		if __debug__:
-			read = matches[0].read
-			old_length = len(read.sequence)
+			old_read = matches[0].read
+			assert len(read) < len(old_read), "Trimmed read isn't shorter than original"
 
-		for match in matches:
-			self._write_info(match)
-			self._write_wildcard_file(match)
-		self._write_rest(matches[-1])
+		self._write_info(matches)
 
 		if self.action == 'trim':
-			# The last match has a copy of the read it was matched to.
-			read = matches[-1].adapter.trimmed(matches[-1])
-			assert len(read.sequence) < old_length, "Trimmed read isn't shorter than original"
+			# read is already trimmed, nothing to do
+			pass
 		elif self.action == 'mask':
-			read = matches[-1].adapter.trimmed(matches[-1])
 			# add N from last modification
 			masked_sequence = read.sequence
 			for match in sorted(matches, reverse=True, key=lambda m: m.astart):
@@ -254,18 +251,14 @@ class AdapterCutter(object):
 			read.qualities = matches[0].read.qualities
 			read.match = matches[-1]
 
-			assert len(read.sequence) == old_length
+			assert len(read.sequence) == len(old_read)
+		elif self.action is None:
+			read = matches[0].read
+			read.match = matches[-1]
 
 		self.reads_matched += 1  # TODO move to filter class
-		return read
 
-	def __call__(self, read):
-		matches = self.find_matches(read)
-		if len(matches) > 0:
-			read = self.cut(matches)
-			read.match = matches[-1]
-		else:
-			read.match = None
+		read.match = matches[-1]
 		return read
 
 
