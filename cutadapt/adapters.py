@@ -42,7 +42,7 @@ def parse_adapter(sequence, where):
 def gather_adapters(back, anywhere, front):
 	"""
 	Yield (name, seq, where) tuples from which Adapter instances can be built.
-	This generator deals with the notation for anchored 5' adapters and also
+	This generator deals with the notation for anchored 5'/3' adapters and also
 	understands the ``file:`` syntax for reading adapters from an external FASTA
 	file.
 	"""

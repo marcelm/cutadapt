@@ -23,6 +23,7 @@ improvements.
 - allow to remove not the adapter itself, but the sequence before or after it
 - convert adapter to lowercase
 - warn when given adapter sequence contains non-IUPAC characters
+- try multithreading again, this time use os.pipe()
 
 
 Specifying adapters
@@ -44,8 +45,16 @@ new adapter types in the feature.
 Or add only ``-a ADAPTER...`` as an alias for ``-g ^ADAPTER`` and
 ``-a ...ADAPTER`` as an alias for ``-a ADAPTER``.
 
+The ``...`` would be equivalent to ``N*`` as in regular expressions.
+
 Another idea: Allow something such as ``-a ADAP$TER`` or ``-a ADAPTER$NNN``.
 This would be a way to specify less strict anchoring.
+
+Make it possible to specify that the rightmost or leftmost match should be
+picked. Default right now: Leftmost, even for -g adapters.
+
+Allow ``A{15}`` to mean “``A`` repeated 15 times”.
+Allow ``N{3,10}`` as in regular expressions (for a variable-length sequence).
 
 
 Paired-end trimming

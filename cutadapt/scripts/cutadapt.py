@@ -331,7 +331,7 @@ class AdapterCutter(object):
 
 	def cut(self, matches):
 		"""
-		Cut found adapters from a single read.
+		Cut found adapters from a single read. Return modified read.
 
 		matches -- a list of AdapterMatch instances
 		"""
