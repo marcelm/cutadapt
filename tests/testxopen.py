@@ -1,3 +1,4 @@
+# coding: utf-8
 from __future__ import print_function, division, absolute_import
 from nose.tools import raises
 from cutadapt.xopen import xopen

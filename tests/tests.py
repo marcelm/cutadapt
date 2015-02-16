@@ -1,3 +1,4 @@
+# coding: utf-8
 # TODO
 # test with the --output option
 # test reading from standard input
