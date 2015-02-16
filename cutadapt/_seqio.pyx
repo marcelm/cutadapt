@@ -64,7 +64,7 @@ cdef class Sequence(object):
 	def __repr__(self):
 		qstr = ''
 		if self.qualities is not None:
-			qstr = '\', qualities={0!r}'.format(_shorten(self.qualities))
+			qstr = ', qualities={0!r}'.format(_shorten(self.qualities))
 		return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
 
 	def __len__(self):

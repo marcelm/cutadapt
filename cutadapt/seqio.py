@@ -51,7 +51,7 @@ class Sequence(object):
 	def __repr__(self):
 		qstr = ''
 		if self.qualities is not None:
-			qstr = '\', qualities={0!r}'.format(_shorten(self.qualities))
+			qstr = ', qualities={0!r}'.format(_shorten(self.qualities))
 		return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
 
 	def __len__(self):
@@ -104,7 +104,7 @@ class ColorspaceSequence(Sequence):
 	def __repr__(self):
 		qstr = ''
 		if self.qualities is not None:
-			qstr = '\', qualities={0!r}'.format(_shorten(self.qualities))
+			qstr = ', qualities={0!r}'.format(_shorten(self.qualities))
 		return '<ColorspaceSequence(name={0!r}, primer={1!r}, sequence={2!r}{3})>'.format(_shorten(self.name), self.primer, _shorten(self.sequence), qstr)
 
 	def __getitem__(self, key):
