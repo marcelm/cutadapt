@@ -420,6 +420,21 @@ or ``ADAPTER`` as used here in the examples).
 Wildcards do not work in colorspace.
 
 
+Repeated bases in the adapter sequence
+--------------------------------------
+
+If you have many repeated bases in the adapter sequence, such as many ``N``s or
+many ``A``s, you do not have to spell them out. For example, instead of writing
+ten ``A`` in a row (``AAAAAAAAAA``), write ``A{10}`` instead. The number within
+the curly braces specifies how often the character that preceeds it will be
+repeated. This works also for IUPAC wildcard characters, as in ``N{5}``.
+
+It is recommended that you use quotation marks around your adapter sequence if
+you use this feature. For poly-A trimming, for example, you would write::
+
+    cutadapt -a "A{100}" -o output.fastq input.fastq
+
+
 .. _cut-bases:
 
 Removing a fixed number of bases

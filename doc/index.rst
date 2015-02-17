@@ -10,6 +10,7 @@ Table of contents
    installation
    guide
    colorspace
+   recipes
    ideas
    changes
 

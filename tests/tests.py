@@ -132,6 +132,10 @@ def test_polya():
 	'''poly-A tails'''
 	run("-m 24 -O 10 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "polya.fasta", "polya.fasta")
 
+def test_polya_brace_notation():
+	'''poly-A tails'''
+	run("-m 24 -O 10 -a A{35}", "polya.fasta", "polya.fasta")
+
 def test_mask_adapter():
 	'''mask adapter with N (reads maintain the same length)'''
 	run("-b CAAG -n 3 --mask-adapter", "anywhere_repeat.fastq", "anywhere_repeat.fastq")
@@ -178,6 +182,13 @@ def test_literal_N():
 
 def test_literal_N2():
 	run("-N -O 1 -g NNNNNNNNNNNNNN", "trimN5.fasta", "trimN5.fasta")
+
+def test_literal_N_brace_notation():
+	'''test matching literal 'N's'''
+	run("-N -e 0.2 -a N{14}", "trimN3.fasta", "trimN3.fasta")
+
+def test_literal_N2_brace_notation():
+	run("-N -O 1 -g N{14}", "trimN5.fasta", "trimN5.fasta")
 
 def test_anchored_front():
 	run("-g ^FRONTADAPT -N", "anchored.fasta", "anchored.fasta")

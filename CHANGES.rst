@@ -2,7 +2,6 @@
 Changes
 =======
 
-
 v1.8
 ----
 
@@ -19,6 +18,11 @@ v1.8
 
   This feature has not been extensively tested, so please give feedback if
   something does not work.
+* Support notation for repeated bases in the adapter sequence: Write ``A{10}``
+  instead of ``AAAAAAAAAA``. Useful for poly-A trimming: Use ``-a A{100}`` to
+  get the longest possible tail.
+* Fix incorrectly reported statistics (> 100% trimmed bases) when ``--times``
+  set to a value greater than one.
 
 v1.7
 ----

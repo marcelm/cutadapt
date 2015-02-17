@@ -1,6 +1,6 @@
 # coding: utf-8
 from __future__ import print_function, division, absolute_import
-from nose.tools import raises
+from nose.tools import raises, assert_raises
 
 from cutadapt.seqio import Sequence
 from cutadapt.adapters import Adapter, AdapterMatch, ColorspaceAdapter, FRONT, BACK
@@ -67,3 +67,26 @@ def test_str():
 def test_color():
 	ColorspaceAdapter('0123', where=FRONT, max_error_rate=0.1)
 
+
+def test_parse_braces():
+	assert Adapter.parse_braces('') == ''
+	assert Adapter.parse_braces('A') == 'A'
+	assert Adapter.parse_braces('A{0}') == ''
+	assert Adapter.parse_braces('A{1}') == 'A'
+	assert Adapter.parse_braces('A{2}') == 'AA'
+	assert Adapter.parse_braces('A{2}C') == 'AAC'
+	assert Adapter.parse_braces('ACGTN{3}TGACCC') == 'ACGTNNNTGACCC'
+	assert Adapter.parse_braces('ACGTN{10}TGACCC') == 'ACGTNNNNNNNNNNTGACCC'
+	assert Adapter.parse_braces('ACGTN{3}TGA{4}CCC') == 'ACGTNNNTGAAAACCC'
+	assert Adapter.parse_braces('ACGTN{0}TGA{4}CCC') == 'ACGTTGAAAACCC'
+
+
+def test_parse_braces_fail():
+	for expression in ['{', '}', '{}', '{5', '{1}', 'A{-7}', 'A{', 'A{1', 'N{7', 'AN{7', 'A{4{}',
+			'A{4}{3}', 'A{b}', 'A{6X}', 'A{X6}']:
+		print(expression)
+		try:
+			Adapter.parse_braces(expression)
+		except ValueError as e:
+			print(e)
+		assert_raises(ValueError, lambda: Adapter.parse_braces(expression))

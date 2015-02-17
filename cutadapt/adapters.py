@@ -4,6 +4,7 @@ Adapters
 """
 from __future__ import print_function, division, absolute_import
 import sys
+import re
 from collections import defaultdict
 from cutadapt import align, colorspace
 from cutadapt.seqio import ColorspaceSequence, FastaReader
@@ -37,7 +38,7 @@ def parse_adapter(sequence, where):
 	(sequence, where).
 	"""
 	if where == FRONT and sequence.startswith('^'):
-		return (sequence[1:],  PREFIX)
+		return (sequence[1:], PREFIX)
 	if where == BACK and sequence.endswith('$'):
 		return (sequence[:-1], SUFFIX)
 	return (sequence, where)
@@ -166,7 +167,7 @@ class Adapter(object):
 			self.name = name
 			self.name_is_generated = False
 
-		self.sequence = sequence.upper().replace('U', 'T')
+		self.sequence = self.parse_braces(sequence.upper().replace('U', 'T'))
 		self.where = where
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
@@ -211,6 +212,39 @@ class Adapter(object):
 			'indels={indels})>'.format(
 				read_wildcards=read_wildcards,
 				**vars(self))
+
+	@staticmethod
+	def parse_braces(sequence):
+		# Simple DFA with four states, encoded in prev
+		result = ''
+		prev = None
+		for s in re.split('(\{|\})', sequence):
+			if s == '':
+				continue
+			if prev is None:
+				if s == '{':
+					raise ValueError('"{" must be used after a character')
+				if s == '}':
+					raise ValueError('"}" cannot be used here')
+				prev = s
+				result += s
+			elif prev == '{':
+				prev = int(s)
+				if not 0 <= prev <= 10000:
+					raise ValueError('Value {} invalid'.format(prev))
+			elif isinstance(prev, int):
+				if s != '}':
+					raise ValueError('"}" expected')
+				result = result[:-1] + result[-1] * prev
+				prev = None
+			else:
+				if s != '{':
+					raise ValueError('Expected "{"')
+				prev = '{'
+		# Check if we are in a non-terminating state
+		if isinstance(prev, int) or prev == '{':
+			raise ValueError("Unterminated expression")
+		return result
 
 	def match_to(self, read):
 		"""

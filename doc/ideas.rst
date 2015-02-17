@@ -53,7 +53,6 @@ This would be a way to specify less strict anchoring.
 Make it possible to specify that the rightmost or leftmost match should be
 picked. Default right now: Leftmost, even for -g adapters.
 
-Allow ``A{15}`` to mean “``A`` repeated 15 times”.
 Allow ``N{3,10}`` as in regular expressions (for a variable-length sequence).
 
 
