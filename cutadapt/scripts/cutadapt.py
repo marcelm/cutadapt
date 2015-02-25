@@ -829,7 +829,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 		if options.quality_cutoff > 0:
 			modifiers2.append(QualityTrimmer(options.quality_cutoff, options.quality_base))
-		if adapters:
+		if adapters2:
 			adapter_cutter2 = AdapterCutter(adapters2, options.times,
 					None, None, None, options.action)
 			modifiers2.append(adapter_cutter2)

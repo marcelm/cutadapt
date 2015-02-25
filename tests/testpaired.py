@@ -153,3 +153,10 @@ def test_paired_end_cut():
 		in1='paired.1.fastq', in2='paired.2.fastq',
 		expected1='pairedu.1.fastq', expected2='pairedu.2.fastq'
 	)
+
+
+def test_paired_end_A_only():
+	run_paired('-A CAGTGGAGTA',
+		in1='paired.1.fastq', in2='paired.2.fastq',
+		expected1='paired-onlyA.1.fastq', expected2='paired-onlyA.2.fastq'
+	)
