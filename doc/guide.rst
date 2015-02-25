@@ -523,12 +523,13 @@ The basic command-line is (``-p`` is the short form of ``--paired-output``)::
 
 The option ``-A`` is used here to specify an adapter sequence that cutadapt
 should remove from the second read in each pair. There are also the options
-``-G`` and ``-B``. All of them work just like their lowercase counterparts,
+``-G``, ``-B``. All of them work just like their lowercase counterparts,
 except that the adapter is searched for in the second read in each paired-end
-read.
+read. There is also option ``-U``, which you can use to remove a fixed number
+of bases from the second read in a pair.
 
 While it is possible to run cutadapt on the two files separately, processing
-both files at the same time is highly recommended since cutadapt can check
+both files at the same time is highly recommended since the program can check
 for problems in your input files only when they are processed together.
 
 When you use ``-p``/``--paired-output``, cutadapt checks whether the files are
@@ -545,9 +546,9 @@ and::
     @my_read/2 another comment
 
 As soon as you start to use one of the filtering options that discard reads, it
-is mandatory you process both files at the same time to make sure that the also
-the output files are kept synchronized: If a read is removed from one of the
-files, cutadapt will ensure it is also removed from the other file.
+is mandatory you process both files at the same time to make sure that the
+output files are kept synchronized: If a read is removed from one of the files,
+cutadapt will ensure it is also removed from the other file.
 
 The following problems still exist:
 
@@ -557,7 +558,6 @@ The following problems still exist:
 
 The following options are applied to the first read in a pair only:
 
-* ``-u``
 * ``--wildcard-file``
 * ``--info-file`` is only written for first read
 * ``--rest-file`` only applies to first read

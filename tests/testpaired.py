@@ -146,3 +146,10 @@ def test_paired_end_qualtrim_swapped():
 		in1='paired.2.fastq', in2='paired.1.fastq',
 		expected1='pairedq.2.fastq', expected2='pairedq.1.fastq'
 	)
+
+
+def test_paired_end_cut():
+	run_paired('-u 3 -u -1 -U 4 -U -2',
+		in1='paired.1.fastq', in2='paired.2.fastq',
+		expected1='pairedu.1.fastq', expected2='pairedu.2.fastq'
+	)

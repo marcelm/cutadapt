@@ -5,14 +5,14 @@ Changes
 v1.8
 ----
 
-* Support single-pass paired-end trimming with the new ``-A``/``-G``/``-B``
-  parameters. These work just like their -a/-g/-b counterparts, but they specify
-  adapters that are removed from the *second read* in a pair.
+* Support single-pass paired-end trimming with the new ``-A``/``-G``/``-B``/``-U``
+  parameters. These work just like their -a/-g/-b/-u counterparts, but they
+  specify sequences that are removed from the *second read* in a pair.
 
   Also, if you start using one of those options, the read modification options
   such as ``-q`` (quality trimming) are applied to *both* reads. For backwards
   compatibility, read modifications are applied to the first read only if
-  neither of -A/-G/-B is used. See `the
+  neither of ``-A``/``-G``/``-B``/``-U`` is used. See `the
   documentation <http://cutadapt.readthedocs.org/en/latest/guide.html#paired-end>`_
   for details.
 

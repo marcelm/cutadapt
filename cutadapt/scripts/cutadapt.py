@@ -490,7 +490,7 @@ def get_option_parser():
 
 	group = OptionGroup(parser, "Additional modifications to the reads")
 	group.add_option("-u", "--cut", action='append', default=[], type=int, metavar="LENGTH",
-		help="Remove bases from the beginning or end of each read. "
+		help="Remove LENGTH bases from the beginning or end of each read. "
 			"If LENGTH is positive, the bases are removed from the beginning of each read. "
 			"If LENGTH is negative, the bases are removed from the end of each read. "
 			"This option can be specified twice if the LENGTHs have different signs.")
@@ -541,13 +541,15 @@ def get_option_parser():
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Paired-end options.", description="The "
-		"-A/-G/-B options work like their -a/-b/-g counterparts.")
+		"-A/-G/-B/-U options work like their -a/-b/-g/-u counterparts.")
 	group.add_option("-A", dest='adapters2', action='append', default=[], metavar='ADAPTER',
 		help="3' adapter to be removed from the second read in a pair.")
 	group.add_option("-G", dest='front2', action='append', default=[], metavar='ADAPTER',
 		help="5' adapter to be removed from the second read in a pair.")
 	group.add_option("-B", dest='anywhere2', action='append', default=[], metavar='ADAPTER',
 		help="5'/3 adapter to be removed from the second read in a pair.")
+	group.add_option("-U", dest='cut2', action='append', default=[], type=int, metavar="LENGTH",
+		help="Remove LENGTH bases from the beginning or end of each read (see --cut).")
 	group.add_option("-p", "--paired-output", metavar="FILE",
 		help="Write second read in a pair to FILE.")
 	group.add_option("--untrimmed-paired-output", metavar="FILE",
@@ -580,20 +582,20 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	input_filename = args[0]
 
 	# Find out which 'mode' we need to use.
-	# Default: single-read trimming (neither -p nor -A/-G/-B given)
+	# Default: single-read trimming (neither -p nor -A/-G/-B/-U given)
 	paired = False
 	if options.paired_output:
-		# Modify first read only, keep second in sync (-p given, but not -A/-G/-B).
+		# Modify first read only, keep second in sync (-p given, but not -A/-G/-B/-U).
 		# This exists for backwards compatibility ('legacy mode').
 		paired = 'first'
-	if options.adapters2 or options.front2 or options.anywhere2:
-		# Full paired-end trimming when both -p and -A/-G/-B given
+	if options.adapters2 or options.front2 or options.anywhere2 or options.cut2:
+		# Full paired-end trimming when both -p and -A/-G/-B/-U given
 		# Also the read modifications (such as quality trimming) are applied
 		# to second read.
 		paired = 'both'
 
 	if paired and len(args) == 1:
-		parser.error("When paired-end trimming is enabled via -A/-G/-B or -p, "
+		parser.error("When paired-end trimming is enabled via -A/-G/-B/-U or -p, "
 			"two input files are required.")
 	if paired:
 		input_paired_filename = args[1]
@@ -607,7 +609,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	if paired:
 		if not options.paired_output:
-			parser.error("When paired-end trimming is enabled via -A/-G/-B, "
+			parser.error("When paired-end trimming is enabled via -A/-G/-B/-U, "
 				"a second output file needs to be specified via -p (--paired-output).")
 		if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
 			parser.error("When trimming paired-end reads, you must use either none "
@@ -751,7 +753,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		raise
 
 	if not adapters and not adapters2 and options.quality_cutoff == 0 and \
-			options.cut == [] and options.minimum_length == 0 and \
+			options.cut == [] and options.cut2 == [] and \
+			options.minimum_length == 0 and \
 			options.maximum_length == sys.maxsize and \
 			quality_filename is None:
 		parser.error("You need to provide at least one adapter sequence.")
@@ -767,7 +770,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		print("Error:", e, file=sys.stderr)
 		sys.exit(1)
 
-	# Create the processing pipeline as a list of "modifiers".
+	# Create the processing pipeline consisting of a list of "modifiers".
 	modifiers = []
 	if options.cut:
 		if len(options.cut) > 2:
@@ -811,13 +814,19 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	modifiers.extend(modifiers_both)
 
 	# For paired-end data, create a second processing pipeline.
-	# However, if no second-read adapters were given (via -A/-G/-B), we need to
+	# However, if no second-read adapters were given (via -A/-G/-B/-U), we need to
 	# be backwards compatible and *no modifications* are done to the second read.
 	modifiers2 = []
 	if paired == 'both':
-		if options.cut:
-			# TODO
-			parser.error("Do not use -u with paired-end data.")
+		if options.cut2:
+			if len(options.cut2) > 2:
+				parser.error("You cannot remove bases from more than two ends.")
+			if len(options.cut2) == 2 and options.cut2[0] * options.cut2[1] > 0:
+				parser.error("You cannot remove bases from the same end twice.")
+			for cut in options.cut2:
+				if cut != 0:
+					modifiers2.append(UnconditionalCutter(cut))
+
 		if options.quality_cutoff > 0:
 			modifiers2.append(QualityTrimmer(options.quality_cutoff, options.quality_base))
 		if adapters:
