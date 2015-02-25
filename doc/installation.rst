@@ -7,12 +7,13 @@ Quickstart
 
 The easiest way to install cutadapt is to use ``pip`` on the command line::
 
-    pip install --user cutadapt
+    pip install --user --upgrade cutadapt
 
 This will download the software from `PyPI (the Python packaging
 index) <https://pypi.python.org/pypi/cutadapt/>`_, and
-install the cutadapt binary into ``$HOME/.local/bin``. You can then run the
-program like this::
+install the cutadapt binary into ``$HOME/.local/bin``. If an old version of
+cutadapt exists on your system, the ``--upgrade`` parameter is required in order
+to install a newer version. You can then run the program like this::
 
     ~/.local/bin/cutadapt --help
 
