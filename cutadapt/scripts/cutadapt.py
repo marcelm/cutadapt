@@ -845,7 +845,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			stats = process_single_reads(reader, modifiers, writers)
 	except KeyboardInterrupt as e:
 		print("Interrupted", file=sys.stderr)
-		sys.exit(1)
+		sys.exit(130)
 	except IOError as e:
 		if e.errno == errno.EPIPE:
 			sys.exit(1)
