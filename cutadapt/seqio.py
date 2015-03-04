@@ -99,7 +99,9 @@ class ColorspaceSequence(Sequence):
 				"is: {3!r})".format(rname, len(qualities), len(sequence), self.primer))
 		super(ColorspaceSequence, self).__init__(name, sequence, qualities, twoheaders, match)
 		if not self.primer in ('A', 'C', 'G', 'T'):
-			raise FormatError("primer base is {0!r}, but it should be one of A, C, G, T".format(self.primer))
+			raise FormatError("Primer base is {0!r} in read {1!r}, but it "
+				"should be one of A, C, G, T.".format(
+					self.primer, _shorten(name)))
 
 	def __repr__(self):
 		qstr = ''
