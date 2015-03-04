@@ -135,3 +135,22 @@ class Demultiplexer(object):
 			f.close()
 		if self.untrimmed_outfile is not None:
 			self.untrimmed_outfile.close()
+
+class NContentTrimmer(object):
+	def __init__(self, count):
+		if count < 1.0:
+			self.proportion=True
+		else:
+			self.proportion = False
+		self.cutoff = count
+
+	def __call__(self, read1, read2=None):
+		if self.proportion:
+			if read1.sequence.lower().count('n')/len(read1.sequence) > self.cutoff or \
+					(read2 is not None and read2.sequence.lower().count('n')/len(read1.sequence) > self.cutoff):
+				return True
+		else:
+			if read1.sequence.lower().count('n') > self.cutoff or\
+					(read2 is not None and read2.sequence.lower().count('n') > self.cutoff):
+				return True
+		return False
