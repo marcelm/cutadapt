@@ -6,6 +6,8 @@ python:
 #  - "3.3"
   - "3.4"
 
-install: 
+install:
+  - pip install --install-option="--no-cython-compile" cython
+  - pip install .
 
 script: nosetests
