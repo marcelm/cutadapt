@@ -10,4 +10,6 @@ install:
   - pip install --install-option="--no-cython-compile" cython
   - pip install .
 
-script: nosetests
+script:
+  - nosetests -P tests
+
