@@ -137,20 +137,26 @@ class Demultiplexer(object):
 			self.untrimmed_outfile.close()
 
 class NContentTrimmer(object):
+	"""
+	Discards reads over a given threshold of N's. It handles both raw counts of Ns as well
+	as proportions. Note, for raw counts, it is a greater than comparison, so a cutoff
+	of '1' will keep reads with a single N in it.
+	"""
 	def __init__(self, count):
-		if count < 1.0:
-			self.proportion=True
-		else:
-			self.proportion = False
+		"""
+		Count -- if it is below 1.0, it will be considered a proportion, and above and equal to
+		1 will be considered as discarding reads with a number of N's greater than this cutoff.
+		"""
+		self.proportion = count < 1.0
 		self.cutoff = count
 
 	def __call__(self, read1, read2=None):
 		if self.proportion:
-			if read1.sequence.lower().count('n')/len(read1.sequence) > self.cutoff or \
-					(read2 is not None and read2.sequence.lower().count('n')/len(read1.sequence) > self.cutoff):
+			if len(read1.sequence) and read1.sequence.lower().count('n')/len(read1.sequence) <= self.cutoff or \
+					(read2 is not None and len(read2.sequence) and read2.sequence.lower().count('n')/len(read2.sequence) <= self.cutoff):
 				return True
 		else:
-			if read1.sequence.lower().count('n') > self.cutoff or\
-					(read2 is not None and read2.sequence.lower().count('n') > self.cutoff):
+			if read1.sequence.lower().count('n') <= self.cutoff or \
+					(read2 is not None and read2.sequence.lower().count('n') <= self.cutoff):
 				return True
 		return False

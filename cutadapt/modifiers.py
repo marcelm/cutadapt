@@ -112,6 +112,7 @@ class QualityTrimmer(object):
 
 
 class NEndTrimmer(object):
+	"""Trims Ns from the 3' and 5' end of reads"""
 	def __init__(self):
 		self.start_trim = re.compile(r'^N+')
 		self.end_trim = re.compile(r'N+$')
