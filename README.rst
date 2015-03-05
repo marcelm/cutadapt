@@ -1,9 +1,9 @@
+.. image:: https://travis-ci.org/marcelm/cutadapt.svg?branch=master
+    :target: https://travis-ci.org/marcelm/cutadapt
+
 ========
 cutadapt
 ========
-
-.. image:: https://travis-ci.org/marcelm/cutadapt.svg?branch=master
-    :target: https://travis-ci.org/marcelm/cutadapt
 
 Cutadapt finds and removes adapter sequences, primers, poly-A tails and other types of unwanted sequence from your high-throughput sequencing reads.
 
