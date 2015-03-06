@@ -412,6 +412,28 @@ class ColorspaceFastaQualReader(FastaQualReader):
 		super(ColorspaceFastaQualReader, self).__init__(fastafile, qualfile, sequence_class=ColorspaceSequence)
 
 
+def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
+	"""
+	Read sequences and (if available) quality information from either:
+	* seqfilename in FASTA format (qualityfilename must be None)
+	* seqfilename in FASTQ format (qualityfilename must be None)
+	* seqfilename in .csfasta format and qualityfilename in .qual format
+	  (SOLiD colorspace)
+
+	Return an instance of either FastaReader, FastqReader,
+	ColorspaceFastaQualReader or FastaQualReader.
+	"""
+	if qualityfilename is not None:
+		if colorspace:
+			# read from .(CS)FASTA/.QUAL
+			return ColorspaceFastaQualReader(seqfilename, qualityfilename)
+		else:
+			return FastaQualReader(seqfilename, qualityfilename)
+	else:
+		# read from FASTA or FASTQ
+		return SequenceReader(seqfilename, colorspace, fileformat)
+
+
 class PairedSequenceReader(object):
 	"""
 	Wrap two SequenceReader instances, making sure that reads are

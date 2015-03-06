@@ -86,32 +86,6 @@ class CutadaptOptionParser(OptionParser):
 		return self.usage.lstrip().replace('%version', __version__)
 
 
-def read_sequences(seqfilename, qualityfilename, colorspace, fileformat):
-	"""
-	Read sequences and (if available) quality information from either:
-	* seqfilename in FASTA format (qualityfilename must be None)
-	* seqfilename in FASTQ format (qualityfilename must be None)
-	* seqfilename in .csfasta format and qualityfilename in .qual format
-	  (SOLiD colorspace)
-
-	Return a generator over tuples (description, sequence, qualities).
-	qualities is None if no qualities are available.
-	qualities are ASCII-encoded (chr(quality) + 33).
-	"""
-	#if ftype == 'FASTQ' and qualityfilename is not None:
-		#raise ValueError("If a FASTQ file is given, no quality file can be provided.")
-
-	if qualityfilename is not None:
-		if colorspace:
-			# read from .(CS)FASTA/.QUAL
-			return seqio.ColorspaceFastaQualReader(seqfilename, qualityfilename)
-		else:
-			return seqio.FastaQualReader(seqfilename, qualityfilename)
-	else:
-		# read from FASTA or FASTQ
-		return seqio.SequenceReader(seqfilename, colorspace, fileformat)
-
-
 class RestFileWriter(object):
 	def __init__(self, file):
 		self.file = file
@@ -205,8 +179,6 @@ class AdapterCutter(object):
 		sequences.
 
 		Cut found adapters from a single read. Return modified read.
-
-		matches -- a list of AdapterMatch instances
 		"""
 		matches = []
 
@@ -764,7 +736,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			reader = seqio.PairedSequenceReader(input_filename, input_paired_filename,
 				colorspace=options.colorspace, fileformat=options.format)
 		else:
-			reader = read_sequences(input_filename, quality_filename,
+			reader = seqio.read_sequences(input_filename, quality_filename,
 				colorspace=options.colorspace, fileformat=options.format)
 	except seqio.UnknownFileType as e:
 		print("Error:", e, file=sys.stderr)
