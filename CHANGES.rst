@@ -23,6 +23,7 @@ v1.8
   get the longest possible tail.
 * Fix incorrectly reported statistics (> 100% trimmed bases) when ``--times``
   set to a value greater than one.
+* Support .xz-compressed files (if running in Python 3.3 or later).
 
 v1.7
 ----

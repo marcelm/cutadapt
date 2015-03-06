@@ -58,11 +58,9 @@ as expected::
 
 Note that the all of cutadapt's options that expect a file name support this.
 
-If your Python installation includes support for bzip2 compression, then
-bzip2-compressed files are also supported and recognized by their
-extension ``.bz2``.
-
-(If you are interested in LZMA compression (``.xz`` and ``.lzma``), contact me.)
+Files compressed with bzip2 (``.bz2``) or xz (``.xz``) are also supported, but
+only if the Python installation includes the proper modules. xz files require
+Python 3.3 or later.
 
 
 Standard input and output

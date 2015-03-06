@@ -1,14 +1,18 @@
 # coding: utf-8
 from __future__ import print_function, division, absolute_import
-from nose.tools import raises
-from cutadapt.xopen import xopen
 import gzip
 import os
 import random
+import sys
+from nose.tools import raises
+from cutadapt.xopen import xopen
 from .utils import temporary_path
 
 base = "tests/data/small.fastq"
 files = [ base + ext for ext in ['', '.gz', '.bz2' ] ]
+if sys.version_info >= (3, 3):
+	# .xz file support is only available in Python 3.3 and later
+	files.append(base + '.xz')
 
 def test_xopen_text():
 	for name in files:

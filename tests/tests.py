@@ -5,6 +5,7 @@
 from __future__ import print_function, division, absolute_import
 
 import os
+import sys
 from nose.tools import raises
 from cutadapt.scripts import cutadapt
 from .utils import run, files_equal, datapath, cutpath, redirect_stderr, temporary_path
@@ -229,9 +230,16 @@ def test_no_trim():
 	''' --no-trim '''
 	run("--no-trim --discard-untrimmed -a CCCTAGTTAAAC", 'no-trim.fastq', 'small.fastq')
 
+
 def test_bzip2():
 	'''test bzip2 support'''
 	run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.bz2')
+
+
+if sys.version_info >= (3, 3):
+	def test_xz():
+		'''test xz support'''
+		run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.xz')
 
 
 @raises(SystemExit)

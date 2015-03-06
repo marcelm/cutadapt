@@ -42,7 +42,7 @@ sequences can be given (use further -a options), but only the best-matching
 adapter will be removed.
 
 Input may also be in FASTA format. Compressed input and output is supported and
-auto-detected from the file name (.gz or .bz2). Use the file name '-' for
+auto-detected from the file name (.gz, .xz, .bz2). Use the file name '-' for
 standard input/output. Without the -o option, output is sent to standard output.
 
 Some other available features are:

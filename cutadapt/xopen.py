@@ -15,6 +15,11 @@ try:
 except ImportError:
 	bz2 = None
 
+try:
+	import lzma
+except ImportError:
+	lzma = None
+
 if sys.version_info < (2, 7):
 	buffered_reader = lambda x: x
 	buffered_writer = lambda x: x
@@ -122,7 +127,10 @@ def xopen(filename, mode='r'):
 				return bz2.BZ2File(filename, mode)
 		else:
 			return bz2.BZ2File(filename, mode)
-
+	elif filename.endswith('.xz'):
+		if lzma is None:
+			raise ImportError("Cannot open xz files: The lzma module is not available (use Python 3.3 or newer)")
+		return lzma.open(filename, mode)
 	elif filename.endswith('.gz'):
 		if PY3:
 			if 't' in mode:

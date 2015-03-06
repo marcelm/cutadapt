@@ -211,6 +211,8 @@ def SequenceReader(file, colorspace=False, fileformat=None):
 	if name is not None:
 		if name.endswith('.gz'):
 			name = name[:-3]
+		elif name.endswith('.xz'):
+			name = name[:-3]
 		elif name.endswith('.bz2'):
 			name = name[:-4]
 		name, ext = splitext(name)
