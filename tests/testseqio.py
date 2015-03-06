@@ -72,25 +72,25 @@ def test_invalid_quality_value():
 
 def test_sequence_reader():
 	# test the autodetection
-	with seqio.SequenceReader("tests/data/simple.fastq") as f:
+	with seqio.open("tests/data/simple.fastq") as f:
 		reads = list(f)
 	assert reads == simple_fastq
 
-	with seqio.SequenceReader("tests/data/simple.fasta") as f:
+	with seqio.open("tests/data/simple.fasta") as f:
 		reads = list(f)
 	assert reads == simple_fasta
 
 	with open("tests/data/simple.fastq") as f:
-		reads = list(seqio.SequenceReader(f))
+		reads = list(seqio.open(f))
 	assert reads == simple_fastq
 
 	# make the name attribute unavailable
 	f = StringIO(open("tests/data/simple.fastq").read())
-	reads = list(seqio.SequenceReader(f))
+	reads = list(seqio.open(f))
 	assert reads == simple_fastq
 
 	f = StringIO(open("tests/data/simple.fasta").read())
-	reads = list(seqio.SequenceReader(f))
+	reads = list(seqio.open(f))
 	assert reads == simple_fasta
 
 
@@ -98,7 +98,7 @@ def test_context_manager():
 	filename = "tests/data/simple.fasta"
 	with open(filename) as f:
 		assert not f.closed
-		reads = list(seqio.SequenceReader(f))
+		reads = list(seqio.open(f))
 		assert not f.closed
 	assert f.closed
 

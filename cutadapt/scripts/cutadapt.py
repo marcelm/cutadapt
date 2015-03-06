@@ -571,7 +571,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			"two input files are required.")
 	if paired:
 		input_paired_filename = args[1]
+		quality_filename = None
 	else:
+		input_paired_filename = None
 		if len(args) == 2:
 			if args[0].endswith('.qual'):
 				parser.error("The QUAL file must be the second argument.")
@@ -732,12 +734,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error("You need to provide at least one adapter sequence.")
 
 	try:
-		if paired:
-			reader = seqio.PairedSequenceReader(input_filename, input_paired_filename,
-				colorspace=options.colorspace, fileformat=options.format)
-		else:
-			reader = seqio.read_sequences(input_filename, quality_filename,
-				colorspace=options.colorspace, fileformat=options.format)
+		reader = seqio.open(input_filename, file2=input_paired_filename,
+				qualfile=quality_filename, colorspace=options.colorspace,
+				fileformat=options.format)
 	except seqio.UnknownFileType as e:
 		print("Error:", e, file=sys.stderr)
 		sys.exit(1)
