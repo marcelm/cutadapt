@@ -236,10 +236,14 @@ def test_bzip2():
 	run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.bz2')
 
 
-if sys.version_info >= (3, 3):
+try:
+	import lzma
+
 	def test_xz():
 		'''test xz support'''
 		run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.xz')
+except ImportError:
+	pass
 
 
 @raises(SystemExit)

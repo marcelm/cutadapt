@@ -5,13 +5,12 @@ import os
 import random
 import sys
 from nose.tools import raises
-from cutadapt.xopen import xopen
+from cutadapt.xopen import xopen, lzma
 from .utils import temporary_path
 
 base = "tests/data/small.fastq"
 files = [ base + ext for ext in ['', '.gz', '.bz2' ] ]
-if sys.version_info >= (3, 3):
-	# .xz file support is only available in Python 3.3 and later
+if lzma is not None:
 	files.append(base + '.xz')
 
 def test_xopen_text():
@@ -43,20 +42,22 @@ def create_truncated_file(path):
 	f.close()
 
 
-@raises(EOFError)
-def test_truncated_gz():
-	with temporary_path('truncated.gz') as path:
-		create_truncated_file(path)
-		f = xopen(path, 'r')
-		f.read()
-		f.close()
+# Disable these tests in Python 3.2 and 3.3
+if not ((3, 2) <= sys.version_info[:2] <= (3, 3)):
+	@raises(EOFError)
+	def test_truncated_gz():
+		with temporary_path('truncated.gz') as path:
+			create_truncated_file(path)
+			f = xopen(path, 'r')
+			f.read()
+			f.close()
 
 
-@raises(EOFError)
-def test_truncated_gz_iter():
-	with temporary_path('truncated.gz') as path:
-		create_truncated_file(path)
-		f = xopen(path, 'r')
-		for line in f:
-			pass
-		f.close()
+	@raises(EOFError)
+	def test_truncated_gz_iter():
+		with temporary_path('truncated.gz') as path:
+			create_truncated_file(path)
+			f = xopen(path, 'r')
+			for line in f:
+				pass
+			f.close()
