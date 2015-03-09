@@ -548,7 +548,7 @@ is mandatory you process both files at the same time to make sure that the
 output files are kept synchronized: If a read is removed from one of the files,
 cutadapt will ensure it is also removed from the other file.
 
-The following problems still exist:
+The following limitations still exist:
 
 * Statistics are only printed for the first read.
 * The ``--info-file`` only includes information for the first read.
@@ -842,6 +842,29 @@ as starting with ``GATCGGA...``. While that is technically correct, the
 library preparation actually results in an additional ``A`` before that
 sequence, which also needs to be removed. See the :ref:`previous
 section <truseq>` for the correct sequence.
+
+
+.. _dealing-with-ns:
+
+Dealing with ``N`` bases
+========================
+
+Cutadapt supports the following options to deal with ``N`` bases in your reads:
+
+``--max-n COUNT``
+    Discard reads containing more than *COUNT* ``N`` bases. A fractional *COUNT*
+    between 0 and 1 can also be given and will be treated as the proportion of
+    maximally allowed ``N`` bases in the read.
+
+``--trim-n``
+    Remove flanking ``N`` bases from each read. That is, a read such as this::
+
+        NNACGTACGTNNNN
+
+    Is trimmed to just ``ACGTACGT``. This option is applied *after* adapter
+    trimming. If you want to get rid of ``N`` bases before adapter removal, use
+    quality trimming: ``N`` bases typically also have a low quality value
+    associated with them.
 
 
 .. _bisulfite:

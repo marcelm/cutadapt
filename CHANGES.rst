@@ -18,6 +18,9 @@ v1.8
 
   This feature has not been extensively tested, so please give feedback if
   something does not work.
+* Chris Mitchell contributed a patch adding two new options: ``--trim-n``
+  removes any ``N`` bases from the read ends, and the ``--max-n`` option can be
+  used to filter out reads with too many ``N``s.
 * Support notation for repeated bases in the adapter sequence: Write ``A{10}``
   instead of ``AAAAAAAAAA``. Useful for poly-A trimming: Use ``-a A{100}`` to
   get the longest possible tail.
