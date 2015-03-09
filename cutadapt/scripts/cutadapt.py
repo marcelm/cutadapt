@@ -778,8 +778,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			if cut != 0:
 				modifiers.append(UnconditionalCutter(cut))
 
-	if options.trim_n:
-		modifiers.append(NEndTrimmer())
+
 	if options.quality_cutoff > 0:
 		modifiers.append(QualityTrimmer(options.quality_cutoff, options.quality_base))
 	if adapters:
@@ -789,6 +788,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		modifiers.append(adapter_cutter)
 	else:
 		adapter_cutter = None
+
+	if options.trim_n:
+		modifiers.append(NEndTrimmer())
 
 	# Modifiers that apply to both reads of paired-end reads
 	modifiers_both = []
