@@ -319,3 +319,11 @@ def test_demultiplex():
 	os.remove(multiout.format(name='first'))
 	os.remove(multiout.format(name='second'))
 	os.remove(multiout.format(name='unknown'))
+
+
+def test_max_n():
+	run('--max-n 0', 'maxn0.fasta', 'maxn.fasta')
+	run('--max-n 1', 'maxn1.fasta', 'maxn.fasta')
+	run('--max-n 2', 'maxn2.fasta', 'maxn.fasta')
+	run('--max-n 0.2', 'maxn0.2.fasta', 'maxn.fasta')
+	run('--max-n 0.4', 'maxn0.4.fasta', 'maxn.fasta')
