@@ -8,10 +8,18 @@ from cutadapt.writers import NContentTrimmer
 from cutadapt.seqio import Sequence
 
 def test_ncontenttrimmer():
-	seqs = ['AAACCTTGGN', 'AAACNNNCTTGGN', 'NNNNNN', 'ANAAAA', 'ANAAAA']
-	params = [(1, True), (0.5, True), (1, False), (1/6, True), (0, False)]
-	for seq, trim_params in zip(seqs, params):
-		count, result = trim_params
+	# third parameter is True if read should be discarded
+	params = [
+		('AAA', 0, False),
+		('AAA', 1, False),
+		('AAACCTTGGN', 1, False),
+		('AAACNNNCTTGGN', 0.5, False),
+		('NNNNNN', 1, True),
+		('ANAAAA', 1/6, False),
+		('ANAAAA', 0, True)
+	]
+	for seq, count, expected in params:
 		writer = NContentTrimmer(count=count)
 		_seq = Sequence('read1', seq, qualities='#'*len(seq))
-		assert writer(_seq) == result
+		assert writer(_seq) == expected
+
