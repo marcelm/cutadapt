@@ -73,9 +73,10 @@ from cutadapt.xopen import xopen
 from cutadapt.adapters import (Adapter, ColorspaceAdapter, gather_adapters,
 	BACK, FRONT, PREFIX, SUFFIX, ANYWHERE)
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
-	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter)
+	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
+    NEndTrimmer)
 from cutadapt.writers import (TooShortReadFilter, TooLongReadFilter,
-	ProcessedReadWriter, Demultiplexer)
+	ProcessedReadWriter, Demultiplexer, NContentTrimmer)
 from cutadapt.report import Statistics, print_statistics
 from cutadapt.compat import next
 
@@ -298,7 +299,7 @@ def process_paired_reads(paired_reader, modifiers, modifiers2, writers):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
-	
+
 	Note that all trimming is only done on the first read of each pair!
 
 	Return a Statistics object.
@@ -361,14 +362,14 @@ def trimmed_and_untrimmed_files(
 		if output_path is not None:
 			trimmed = xopen(output_path, 'w')
 		return (trimmed, None)
-	
+
 	trimmed = default_output
 	untrimmed = default_output
 	if output_path is not None:
 		trimmed = untrimmed = xopen(output_path, 'w')
 	if untrimmed_path is not None:
 		untrimmed = xopen(untrimmed_path, 'w')
-	
+
 	return (trimmed, untrimmed)
 
 
@@ -451,6 +452,11 @@ def get_option_parser():
 	group.add_option("--no-trim", dest='action', action='store_const', const=None,
 		help="Match and redirect reads to output/untrimmed-output as usual, "
 			"but do not remove adapters.")
+	group.add_option("--trim-n", action='store_true', default=False,
+		help="Trim N's on ends of reads.")
+	group.add_option("--max-n", type=float, default=-1.0, metavar="LENGTH",
+		help="The max proportion of N's allowed in a read. A number < 1 will be treated as a proportion while"
+			 " a number > 1 will be treated as the maximum number of N's contained.")
 	group.add_option("--mask-adapter", dest='action', action='store_const', const='mask',
 		help="Mask adapters with 'N' characters instead of trimming them.")
 	parser.add_option_group(group)
@@ -642,6 +648,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			too_long_outfile, check_second=paired=='both')
 		writers.append(too_long_filter)
 
+	if options.max_n != -1:
+		writers.append(NContentTrimmer(options.max_n))
+
 	demultiplexer = None
 	if options.output is not None and '{name}' in options.output:
 		if options.discard_trimmed:
@@ -769,6 +778,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			if cut != 0:
 				modifiers.append(UnconditionalCutter(cut))
 
+
 	if options.quality_cutoff > 0:
 		modifiers.append(QualityTrimmer(options.quality_cutoff, options.quality_base))
 	if adapters:
@@ -778,6 +788,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		modifiers.append(adapter_cutter)
 	else:
 		adapter_cutter = None
+
+	if options.trim_n:
+		modifiers.append(NEndTrimmer())
 
 	# Modifiers that apply to both reads of paired-end reads
 	modifiers_both = []

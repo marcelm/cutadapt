@@ -109,3 +109,18 @@ class QualityTrimmer(object):
 		index = quality_trim_index(read.qualities, self.cutoff, self.base)
 		self.trimmed_bases += len(read.qualities) - index
 		return read[:index]
+
+
+class NEndTrimmer(object):
+	"""Trims Ns from the 3' and 5' end of reads"""
+	def __init__(self):
+		self.start_trim = re.compile(r'^N+')
+		self.end_trim = re.compile(r'N+$')
+
+	def __call__(self, read):
+		sequence = read.sequence
+		start_cut = self.start_trim.match(sequence)
+		end_cut = self.end_trim.search(sequence)
+		start_cut = start_cut.end() if start_cut else 0
+		end_cut = end_cut.start() if end_cut else len(read)
+		return read[start_cut:end_cut]
