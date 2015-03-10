@@ -46,7 +46,7 @@ class TooLongReadFilter(object):
 
 	def __call__(self, read1, read2=None):
 		if len(read1.sequence) > self.maximum_length or (read2 is not None and
-				self.check_second and len(read2.sequence) > self.minimum_length):
+				self.check_second and len(read2.sequence) > self.maximum_length):
 			self.too_long += 1
 			if self.too_long_outfile is not None:
 				read1.write(self.too_long_outfile)

@@ -134,7 +134,7 @@ def test_paired_end():
 
 def test_paired_end_qualtrim():
 	'''single-pass paired-end with -q and -m'''
-	run_paired('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14',
+	run_paired('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
 		in1='paired.1.fastq', in2='paired.2.fastq',
 		expected1='pairedq.1.fastq', expected2='pairedq.2.fastq'
 	)
