@@ -1,6 +1,6 @@
 # coding: utf-8
 """
-Classes for writing of processed reads
+Classes for writing of processed reads.
 """
 from __future__ import print_function, division, absolute_import
 from cutadapt.xopen import xopen
@@ -58,6 +58,10 @@ class TooLongReadFilter(object):
 class ProcessedReadWriter(object):
 	"""
 	Write trimmed and untrimmed reads to the proper output file(s).
+
+	TODO
+	This is way too complicated. Implement a proper PairedFasta/qWriter class
+	instead and move stats keeping there.
 	"""
 	def __init__(self,
 			trimmed_outfile,
@@ -68,6 +72,8 @@ class ProcessedReadWriter(object):
 		self.untrimmed_outfile = untrimmed_outfile
 		self.trimmed_paired_outfile = trimmed_paired_outfile
 		self.untrimmed_paired_outfile = untrimmed_paired_outfile
+		self.written = 0
+		self.written_bp = [0, 0]
 
 	def __call__(self, read1, read2=None):
 		"""
@@ -75,30 +81,46 @@ class ProcessedReadWriter(object):
 
 		If read2 is not None, this is a paired-end read.
 		"""
+		w = False
 		if read2 is None:
 			# single end
 			if read1.match is not None and self.trimmed_outfile:
+				w = True
 				read1.write(self.trimmed_outfile)
 			if read1.match is None and self.untrimmed_outfile:
+				w = True
 				read1.write(self.untrimmed_outfile)
+			if w:
+				self.written += 1
+				self.written_bp[0] += len(read1)
 		else:
 			# paired end
-			if read1.match is not None:  # or (not self.legacy and read2.match is not None):
+			if read1.match is not None:  # TODO or (not self.legacy and read2.match is not None):
 				if self.trimmed_outfile:
+					w = True
+					self.written_bp[0] += len(read1)
 					read1.write(self.trimmed_outfile)
 				if self.trimmed_paired_outfile:
+					w = True
+					self.written_bp[1] += len(read2)
 					read2.write(self.trimmed_paired_outfile)
 			else:
 				if self.untrimmed_outfile:
+					w = True
+					self.written_bp[0] += len(read1)
 					read1.write(self.untrimmed_outfile)
 				if self.untrimmed_paired_outfile:
+					w = True
+					self.written_bp[1] += len(read2)
 					read2.write(self.untrimmed_paired_outfile)
+			if w:
+				self.written += 1
 		return True
 
 
 class Demultiplexer(object):
 	"""
-	Demultiplexed trimmed reads. Reads are written to different output files
+	Demultiplex trimmed reads. Reads are written to different output files
 	depending on which adapter matches. Files are created when the first read
 	is written to them.
 	"""
@@ -114,19 +136,27 @@ class Demultiplexer(object):
 		self.untrimmed_path = untrimmed_path
 		self.untrimmed_outfile = None
 		self.files = dict()
+		self.written = 0
+		self.written_bp = [0, 0]
 
 	def __call__(self, read1, read2=None):
 		if read2 is None:
+			# single-end read
 			if read1.match is None:
 				if self.untrimmed_outfile is None and self.untrimmed_path is not None:
 					self.untrimmed_outfile = xopen(self.untrimmed_path, 'w')
 				if self.untrimmed_outfile is not None:
+					self.written += 1
+					self.written_bp[0] += len(read1)
 					read1.write(self.untrimmed_outfile)
 			else:
 				name = read1.match.adapter.name
 				if name not in self.files:
 					self.files[name] = xopen(self.template.format(name=name), 'w')
+				self.written += 1
+				self.written_bp[0] += len(read1)
 				read1.write(self.files[name])
+			return True
 		else:
 			assert False, "Not supported"  # pragma: no cover
 

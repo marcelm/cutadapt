@@ -5,12 +5,14 @@ Routines for printing a report.
 from __future__ import print_function, division, absolute_import
 
 import sys
-import platform
 from collections import namedtuple
-from . import __version__
+import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
+from .modifiers import QualityTrimmer
+from .writers import (TooShortReadFilter, TooLongReadFilter,
+	ProcessedReadWriter, Demultiplexer, NContentTrimmer)
 
-Statistics = namedtuple('Statistics', 'total_bp n quality_trimmed_bases')
+Statistics = namedtuple('Statistics', 'total_bp n')
 
 ADAPTER_TYPES = {
 	BACK: "regular 3'",
@@ -87,88 +89,165 @@ def print_adjacent_bases(bases, sequence):
 	return False
 
 
-def print_statistics(adapters, time, stats, action, reads_matched,
-		error_rate, too_short, too_long, args, file=None):
+def qtrimmed(modifiers):
+	"""
+	Look for a QualityTrimmer in the given list of modifiers and return its
+	trimmed_bases attribute. If not found, return None.
+	"""
+	for m in modifiers:
+		if isinstance(m, QualityTrimmer):
+			return m.trimmed_bases
+	return None
+
+
+def print_statistics(adapters_pair, paired, time, stats,
+		modifiers, modifiers2, writers, file=None):
 	"""Print summary to file"""
 	old_stdout = sys.stdout
 	if file is not None:
 		sys.stdout = file
 	n = stats.n
-	total_bp = stats.total_bp
-	quality_trimmed = stats.quality_trimmed_bases
-	print("You are running cutadapt", __version__, "with Python", platform.python_version())
-	print("Command line parameters:", " ".join(args))
-	print("Maximum error rate: {0:.2%}".format(error_rate))
-	print("   No. of adapters:", len(adapters))
-	print("   Processed reads: {0:12}".format(n))
-	print("   Processed bases: {0:12} bp ({1:.1F} Mbp)".format(total_bp, total_bp / 1E6))
-	trimmed_bp = 0
-	for adapter in adapters:
-		for d in (adapter.lengths_front, adapter.lengths_back):
-			trimmed_bp += sum(seqlen * count for (seqlen, count) in d.items())
+	if stats.n == 0:
+		print("No reads processed! Either your input file is empty or you used the wrong -f/--format parameter.")
+		sys.stdout = old_stdout
+		return
+	print("Finished in {0:.2F} s ({1:.0F} us/read; {2:.2F} M reads/minute).".format(
+		time, 1E6 * time / n, n / time * 60 / 1E6))
 
-	if n > 0:
-		operation = "Trimmed" if action == 'trim' else "Matched"
-		print("     {0} reads: {1:12} ({2:.1%})".format(operation, reads_matched, reads_matched / n))
-		t = [ ("Quality-trimmed", quality_trimmed), ("  Trimmed bases", trimmed_bp)]
-		if quality_trimmed < 0:
-			del t[0]
-		for what, bp in t:
-			s = " ({0:.2%} of total)".format(float(bp)/total_bp) if total_bp > 0 else ''
-			print("   {0}: {1:12} bp ({2:.1F} Mbp){3}".format(what, bp, bp/1E6, s))
-		print("   Too short reads: {0:12} ({1:.1%} of processed reads)".format(too_short, too_short / n))
-		print("    Too long reads: {0:12} ({1:.1%} of processed reads)".format(too_long, too_long / n))
-	print("        Total time: {0:9.2F} s".format(time))
-	if n > 0:
-		print("     Time per read: {0:10.3F} ms".format(1000. * time / n))
-	print()
+	too_short = None
+	too_long = None
+	written = None
+	written_bp = None
+	too_many_n = None
+	for w in writers:
+		if isinstance(w, TooShortReadFilter):
+			too_short = w.too_short
+		elif isinstance(w, TooLongReadFilter):
+			too_long = w.too_long
+		elif isinstance(w, NContentTrimmer):
+			too_many_n = w.too_many_n
+		elif isinstance(w, (ProcessedReadWriter, Demultiplexer)):
+			written = w.written
+			written_fraction = written / n
+			written_bp = w.written_bp
+	assert written is not None
+
+	with_adapters = [0, 0]
+	for i in (0, 1):
+		for adapter in adapters_pair[i]:
+			with_adapters[i] += sum(adapter.lengths_front.values())
+			with_adapters[i] += sum(adapter.lengths_back.values())
+	with_adapters_fraction = [ v / n for v in with_adapters ]
+	total_bp = sum(stats.total_bp)
+	report = "\n=== Summary ===\n\n"
+	if paired:
+		report += textwrap.dedent("""\
+		Total read pairs processed:      {n:13,d}
+		  Read 1 with adapter:           {with_adapters[0]:13,d} ({with_adapters_fraction[0]:.1%})
+		  Read 2 with adapter:           {with_adapters[1]:13,d} ({with_adapters_fraction[1]:.1%})
+		""")
+	else:
+		report += textwrap.dedent("""\
+		Total reads processed:           {n:13,d}
+		Reads with adapters:             {with_adapters[0]:13,d} ({with_adapters_fraction[0]:.1%})
+		""")
+	pairs_or_reads = "Pairs" if paired else "Reads"
+	if too_short is not None:
+		too_short_fraction = too_short / n
+		report += "{pairs_or_reads} that were too long:        {too_short:13,d} ({too_short_fraction:.1%})\n"
+	if too_long is not None:
+		too_long_fraction = too_long / n
+		report += "{pairs_or_reads} that were too short:       {too_long:13,d} ({too_long_fraction:.1%})\n"
+	if too_many_n is not None:
+		too_many_n_fraction = too_many_n / n
+		report += "{pairs_or_reads} with too many N:           {too_many_n:13,d} ({too_many_n_fraction:.1%})\n"
+
+	report += textwrap.dedent("""\
+	{pairs_or_reads} written (passing filters): {written:13,d} ({written_fraction:.1%})
+
+	Total basepairs processed: {total_bp:13,d} bp
+	""")
+	if paired:
+		report += "  Read 1: {stats.total_bp[0]:13,d} bp\n"
+		report += "  Read 2: {stats.total_bp[1]:13,d} bp\n"
+
+	quality_trimmed_bp = [qtrimmed(modifiers), qtrimmed(modifiers2)]
+	if quality_trimmed_bp[0] is not None or quality_trimmed_bp[1] is not None:
+		if quality_trimmed_bp[0] is None:
+			quality_trimmed_bp[0] = 0
+		if quality_trimmed_bp[1] is None:
+			quality_trimmed_bp[1] = 0
+		quality_trimmed = sum(quality_trimmed_bp)
+		quality_trimmed_fraction = quality_trimmed / total_bp
+		report += "Quality-trimmed:           {quality_trimmed:13,d} bp ({quality_trimmed_fraction:.1%})\n"
+		if paired:
+			report += "  Read 1: {quality_trimmed_bp[0]:13,d} bp\n"
+			report += "  Read 2: {quality_trimmed_bp[1]:13,d} bp\n"
+
+	total_written_bp = sum(written_bp)
+	total_written_bp_fraction = total_written_bp / total_bp if total_bp > 0 else 0.0
+	report += "Total written (filtered):  {total_written_bp:13,d} bp ({total_written_bp_fraction:.1%})\n"
+	if paired:
+		report += "  Read 1: {written_bp[0]:13,d} bp\n"
+		report += "  Read 2: {written_bp[1]:13,d} bp\n"
+	try:
+		report = report.format(**vars())
+	except ValueError:
+		# Python 2.6 does not support the comma format specifier (PEP 378)
+		report = report.replace(",d}", "d}").format(**vars())
+	print(report)
 
 	warning = False
-	for index, adapter in enumerate(adapters):
-		total_front = sum(adapter.lengths_front.values())
-		total_back = sum(adapter.lengths_back.values())
-		total = total_front + total_back
-		where = adapter.where
-		assert where == ANYWHERE or (where in (BACK, SUFFIX) and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
+	for which_in_pair in (0, 1):
+		for index, adapter in enumerate(adapters_pair[which_in_pair]):
+			total_front = sum(adapter.lengths_front.values())
+			total_back = sum(adapter.lengths_back.values())
+			total = total_front + total_back
+			where = adapter.where
+			assert where == ANYWHERE or (where in (BACK, SUFFIX) and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
 
-		name = str(adapter.name)
-		if not adapter.name_is_generated:
-			name = "'{0}'".format(name)
-		print("=" * 3, "Adapter", name, "=" * 3)
-		print()
-		print("Sequence: {0}; Type: {1}; Length: {2}; Trimmed: {3} times.".
-			format(adapter.sequence, ADAPTER_TYPES[adapter.where],
-				len(adapter.sequence), total))
-		if total == 0:
+			name = str(adapter.name)
+			if not adapter.name_is_generated:
+				name = "'{0}'".format(name)
+			if paired:
+				extra = 'First read: ' if which_in_pair == 0 else 'Second read: '
+			else:
+				extra = ''
+
+			print("=" * 3, extra + "Adapter", name, "=" * 3)
 			print()
-			continue
-		if where == ANYWHERE:
-			print(total_front, "times, it overlapped the 5' end of a read")
-			print(total_back, "times, it overlapped the 3' end or was within the read")
-			print()
-			print_error_ranges(len(adapter), adapter.max_error_rate)
-			print("Overview of removed sequences (5')")
-			print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate, adapter.errors_front)
-			print()
-			print("Overview of removed sequences (3' or within)")
-			print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate, adapter.errors_back)
-		elif where in (FRONT, PREFIX):
-			print()
-			print_error_ranges(len(adapter), adapter.max_error_rate)
-			print("Overview of removed sequences")
-			print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate, adapter.errors_front)
-		else:
-			assert where in (BACK, SUFFIX)
-			print()
-			print_error_ranges(len(adapter), adapter.max_error_rate)
-			warning = warning or print_adjacent_bases(adapter.adjacent_bases, adapter.sequence)
-			print("Overview of removed sequences")
-			print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate, adapter.errors_back)
+			print("Sequence: {0}; Type: {1}; Length: {2}; Trimmed: {3} times.".
+				format(adapter.sequence, ADAPTER_TYPES[adapter.where],
+					len(adapter.sequence), total))
+			if total == 0:
+				print()
+				continue
+			if where == ANYWHERE:
+				print(total_front, "times, it overlapped the 5' end of a read")
+				print(total_back, "times, it overlapped the 3' end or was within the read")
+				print()
+				print_error_ranges(len(adapter), adapter.max_error_rate)
+				print("Overview of removed sequences (5')")
+				print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate, adapter.errors_front)
+				print()
+				print("Overview of removed sequences (3' or within)")
+				print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate, adapter.errors_back)
+			elif where in (FRONT, PREFIX):
+				print()
+				print_error_ranges(len(adapter), adapter.max_error_rate)
+				print("Overview of removed sequences")
+				print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate, adapter.errors_front)
+			else:
+				assert where in (BACK, SUFFIX)
+				print()
+				print_error_ranges(len(adapter), adapter.max_error_rate)
+				warning = warning or print_adjacent_bases(adapter.adjacent_bases, adapter.sequence)
+				print("Overview of removed sequences")
+				print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate, adapter.errors_back)
 
 	if warning:
 		print('WARNING:')
 		print('    One or more of your adapter sequences may be incomplete.')
 		print('    Please see the detailed output above.')
-	if n == 0:
-		print("No reads were read! Either your input file is empty or you used the wrong -f/--format parameter.")
+
 	sys.stdout = old_stdout

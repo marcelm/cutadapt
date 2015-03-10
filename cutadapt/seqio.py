@@ -161,7 +161,6 @@ class FileWithPrependedLine(object):
 			yield line
 
 
-
 class FastaReader(object):
 	"""
 	Reader for FASTA files.
@@ -459,7 +458,7 @@ def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None):
 				"or FASTQ: file name extension {0} not recognized".format(ext))
 
 	# No name available.
-	# and autodetect its type by reading from it.
+	# autodetect type by reading from the file
 	for line in file1:
 		if line.startswith('#'):
 			# Skip comment lines (needed for csfasta)

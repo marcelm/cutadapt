@@ -238,19 +238,6 @@ class AdapterCutter(object):
 		return read
 
 
-def qtrimmed(modifiers):
-	"""
-	Look for a QualityTrimmer in the given list of modifiers and return its
-	trimmed_bases attribute. If not found, return -1.
-
-	TODO get rid of this
-	"""
-	for m in modifiers:
-		if isinstance(m, QualityTrimmer):
-			return m.trimmed_bases
-	return -1
-
-
 def process_single_reads(reader, modifiers, writers):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
@@ -269,7 +256,7 @@ def process_single_reads(reader, modifiers, writers):
 			if writer(read):
 				break
 
-	return Statistics(total_bp=total_bp, n=n, quality_trimmed_bases=qtrimmed(modifiers))
+	return Statistics(total_bp=(total_bp, 0), n=n)
 
 
 def process_paired_reads(paired_reader, modifiers, modifiers2, writers):
@@ -294,8 +281,7 @@ def process_paired_reads(paired_reader, modifiers, modifiers2, writers):
 			# Stop writing as soon as one of the writers was successful.
 			if writer(read1, read2):
 				break
-
-	return Statistics(total_bp=total1_bp, n=n, quality_trimmed_bases=qtrimmed(modifiers))
+	return Statistics(total_bp=(total1_bp, total2_bp), n=n)
 
 
 def trimmed_and_untrimmed_files(
@@ -745,7 +731,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
 	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-	logger.info("Trimming %s adapters with at most %.1f%% errors in %s mode ...",
+	logger.info("Trimming %s adapter(s) with at most %.1f%% errors in %s mode ...",
 		len(adapters) + len(adapters2), options.error_rate * 100,
 		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
 
@@ -849,15 +835,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		if f is not None and f is not sys.stdin and f is not sys.stdout:
 			f.close()
 
+	elapsed_time = time.clock() - start_time
 	if not options.quiet:
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
-		print_statistics(adapters, time.clock() - start_time, stats,
-			options.action, adapter_cutter.reads_matched if adapter_cutter else 0,
-			options.error_rate,
-			too_short_filter.too_short if too_short_filter else 0,
-			too_long_filter.too_long if too_long_filter else 0,
-			cmdlineargs, file=stat_file)
+		print_statistics((adapters, adapters2), paired, elapsed_time, stats,
+			modifiers, modifiers2, writers, file=stat_file)
 
 
 if __name__ == '__main__':
