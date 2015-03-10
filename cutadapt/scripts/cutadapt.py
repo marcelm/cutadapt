@@ -67,6 +67,8 @@ import sys
 import time
 import errno
 from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
+import logging
+import platform
 
 from cutadapt import seqio, __version__
 from cutadapt.xopen import xopen
@@ -80,6 +82,7 @@ from cutadapt.writers import (TooShortReadFilter, TooLongReadFilter,
 from cutadapt.report import Statistics, print_statistics
 from cutadapt.compat import next
 
+logger = logging.getLogger(__name__)
 
 class CutadaptOptionParser(OptionParser):
 	def get_usage(self):
@@ -239,6 +242,8 @@ def qtrimmed(modifiers):
 	"""
 	Look for a QualityTrimmer in the given list of modifiers and return its
 	trimmed_bases attribute. If not found, return -1.
+
+	TODO get rid of this
 	"""
 	for m in modifiers:
 		if isinstance(m, QualityTrimmer):
@@ -271,8 +276,6 @@ def process_paired_reads(paired_reader, modifiers, modifiers2, writers):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
-
-	Note that all trimming is only done on the first read of each pair!
 
 	Return a Statistics object.
 	"""
@@ -542,6 +545,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	default_outfile is the file to which trimmed reads are sent if the ``-o``
 	parameter is not used.
 	"""
+	logging.basicConfig(level=logging.INFO, format='%(message)s')  #  %(levelname)s
 	parser = get_option_parser()
 	if cmdlineargs is None:
 		cmdlineargs = sys.argv[1:]
@@ -722,7 +726,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			adapters2.append(adapter)
 	except IOError as e:
 		if e.errno == errno.ENOENT:
-			print("Error:", e, file=sys.stderr)
+			logger.error("Error: %s", e)
 			sys.exit(1)
 		raise
 
@@ -734,12 +738,23 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			options.max_n == -1:
 		parser.error("You need to provide at least one adapter sequence.")
 
+	# Due to backwards compatibility, from here on logging output needs to be
+	# sent to standard output instead of standard error if the -o option is used.
+	if options.output:
+		logger.root.handlers = []
+		logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
+	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
+	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
+	logger.info("Trimming %s adapters with at most %.1f%% errors in %s mode ...",
+		len(adapters) + len(adapters2), options.error_rate * 100,
+		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
+
 	try:
 		reader = seqio.open(input_filename, file2=input_paired_filename,
 				qualfile=quality_filename, colorspace=options.colorspace,
 				fileformat=options.format)
 	except seqio.UnknownFileType as e:
-		print("Error:", e, file=sys.stderr)
+		logger.error("Error: %s", e)
 		sys.exit(1)
 
 	# Create the processing pipeline consisting of a list of "modifiers".
@@ -823,7 +838,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			sys.exit(1)
 		raise
 	except (seqio.FormatError, EOFError) as e:
-		print("Error:", e, file=sys.stderr)
+		logger.error("Error: %s", e)
 		sys.exit(1)
 
 	# close open files
