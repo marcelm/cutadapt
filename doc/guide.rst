@@ -550,21 +550,15 @@ cutadapt will ensure it is also removed from the other file.
 
 The following limitations still exist:
 
-* Statistics are only printed for the first read.
-* The ``--info-file`` only includes information for the first read.
+* The ``--info-file``, ``--rest-file`` and ``--wildcard-file`` options write out
+  information only from the first read.
 * Demultiplexing is not yet supported with paired-end data.
 
-The following options are applied to the first read in a pair only:
-
-* ``--wildcard-file``
-* ``--info-file`` is only written for first read
-* ``--rest-file`` only applies to first read
-
-These options apply to both reads:
+The following command-line options are applied to *both* reads:
 
 * ``-q``
 * ``--quality-base``
-* ``--times`` applies to both sets of adapters
+* ``--times`` applies to all the adapters given
 * ``--no-trim``
 * ``--mask``
 * ``--length-tag``
@@ -579,7 +573,7 @@ Legacy paired-end read trimming
 
 .. note::
     This section describes the way paired-end trimming was done
-    in cutadapt 1.7 and older, where the ``-A``, ``-G``, ``-B`` options were not
+    in cutadapt before 1.8, where the ``-A``, ``-G``, ``-B`` options were not
     available. It is less safe and more complicated, but you can still use it.
 
 If you do not use any of the filtering options that discard reads, such

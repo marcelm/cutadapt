@@ -18,6 +18,9 @@ v1.8
 
   This feature has not been extensively tested, so please give feedback if
   something does not work.
+* The report output has been re-worked in order to accomodate the new paired-end
+  trimming mode. This also changes the way the report looks like in single-end
+  mode. It is hopefully now more accessible.
 * Chris Mitchell contributed a patch adding two new options: ``--trim-n``
   removes any ``N`` bases from the read ends, and the ``--max-n`` option can be
   used to filter out reads with too many ``N``s.
