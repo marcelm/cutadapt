@@ -111,6 +111,7 @@ def print_statistics(adapters_pair, paired, time, stats,
 		print("No reads processed! Either your input file is empty or you used the wrong -f/--format parameter.")
 		sys.stdout = old_stdout
 		return
+	time = max(time, 0.1)
 	print("Finished in {0:.2F} s ({1:.0F} us/read; {2:.2F} M reads/minute).".format(
 		time, 1E6 * time / n, n / time * 60 / 1E6))
 
