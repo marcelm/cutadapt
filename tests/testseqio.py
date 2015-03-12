@@ -28,6 +28,14 @@ def test_fastqreader():
 	assert reads == simple_fastq
 
 
+def test_fastqreader_dos():
+	with seqio.FastqReader("tests/data/dos.fastq") as f:
+		dos_reads = list(f)
+	with seqio.FastqReader("tests/data/small.fastq") as f:
+		unix_reads = list(f)
+	assert dos_reads == unix_reads
+
+
 def test_fastareader_keeplinebreaks():
 	with seqio.FastaReader("tests/data/simple.fasta", keep_linebreaks=True) as f:
 		reads = list(f)
