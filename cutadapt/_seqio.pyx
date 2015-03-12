@@ -155,7 +155,10 @@ class FastqReader(object):
 					else:
 						twoheaders = False
 			elif i == 3:
-				qualities = line[:strip]
+				if len(line) == len(sequence) - strip:
+					qualities = line[:strip]
+				else:
+					qualities = line.rstrip('\r\n')
 				yield sequence_class(name, sequence, qualities, twoheaders=twoheaders)
 			i = (i + 1) % 4
 		if i != 0:
