@@ -1,11 +1,25 @@
 # coding: utf-8
 """
-Classes for writing of processed reads.
+Classes for writing and filtering of processed reads.
+
+To determine what happens to a read, a list of writers is created and each
+one is called in turn (via its __call__ method) until one writer returns True.
+The read is then assumed to have been "consumed", that is, either written
+somewhere or filtered (should be discarded). Filters and writers are currently
+not distinguished.
 """
 from __future__ import print_function, division, absolute_import
 from cutadapt.xopen import xopen
 
+# Use these constants when returning from a writer to improve readability
+# (it is unintuitive that "return True" means "discard the read").
+DISCARD = True
+KEEP = False
 
+# TODO
+# - distinguish between Filter and Writer classes
+# - rename __call__ to filtered() in Filter classes
+# - do not require writers to return anything
 class TooShortReadFilter(object):
 	def __init__(self, minimum_length, too_short_outfile, check_second=True):
 		"""
@@ -28,8 +42,8 @@ class TooShortReadFilter(object):
 			if self.too_short_outfile is not None:
 				read1.write(self.too_short_outfile)
 			# TODO read2 is silently discarded
-			return True
-		return False
+			return DISCARD
+		return KEEP
 
 
 class TooLongReadFilter(object):
@@ -51,8 +65,8 @@ class TooLongReadFilter(object):
 			if self.too_long_outfile is not None:
 				read1.write(self.too_long_outfile)
 			# TODO read2 is silently discarded
-			return True
-		return False
+			return DISCARD
+		return KEEP
 
 
 class ProcessedReadWriter(object):
@@ -115,7 +129,7 @@ class ProcessedReadWriter(object):
 					read2.write(self.untrimmed_paired_outfile)
 			if w:
 				self.written += 1
-		return True
+		return DISCARD
 
 
 class Demultiplexer(object):
@@ -156,7 +170,7 @@ class Demultiplexer(object):
 				self.written += 1
 				self.written_bp[0] += len(read1)
 				read1.write(self.files[name])
-			return True
+			return DISCARD
 		else:
 			assert False, "Not supported"  # pragma: no cover
 
@@ -178,6 +192,7 @@ class NContentTrimmer(object):
 		Count -- if it is below 1.0, it will be considered a proportion, and above and equal to
 		1 will be considered as discarding reads with a number of N's greater than this cutoff.
 		"""
+		assert count >= 0
 		self.proportion = count < 1.0
 		self.cutoff = count
 		self.too_many_n = 0
@@ -185,12 +200,12 @@ class NContentTrimmer(object):
 	def __call__(self, read1, read2=None):
 		if self.proportion:
 			if len(read1.sequence) and read1.sequence.lower().count('n') / len(read1.sequence) > self.cutoff or \
-					(read2 is not None and len(read2.sequence) and read2.sequence.lower().count('n')/len(read2.sequence) > self.cutoff):
+					(read2 is not None and len(read2.sequence) and read2.sequence.lower().count('n') / len(read2.sequence) > self.cutoff):
 				self.too_many_n += 1
-				return True
+				return DISCARD
 		else:
 			if read1.sequence.lower().count('n') > self.cutoff or \
 					(read2 is not None and read2.sequence.lower().count('n') > self.cutoff):
 				self.too_many_n += 1
-				return True
-		return False
+				return DISCARD
+		return KEEP
