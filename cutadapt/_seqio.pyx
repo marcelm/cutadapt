@@ -46,11 +46,10 @@ cdef class Sequence(object):
 		self.qualities = qualities
 		self.twoheaders = twoheaders
 		self.match = match
-		if qualities is not None:
-			if len(qualities) != len(sequence):
-				rname = _shorten(name)
-				raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length of read ({2}) do not match".format(
-					rname, len(qualities), len(sequence)))
+		if qualities is not None and len(qualities) != len(sequence):
+			rname = _shorten(name)
+			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length of read ({2}) do not match".format(
+				rname, len(qualities), len(sequence)))
 
 	def __getitem__(self, key):
 		"""slicing"""
@@ -117,35 +116,48 @@ class FastqReader(object):
 		qualities is a string and it contains the unmodified, encoded qualities.
 		"""
 		cdef int i = 0
+		cdef int strip
 		cdef str line, name, qualities, sequence
 		cdef bint twoheaders
+		sequence_class = self.sequence_class
 
-		for line in self.fp:
-			if i % 4 == 0:
-				if not line.startswith('@'):
-					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
-				name = line.rstrip('\r\n')[1:]
-			elif i % 4 == 1:
-				sequence = line.rstrip('\r\n')
-			elif i % 4 == 2:
-				line = line.rstrip('\r\n')
-				if not line.startswith('+'):
-					raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
-				if len(line) > 1:
-					twoheaders = True
-					if not line[1:] == name:
-						raise FormatError(
-							"At line {0}: Sequence descriptions in the FASTQ file don't match "
-							"({1!r} != {2!r}).\n"
-							"The second sequence description must be either empty "
-							"or equal to the first description.".format(i+1,
-								name, line.rstrip()[1:]))
-				else:
+		it = iter(self.fp)
+		line = next(it)
+		if not (line and line[0] == '@'):
+			raise FormatError("at line {0}, expected a line starting with '@'".format(i+1))
+		strip = -2 if line.endswith('\r\n') else -1
+		name = line[1:strip]
+
+		i = 1
+		for line in it:
+			if i == 0:
+				if not (line and line[0] == '@'):
+					raise FormatError("at line {0}, expected a line starting with '@'".format(i+1))
+				name = line[1:strip]
+			elif i == 1:
+				sequence = line[:strip]
+			elif i == 2:
+				if line == '+\n':  # check most common case first
 					twoheaders = False
-			elif i % 4 == 3:
-				qualities = line.rstrip('\r\n')
-				yield self.sequence_class(name, sequence, qualities, twoheaders=twoheaders)
-			i += 1
+				else:
+					line = line[:strip]
+					if not (line and line[0] == '+'):
+						raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
+					if len(line) > 1:
+						twoheaders = True
+						if not line[1:] == name:
+							raise FormatError(
+								"At line {0}: Sequence descriptions in the FASTQ file don't match "
+								"({1!r} != {2!r}).\n"
+								"The second sequence description must be either empty "
+								"or equal to the first description.".format(i+1,
+									name, line[1:]))
+					else:
+						twoheaders = False
+			elif i == 3:
+				qualities = line[:strip]
+				yield sequence_class(name, sequence, qualities, twoheaders=twoheaders)
+			i = (i + 1) % 4
 
 	def __enter__(self):
 		if self.fp is None:
