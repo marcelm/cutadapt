@@ -50,6 +50,13 @@ def test_fastq_wrongformat():
 
 
 @raises(seqio.FormatError)
+def test_fastq_incomplete():
+	fastq = StringIO("@name\nACGT+\n")
+	with seqio.FastqReader(fastq) as fq:
+		list(fq)
+
+
+@raises(seqio.FormatError)
 def test_too_many_qualities():
 	seqio.Sequence(name="name", sequence="ACGT", qualities="#####")
 

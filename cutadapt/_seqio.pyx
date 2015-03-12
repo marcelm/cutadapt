@@ -158,6 +158,8 @@ class FastqReader(object):
 				qualities = line[:strip]
 				yield sequence_class(name, sequence, qualities, twoheaders=twoheaders)
 			i = (i + 1) % 4
+		if i != 0:
+			raise FormatError("FASTQ file ended prematurely")
 
 	def __enter__(self):
 		if self.fp is None:
