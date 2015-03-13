@@ -615,7 +615,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		writers.append(too_long_filter)
 
 	if options.max_n != -1:
-		writers.append(NContentTrimmer(options.max_n))
+		writers.append(NContentTrimmer(options.max_n, check_second=paired=='both'))
 
 	demultiplexer = None
 	if options.output is not None and '{name}' in options.output:
@@ -649,7 +649,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 		writer = ProcessedReadWriter(
 			trimmed_outfile, trimmed_paired_outfile,
-			untrimmed_outfile, untrimmed_paired_outfile
+			untrimmed_outfile, untrimmed_paired_outfile,
+			check_second=paired=='both'
 		)
 		writers.append(writer)
 

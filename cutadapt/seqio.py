@@ -238,7 +238,7 @@ class FastqReader(object):
 		for i, line in enumerate(self.fp):
 			if i % 4 == 0:
 				if not line.startswith('@'):
-					raise FormatError("At line {0}: Expected a line starting with '+'".format(i+1))
+					raise FormatError("At line {0}: Expected a line starting with '@'".format(i+1))
 				name = line.strip()[1:]
 			elif i % 4 == 1:
 				sequence = line.strip()
