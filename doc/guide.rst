@@ -470,18 +470,29 @@ Quality trimming can be done without adapter trimming, so this will work::
 
     cutadapt -q 10 -o output.fastq input.fastq
 
+By default, only the 3' end of each read is quality-trimmed. If you want to
+trim the 5' end as well, use the ``-q`` option with two comma-separated cutoffs::
+
+    cutadapt -q 15,10 -o output.fastq input.fastq
+
+The 5' end will then be trimmed with a cutoff of 15, and the 3' will be trimmed
+with a cutoff of 10. If you only want to trim the 5' end, then use a cutoff of
+0 for the 3' end, as in ``-q 10,0``.
+
 
 Quality trimming algorithm
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The trimming algorithm is the same as the one used by BWA. That is:
-Subtract the given cutoff from all qualities; compute partial sums from
-all indices to the end of the sequence; cut sequence at the index at
-which the sum is minimal.
+The trimming algorithm is the same as the one used by BWA, but applied to both
+ends of the read in turn (if requested). That is: Subtract the given cutoff
+from all qualities; compute partial sums from all indices to the end of the
+sequence; cut the sequence at the index at which the sum is minimal. If both
+ends are to be trimmed, repeat this for the other end.
 
 The basic idea is to remove all bases starting from the end of the read whose
 quality is smaller than the given threshold. This is refined a bit by allowing
-some good-quality bases among the bad-quality ones.
+some good-quality bases among the bad-quality ones. In the following example,
+we assume that the 3' is to be quality-trimmed.
 
 Assume you use a threshold of 10 and have these quality values:
 
@@ -599,6 +610,8 @@ be::
     cutadapt -q 10 -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
     cutadapt -q 15 -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
 
+If you use any of the filtering options, you must use cutadapt in the following
+way (with the ``-p`` option) to make sure that read pairs remain sychronized.
 
 First trim the forward read, writing output to temporary files (we also
 add some quality trimming)::
@@ -613,15 +626,16 @@ Finally, remove the temporary files::
 
     rm tmp.1.fastq tmp.2.fastq
 
-In each call to cutadapt, the read-modifying options such as ``-q`` only
-apply to the first file (first ``reads.1.fastq``, then ``tmp.2.fastq``
-in this example). Reads in the second file are not affected by those
+Please see the previous section for a much simpler way of trimming paired-end
+reads!
+
+In the legacy paired-end mode, the read-modifying options such as ``-q`` only
+apply to the first file in each call to cutadapt (first ``reads.1.fastq``, then
+``tmp.2.fastq`` in this example). Reads in the second file are not affected by those
 options, but by the filtering options: If a read in the first file is
 discarded, then the matching read in the second file is also filtered
 and not written to the output given by ``--paired-output`` in order to
 keep both output files synchronized.
-
-
 
 
 .. _multiple-adapters:

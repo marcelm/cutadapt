@@ -455,13 +455,12 @@ def get_option_parser():
 			"If LENGTH is positive, the bases are removed from the beginning of each read. "
 			"If LENGTH is negative, the bases are removed from the end of each read. "
 			"This option can be specified twice if the LENGTHs have different signs.")
-	group.add_option("-q", "--quality-cutoff", type=int, default=0, metavar="CUTOFF",
-		help="Trim low-quality bases from 3' ends of reads before adapter "
-			"removal. The algorithm is the same as the one used by BWA "
-			"(Subtract CUTOFF from all qualities; "
-			"compute partial sums from all indices to the end of the "
-			"sequence; cut sequence at the index at which the sum "
-			"is minimal) (default: %default)")
+	group.add_option("-q", "--quality-cutoff", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
+		help="Trim low-quality bases from 5' and/or 3' ends of reads before "
+			"adapter removal. If one value is given, only the 3' end is trimmed. "
+			"If two comma-separated cutoffs are given, the 5' end is trimmed with "
+			"the first cutoff, the 3' end with the second. The algorithm is the "
+			"same as the one used by BWA (see documentation). (default: no trimming)")
 	group.add_option("--quality-base", type=int, default=33,
 		help="Assume that quality values are encoded as ascii(quality + QUALITY_BASE). The default (33) is usually correct, "
 			 "except for reads produced by some versions of the Illumina pipeline, where this should be set to 64. (Default: %default)")
@@ -591,6 +590,22 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error("The input file format must be either 'fasta', 'fastq' or "
 			"'sra-fastq' (not '{0}').".format(options.format))
 
+	if options.quality_cutoff is not None:
+		cutoffs = options.quality_cutoff.split(',')
+		if len(cutoffs) == 1:
+			try:
+				cutoffs = [0, int(cutoffs[0])]
+			except ValueError as e:
+				parser.error("Quality cutoff value not recognized: {0}".format(e))
+		elif len(cutoffs) == 2:
+			try:
+				cutoffs = [int(cutoffs[0]), int(cutoffs[1])]
+			except ValueError as e:
+				parser.error("Quality cutoff value not recognized: {0}".format(e))
+		else:
+			parser.error("Expected one value or two values separated by comma for the quality cutoff")
+	else:
+		cutoffs = None
 	writers = []
 	too_short_outfile = None  # too short reads go here
 	too_short_filter = None
@@ -717,7 +732,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			sys.exit(1)
 		raise
 
-	if not adapters and not adapters2 and options.quality_cutoff == 0 and \
+	if not adapters and not adapters2 and not cutoffs and \
 			options.cut == [] and options.cut2 == [] and \
 			options.minimum_length == 0 and \
 			options.maximum_length == sys.maxsize and \
@@ -755,9 +770,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			if cut != 0:
 				modifiers.append(UnconditionalCutter(cut))
 
-
-	if options.quality_cutoff > 0:
-		modifiers.append(QualityTrimmer(options.quality_cutoff, options.quality_base))
+	if cutoffs:
+		modifiers.append(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
 	if adapters:
 		adapter_cutter = AdapterCutter(adapters, options.times,
 				options.wildcard_file, options.info_file,
@@ -801,8 +815,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 				if cut != 0:
 					modifiers2.append(UnconditionalCutter(cut))
 
-		if options.quality_cutoff > 0:
-			modifiers2.append(QualityTrimmer(options.quality_cutoff, options.quality_base))
+		if cutoffs:
+			modifiers2.append(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
 		if adapters2:
 			adapter_cutter2 = AdapterCutter(adapters2, options.times,
 					None, None, None, options.action)

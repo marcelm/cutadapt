@@ -100,15 +100,16 @@ def PrimerTrimmer(read):
 
 
 class QualityTrimmer(object):
-	def __init__(self, cutoff, base):
-		self.cutoff = cutoff
+	def __init__(self, cutoff_front, cutoff_back, base):
+		self.cutoff_front = cutoff_front
+		self.cutoff_back = cutoff_back
 		self.base = base
 		self.trimmed_bases = 0
 
 	def __call__(self, read):
-		index = quality_trim_index(read.qualities, self.cutoff, self.base)
-		self.trimmed_bases += len(read.qualities) - index
-		return read[:index]
+		start, stop = quality_trim_index(read.qualities, self.cutoff_front, self.cutoff_back, self.base)
+		self.trimmed_bases += len(read) - (stop - start)
+		return read[start:stop]
 
 
 class NEndTrimmer(object):

@@ -3,9 +3,10 @@
 Quality trimming.
 """
 
-def quality_trim_index(str qualities, int cutoff, int base=33):
+def quality_trim_index(str qualities, int cutoff_front, int cutoff_back, int base=33):
 	"""
-	Find the position at which to trim a low-quality end from a nucleotide sequence.
+	Find the positions at which to trim low-quality ends from a nucleotide sequence.
+	Return tuple (start, stop) that indicates the good-quality segment.
 
 	Qualities are assumed to be ASCII-encoded as chr(qual + base).
 
@@ -15,15 +16,33 @@ def quality_trim_index(str qualities, int cutoff, int base=33):
 	- Compute partial sums from all indices to the end of the sequence.
 	- Trim sequence at the index at which the sum is minimal.
 	"""
-	cdef int s = 0
-	cdef int max_qual = 0
-	cdef int max_i = len(qualities)
+	cdef int s
+	cdef int max_qual
+	cdef int stop = len(qualities)
+	cdef int start = 0
 	cdef int i
-	for i in reversed(xrange(len(qualities))):
-		s += cutoff - (ord(qualities[i]) - base)
+
+	# find trim position for 5' end
+	s = 0
+	max_qual = 0
+	for i in range(len(qualities)):
+		s += cutoff_front - (ord(qualities[i]) - base)
 		if s < 0:
 			break
 		if s > max_qual:
 			max_qual = s
-			max_i = i
-	return max_i
+			start = i + 1
+
+	# same for 3' end
+	max_qual = 0
+	s = 0
+	for i in reversed(xrange(len(qualities))):
+		s += cutoff_back - (ord(qualities[i]) - base)
+		if s < 0:
+			break
+		if s > max_qual:
+			max_qual = s
+			stop = i
+	if start >= stop:
+		start, stop = 0, 0
+	return (start, stop)

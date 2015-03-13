@@ -27,6 +27,8 @@ v1.8
 * Support notation for repeated bases in the adapter sequence: Write ``A{10}``
   instead of ``AAAAAAAAAA``. Useful for poly-A trimming: Use ``-a A{100}`` to
   get the longest possible tail.
+* Quality trimming at the 5' end of reads is now supported. Use ``-q 15,10`` to
+  trim the 5' end with a cutoff of 15 and the 3' end with a cutoff of 10.
 * Fix incorrectly reported statistics (> 100% trimmed bases) when ``--times``
   set to a value greater than one.
 * Support .xz-compressed files (if running in Python 3.3 or later).
