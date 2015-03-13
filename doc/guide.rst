@@ -548,12 +548,6 @@ is mandatory you process both files at the same time to make sure that the
 output files are kept synchronized: If a read is removed from one of the files,
 cutadapt will ensure it is also removed from the other file.
 
-The following limitations still exist:
-
-* The ``--info-file``, ``--rest-file`` and ``--wildcard-file`` options write out
-  information only from the first read.
-* Demultiplexing is not yet supported with paired-end data.
-
 The following command-line options are applied to *both* reads:
 
 * ``-q``
@@ -566,6 +560,19 @@ The following command-line options are applied to *both* reads:
 * ``--strip-f3``
 * ``--colorspace``, ``--bwa``, ``-z``, ``--no-zero-cap``, ``--double-encode``,
   ``--trim-primer``
+
+In paired-end mode, the filtering options discard the read pair if *any*
+of the two reads fulfill the criteria. That is, ``--max-n`` discards the pair
+if one of the two reads has too many ``N`` bases; ``--discard-untrimmed``
+discards the pair if one of the reads does not contain an adapter;
+``--minimum-length`` discards the pair if one of the reads is too short;
+and ``--maximum-length`` discards the pair if one of the reads is too long.
+
+The following limitations still exist:
+
+* The ``--info-file``, ``--rest-file`` and ``--wildcard-file`` options write out
+  information only from the first read.
+* Demultiplexing is not yet supported with paired-end data.
 
 
 Legacy paired-end read trimming
