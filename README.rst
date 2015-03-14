@@ -30,12 +30,9 @@ If you use cutadapt, please cite
 Links
 -----
 
-* `Project homepage <http://cutadapt.readthedocs.org/>`_
+* `Documentation <https://cutadapt.readthedocs.org/>`_
+* `Source code <https://github.com/marcelm/cutadapt/>`_
+* `Report an issue <https://github.com/marcelm/cutadapt/issues>`_
 * `Project page on PyPI (Python package index) <https://pypi.python.org/pypi/cutadapt/>`_
-* `Source code on GitHub <https://github.com/marcelm/cutadapt/>`_
-* `Full documentation <https://cutadapt.readthedocs.org/>`_.
-  Offline documentation is also available in the ``doc/`` subdirectory in the repository
-  and in the downloaded tar distribution.
-* `Report issues to the Google code bug tracker <https://code.google.com/p/cutadapt/issues/list>`_
-* `A cutadapt wrapper for the Galaxy platform <https://bitbucket.org/lance_parsons/cutadapt_galaxy_wrapper>`_,
-  written by Lance Parsons.
+* `Follow @marcelm_ on Twitter <https://twitter.com/marcelm_>`_
+* `Wrapper for the Galaxy platform <https://bitbucket.org/lance_parsons/cutadapt_galaxy_wrapper>`_
