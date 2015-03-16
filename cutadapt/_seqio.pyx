@@ -81,6 +81,9 @@ cdef class Sequence(object):
 		else:
 			raise NotImplementedError()
 
+	def __reduce__(self):
+		return (Sequence, (self.name, self.sequence, self.qualities, self.twoheaders))
+
 	def write(self, outfile):
 		if self.qualities is not None:
 			s = '@' + self.name + '\n' + self.sequence + '\n+'
