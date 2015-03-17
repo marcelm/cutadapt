@@ -155,10 +155,10 @@ def print_statistics(adapters_pair, paired, time, stats,
 	pairs_or_reads = "Pairs" if paired else "Reads"
 	if too_short is not None:
 		too_short_fraction = too_short / n
-		report += "{pairs_or_reads} that were too long:        {too_short:13,d} ({too_short_fraction:.1%})\n"
+		report += "{pairs_or_reads} that were too short:       {too_short:13,d} ({too_short_fraction:.1%})\n"
 	if too_long is not None:
 		too_long_fraction = too_long / n
-		report += "{pairs_or_reads} that were too short:       {too_long:13,d} ({too_long_fraction:.1%})\n"
+		report += "{pairs_or_reads} that were too long:        {too_long:13,d} ({too_long_fraction:.1%})\n"
 	if too_many_n is not None:
 		too_many_n_fraction = too_many_n / n
 		report += "{pairs_or_reads} with too many N:           {too_many_n:13,d} ({too_many_n_fraction:.1%})\n"
