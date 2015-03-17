@@ -258,6 +258,12 @@ def test_no_args():
 		cutadapt.main([])
 
 
+@raises(SystemExit)
+def test_two_fastqs():
+	with redirect_stderr():
+		cutadapt.main([datapath('paired.1.fastq'), datapath('paired.2.fastq')])
+
+
 def test_anchored_no_indels():
 	'''anchored 5' adapter, mismatches only (no indels)'''
 	run('-g ^TTAGACATAT --no-indels -e 0.1', 'anchored_no_indels.fasta', 'anchored_no_indels.fasta')

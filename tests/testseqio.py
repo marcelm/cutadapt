@@ -1,9 +1,10 @@
 # coding: utf-8
 from __future__ import print_function, division, absolute_import
 
+import sys
+from textwrap import dedent
 from nose.tools import raises
 from cutadapt import seqio
-import sys
 from cutadapt.compat import StringIO
 
 
@@ -20,6 +21,39 @@ def test_fastareader():
 	with seqio.FastaReader("tests/data/simple.fasta") as f:
 		reads = list(f)
 	assert reads == simple_fasta
+
+	fasta = StringIO(">first_sequence\nSEQUENCE1\n>second_sequence\nSEQUENCE2\n")
+	reads = list(seqio.FastaReader(fasta))
+	assert reads == simple_fasta
+
+
+def test_fastareader_with_comments():
+	fasta = StringIO(dedent(
+		"""
+		# a comment
+		# another one
+		>first_sequence
+		SEQUENCE1
+		>second_sequence
+		SEQUENCE2
+		"""))
+	reads = list(seqio.FastaReader(fasta))
+	assert reads == simple_fasta
+
+
+@raises(seqio.FormatError)
+def test_wrong_fasta_format():
+	fasta = StringIO(dedent(
+		"""
+		# a comment
+		# another one
+		unexpected
+		>first_sequence
+		SEQUENCE1
+		>second_sequence
+		SEQUENCE2
+		"""))
+	reads = list(seqio.FastaReader(fasta))
 
 
 def test_fastqreader():

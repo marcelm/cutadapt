@@ -185,16 +185,24 @@ class FastaReader(object):
 		"""
 		name = None
 		seq = []
-		for line in self.fp:
-			# strip() should also take care of DOS line breaks
+		for i, line in enumerate(self.fp):
+			# strip() also removes DOS line breaks
 			line = line.strip()
+			if not line:
+				continue
 			if line and line[0] == '>':
 				if name is not None:
 					yield self.sequence_class(name, self._delimiter.join(seq), None)
 				name = line[1:]
 				seq = []
-			else:
+			elif line and line[0] == '#':
+				continue
+			elif name is not None:
 				seq.append(line)
+			else:
+				raise FormatError("At line {0}: Expected '>' at beginning of "
+					"FASTA record, but got {1!r}.".format(i+1, _shorten(line)))
+
 		if name is not None:
 			yield self.sequence_class(name, self._delimiter.join(seq), None)
 
