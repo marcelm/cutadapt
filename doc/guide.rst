@@ -132,8 +132,7 @@ character <wildcards>`.
 
 In addition, it is possible to :ref:`remove a fixed number of
 bases <cut-bases>` from the beginning or end of each read, and to :ref:`remove
-low-quality bases (quality trimming) <quality-trimming>` from the 3' end of
-each read.
+low-quality bases (quality trimming) <quality-trimming>` from the 3' and 5' ends.
 
 
 .. _three-prime-adapters:
@@ -492,7 +491,7 @@ ends are to be trimmed, repeat this for the other end.
 The basic idea is to remove all bases starting from the end of the read whose
 quality is smaller than the given threshold. This is refined a bit by allowing
 some good-quality bases among the bad-quality ones. In the following example,
-we assume that the 3' is to be quality-trimmed.
+we assume that the 3' end is to be quality-trimmed.
 
 Assume you use a threshold of 10 and have these quality values:
 
@@ -510,7 +509,7 @@ the sum is greater than zero:
 The numbers in parentheses are not computed (because 8 is greater than zero),
 but shown here for completeness. The position of the minimum (-25) is used as
 the trimming position. Therefore, the read is trimmed to the first four bases,
-which have quality values 41, 40, 25, 27.
+which have quality values 42, 40, 26, 27.
 
 
 .. _paired-end:
