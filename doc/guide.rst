@@ -795,29 +795,33 @@ Illumina TruSeq
 If you have reads containing Illumina TruSeq adapters, follow these
 steps.
 
-Trim read 1 with ``A`` + the “TruSeq Indexed Adapter”. Use only the
-prefix of the adapter sequence that is common to all Indexed Adapter
-sequences::
+Single-end reads as well as the first reads of paired-end data need to be
+trimmed with ``A`` + the “TruSeq Indexed Adapter”. Use only the prefix of the
+adapter sequence that is common to all Indexed Adapter sequences::
 
-    cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -o trimmed.1.fastq.gz reads.1.fastq.gz
+    cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -o trimmed.fastq.gz reads.fastq.gz
 
-Trim read 2 with the reverse complement of the “TruSeq Universal
-Adapter”::
+If you have paired-end data, trim also read 2 with the reverse complement of the
+“TruSeq Universal Adapter”. The full command-line looks as follows::
 
-    cutadapt -a AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -o trimmed.2.fastq.gz reads.2.fastq.gz
+    cutadapt \
+		-a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC \
+		-A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT \
+		-o trimmed.1.fastq.gz -p trimmed.2.fastq.gz \
+		reads.1.fastq.gz reads.2.fastq.gz
 
-See also the section about paired-end adapter trimming above.
+See also the :ref:`section about paired-end adapter trimming above <paired-end>`.
 
 If you want to simplify this a bit, you can also use the common prefix
 ``AGATCGGAAGAGC`` as the adapter sequence in both cases::
 
-    cutadapt -a AGATCGGAAGAGC -o trimmed.1.fastq.gz reads.1.fastq.gz
-    cutadapt -a AGATCGGAAGAGC -o trimmed.2.fastq.gz reads.2.fastq.gz
+    cutadapt \
+		-a AGATCGGAAGAGC -A AGATCGGAAGAGC \
+		-o trimmed.1.fastq.gz -p trimmed.2.fastq.gz \
+		reads.1.fastq.gz reads.2.fastq.gz
 
-The adapter sequences can be found in the document `Illumina TruSeq
-Adapters
+The adapter sequences can be found in the document `Illumina TruSeq Adapters
 De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf>`__.
-
 
 
 .. _warnbase:

@@ -23,7 +23,7 @@ v1.8
   mode. It is hopefully now more accessible.
 * Chris Mitchell contributed a patch adding two new options: ``--trim-n``
   removes any ``N`` bases from the read ends, and the ``--max-n`` option can be
-  used to filter out reads with too many ``N``s.
+  used to filter out reads with too many ``N``.
 * Support notation for repeated bases in the adapter sequence: Write ``A{10}``
   instead of ``AAAAAAAAAA``. Useful for poly-A trimming: Use ``-a A{100}`` to
   get the longest possible tail.
@@ -187,12 +187,12 @@ v0.9.5
   older cutadapt versions!
 
   Before this change, finding an adapter would work as follows:
-  
+
   - Find an alignment between adapter and read -- longer alignments are
     better.
   - If the number of errors in the alignment (divided by length) is above the
     maximum error rate, report the adapter as not being found.
-  
+
   Sometimes, the long alignment that is found had too many errors, but a
   shorter alignment would not. The adapter was then incorrectly seen as "not
   found". The new alignment algorithm checks the error rate while aligning and only
