@@ -55,6 +55,20 @@ appropriate package is called ``python-dev`` in Ubuntu (or ``python3-dev``
 for Python 3).
 
 
+System-wide installation
+------------------------
+
+If you have root access, then you can install cutadapt system-wide by running::
+
+    sudo pip install cutadapt
+
+This installs cutadapt into `/usr/local/bin`.
+
+If you want to upgrade from an older version, use this command instead::
+
+    sudo pip install --upgrade cutadapt
+
+
 Use without installation
 ------------------------
 
