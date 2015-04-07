@@ -780,11 +780,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	else:
 		adapter_cutter = None
 
-	if options.trim_n:
-		modifiers.append(NEndTrimmer())
-
 	# Modifiers that apply to both reads of paired-end reads
 	modifiers_both = []
+	if options.trim_n:
+		modifiers_both.append(NEndTrimmer())
 	if options.length_tag:
 		modifiers_both.append(LengthTagModifier(options.length_tag))
 	if options.strip_f3:
