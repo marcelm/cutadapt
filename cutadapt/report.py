@@ -6,6 +6,7 @@ from __future__ import print_function, division, absolute_import
 
 import sys
 from collections import namedtuple
+from contextlib import contextmanager
 import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
 from .modifiers import QualityTrimmer
@@ -100,16 +101,23 @@ def qtrimmed(modifiers):
 	return None
 
 
-def print_statistics(adapters_pair, paired, time, stats,
-		modifiers, modifiers2, writers, file=None):
-	"""Print summary to file"""
+@contextmanager
+def redirect_standard_output(file):
+	if file is None:
+		yield
+		return
 	old_stdout = sys.stdout
-	if file is not None:
-		sys.stdout = file
+	sys.stdout = file
+	yield
+	sys.stdout = old_stdout
+
+
+def print_report(adapters_pair, paired, time, stats,
+		modifiers, modifiers2, writers):
+	"""Print report to standard output."""
 	n = stats.n
 	if stats.n == 0:
 		print("No reads processed! Either your input file is empty or you used the wrong -f/--format parameter.")
-		sys.stdout = old_stdout
 		return
 	time = max(time, 0.1)
 	print("Finished in {0:.2F} s ({1:.0F} us/read; {2:.2F} M reads/minute).".format(
@@ -250,5 +258,3 @@ def print_statistics(adapters_pair, paired, time, stats,
 		print('WARNING:')
 		print('    One or more of your adapter sequences may be incomplete.')
 		print('    Please see the detailed output above.')
-
-	sys.stdout = old_stdout

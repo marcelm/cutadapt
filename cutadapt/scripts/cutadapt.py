@@ -79,7 +79,7 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
     NEndTrimmer)
 from cutadapt.writers import (TooShortReadFilter, TooLongReadFilter,
 	ProcessedReadWriter, Demultiplexer, NContentTrimmer)
-from cutadapt.report import Statistics, print_statistics
+from cutadapt.report import Statistics, print_report, redirect_standard_output
 from cutadapt.compat import next
 
 logger = logging.getLogger(__name__)
@@ -728,8 +728,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			adapters2.append(adapter)
 	except IOError as e:
 		if e.errno == errno.ENOENT:
-			logger.error("Error: %s", e)
-			sys.exit(1)
+			parser.error(e)
 		raise
 
 	if not adapters and not adapters2 and not cutoffs and \
@@ -740,24 +739,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			options.max_n == -1:
 		parser.error("You need to provide at least one adapter sequence.")
 
-	# Due to backwards compatibility, from here on logging output needs to be
-	# sent to standard output instead of standard error if the -o option is used.
-	if options.output:
-		logger.root.handlers = []
-		logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
-	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
-	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-	logger.info("Trimming %s adapter(s) with at most %.1f%% errors in %s mode ...",
-		len(adapters) + len(adapters2), options.error_rate * 100,
-		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
-
 	try:
 		reader = seqio.open(input_filename, file2=input_paired_filename,
 				qualfile=quality_filename, colorspace=options.colorspace,
 				fileformat=options.format)
-	except seqio.UnknownFileType as e:
-		logger.error("Error: %s", e)
-		sys.exit(1)
+	except (seqio.UnknownFileType, IOError) as e:
+		parser.error(e)
 
 	# Create the processing pipeline consisting of a list of "modifiers".
 	modifiers = []
@@ -824,6 +811,17 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			adapter_cutter2 = None
 		modifiers2.extend(modifiers_both)
 
+	# Due to backwards compatibility, from here on logging output needs to be
+	# sent to standard output instead of standard error if the -o option is used.
+	if options.output:
+		logger.root.handlers = []
+		logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
+	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
+	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
+	logger.info("Trimming %s adapter(s) with at most %.1f%% errors in %s mode ...",
+		len(adapters) + len(adapters2), options.error_rate * 100,
+		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
+
 	start_time = time.clock()
 	try:
 		if paired:
@@ -838,8 +836,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			sys.exit(1)
 		raise
 	except (seqio.FormatError, EOFError) as e:
-		logger.error("Error: %s", e)
-		sys.exit(1)
+		sys.exit("cutadapt: error: {0}".format(e))
 
 	# close open files
 	for f in [trimmed_outfile, untrimmed_outfile, trimmed_paired_outfile,
@@ -853,8 +850,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if not options.quiet:
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
-		print_statistics((adapters, adapters2), paired, elapsed_time, stats,
-			modifiers, modifiers2, writers, file=stat_file)
+		with redirect_standard_output(stat_file):
+			print_report((adapters, adapters2), paired, elapsed_time, stats,
+				modifiers, modifiers2, writers)
 
 
 if __name__ == '__main__':
