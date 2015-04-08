@@ -215,6 +215,13 @@ class Adapter(object):
 
 	@staticmethod
 	def parse_braces(sequence):
+		"""
+		Replace all occurrences of ``x{n}`` (where x is any character) with n
+		occurrences of x. Raise ValueError if the expression cannot be parsed.
+
+		>>> parse_braces('TGA{5}CT')
+		TGAAAAACT
+		"""
 		# Simple DFA with four states, encoded in prev
 		result = ''
 		prev = None
