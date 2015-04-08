@@ -2,6 +2,12 @@
 Changes
 =======
 
+v1.x
+----
+
+* Fix: Counts for 'too short' and 'too long' reads were swapped in statistics.
+* Fix: Make ``--trim-n`` work also on second read for paired-end data.
+
 v1.8
 ----
 
