@@ -13,7 +13,77 @@ from .modifiers import QualityTrimmer
 from .writers import (TooShortReadFilter, TooLongReadFilter,
 	ProcessedReadWriter, Demultiplexer, NContentTrimmer)
 
-Statistics = namedtuple('Statistics', 'total_bp n')
+
+
+class Statistics:
+	def __init__(self, n, total_bp1, total_bp2):
+		"""
+		n -- total number of reads
+		total_bp1 -- number of bases in first reads
+		total_bp2 -- number of bases in second reads (set to None for single-end data)
+		"""
+		self.n = n
+		self.total_bp = total_bp1
+		self.total_bp1 = total_bp1
+		if total_bp2 is None:
+			self.paired = False
+		else:
+			self.paired = True
+			self.total_bp2 = total_bp2
+			self.total_bp += total_bp2
+
+	def collect(self, adapters_pair, time, modifiers, modifiers2, writers):
+		self.time = max(time, 0.01)
+		self.too_short = None
+		self.too_long = None
+		self.written = None
+		self.written_bp = None
+		self.too_many_n = None
+		for w in writers:
+			if isinstance(w, TooShortReadFilter):
+				self.too_short = w.too_short
+			elif isinstance(w, TooLongReadFilter):
+				self.too_long = w.too_long
+			elif isinstance(w, NContentTrimmer):
+				self.too_many_n = w.too_many_n
+			elif isinstance(w, (ProcessedReadWriter, Demultiplexer)):
+				self.written = w.written
+				if self.n > 0:
+					self.written_fraction = self.written / self.n
+				self.written_bp = w.written_bp
+		assert self.written is not None
+
+		self.with_adapters = [0, 0]
+		for i in (0, 1):
+			for adapter in adapters_pair[i]:
+				self.with_adapters[i] += sum(adapter.lengths_front.values())
+				self.with_adapters[i] += sum(adapter.lengths_back.values())
+		self.with_adapters_fraction = [ (v / self.n if self.n > 0 else 0) for v in self.with_adapters ]
+
+		self.quality_trimmed_bp = [qtrimmed(modifiers), qtrimmed(modifiers2)]
+
+		if self.quality_trimmed_bp[0] is not None or self.quality_trimmed_bp[1] is not None:
+			self.did_quality_trimming = True
+			if self.quality_trimmed_bp[0] is None:
+				self.quality_trimmed_bp[0] = 0
+			if self.quality_trimmed_bp[1] is None:
+				self.quality_trimmed_bp[1] = 0
+			self.quality_trimmed = sum(self.quality_trimmed_bp)
+			self.quality_trimmed_fraction = self.quality_trimmed / self.total_bp if self.total_bp > 0 else 0.0
+		else:
+			self.did_quality_trimming = False
+
+		self.total_written_bp = sum(self.written_bp)
+		self.total_written_bp_fraction = self.total_written_bp / self.total_bp if self.total_bp > 0 else 0.0
+
+		if self.n > 0:
+			if self.too_short is not None:
+				self.too_short_fraction = self.too_short / self.n
+			if self.too_long is not None:
+				self.too_long_fraction = self.too_long / self.n
+			if self.too_many_n is not None:
+				self.too_many_n_fraction = self.too_many_n / self.n
+
 
 ADAPTER_TYPES = {
 	BACK: "regular 3'",
@@ -22,6 +92,7 @@ ADAPTER_TYPES = {
 	SUFFIX: "anchored 3'",
 	ANYWHERE: "variable 5'/3'"
 }
+
 
 def print_error_ranges(adapter_length, error_rate):
 	print("No. of allowed errors:")
@@ -112,44 +183,16 @@ def redirect_standard_output(file):
 	sys.stdout = old_stdout
 
 
-def print_report(adapters_pair, paired, time, stats,
-		modifiers, modifiers2, writers):
+def print_report(stats, adapters_pair):
 	"""Print report to standard output."""
-	n = stats.n
 	if stats.n == 0:
 		print("No reads processed! Either your input file is empty or you used the wrong -f/--format parameter.")
 		return
-	time = max(time, 0.1)
 	print("Finished in {0:.2F} s ({1:.0F} us/read; {2:.2F} M reads/minute).".format(
-		time, 1E6 * time / n, n / time * 60 / 1E6))
+		stats.time, 1E6 * stats.time / stats.n, stats.n / stats.time * 60 / 1E6))
 
-	too_short = None
-	too_long = None
-	written = None
-	written_bp = None
-	too_many_n = None
-	for w in writers:
-		if isinstance(w, TooShortReadFilter):
-			too_short = w.too_short
-		elif isinstance(w, TooLongReadFilter):
-			too_long = w.too_long
-		elif isinstance(w, NContentTrimmer):
-			too_many_n = w.too_many_n
-		elif isinstance(w, (ProcessedReadWriter, Demultiplexer)):
-			written = w.written
-			written_fraction = written / n
-			written_bp = w.written_bp
-	assert written is not None
-
-	with_adapters = [0, 0]
-	for i in (0, 1):
-		for adapter in adapters_pair[i]:
-			with_adapters[i] += sum(adapter.lengths_front.values())
-			with_adapters[i] += sum(adapter.lengths_back.values())
-	with_adapters_fraction = [ v / n for v in with_adapters ]
-	total_bp = sum(stats.total_bp)
 	report = "\n=== Summary ===\n\n"
-	if paired:
+	if stats.paired:
 		report += textwrap.dedent("""\
 		Total read pairs processed:      {n:13,d}
 		  Read 1 with adapter:           {with_adapters[0]:13,d} ({with_adapters_fraction[0]:.1%})
@@ -160,15 +203,11 @@ def print_report(adapters_pair, paired, time, stats,
 		Total reads processed:           {n:13,d}
 		Reads with adapters:             {with_adapters[0]:13,d} ({with_adapters_fraction[0]:.1%})
 		""")
-	pairs_or_reads = "Pairs" if paired else "Reads"
-	if too_short is not None:
-		too_short_fraction = too_short / n
+	if stats.too_short is not None:
 		report += "{pairs_or_reads} that were too short:       {too_short:13,d} ({too_short_fraction:.1%})\n"
-	if too_long is not None:
-		too_long_fraction = too_long / n
+	if stats.too_long is not None:
 		report += "{pairs_or_reads} that were too long:        {too_long:13,d} ({too_long_fraction:.1%})\n"
-	if too_many_n is not None:
-		too_many_n_fraction = too_many_n / n
+	if stats.too_many_n is not None:
 		report += "{pairs_or_reads} with too many N:           {too_many_n:13,d} ({too_many_n_fraction:.1%})\n"
 
 	report += textwrap.dedent("""\
@@ -176,34 +215,27 @@ def print_report(adapters_pair, paired, time, stats,
 
 	Total basepairs processed: {total_bp:13,d} bp
 	""")
-	if paired:
-		report += "  Read 1: {stats.total_bp[0]:13,d} bp\n"
-		report += "  Read 2: {stats.total_bp[1]:13,d} bp\n"
+	if stats.paired:
+		report += "  Read 1: {total_bp1:13,d} bp\n"
+		report += "  Read 2: {total_bp2:13,d} bp\n"
 
-	quality_trimmed_bp = [qtrimmed(modifiers), qtrimmed(modifiers2)]
-	if quality_trimmed_bp[0] is not None or quality_trimmed_bp[1] is not None:
-		if quality_trimmed_bp[0] is None:
-			quality_trimmed_bp[0] = 0
-		if quality_trimmed_bp[1] is None:
-			quality_trimmed_bp[1] = 0
-		quality_trimmed = sum(quality_trimmed_bp)
-		quality_trimmed_fraction = quality_trimmed / total_bp
+	if stats.did_quality_trimming:
 		report += "Quality-trimmed:           {quality_trimmed:13,d} bp ({quality_trimmed_fraction:.1%})\n"
-		if paired:
+		if stats.paired:
 			report += "  Read 1: {quality_trimmed_bp[0]:13,d} bp\n"
 			report += "  Read 2: {quality_trimmed_bp[1]:13,d} bp\n"
 
-	total_written_bp = sum(written_bp)
-	total_written_bp_fraction = total_written_bp / total_bp if total_bp > 0 else 0.0
 	report += "Total written (filtered):  {total_written_bp:13,d} bp ({total_written_bp_fraction:.1%})\n"
-	if paired:
+	if stats.paired:
 		report += "  Read 1: {written_bp[0]:13,d} bp\n"
 		report += "  Read 2: {written_bp[1]:13,d} bp\n"
+	v = vars(stats)
+	v['pairs_or_reads'] = "Pairs" if stats.paired else "Reads"
 	try:
-		report = report.format(**vars())
+		report = report.format(**v)
 	except ValueError:
 		# Python 2.6 does not support the comma format specifier (PEP 378)
-		report = report.replace(",d}", "d}").format(**vars())
+		report = report.replace(",d}", "d}").format(**v)
 	print(report)
 
 	warning = False
@@ -218,7 +250,7 @@ def print_report(adapters_pair, paired, time, stats,
 			name = str(adapter.name)
 			if not adapter.name_is_generated:
 				name = "'{0}'".format(name)
-			if paired:
+			if stats.paired:
 				extra = 'First read: ' if which_in_pair == 0 else 'Second read: '
 			else:
 				extra = ''
@@ -237,22 +269,22 @@ def print_report(adapters_pair, paired, time, stats,
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)
 				print("Overview of removed sequences (5')")
-				print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate, adapter.errors_front)
+				print_histogram(adapter.lengths_front, len(adapter), stats.n, adapter.max_error_rate, adapter.errors_front)
 				print()
 				print("Overview of removed sequences (3' or within)")
-				print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate, adapter.errors_back)
+				print_histogram(adapter.lengths_back, len(adapter), stats.n, adapter.max_error_rate, adapter.errors_back)
 			elif where in (FRONT, PREFIX):
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)
 				print("Overview of removed sequences")
-				print_histogram(adapter.lengths_front, len(adapter), n, adapter.max_error_rate, adapter.errors_front)
+				print_histogram(adapter.lengths_front, len(adapter), stats.n, adapter.max_error_rate, adapter.errors_front)
 			else:
 				assert where in (BACK, SUFFIX)
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)
 				warning = warning or print_adjacent_bases(adapter.adjacent_bases, adapter.sequence)
 				print("Overview of removed sequences")
-				print_histogram(adapter.lengths_back, len(adapter), n, adapter.max_error_rate, adapter.errors_back)
+				print_histogram(adapter.lengths_back, len(adapter), stats.n, adapter.max_error_rate, adapter.errors_back)
 
 	if warning:
 		print('WARNING:')

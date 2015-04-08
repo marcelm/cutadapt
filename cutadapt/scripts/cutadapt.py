@@ -256,7 +256,7 @@ def process_single_reads(reader, modifiers, writers):
 			if writer(read):
 				break
 
-	return Statistics(total_bp=(total_bp, 0), n=n)
+	return Statistics(n=n, total_bp1=total_bp, total_bp2=None)
 
 
 def process_paired_reads(paired_reader, modifiers, modifiers2, writers):
@@ -281,7 +281,7 @@ def process_paired_reads(paired_reader, modifiers, modifiers2, writers):
 			# Stop writing as soon as one of the writers was successful.
 			if writer(read1, read2):
 				break
-	return Statistics(total_bp=(total1_bp, total2_bp), n=n)
+	return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
 
 
 def trimmed_and_untrimmed_files(
@@ -848,11 +848,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	elapsed_time = time.clock() - start_time
 	if not options.quiet:
+		stats.collect((adapters, adapters2), elapsed_time,
+			modifiers, modifiers2, writers)
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
 		with redirect_standard_output(stat_file):
-			print_report((adapters, adapters2), paired, elapsed_time, stats,
-				modifiers, modifiers2, writers)
+			print_report(stats, (adapters, adapters2))
 
 
 if __name__ == '__main__':
