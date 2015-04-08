@@ -240,7 +240,7 @@ def print_report(stats, adapters_pair):
 
 	warning = False
 	for which_in_pair in (0, 1):
-		for index, adapter in enumerate(adapters_pair[which_in_pair]):
+		for adapter in adapters_pair[which_in_pair]:
 			total_front = sum(adapter.lengths_front.values())
 			total_back = sum(adapter.lengths_back.values())
 			total = total_front + total_back
