@@ -1,6 +1,9 @@
 .. image:: https://travis-ci.org/marcelm/cutadapt.svg?branch=master
     :target: https://travis-ci.org/marcelm/cutadapt
 
+.. image:: https://img.shields.io/pypi/v/cutadapt.svg?branch=master
+    :target: https://pypi.python.org/pypi/cutadapt
+
 ========
 cutadapt
 ========
