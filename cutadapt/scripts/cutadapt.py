@@ -818,8 +818,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
 	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-	logger.info("Trimming %s adapter(s) with at most %.1f%% errors in %s mode ...",
-		len(adapters) + len(adapters2), options.error_rate * 100,
+	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
+		len(adapters) + len(adapters2), 's' if len(adapters) + len(adapters2) != 1 else '',
+		options.error_rate * 100,
 		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
 
 	start_time = time.clock()
