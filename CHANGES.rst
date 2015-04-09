@@ -2,11 +2,11 @@
 Changes
 =======
 
-v1.x
+v1.8.1
 ----
 
-* Fix: Counts for 'too short' and 'too long' reads were swapped in statistics.
-* Fix: Make ``--trim-n`` work also on second read for paired-end data.
+* Fix #110: Counts for 'too short' and 'too long' reads were swapped in statistics.
+* Fix #115: Make ``--trim-n`` work also on second read for paired-end data.
 
 v1.8
 ----
