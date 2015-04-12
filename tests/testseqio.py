@@ -143,7 +143,7 @@ def test_sequence_reader():
 	assert reads == simple_fasta
 
 
-def test_context_manager():
+def test_fasta_context_manager():
 	filename = "tests/data/simple.fasta"
 	with open(filename) as f:
 		assert not f.closed
@@ -156,4 +156,20 @@ def test_context_manager():
 		assert not sr.fp.closed
 		reads = list(sr)
 		assert not sr.fp.closed
-	assert tmp_sr.fp.closed
+	assert tmp_sr.fp is None
+
+
+def test_fastq_context_manager():
+	filename = "tests/data/simple.fastq"
+	with open(filename) as f:
+		assert not f.closed
+		reads = list(seqio.open(f))
+		assert not f.closed
+	assert f.closed
+
+	with seqio.FastqReader(filename) as sr:
+		tmp_sr = sr
+		assert not sr.fp.closed
+		reads = list(sr)
+		assert not sr.fp.closed
+	assert tmp_sr.fp is None

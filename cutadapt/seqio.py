@@ -160,6 +160,9 @@ class FileWithPrependedLine(object):
 		for line in self.file:
 			yield line
 
+	def close(self):
+		self.file.close()
+
 
 class FastaReader(object):
 	"""
@@ -174,6 +177,9 @@ class FastaReader(object):
 		"""
 		if isinstance(file, basestring):
 			file = xopen(file)
+			self._file_passed = False
+		else:
+			self._file_passed = True
 		self.fp = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = False
@@ -206,13 +212,18 @@ class FastaReader(object):
 		if name is not None:
 			yield self.sequence_class(name, self._delimiter.join(seq), None)
 
+	def close(self):
+		if not self._file_passed and self.fp is not None:
+			self.fp.close()
+			self.fp = None
+
 	def __enter__(self):
 		if self.fp is None:
 			raise ValueError("I/O operation on closed FastaReader")
 		return self
 
 	def __exit__(self, *args):
-		self.fp.close()
+		self.close()
 
 
 class ColorspaceFastaReader(FastaReader):
@@ -234,6 +245,9 @@ class FastqReader(object):
 		"""
 		if isinstance(file, basestring):
 			file = xopen(file)
+			self._file_passed = False
+		else:
+			self._file_passed = True
 		self.fp = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
@@ -269,13 +283,18 @@ class FastqReader(object):
 				qualities = line.rstrip('\n\r')
 				yield self.sequence_class(name, sequence, qualities, twoheaders=twoheaders)
 
+	def close(self):
+		if not self._file_passed and self.fp is not None:
+			self.fp.close()
+			self.fp = None
+
 	def __enter__(self):
 		if self.fp is None:
 			raise ValueError("I/O operation on closed FastqReader")
 		return self
 
 	def __exit__(self, *args):
-		self.fp.close()
+		self.close()
 
 
 try:
@@ -329,14 +348,15 @@ class FastaQualReader(object):
 			assert fastaread.name == qualread.name
 			yield self.sequence_class(fastaread.name, fastaread.sequence, qualities)
 
+	def close(self):
+		self.fastareader.close()
+		self.qualreader.close()
+
 	def __enter__(self):
-		if self.fastafile is None:
-			raise ValueError("I/O operation on closed FastaQualReader")
 		return self
 
 	def __exit__(self, *args):
-		self.fastareader.close()
-		self.qualreader.close()
+		self.close()
 
 
 class ColorspaceFastaQualReader(FastaQualReader):

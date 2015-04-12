@@ -108,7 +108,10 @@ class FastqReader(object):
 		n quality values. When this is True, there must be n+1 characters in the sequence and n quality values.
 		"""
 		if isinstance(file, basestring):
-			file = xopen(file, 'r')
+			file = xopen(file)
+			self._file_passed = False
+		else:
+			self._file_passed = True
 		self.fp = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
@@ -167,10 +170,15 @@ class FastqReader(object):
 		if i != 0:
 			raise FormatError("FASTQ file ended prematurely")
 
+	def close(self):
+		if not self._file_passed and self.fp is not None:
+			self.fp.close()
+			self.fp = None
+
 	def __enter__(self):
 		if self.fp is None:
 			raise ValueError("I/O operation on closed FastqReader")
 		return self
 
 	def __exit__(self, *args):
-		self.fp.close()
+		self.close()
