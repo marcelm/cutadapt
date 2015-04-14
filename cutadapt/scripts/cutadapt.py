@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # kate: word-wrap off; remove-trailing-spaces all;
 #
-# Copyright (c) 2010-2014 Marcel Martin <marcel.martin@scilifelab.se>
+# Copyright (c) 2010-2015 Marcel Martin <marcel.martin@scilifelab.se>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -49,12 +49,11 @@ Some other available features are:
   * Various other adapter types (5' adapters, "mixed" 5'/3' adapters etc.)
   * Trimming a fixed number of bases
   * Quality trimming
-  * Trimming paired-end reads
   * Trimming colorspace reads
   * Filtering reads by various criteria
 
 Use "cutadapt --help" to see all command-line options.
-See http://cutadapt.readthedocs.org/ for the full documentation.
+See http://cutadapt.readthedocs.org/ for full documentation.
 """
 
 from __future__ import print_function, division, absolute_import
@@ -76,7 +75,7 @@ from cutadapt.adapters import (Adapter, ColorspaceAdapter, gather_adapters,
 	BACK, FRONT, PREFIX, SUFFIX, ANYWHERE)
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
-    NEndTrimmer)
+	NEndTrimmer)
 from cutadapt.writers import (TooShortReadFilter, TooLongReadFilter,
 	ProcessedReadWriter, Demultiplexer, NContentTrimmer)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
@@ -413,8 +412,6 @@ def get_option_parser():
 	group.add_option("--no-trim", dest='action', action='store_const', const=None,
 		help="Match and redirect reads to output/untrimmed-output as usual, "
 			"but do not remove adapters.")
-	group.add_option("--trim-n", action='store_true', default=False,
-		help="Trim N's on ends of reads.")
 	group.add_option("--max-n", type=float, default=-1.0, metavar="LENGTH",
 		help="The max proportion of N's allowed in a read. A number < 1 will be treated as a proportion while"
 			 " a number > 1 will be treated as the maximum number of N's contained.")
@@ -464,6 +461,8 @@ def get_option_parser():
 	group.add_option("--quality-base", type=int, default=33,
 		help="Assume that quality values are encoded as ascii(quality + QUALITY_BASE). The default (33) is usually correct, "
 			 "except for reads produced by some versions of the Illumina pipeline, where this should be set to 64. (Default: %default)")
+	group.add_option("--trim-n", action='store_true', default=False,
+		help="Trim N's on ends of reads.")
 	group.add_option("-x", "--prefix", default='',
 		help="Add this prefix to read names")
 	group.add_option("-y", "--suffix", default='',
@@ -482,11 +481,10 @@ def get_option_parser():
 	group.add_option("--maq", "--bwa", action='store_true', default=False,
 		help="MAQ- and BWA-compatible colorspace output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
 	group.add_option("--length-tag", metavar="TAG",
-		help="Search for TAG followed by a decimal number in the name of the read "
-			"(description/comment field of the FASTA or FASTQ file). Replace the "
-			"decimal number with the correct length of the trimmed read. "
-			"For example, use --length-tag 'length=' to correct fields "
-			"like 'length=123'.")
+		help="Search for TAG followed by a decimal number in the description "
+			"field of the read. Replace the decimal number with the correct "
+			"length of the trimmed read. For example, use --length-tag 'length=' "
+			"to correct fields like 'length=123'.")
 	group.add_option("--no-zero-cap", dest='zero_cap', action='store_false',
 		help="Do not change negative quality values to zero. Colorspace "
 			"quality values of -1 would appear as spaces in the output FASTQ "
