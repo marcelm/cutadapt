@@ -69,7 +69,23 @@ class TooLongReadFilter(object):
 		return KEEP
 
 
-class NContentFilter(object):
+class Filter(object):
+	"""Abstract base class for filters"""
+	def __init__(self, check_second=True):
+		self.check_second = check_second
+		self.filtered = 0
+
+	def discard(self, read):
+		raise NotImplementedError()
+
+	def __call__(self, read1, read2=None):
+		if self.discard(read1) or (self.check_second and read2 is not None and self.discard(read2)):
+			self.filtered += 1
+			return DISCARD
+		return KEEP
+
+
+class NContentFilter(Filter):
 	"""
 	Discards reads over a given threshold of N's. It handles both raw counts of Ns as well
 	as proportions. Note, for raw counts, it is a greater than comparison, so a cutoff
@@ -80,26 +96,20 @@ class NContentFilter(object):
 		Count -- if it is below 1.0, it will be considered a proportion, and above and equal to
 		1 will be considered as discarding reads with a number of N's greater than this cutoff.
 		"""
+		super(NContentFilter, self).__init__(check_second)
 		assert count >= 0
-		self.proportion = count < 1.0
+		self.is_proportion = count < 1.0
 		self.cutoff = count
-		self.too_many_n = 0
-		self.check_second = check_second
 
-	def __call__(self, read1, read2=None):
-		if self.proportion:
-			if read1 and read1.sequence.lower().count('n') / len(read1) > self.cutoff or \
-					(self.check_second and read2
-						and read2.sequence.lower().count('n') / len(read2) > self.cutoff):
-				self.too_many_n += 1
-				return DISCARD
+	def discard(self, read):
+		n_count = read.sequence.lower().count('n')
+		if self.is_proportion:
+			if len(read) == 0:
+				return False
+			return n_count / len(read) > self.cutoff
 		else:
-			if read1.sequence.lower().count('n') > self.cutoff or \
-					(self.check_second and read2 is not None
-						and read2.sequence.lower().count('n') > self.cutoff):
-				self.too_many_n += 1
-				return DISCARD
-		return KEEP
+			return n_count > self.cutoff
+		return False
 
 
 class ProcessedReadWriter(object):

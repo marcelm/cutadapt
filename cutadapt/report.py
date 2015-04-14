@@ -44,7 +44,7 @@ class Statistics:
 			elif isinstance(w, TooLongReadFilter):
 				self.too_long = w.too_long
 			elif isinstance(w, NContentFilter):
-				self.too_many_n = w.too_many_n
+				self.too_many_n = w.filtered
 			elif isinstance(w, (ProcessedReadWriter, Demultiplexer)):
 				self.written = w.written
 				if self.n > 0:
