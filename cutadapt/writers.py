@@ -51,16 +51,20 @@ class RedirectingFilter(Filter):
 		super(RedirectingFilter, self).__init__(check_second)
 		self.outfile = outfile
 		self.paired_outfile = paired_outfile
+		self.written = 0  # no of written reads or read pairs
+		self.written_bp = [0, 0]
 
 	def __call__(self, read1, read2=None):
 		if super(RedirectingFilter, self).__call__(read1, read2) == DISCARD:
 			if self.outfile is not None:
 				read1.write(self.outfile)
+				self.written += 1
+				self.written_bp[0] += len(read1)
 			if read2 is not None and self.paired_outfile is not None:
 				read2.write(self.paired_outfile)
+				self.written_bp[1] += len(read2)
 			return DISCARD
 		return KEEP
-
 
 
 # TODO
@@ -127,48 +131,18 @@ class DiscardUntrimmedFilter(RedirectingFilter):
 		return read.match is None
 
 
-class ProcessedReadWriter(object):
+class DiscardTrimmedFilter(RedirectingFilter):
 	"""
-	Write trimmed and untrimmed reads to the proper output file(s).
-
-	TODO
-	This is way too complicated. Implement a proper PairedFasta/qWriter class
-	instead and move stats keeping there.
+	A filter that discards trimmed reads.
 	"""
-	def __init__(self,
-			trimmed_outfile,
-			trimmed_paired_outfile,
-			check_second):
-		self.trimmed_outfile = trimmed_outfile
-		self.trimmed_paired_outfile = trimmed_paired_outfile
-		self.check_second = check_second
-		self.written = 0  # no of written reads or read pairs
-		self.written_bp = [0, 0]
+	def __init__(self, trimmed_outfile, trimmed_paired_outfile, check_second=True):
+		super(DiscardTrimmedFilter, self).__init__(
+			outfile=trimmed_outfile,
+			paired_outfile=trimmed_paired_outfile,
+			check_second=check_second)
 
-	def __call__(self, read1, read2=None):
-		"""
-		Write this read to the proper file.
-		"""
-		if read2 is None:
-			# single end
-			if read1.match is not None and self.trimmed_outfile:
-				read1.write(self.trimmed_outfile)
-				self.written += 1
-				self.written_bp[0] += len(read1)
-		else:
-			# paired end
-			if not (read1.match is None or (self.check_second and read2.match is None)):
-				if self.trimmed_outfile:
-					w = True
-					self.written_bp[0] += len(read1)
-					read1.write(self.trimmed_outfile)
-				if self.trimmed_paired_outfile:
-					w = True
-					self.written_bp[1] += len(read2)
-					read2.write(self.trimmed_paired_outfile)
-			if w:
-				self.written += 1
-		return DISCARD
+	def discard(self, read):
+		return read.match is not None
 
 
 class Demultiplexer(object):

@@ -11,7 +11,7 @@ import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
 from .modifiers import QualityTrimmer
 from .writers import (TooShortReadFilter, TooLongReadFilter,
-	ProcessedReadWriter, Demultiplexer, NContentFilter)
+	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, NContentFilter)
 
 
 class Statistics:
@@ -35,8 +35,8 @@ class Statistics:
 		self.time = max(time, 0.01)
 		self.too_short = None
 		self.too_long = None
-		self.written = None
-		self.written_bp = None
+		self.written = 0
+		self.written_bp = [0, 0]
 		self.too_many_n = None
 		for w in writers:
 			if isinstance(w, TooShortReadFilter):
@@ -45,11 +45,11 @@ class Statistics:
 				self.too_long = w.filtered
 			elif isinstance(w, NContentFilter):
 				self.too_many_n = w.filtered
-			elif isinstance(w, (ProcessedReadWriter, Demultiplexer)):
-				self.written = w.written
+			elif isinstance(w, (DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer)):
+				self.written += w.written
 				if self.n > 0:
 					self.written_fraction = self.written / self.n
-				self.written_bp = w.written_bp
+				self.written_bp = self.written_bp[0] + w.written_bp[0], self.written_bp[1] + w.written_bp[1]
 		assert self.written is not None
 
 		self.with_adapters = [0, 0]
