@@ -69,6 +69,39 @@ class TooLongReadFilter(object):
 		return KEEP
 
 
+class NContentTrimmer(object):
+	"""
+	Discards reads over a given threshold of N's. It handles both raw counts of Ns as well
+	as proportions. Note, for raw counts, it is a greater than comparison, so a cutoff
+	of '1' will keep reads with a single N in it.
+	"""
+	def __init__(self, count, check_second=True):
+		"""
+		Count -- if it is below 1.0, it will be considered a proportion, and above and equal to
+		1 will be considered as discarding reads with a number of N's greater than this cutoff.
+		"""
+		assert count >= 0
+		self.proportion = count < 1.0
+		self.cutoff = count
+		self.too_many_n = 0
+		self.check_second = check_second
+
+	def __call__(self, read1, read2=None):
+		if self.proportion:
+			if read1 and read1.sequence.lower().count('n') / len(read1) > self.cutoff or \
+					(self.check_second and read2
+						and read2.sequence.lower().count('n') / len(read2) > self.cutoff):
+				self.too_many_n += 1
+				return DISCARD
+		else:
+			if read1.sequence.lower().count('n') > self.cutoff or \
+					(self.check_second and read2 is not None
+						and read2.sequence.lower().count('n') > self.cutoff):
+				self.too_many_n += 1
+				return DISCARD
+		return KEEP
+
+
 class ProcessedReadWriter(object):
 	"""
 	Write trimmed and untrimmed reads to the proper output file(s).
@@ -88,7 +121,7 @@ class ProcessedReadWriter(object):
 		self.trimmed_paired_outfile = trimmed_paired_outfile
 		self.untrimmed_paired_outfile = untrimmed_paired_outfile
 		self.check_second = check_second
-		self.written = 0
+		self.written = 0  # no of written reads/read pairs
 		self.written_bp = [0, 0]
 
 	def __call__(self, read1, read2=None):
@@ -182,36 +215,3 @@ class Demultiplexer(object):
 			f.close()
 		if self.untrimmed_outfile is not None:
 			self.untrimmed_outfile.close()
-
-
-class NContentTrimmer(object):
-	"""
-	Discards reads over a given threshold of N's. It handles both raw counts of Ns as well
-	as proportions. Note, for raw counts, it is a greater than comparison, so a cutoff
-	of '1' will keep reads with a single N in it.
-	"""
-	def __init__(self, count, check_second=True):
-		"""
-		Count -- if it is below 1.0, it will be considered a proportion, and above and equal to
-		1 will be considered as discarding reads with a number of N's greater than this cutoff.
-		"""
-		assert count >= 0
-		self.proportion = count < 1.0
-		self.cutoff = count
-		self.too_many_n = 0
-		self.check_second = check_second
-
-	def __call__(self, read1, read2=None):
-		if self.proportion:
-			if read1 and read1.sequence.lower().count('n') / len(read1) > self.cutoff or \
-					(self.check_second and read2
-						and read2.sequence.lower().count('n') / len(read2) > self.cutoff):
-				self.too_many_n += 1
-				return DISCARD
-		else:
-			if read1.sequence.lower().count('n') > self.cutoff or \
-					(self.check_second and read2 is not None
-						and read2.sequence.lower().count('n') > self.cutoff):
-				self.too_many_n += 1
-				return DISCARD
-		return KEEP
