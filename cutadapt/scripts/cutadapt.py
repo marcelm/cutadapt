@@ -77,7 +77,7 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer)
 from cutadapt.writers import (TooShortReadFilter, TooLongReadFilter,
-	ProcessedReadWriter, Demultiplexer, NContentTrimmer)
+	ProcessedReadWriter, Demultiplexer, NContentFilter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
 from cutadapt.compat import next
 
@@ -628,7 +628,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		writers.append(too_long_filter)
 
 	if options.max_n != -1:
-		writers.append(NContentTrimmer(options.max_n, check_second=paired=='both'))
+		writers.append(NContentFilter(options.max_n, check_second=paired=='both'))
 
 	demultiplexer = None
 	if options.output is not None and '{name}' in options.output:

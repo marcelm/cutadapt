@@ -69,7 +69,7 @@ class TooLongReadFilter(object):
 		return KEEP
 
 
-class NContentTrimmer(object):
+class NContentFilter(object):
 	"""
 	Discards reads over a given threshold of N's. It handles both raw counts of Ns as well
 	as proportions. Note, for raw counts, it is a greater than comparison, so a cutoff

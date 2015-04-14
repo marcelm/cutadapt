@@ -4,10 +4,10 @@ Tests write output (should it return True or False or write)
 """
 from __future__ import print_function, division, absolute_import
 
-from cutadapt.writers import NContentTrimmer, DISCARD, KEEP
+from cutadapt.writers import NContentFilter, DISCARD, KEEP
 from cutadapt.seqio import Sequence
 
-def test_ncontenttrimmer():
+def test_ncontentfilter():
 	# third parameter is True if read should be discarded
 	params = [
 		('AAA', 0, KEEP),
@@ -19,12 +19,12 @@ def test_ncontenttrimmer():
 		('ANAAAA', 0, DISCARD)
 	]
 	for seq, count, expected in params:
-		writer = NContentTrimmer(count=count)
+		writer = NContentFilter(count=count)
 		_seq = Sequence('read1', seq, qualities='#'*len(seq))
 		assert writer(_seq) == expected
 
 
-def test_ncontenttrimmer_paired():
+def test_ncontentfilter_paired():
 	params = [
 		('AAA', 'AAA', 0, KEEP),
 		('AAAN', 'AAA', 0, DISCARD),
@@ -32,8 +32,8 @@ def test_ncontenttrimmer_paired():
 		('ANAA', 'AANA', 1, KEEP),
 	]
 	for seq1, seq2, count, expected in params:
-		writer = NContentTrimmer(count=count, check_second=False)
-		writer_cs = NContentTrimmer(count=count, check_second=True)
+		writer = NContentFilter(count=count, check_second=False)
+		writer_cs = NContentFilter(count=count, check_second=True)
 		read1 = Sequence('read1', seq1, qualities='#'*len(seq1))
 		read2 = Sequence('read1', seq2, qualities='#'*len(seq2))
 		assert writer(read1, read2) == writer(read1)

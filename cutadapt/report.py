@@ -11,8 +11,7 @@ import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
 from .modifiers import QualityTrimmer
 from .writers import (TooShortReadFilter, TooLongReadFilter,
-	ProcessedReadWriter, Demultiplexer, NContentTrimmer)
-
+	ProcessedReadWriter, Demultiplexer, NContentFilter)
 
 
 class Statistics:
@@ -44,7 +43,7 @@ class Statistics:
 				self.too_short = w.too_short
 			elif isinstance(w, TooLongReadFilter):
 				self.too_long = w.too_long
-			elif isinstance(w, NContentTrimmer):
+			elif isinstance(w, NContentFilter):
 				self.too_many_n = w.too_many_n
 			elif isinstance(w, (ProcessedReadWriter, Demultiplexer)):
 				self.written = w.written
