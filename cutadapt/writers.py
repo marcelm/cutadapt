@@ -16,66 +16,22 @@ from cutadapt.xopen import xopen
 DISCARD = True
 KEEP = False
 
-# TODO
-# - distinguish between Filter and Writer classes
-# - rename __call__ to filtered() in Filter classes
-# - do not require writers to return anything
-class TooShortReadFilter(object):
-	def __init__(self, minimum_length, too_short_outfile, check_second=True):
-		"""
-		check_second -- whether the second read in a pair is also checked for
-		its length. If True, the read is discarded if *any* of the two reads are
-		too short.
-		"""
-		self.too_short_outfile = too_short_outfile
-		self.minimum_length = minimum_length
-		self.too_short = 0
-		self.check_second = check_second
-
-	def __call__(self, read1, read2=None):
-		"""
-		Return whether the read was written somewhere.
-		"""
-		if len(read1.sequence) < self.minimum_length or (read2 is not None and
-				self.check_second and len(read2.sequence) < self.minimum_length):
-			self.too_short += 1
-			if self.too_short_outfile is not None:
-				read1.write(self.too_short_outfile)
-			# TODO read2 is silently discarded
-			return DISCARD
-		return KEEP
-
-
-class TooLongReadFilter(object):
-	def __init__(self, maximum_length, too_long_outfile, check_second=True):
-		"""
-		check_second -- whether the second read in a pair is also checked for
-		its length. If True, the read is discarded if *any* of the two reads are
-		too long.
-		"""
-		self.too_long_outfile = too_long_outfile
-		self.maximum_length = maximum_length
-		self.too_long = 0
-		self.check_second = check_second
-
-	def __call__(self, read1, read2=None):
-		if len(read1.sequence) > self.maximum_length or (read2 is not None and
-				self.check_second and len(read2.sequence) > self.maximum_length):
-			self.too_long += 1
-			if self.too_long_outfile is not None:
-				read1.write(self.too_long_outfile)
-			# TODO read2 is silently discarded
-			return DISCARD
-		return KEEP
-
 
 class Filter(object):
 	"""Abstract base class for filters"""
 	def __init__(self, check_second=True):
+		"""
+		check_second -- whether the second read in a pair is also checked for
+		its length. If True, the read is discarded if *any* of the two reads are
+		fulfills the criteria for discarding a read.
+		"""
 		self.check_second = check_second
-		self.filtered = 0
+		self.filtered = 0  # statistics
 
 	def discard(self, read):
+		"""
+		Return True if read should be discarded (implement this in a derived class).
+		"""
 		raise NotImplementedError()
 
 	def __call__(self, read1, read2=None):
@@ -83,6 +39,53 @@ class Filter(object):
 			self.filtered += 1
 			return DISCARD
 		return KEEP
+
+
+class RedirectingFilter(Filter):
+	"""
+	Abstract base class for a filter that can send the reads it discards to a
+	separate output file.
+	"""
+	def __init__(self, outfile=None, paired_outfile=None, check_second=True):
+		"""
+
+		"""
+		super(RedirectingFilter, self).__init__(check_second)
+		self.outfile = outfile
+		self.paired_outfile = paired_outfile
+
+	def __call__(self, read1, read2=None):
+		if super(RedirectingFilter, self).__call__(read1, read2) == DISCARD:
+			if self.outfile is not None:
+				read1.write(self.outfile)
+			if read2 is not None and self.paired_outfile is not None:
+				read2.write(self.paired_outfile)
+			return DISCARD
+		return KEEP
+
+
+
+# TODO
+# - distinguish between Filter and Writer classes
+# - rename __call__ to filtered() in Filter classes
+# - do not require writers to return anything
+class TooShortReadFilter(RedirectingFilter):
+	def __init__(self, minimum_length, too_short_outfile, check_second=True):
+		# TODO paired_outfile is left at its default value None (read2 is silently discarded)
+		super(TooShortReadFilter, self).__init__(outfile=too_short_outfile, check_second=check_second)
+		self.minimum_length = minimum_length
+
+	def discard(self, read):
+		return len(read) < self.minimum_length
+
+
+class TooLongReadFilter(RedirectingFilter):
+	def __init__(self, maximum_length, too_long_outfile, check_second=True):
+		super(TooLongReadFilter, self).__init__(outfile=too_long_outfile, check_second=check_second)
+		self.maximum_length = maximum_length
+
+	def discard(self, read):
+		return len(read) > self.maximum_length
 
 
 class NContentFilter(Filter):

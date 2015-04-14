@@ -40,9 +40,9 @@ class Statistics:
 		self.too_many_n = None
 		for w in writers:
 			if isinstance(w, TooShortReadFilter):
-				self.too_short = w.too_short
+				self.too_short = w.filtered
 			elif isinstance(w, TooLongReadFilter):
-				self.too_long = w.too_long
+				self.too_long = w.filtered
 			elif isinstance(w, NContentFilter):
 				self.too_many_n = w.filtered
 			elif isinstance(w, (ProcessedReadWriter, Demultiplexer)):
