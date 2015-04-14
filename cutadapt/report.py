@@ -10,7 +10,7 @@ from contextlib import contextmanager
 import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
 from .modifiers import QualityTrimmer
-from .writers import (TooShortReadFilter, TooLongReadFilter,
+from .filters import (TooShortReadFilter, TooLongReadFilter,
 	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, NContentFilter)
 
 

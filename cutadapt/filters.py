@@ -2,17 +2,17 @@
 """
 Classes for writing and filtering of processed reads.
 
-To determine what happens to a read, a list of writers is created and each
-one is called in turn (via its __call__ method) until one writer returns True.
+To determine what happens to a read, a list of filters is created and each
+one is called in turn (via its __call__ method) until one returns True.
 The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded). Filters and writers are currently
-not distinguished.
+not distinguished: The idea is that at least one of the filters will apply.
 """
 from __future__ import print_function, division, absolute_import
 from cutadapt.xopen import xopen
 
-# Use these constants when returning from a writer to improve readability
-# (it is unintuitive that "return True" means "discard the read").
+# Constants used when returning from a Filter’s __call__ method to improve
+# readability (it is unintuitive that "return True" means "discard the read").
 DISCARD = True
 KEEP = False
 
@@ -67,10 +67,6 @@ class RedirectingFilter(Filter):
 		return KEEP
 
 
-# TODO
-# - distinguish between Filter and Writer classes
-# - rename __call__ to filtered() in Filter classes
-# - do not require writers to return anything
 class TooShortReadFilter(RedirectingFilter):
 	def __init__(self, minimum_length, too_short_outfile, check_second=True):
 		# TODO paired_outfile is left at its default value None (read2 is silently discarded)

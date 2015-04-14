@@ -76,7 +76,7 @@ from cutadapt.adapters import (Adapter, ColorspaceAdapter, gather_adapters,
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer)
-from cutadapt.writers import (TooShortReadFilter, TooLongReadFilter,
+from cutadapt.filters import (TooShortReadFilter, TooLongReadFilter,
 	Demultiplexer, NContentFilter, DiscardUntrimmedFilter, DiscardTrimmedFilter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
 from cutadapt.compat import next
