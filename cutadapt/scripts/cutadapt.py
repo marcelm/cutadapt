@@ -77,7 +77,7 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer)
 from cutadapt.writers import (TooShortReadFilter, TooLongReadFilter,
-	ProcessedReadWriter, Demultiplexer, NContentFilter)
+	ProcessedReadWriter, Demultiplexer, NContentFilter, DiscardUntrimmedFilter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
 from cutadapt.compat import next
 
@@ -660,9 +660,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			options.discard_trimmed,
 			options.discard_untrimmed)
 
+		if untrimmed_outfile or untrimmed_paired_outfile:
+			writers.append(DiscardUntrimmedFilter(untrimmed_outfile,
+				untrimmed_paired_outfile, check_second=paired=='both'))
 		writer = ProcessedReadWriter(
 			trimmed_outfile, trimmed_paired_outfile,
-			untrimmed_outfile, untrimmed_paired_outfile,
 			check_second=paired=='both'
 		)
 		writers.append(writer)

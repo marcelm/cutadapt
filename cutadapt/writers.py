@@ -35,7 +35,8 @@ class Filter(object):
 		raise NotImplementedError()
 
 	def __call__(self, read1, read2=None):
-		if self.discard(read1) or (self.check_second and read2 is not None and self.discard(read2)):
+		if self.discard(read1) or (
+				self.check_second and read2 is not None and self.discard(read2)):
 			self.filtered += 1
 			return DISCARD
 		return KEEP
@@ -47,9 +48,6 @@ class RedirectingFilter(Filter):
 	separate output file.
 	"""
 	def __init__(self, outfile=None, paired_outfile=None, check_second=True):
-		"""
-
-		"""
 		super(RedirectingFilter, self).__init__(check_second)
 		self.outfile = outfile
 		self.paired_outfile = paired_outfile
@@ -115,6 +113,20 @@ class NContentFilter(Filter):
 		return False
 
 
+class DiscardUntrimmedFilter(RedirectingFilter):
+	"""
+	A Filter that discards untrimmed reads.
+	"""
+	def __init__(self, untrimmed_outfile, untrimmed_paired_outfile, check_second=True):
+		super(DiscardUntrimmedFilter, self).__init__(
+			outfile=untrimmed_outfile,
+			paired_outfile=untrimmed_paired_outfile,
+			check_second=check_second)
+
+	def discard(self, read):
+		return read.match is None
+
+
 class ProcessedReadWriter(object):
 	"""
 	Write trimmed and untrimmed reads to the proper output file(s).
@@ -126,48 +138,26 @@ class ProcessedReadWriter(object):
 	def __init__(self,
 			trimmed_outfile,
 			trimmed_paired_outfile,
-			untrimmed_outfile,
-			untrimmed_paired_outfile,
 			check_second):
 		self.trimmed_outfile = trimmed_outfile
-		self.untrimmed_outfile = untrimmed_outfile
 		self.trimmed_paired_outfile = trimmed_paired_outfile
-		self.untrimmed_paired_outfile = untrimmed_paired_outfile
 		self.check_second = check_second
-		self.written = 0  # no of written reads/read pairs
+		self.written = 0  # no of written reads or read pairs
 		self.written_bp = [0, 0]
 
 	def __call__(self, read1, read2=None):
 		"""
 		Write this read to the proper file.
-
-		If read2 is not None, this is a paired-end read.
 		"""
-		w = False
 		if read2 is None:
 			# single end
 			if read1.match is not None and self.trimmed_outfile:
-				w = True
 				read1.write(self.trimmed_outfile)
-			if read1.match is None and self.untrimmed_outfile:
-				w = True
-				read1.write(self.untrimmed_outfile)
-			if w:
 				self.written += 1
 				self.written_bp[0] += len(read1)
 		else:
 			# paired end
-			if read1.match is None or (self.check_second and read2.match is None):
-				# no match -> write to untrimmed outfile
-				if self.untrimmed_outfile:
-					w = True
-					self.written_bp[0] += len(read1)
-					read1.write(self.untrimmed_outfile)
-				if self.untrimmed_paired_outfile:
-					w = True
-					self.written_bp[1] += len(read2)
-					read2.write(self.untrimmed_paired_outfile)
-			else:
+			if not (read1.match is None or (self.check_second and read2.match is None)):
 				if self.trimmed_outfile:
 					w = True
 					self.written_bp[0] += len(read1)
