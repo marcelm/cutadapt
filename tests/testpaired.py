@@ -160,3 +160,17 @@ def test_paired_end_A_only():
 		in1='paired.1.fastq', in2='paired.2.fastq',
 		expected1='paired-onlyA.1.fastq', expected2='paired-onlyA.2.fastq'
 	)
+
+def test_paired_end_discard_trimmed():
+	'''single-pass paired end, discarding reads with adapter'''
+	run_paired('-a CCCCCC -A GGGGGG --no-trim --discard-trimmed',
+		in1='paired-discard.1.fastq', in2='paired-discard.2.fastq',
+		expected1='paired-discard-trimmed.1.fastq', expected2='paired-discard-trimmed.2.fastq'
+	)
+
+def test_paired_end_discard_untrimmed():
+	'''single-pass paired end, discarding reads without adapter'''
+	run_paired('-a CCCCCC -A GGGGGG --no-trim --discard-untrimmed',
+		in1='paired-discard.1.fastq', in2='paired-discard.2.fastq',
+		expected1='paired-discard-untrimmed.1.fastq', expected2='paired-discard-untrimmed.2.fastq'
+	)
