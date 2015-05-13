@@ -13,7 +13,7 @@ class FormatError(Exception):
 	"""
 
 
-def _shorten(s, n=20):
+def _shorten(s, n=100):
 	"""Shorten string s to at most n characters, appending "..." if necessary."""
 	if s is None:
 		return None
