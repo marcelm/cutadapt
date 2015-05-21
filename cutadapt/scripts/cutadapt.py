@@ -706,27 +706,22 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	ADAPTER_CLASS = ColorspaceAdapter if options.colorspace else Adapter
 	try:
-		# TODO refactor, code duplicated
-		adapters = []
-		for name, seq, where in gather_adapters(options.adapters, options.anywhere, options.front):
-			if not seq:
-				parser.error("The adapter sequence is empty.")
-			if not options.indels and where not in (PREFIX, SUFFIX):
-				parser.error("Not allowing indels is currently supported only for anchored 5' and 3' adapters.")
-			adapter = ADAPTER_CLASS(seq, where, options.error_rate,
-				options.overlap, options.match_read_wildcards,
-				options.match_adapter_wildcards, name=name, indels=options.indels)
-			adapters.append(adapter)
-		adapters2 = []
-		for name, seq, where in gather_adapters(options.adapters2, options.anywhere2, options.front2):
-			if not seq:
-				parser.error("The adapter sequence is empty.")
-			if not options.indels and where != PREFIX:
-				parser.error("Not allowing indels is currently supported only for anchored 5' and 3' adapters.")
-			adapter = ADAPTER_CLASS(seq, where, options.error_rate,
-				options.overlap, options.match_read_wildcards,
-				options.match_adapter_wildcards, name=name, indels=options.indels)
-			adapters2.append(adapter)
+		# TODO refactor this a bit
+		def collect(back, anywhere, front):
+			adapters = []
+			for name, seq, where in gather_adapters(back, anywhere, front):
+				if not seq:
+					parser.error("The adapter sequence is empty.")
+				if not options.indels and where not in (PREFIX, SUFFIX):
+					parser.error("Not allowing indels is currently supported only for anchored 5' and 3' adapters.")
+				adapter = ADAPTER_CLASS(seq, where, options.error_rate,
+					options.overlap, options.match_read_wildcards,
+					options.match_adapter_wildcards, name=name, indels=options.indels)
+				adapters.append(adapter)
+			return adapters
+
+		adapters = collect(options.adapters, options.anywhere, options.front)
+		adapters2 = collect(options.adapters2, options.anywhere2, options.front2)
 	except IOError as e:
 		if e.errno == errno.ENOENT:
 			parser.error(e)

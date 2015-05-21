@@ -132,6 +132,13 @@ def test_paired_end():
 	)
 
 
+def test_paired_anchored_back_no_indels():
+	run_paired("-a BACKADAPTER$ -A BACKADAPTER$ -N --no-indels",
+		in1='anchored-back.fasta', in2='anchored-back.fasta',
+		expected1='anchored-back.fasta', expected2="anchored-back.fasta"
+	)
+
+
 def test_paired_end_qualtrim():
 	'''single-pass paired-end with -q and -m'''
 	run_paired('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
