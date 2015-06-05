@@ -22,6 +22,26 @@ class UnconditionalCutter(object):
 			return read[:self.length]
 
 
+class BarcodeCutter(object):
+	"""
+	A modifier that unconditionally removes the first n bases from a read and adds those bases to the read name.
+
+	If the length is positive, the bases are removed from the beginning of the read.
+        Not implemented yet for end of read.
+	"""
+	def __init__(self, length):
+		self.length = length
+
+	def __call__(self, read):
+		if self.length > 0:
+                        trimmed_barcode = read[0:self.length]
+			trimmed_read = read[self.length:]
+                        trimmed_read.name += ':' + trimmed_barcode.sequence
+                        return trimmed_read
+		elif self.length < 0:
+                        return read
+
+
 class LengthTagModifier(object):
 	"""
 	Replace "length=..." strings in read names.
