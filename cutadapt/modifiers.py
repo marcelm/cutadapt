@@ -39,7 +39,11 @@ class BarcodeCutter(object):
                         trimmed_read.name += ':' + trimmed_barcode.sequence
                         return trimmed_read
 		elif self.length < 0:
-                        return read
+                        diff = len(read.sequence) - abs(self.length)
+                        trimmed_barcode = read[diff:len(read.sequence)]
+			trimmed_read = read[:self.length]
+                        trimmed_read.name += ':' + trimmed_barcode.sequence
+                        return trimmed_read
 
 
 class LengthTagModifier(object):
