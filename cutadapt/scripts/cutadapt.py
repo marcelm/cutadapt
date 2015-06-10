@@ -76,7 +76,7 @@ from cutadapt.adapters import (Adapter, ColorspaceAdapter, gather_adapters,
 	BACK, FRONT, PREFIX, SUFFIX, ANYWHERE)
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
-        BarcodeCutter, NEndTrimmer)
+        BarcodeCutter1, BarcodeCutter2, NEndTrimmer)
 from cutadapt.filters import (TooShortReadFilter, TooLongReadFilter,
 	Demultiplexer, NContentFilter, DiscardUntrimmedFilter, DiscardTrimmedFilter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
@@ -275,10 +275,12 @@ def process_paired_reads(paired_reader, modifiers, modifiers2, writers):
 		total2_bp += len(read2.sequence)
 		for modifier in modifiers:
                         read1 = modifier(read1)
-                        if re.match("BarcodeCutter", modifier.__class__.__name__):
-                                read2.name += read1.name[len(read2.name):]
+                        if re.match("BarcodeCutter1", modifier.__class__.__name__):
+                                read2.name += ':' + read1.name.split(':')[-1]
 		for modifier in modifiers2:
 			read2 = modifier(read2)
+                        if re.match("BarcodeCutter2", modifier.__class__.__name__):
+                                read1.name += ':' + read2.name.split(':')[-1]
 		for writer in writers:
 			# Stop writing as soon as one of the writers was successful.
 			if writer(read1, read2):
@@ -455,8 +457,13 @@ def get_option_parser():
 			"If LENGTH is positive, the bases are removed from the beginning of each read. "
 			"If LENGTH is negative, the bases are removed from the end of each read. "
 			"This option can be specified twice if the LENGTHs have different signs.")
-	group.add_option("--barcode", action='append', default=[], type=int, metavar="LENGTH",
-		help="Remove LENGTH bases from the beginning or end of each read and add the barcode to the read name. "
+	group.add_option("--barcodeR1", action='append', default=[], type=int, metavar="LENGTH",
+		help="Remove LENGTH bases from the beginning or end of R1 and add the barcode to the read name of both R1 and R2. "
+			"If LENGTH is positive, the bases are removed from the beginning of each read. "
+			"If LENGTH is negative, the bases are removed from the end of each read. "
+			"This option can be specified twice if the LENGTHs have different signs.")
+	group.add_option("--barcodeR2", action='append', default=[], type=int, metavar="LENGTH",
+		help="Remove LENGTH bases from the beginning or end of R2 and add the barcode to the read name of both R1 and R2. "
 			"If LENGTH is positive, the bases are removed from the beginning of each read. "
 			"If LENGTH is negative, the bases are removed from the end of each read. "
 			"This option can be specified twice if the LENGTHs have different signs.")
@@ -555,7 +562,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		# Modify first read only, keep second in sync (-p given, but not -A/-G/-B/-U).
 		# This exists for backwards compatibility ('legacy mode').
 		paired = 'first'
-	if options.adapters2 or options.front2 or options.anywhere2 or options.cut2 or options.barcode:
+	if options.adapters2 or options.front2 or options.anywhere2 or options.cut2 or options.barcodeR1 or options.barcodeR2:
 		# Full paired-end trimming when both -p and -A/-G/-B/-U given
 		# Also the read modifications (such as quality trimming) are applied
 		# to second read.
@@ -737,7 +744,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	if not adapters and not adapters2 and not cutoffs and \
 			options.cut == [] and options.cut2 == [] and \
-			options.barcode == [] and \
+			options.barcodeR1 == [] and \
+			options.barcodeR2 == [] and \
 			options.minimum_length == 0 and \
 			options.maximum_length == sys.maxsize and \
 			quality_filename is None and \
@@ -762,14 +770,14 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			if cut != 0:
 				modifiers.append(UnconditionalCutter(cut))
 
-	if options.barcode:
-		if len(options.barcode) > 2:
+	if options.barcodeR1:
+		if len(options.barcodeR1) > 2:
 			parser.error("You cannot remove bases from more than two ends.")
-		if len(options.barcode) == 2 and options.barcode[0] * options.barcode[1] > 0:
+		if len(options.barcodeR1) == 2 and options.barcodeR1[0] * options.barcodeR1[1] > 0:
 			parser.error("You cannot remove bases from the same end twice.")
-		for cut in options.barcode:
+		for cut in options.barcodeR1:
 			if cut != 0:
-				modifiers.append(BarcodeCutter(cut))
+				modifiers.append(BarcodeCutter1(cut))
 
 	if cutoffs:
 		modifiers.append(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
@@ -814,6 +822,15 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			for cut in options.cut2:
 				if cut != 0:
 					modifiers2.append(UnconditionalCutter(cut))
+
+                if options.barcodeR2:
+                        if len(options.barcodeR2) > 2:
+                                parser.error("You cannot remove bases from more than two ends.")
+                        if len(options.barcodeR2) == 2 and options.barcodeR2[0] * options.barcodeR2[1] > 0:
+                                parser.error("You cannot remove bases from the same end twice.")
+                        for cut in options.barcodeR2:
+                                if cut != 0:
+                                        modifiers2.append(BarcodeCutter2(cut))
 
 		if cutoffs:
 			modifiers2.append(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
