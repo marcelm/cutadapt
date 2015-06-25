@@ -33,9 +33,9 @@ def test_append():
 			except OSError:
 				pass
 			with xopen(path, 'a') as f:
-				f.write(text.encode('utf-8'))
+				f.write(text.decode('utf-8'))
 			with xopen(path, 'a') as f:
-				f.write(text.encode('utf-8'))
+				f.write(text.decode('utf-8'))
 			with xopen(path, 'r') as f:
 				print("hey")
 
