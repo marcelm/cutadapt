@@ -13,6 +13,35 @@ files = [ base + ext for ext in ['', '.gz', '.bz2' ] ]
 if lzma is not None:
 	files.append(base + '.xz')
 
+def test_context_manager():
+	for name in files:
+		with xopen(name, 'rt') as f:
+			lines = list(f)
+			assert len(lines) == 12
+			assert lines[5] == 'AGCCGCTANGACGGGTTGGCCCTTAGACGTATCT\n', name
+			f.close()
+
+def test_append():
+	text = "AB"
+	reference = text + text
+	for ext in ["", ".gz"]:  # BZ2 does NOT support append
+		with temporary_path('truncated.fastq' + ext) as path:
+			try:
+				os.unlink(path)
+			except OSError:
+				pass
+			with xopen(path, 'a') as f:
+				f.write(text)
+			with xopen(path, 'a') as f:
+				f.write(text)
+			with xopen(path, 'r') as f:
+				print("hey")
+
+				for appended in f:
+					pass
+
+				assert appended == reference
+
 def test_xopen_text():
 	for name in files:
 		f = xopen(name, 'rt')
