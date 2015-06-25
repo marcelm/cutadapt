@@ -25,24 +25,30 @@ def test_context_manager():
 			f.close()
 
 def test_append():
-	text = "AB"
-	reference = text + text
 	for ext in ["", ".gz"]:  # BZ2 does NOT support append
+		text = "AB"
+		if ext != "":
+			text = text.encode("utf-8")  # On Py3, need to send BYTES, not unicode
+		reference = text + text
+		print("Trying ext=%s" % ext)
 		with temporary_path('truncated.fastq' + ext) as path:
 			try:
 				os.unlink(path)
 			except OSError:
 				pass
 			with xopen(path, 'a') as f:
-				f.write(text.decode('utf-8'))
+				f.write(text)
 			with xopen(path, 'a') as f:
-				f.write(text.decode('utf-8'))
+				f.write(text)
 			with xopen(path, 'r') as f:
-				print("hey")
-
 				for appended in f:
 					pass
-
+				try:
+					reference = reference.decode("utf-8")
+				except AttributeError:
+					pass
+				print(appended)
+				print(reference)
 				assert appended == reference
 
 def test_xopen_text():
