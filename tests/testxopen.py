@@ -15,6 +15,8 @@ if lzma is not None:
 
 def test_context_manager():
 	for name in files:
+		if sys.version_info.major == 2 and sys.version_info.minor == 6:
+			continue  # Py26 compression libraries do not support context manager protocol.
 		with xopen(name, 'rt') as f:
 			lines = list(f)
 			assert len(lines) == 12
