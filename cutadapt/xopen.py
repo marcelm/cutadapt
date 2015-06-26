@@ -29,8 +29,8 @@ else:
 
 
 class GzipWriter:
-	def __init__(self, path):
-		self.outfile = open(path, 'w')
+	def __init__(self, path, mode='w'):
+		self.outfile = open(path, mode)
 		try:
 			self.process = Popen(['gzip'], stdin=PIPE, stdout=self.outfile)
 		except IOError as e:
@@ -46,6 +46,11 @@ class GzipWriter:
 		if retcode != 0:
 			raise IOError("Output gzip process terminated with exit code {0}".format(retcode))
 
+	def __enter__(self):
+		return self
+
+	def __exit__(self, *exc_info):
+		self.close()
 
 class GzipReader:
 	def __init__(self, path):
@@ -80,6 +85,11 @@ class GzipReader:
 			self.process.wait()
 		self._raise_if_error()
 
+	def __enter__(self):
+		return self
+
+	def __exit__(self, *exc_info):
+		self.close()
 
 def xopen(filename, mode='r'):
 	"""
@@ -91,16 +101,18 @@ def xopen(filename, mode='r'):
 	the pipe to the gzip program). If the filename ends with .bz2, it's
 	opened as a bz2.BZ2File. Otherwise, the regular open() is used.
 
-	mode can be: 'rt', 'rb', 'wt', or 'wb'
+	mode can be: 'rt', 'rb', 'a', 'wt', or 'wb'
 	Instead of 'rt' and 'wt', 'r' and 'w' can be used as abbreviations.
 
 	In Python 2, the 't' and 'b' characters are ignored.
+
+	Append mode ('a') is unavailable with BZ2 compression and will raise an error.
 	"""
 	if mode == 'r':
 		mode = 'rt'
 	elif mode == 'w':
 		mode = 'wt'
-	if mode not in ('rt', 'rb', 'wt', 'wb'):
+	if mode not in ('rt', 'rb', 'wt', 'wb', 'a'):
 		raise ValueError("mode '{0}' not supported".format(mode))
 	if not PY3:
 		mode = mode[0]
@@ -150,7 +162,7 @@ def xopen(filename, mode='r'):
 					return buffered_reader(gzip.open(filename, mode))
 			else:
 				try:
-					return GzipWriter(filename)
+					return GzipWriter(filename, mode)
 				except IOError:
 					return buffered_writer(gzip.open(filename, mode))
 	else:
