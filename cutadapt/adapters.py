@@ -4,7 +4,12 @@ Adapters
 """
 from __future__ import print_function, division, absolute_import
 import sys
-import re
+import warnings
+try:
+    import re2 as re
+except ImportError:
+    warnings.warn("Note: re2 not available. Falling back to re.")
+    import re
 from collections import defaultdict
 from cutadapt import align, colorspace
 from cutadapt.seqio import ColorspaceSequence, FastaReader

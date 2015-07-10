@@ -1,6 +1,12 @@
 # coding: utf-8
 from __future__ import print_function, division, absolute_import
-import re
+import warnings
+try:
+    import re2 as re
+except ImportError:
+    warnings.warn("Note: re2 not available. Falling back to re.")
+    import re
+
 from cutadapt.qualtrim import quality_trim_index
 from cutadapt.compat import maketrans
 
