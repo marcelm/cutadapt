@@ -30,7 +30,10 @@ def out_of_date(extensions):
 			path, ext = os.path.splitext(pyx)
 			if ext not in ('.pyx', '.py'):
 				continue
-			csource = path + ('.cpp' if extension.language == 'c++' else '.c')
+			if extension.language == 'c++':
+				csource = path + '.cpp'
+			else:
+				csource = path + '.c'
 			if not os.path.exists(csource) or (
 				os.path.getmtime(pyx) > os.path.getmtime(csource)):
 				return True
