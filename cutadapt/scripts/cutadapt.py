@@ -137,26 +137,23 @@ class AdapterCutter(object):
 				best = match
 		return best
 
-	def _write_info(self, matches):
+	def _write_info(self, read):
 		"""
 		Write to the info, wildcard and rest files.
-		# TODO move to separate class
+		# TODO
+		# This design with a read having a .match attribute and
+		# a match having a .read attribute is really confusing.
 		"""
-		if self.rest_writer:
-			self.rest_writer.write(matches[-1])
+		match = read.match
+		if self.rest_writer and match:
+			self.rest_writer.write(match)
 
-		if self.wildcard_file:
-			for match in matches:
-				print(match.wildcards(), match.read.name, file=self.wildcard_file)
+		if self.wildcard_file and match:
+			print(match.wildcards(), read.name, file=self.wildcard_file)
 
-		if not self.info_file:
-			return
-		# TODO write only one line, even for multiple matches
-		for match in matches:
-			seq = match.read.sequence
-			if match is None:
-				print(match.read.name, -1, seq, sep='\t', file=self.info_file)
-			else:
+		if self.info_file:
+			if match:
+				seq = match.read.sequence
 				print(
 					match.read.name,
 					match.errors,
@@ -168,6 +165,9 @@ class AdapterCutter(object):
 					match.adapter.name,
 					sep='\t', file=self.info_file
 				)
+			else:
+				seq = read.sequence
+				print(read.name, -1, seq, sep='\t', file=self.info_file)
 
 	def __call__(self, read):
 		"""
@@ -185,34 +185,33 @@ class AdapterCutter(object):
 		matches = []
 
 		# try at most self.times times to remove an adapter
+		trimmed_read = read
 		for t in range(self.times):
-			match = self._best_match(read)
+			match = self._best_match(trimmed_read)
 			if match is None:
 				# nothing found
 				break
 			assert match.length > 0
 			assert match.errors / match.length <= match.adapter.max_error_rate
 			assert match.length - match.errors > 0
-
 			matches.append(match)
-			read = match.adapter.trimmed(match)
+			trimmed_read = match.adapter.trimmed(match)
+
+		trimmed_read.match = matches[-1] if matches else None
+		self._write_info(trimmed_read)
 
 		if not matches:
-			read.match = None
-			return read
+			return trimmed_read
 
 		if __debug__:
-			old_read = matches[0].read
-			assert len(read) < len(old_read), "Trimmed read isn't shorter than original"
-
-		self._write_info(matches)
+			assert len(trimmed_read) < len(read), "Trimmed read isn't shorter than original"
 
 		if self.action == 'trim':
 			# read is already trimmed, nothing to do
 			pass
 		elif self.action == 'mask':
 			# add N from last modification
-			masked_sequence = read.sequence
+			masked_sequence = trimmed_read.sequence
 			for match in sorted(matches, reverse=True, key=lambda m: m.astart):
 				ns = 'N' * (len(match.read.sequence) -
 							len(match.adapter.trimmed(match).sequence))
@@ -222,19 +221,17 @@ class AdapterCutter(object):
 				else:
 					masked_sequence += ns
 			# set masked sequence as sequence with original quality
-			read.sequence = masked_sequence
-			read.qualities = matches[0].read.qualities
-			read.match = matches[-1]
+			trimmed_read.sequence = masked_sequence
+			trimmed_read.qualities = matches[0].read.qualities
 
-			assert len(read.sequence) == len(old_read)
+			assert len(trimmed_read.sequence) == len(read)
 		elif self.action is None:
-			read = matches[0].read
-			read.match = matches[-1]
+			trimmed_read = read
+			trimmed_read.match = matches[-1]
 
 		self.reads_matched += 1  # TODO move to filter class
 
-		read.match = matches[-1]
-		return read
+		return trimmed_read
 
 
 def process_single_reads(reader, modifiers, writers):
