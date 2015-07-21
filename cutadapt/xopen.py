@@ -7,6 +7,7 @@ __author__ = 'Marcel Martin'
 import gzip
 import sys
 import io
+import os
 from subprocess import Popen, PIPE
 from .compat import PY3, basestring
 
@@ -31,10 +32,15 @@ else:
 class GzipWriter:
 	def __init__(self, path, mode='w'):
 		self.outfile = open(path, mode)
+		self.devnull = open(os.devnull, 'w')
 		try:
-			self.process = Popen(['gzip'], stdin=PIPE, stdout=self.outfile)
+			# Setting close_fds to True is necessary due to
+			# http://bugs.python.org/issue12786
+			self.process = Popen(['gzip'], stdin=PIPE, stdout=self.outfile,
+				stderr=self.devnull, close_fds=True)
 		except IOError as e:
 			self.outfile.close()
+			self.devnull.close()
 			raise
 
 	def write(self, arg):
@@ -43,6 +49,8 @@ class GzipWriter:
 	def close(self):
 		self.process.stdin.close()
 		retcode = self.process.wait()
+		self.outfile.close()
+		self.devnull.close()
 		if retcode != 0:
 			raise IOError("Output gzip process terminated with exit code {0}".format(retcode))
 
@@ -51,6 +59,7 @@ class GzipWriter:
 
 	def __exit__(self, *exc_info):
 		self.close()
+
 
 class GzipReader:
 	def __init__(self, path):
