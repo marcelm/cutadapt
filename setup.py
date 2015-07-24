@@ -34,8 +34,12 @@ def out_of_date(extensions):
 				csource = path + '.cpp'
 			else:
 				csource = path + '.c'
+			# When comparing modification times, allow five seconds slack:
+			# If the installation is being run from pip, modification
+			# times are not preserved and therefore depends on the order in
+			# which files were unpacked.
 			if not os.path.exists(csource) or (
-				os.path.getmtime(pyx) > os.path.getmtime(csource)):
+				os.path.getmtime(pyx) > os.path.getmtime(csource) + 5):
 				return True
 	return False
 
