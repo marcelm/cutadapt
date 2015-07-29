@@ -2,8 +2,16 @@
 Changes
 =======
 
+v1.8.3
+------
+
+* Fix issue #95: Untrimmed reads were not listed in the info file.
+* Fix issue #138: pip install cutadapt did not work with new setuptools versions.
+* Fix issue #137: Avoid a hang when writing to two or more gzip-compressed
+  output files in Python 2.6.
+
 v1.8.1
-----
+------
 
 * Fix #110: Counts for 'too short' and 'too long' reads were swapped in statistics.
 * Fix #115: Make ``--trim-n`` work also on second read for paired-end data.
