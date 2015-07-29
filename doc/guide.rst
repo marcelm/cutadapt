@@ -1080,7 +1080,7 @@ Format of the info file
 When the ``--info-file`` command-line parameter is given, detailed
 information about the found adapters is written to the given file. The
 output is a tab-separated text file. Each line corresponds to one read
-of the input file. The fields are:
+of the input file (unless `--times` is used, see below). The fields are:
 
 1. Read name
 2. Number of errors
@@ -1108,7 +1108,10 @@ consecutive tabs within a line.
 
 If the ``--times`` option is used and greater than 1, each read can appear
 more than once in the info file. There will be one line for each found adapter,
-all with identical read names.
+all with identical read names. Only for the first of those lines will the
+concatenation of columns 5-7 be identical to the original read sequence. For
+subsequent lines, the shown sequence are the ones that were used in subsequent
+rounds of adapter trimming, that is, they get successively shorter.
 
 
 .. _algorithm:

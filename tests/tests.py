@@ -210,12 +210,19 @@ def test_strip_suffix():
 	run("--strip-suffix _sequence -a XXXXXXX", "stripped.fasta", "simple.fasta")
 
 
-# note: the actual adapter sequence in the illumina.fastq.gz data set is
-# GCCTAACTTCTTAGACTGCCTTAAGGACGT (fourth base is different)
 def test_info_file():
+	# The true adapter sequence in the illumina.fastq.gz data set is
+	# GCCTAACTTCTTAGACTGCCTTAAGGACGT (fourth base is different)
+	#
 	with temporary_path("infotmp.txt") as infotmp:
 		run(["--info-file", infotmp, '-a', 'adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT'], "illumina.fastq", "illumina.fastq.gz")
 		assert files_equal(cutpath('illumina.info.txt'), infotmp)
+
+
+def test_info_file_times():
+	with temporary_path("infotmp.txt") as infotmp:
+		run(["--info-file", infotmp, '--times', '2', '-a', 'adapt=GCCGAACTTCTTA', '-a', 'adapt2=GACTGCCTTAAGGACGT'], "illumina5.fastq", "illumina5.fastq")
+		assert files_equal(cutpath('illumina5.info.txt'), infotmp)
 
 
 def test_named_adapter():

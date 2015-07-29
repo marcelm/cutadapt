@@ -137,7 +137,7 @@ class AdapterCutter(object):
 				best = match
 		return best
 
-	def _write_info(self, read):
+	def _write_info(self, read, matches):
 		"""
 		Write to the info, wildcard and rest files.
 		# TODO
@@ -153,18 +153,19 @@ class AdapterCutter(object):
 
 		if self.info_file:
 			if match:
-				seq = match.read.sequence
-				print(
-					match.read.name,
-					match.errors,
-					match.rstart,
-					match.rstop,
-					seq[0:match.rstart],
-					seq[match.rstart:match.rstop],
-					seq[match.rstop:],
-					match.adapter.name,
-					sep='\t', file=self.info_file
-				)
+				for m in matches:
+					seq = m.read.sequence
+					print(
+						m.read.name,
+						m.errors,
+						m.rstart,
+						m.rstop,
+						seq[0:m.rstart],
+						seq[m.rstart:m.rstop],
+						seq[m.rstop:],
+						m.adapter.name,
+						sep='\t', file=self.info_file
+					)
 			else:
 				seq = read.sequence
 				print(read.name, -1, seq, sep='\t', file=self.info_file)
@@ -198,7 +199,7 @@ class AdapterCutter(object):
 			trimmed_read = match.adapter.trimmed(match)
 
 		trimmed_read.match = matches[-1] if matches else None
-		self._write_info(trimmed_read)
+		self._write_info(trimmed_read, matches)
 
 		if not matches:
 			return trimmed_read
