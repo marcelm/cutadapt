@@ -340,13 +340,13 @@ def get_option_parser():
 			"from file name extension).")
 
 	group = OptionGroup(parser, "Options that influence how the adapters are found",
-		description="Each of the following three parameters (-a, -b, -g) can be used "
+		description="Each of the three parameters -a, -b, -g can be used "
 			"multiple times and in any combination to search for an entire set of "
 			"adapters of possibly different types. Only the best matching "
 			"adapter is trimmed from each read (but see the --times option). "
 			"Instead of giving an adapter directly, you can also write "
 			"file:FILE and the adapter sequences will be read from the given "
-			"FILE (which must be in FASTA format).")
+			"FASTA FILE.")
 	group.add_option("-a", "--adapter", action="append", default=[], metavar="ADAPTER",
 		dest="adapters",
 		help="Sequence of an adapter that was ligated to the 3' end. The "
@@ -432,13 +432,15 @@ def get_option_parser():
 		help="When the adapter matches in the middle of a read, write the "
 			"rest (after the adapter) into FILE.")
 	group.add_option("--wildcard-file", metavar="FILE",
-		help="When the adapter has wildcard bases ('N's), write adapter bases "
+		help="When the adapter has N bases (wildcards), write adapter bases "
 			"matching wildcard positions to FILE. When there are indels in the "
 			"alignment, this will often not be accurate.")
 	group.add_option("--too-short-output", metavar="FILE",
-		help="Write reads that are too short (according to length specified by -m) to FILE. (default: discard reads)")
+		help="Write reads that are too short (according to length specified by "
+		"-m) to FILE. (default: discard reads)")
 	group.add_option("--too-long-output", metavar="FILE",
-		help="Write reads that are too long (according to length specified by -M) to FILE. (default: discard reads)")
+		help="Write reads that are too long (according to length specified by "
+		"-M) to FILE. (default: discard reads)")
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
 		help="Write reads that do not contain the adapter to FILE. (default: "
 			"output to same file as trimmed reads)")
@@ -447,18 +449,19 @@ def get_option_parser():
 	group = OptionGroup(parser, "Additional modifications to the reads")
 	group.add_option("-u", "--cut", action='append', default=[], type=int, metavar="LENGTH",
 		help="Remove LENGTH bases from the beginning or end of each read. "
-			"If LENGTH is positive, the bases are removed from the beginning of each read. "
-			"If LENGTH is negative, the bases are removed from the end of each read. "
+			"If LENGTH is positive, bases are removed from the beginning of each read. "
+			"If LENGTH is negative, bases are removed from the end of each read. "
 			"This option can be specified twice if the LENGTHs have different signs.")
 	group.add_option("-q", "--quality-cutoff", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
 		help="Trim low-quality bases from 5' and/or 3' ends of reads before "
 			"adapter removal. If one value is given, only the 3' end is trimmed. "
 			"If two comma-separated cutoffs are given, the 5' end is trimmed with "
-			"the first cutoff, the 3' end with the second. The algorithm is the "
-			"same as the one used by BWA (see documentation). (default: no trimming)")
+			"the first cutoff, the 3' end with the second. See documentation for "
+			"the algorithm. (default: no trimming)")
 	group.add_option("--quality-base", type=int, default=33,
-		help="Assume that quality values are encoded as ascii(quality + QUALITY_BASE). The default (33) is usually correct, "
-			 "except for reads produced by some versions of the Illumina pipeline, where this should be set to 64. (Default: %default)")
+		help="Assume that quality values in FASTQ are encoded as ascii(quality "
+			"+ QUALITY_BASE). This needs to be set to 64 for some old Illumina "
+			"FASTQ files. Default: %default")
 	group.add_option("--trim-n", action='store_true', default=False,
 		help="Trim N's on ends of reads.")
 	group.add_option("-x", "--prefix", default='',
@@ -467,28 +470,29 @@ def get_option_parser():
 		help="Add this suffix to read names")
 	group.add_option("--strip-suffix", action='append', default=[],
 		help="Remove this suffix from read names if present. Can be given multiple times.")
-	group.add_option("-c", "--colorspace", action='store_true', default=False,
-		help="Colorspace mode: Also trim the color that is adjacent to the found adapter.")
-	group.add_option("-d", "--double-encode", action='store_true', default=False,
-		help="When in colorspace, double-encode colors (map 0,1,2,3,4 to A,C,G,T,N).")
-	group.add_option("-t", "--trim-primer", action='store_true', default=False,
-		help="When in colorspace, trim primer base and the first color "
-			"(which is the transition to the first nucleotide)")
-	group.add_option("--strip-f3", action='store_true', default=False,
-		help="For colorspace: Strip the _F3 suffix of read names")
-	group.add_option("--maq", "--bwa", action='store_true', default=False,
-		help="MAQ- and BWA-compatible colorspace output. This enables -c, -d, -t, --strip-f3 and -y '/1'.")
 	group.add_option("--length-tag", metavar="TAG",
 		help="Search for TAG followed by a decimal number in the description "
 			"field of the read. Replace the decimal number with the correct "
 			"length of the trimmed read. For example, use --length-tag 'length=' "
 			"to correct fields like 'length=123'.")
+
+	group = OptionGroup(parser, "Colorspace options")
+	group.add_option("-c", "--colorspace", action='store_true', default=False,
+		help="Enable colorspace mode: Also trim the color that is adjacent to the found adapter.")
+	group.add_option("-d", "--double-encode", action='store_true', default=False,
+		help="Double-encode colors (map 0,1,2,3,4 to A,C,G,T,N).")
+	group.add_option("-t", "--trim-primer", action='store_true', default=False,
+		help="Trim primer base and the first color (which is the transition "
+			"to the first nucleotide)")
+	group.add_option("--strip-f3", action='store_true', default=False,
+		help="Strip the _F3 suffix of read names")
+	group.add_option("--maq", "--bwa", action='store_true', default=False,
+		help="MAQ- and BWA-compatible colorspace output. This enables -c, -d, "
+			"-t, --strip-f3 and -y '/1'.")
 	group.add_option("--no-zero-cap", dest='zero_cap', action='store_false',
-		help="Do not change negative quality values to zero. Colorspace "
-			"quality values of -1 would appear as spaces in the output FASTQ "
-			"file. Since many tools have problems with that, negative qualities "
-			"are converted to zero when trimming colorspace data. Use this "
-			"option to keep negative qualities.")
+		help="Do not change negative quality values to zero in colorspace "
+			"data. By default, they are changed to zero since many tools have "
+			"problems with negative qualities.")
 	group.add_option("--zero-cap", "-z", action='store_true',
 		help="Change negative quality values to zero. This is enabled "
 		"by default when -c/--colorspace is also enabled. Use the above option "
@@ -496,7 +500,7 @@ def get_option_parser():
 	parser.set_defaults(zero_cap=None, action='trim')
 	parser.add_option_group(group)
 
-	group = OptionGroup(parser, "Paired-end options.", description="The "
+	group = OptionGroup(parser, "Paired-end options", description="The "
 		"-A/-G/-B/-U options work like their -a/-b/-g/-u counterparts.")
 	group.add_option("-A", dest='adapters2', action='append', default=[], metavar='ADAPTER',
 		help="3' adapter to be removed from the second read in a pair.")
