@@ -334,6 +334,8 @@ def trimmed_and_untrimmed_files(
 def get_option_parser():
 	parser = CutadaptOptionParser(usage=__doc__, version=__version__)
 
+	parser.add_option("--debug", action='store_true', default=False,
+		help="Print debugging information.")
 	parser.add_option("-f", "--format",
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files (default: auto-detect "
@@ -719,6 +721,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 				adapter = ADAPTER_CLASS(seq, where, options.error_rate,
 					options.overlap, options.match_read_wildcards,
 					options.match_adapter_wildcards, name=name, indels=options.indels)
+				if options.debug:
+					adapter.enable_debug()
 				adapters.append(adapter)
 			return adapters
 

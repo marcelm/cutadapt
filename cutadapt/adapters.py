@@ -159,6 +159,7 @@ class Adapter(object):
 	def __init__(self, sequence, where, max_error_rate, min_overlap=3,
 			read_wildcards=False, adapter_wildcards=True,
 			name=None, indels=True):
+		self.debug = False
 		if name is None:
 			self.name = str(self.__class__.automatic_name)
 			self.__class__.automatic_name += 1
@@ -212,6 +213,14 @@ class Adapter(object):
 			'indels={indels})>'.format(
 				read_wildcards=read_wildcards,
 				**vars(self))
+
+	def enable_debug(self):
+		"""
+		Print out the dynamic programming matrix after matching a read to an
+		adapter.
+		"""
+		self.debug = True
+		self.aligner.enable_debug()
 
 	@staticmethod
 	def parse_braces(sequence):
@@ -288,6 +297,8 @@ class Adapter(object):
 					match = None
 			else:
 				alignment = self.aligner.locate(read_seq)
+				if self.debug:
+					print(self.aligner.dpmatrix)
 				if alignment is None:
 					match = None
 				else:
@@ -359,6 +370,8 @@ class ColorspaceAdapter(Adapter):
 			# try approximate matching
 			self.aligner.reference = asequence
 			alignment = self.aligner.locate(read.sequence)
+			if self.debug:
+				print(self.aligner.dpmatrix)
 			if alignment is not None:
 				match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
 			else:
