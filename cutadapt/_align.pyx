@@ -89,6 +89,40 @@ cdef bytes ACGT_TABLE = _acgt_table()
 cdef bytes IUPAC_TABLE = _iupac_table()
 
 
+class DPMatrix:
+	"""
+	Representation of the dynamic-programming matrix.
+
+	This used only when debugging is enabled in the Aligner class since the
+	matrix is normally not stored in full.
+
+	Entries in the matrix may be None, in which case that value was not
+	computed.
+	"""
+	def __init__(self, reference, query):
+		m = len(reference)
+		n = len(query)
+		self._rows = [ [None] * (n+1) for _ in range(m + 1) ]
+		self.reference = reference
+		self.query = query
+
+	def set_entry(self, int i, int j, cost):
+		"""
+		Set an entry in the dynamic programming matrix.
+		"""
+		self._rows[i][j] = cost
+
+	def __str__(self):
+		"""
+		Return a representation of the matrix as a string.
+		"""
+		rows = ['     ' + ' '.join(c.rjust(2) for c in self.query)]
+		for c, row in zip(' ' + self.reference, self._rows):
+			r = c + ' ' + ' '.join('  ' if v is None else '{0:2d}'.format(v) for v in row)
+			rows.append(r)
+		return '\n'.join(rows)
+
+
 cdef class Aligner:
 	"""
 	TODO documentation still uses s1 (reference) and s2 (query).
@@ -158,17 +192,23 @@ cdef class Aligner:
 	cdef int min_overlap
 	cdef bint wildcard_ref
 	cdef bint wildcard_query
-	cdef bytes _reference
+	cdef bint debug
+	cdef object _dpmatrix
+	cdef bytes _reference  # TODO rename to translated_reference or so
+	cdef str str_reference
 
 	def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0, int min_overlap=1):
 		self.max_error_rate = max_error_rate
 		self.flags = flags
 		self.wildcard_ref = degenerate & ALLOW_WILDCARD_SEQ1
 		self.wildcard_query = degenerate & ALLOW_WILDCARD_SEQ2
+		self.str_reference = reference
 		self.reference = reference
 		if min_overlap < 1:
 			raise ValueError("minimum overlap must be at least 1")
 		self.min_overlap = min_overlap
+		self.debug = False
+		self._dpmatrix = None
 
 	property reference:
 		def __get__(self):
@@ -185,6 +225,18 @@ cdef class Aligner:
 				self._reference = self._reference.translate(IUPAC_TABLE)
 			elif self.wildcard_query:
 				self._reference = self._reference.translate(ACGT_TABLE)
+			self.str_reference = reference
+
+	property dpmatrix:
+		def __get__(self):
+			return self._dpmatrix
+
+	def enable_debug(self):
+		"""
+		Store the dynamic programming matrix while running the locate() method
+		and make it available in the .dpmatrix attribute.
+		"""
+		self.debug = True
 
 	def locate(self, str query):
 		"""
@@ -254,26 +306,30 @@ cdef class Aligner:
 		# TODO (later)
 		# fill out columns only until 'last'
 		if not start_in_ref and not start_in_query:
-			for i in range(0, m + 1):
+			for i in range(m + 1):
 				column[i].matches = 0
 				column[i].cost = max(i, min_n)
 				column[i].origin = 0
 		elif start_in_ref and not start_in_query:
-			for i in range(0, m + 1):
+			for i in range(m + 1):
 				column[i].matches = 0
 				column[i].cost = min_n
 				column[i].origin = min(0, min_n - i)
 		elif not start_in_ref and start_in_query:
-			for i in range(0, m + 1):
+			for i in range(m + 1):
 				column[i].matches = 0
 				column[i].cost = i
 				column[i].origin = max(0, min_n - i)
 		else:
-			for i in range(0, m + 1):
+			for i in range(m + 1):
 				column[i].matches = 0
 				column[i].cost = min(i, min_n)
 				column[i].origin = min_n - i
 
+		if self.debug:
+			self._dpmatrix = DPMatrix(self.str_reference, query)
+			for i in range(m + 1):
+				self._dpmatrix.set_entry(i, min_n, column[i].cost)
 		cdef _Match best
 		best.ref_stop = m
 		best.query_stop = n
@@ -342,6 +398,9 @@ cdef class Aligner:
 				column[i].cost = cost
 				column[i].origin = origin
 				column[i].matches = matches
+			if self.debug:
+				for i in range(last + 1):
+					self._dpmatrix.set_entry(i, j, column[i].cost)
 			while last >= 0 and column[last].cost > k:
 				last -= 1
 			# last can be -1 here, but will be incremented next.
@@ -380,7 +439,6 @@ cdef class Aligner:
 					best.origin = column[i].origin
 					best.ref_stop = i
 					best.query_stop = n
-
 		if best.cost == m + n:
 			# best.cost was initialized with this value.
 			# If it is unchanged, no alignment was found that has
