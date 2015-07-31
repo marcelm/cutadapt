@@ -201,6 +201,10 @@ def test_anchored_back_no_indels():
 	run("-a BACKADAPTER$ -N --no-indels", "anchored-back.fasta", "anchored-back.fasta")
 
 
+def test_no_indels():
+	run('-a TTAGACATAT -g GAGATTGCCA --no-indels', 'no_indels.fasta', 'no_indels.fasta')
+
+
 def test_issue_46():
 	'''issue 46 - IndexError with --wildcard-file'''
 	with temporary_path("wildcardtmp.txt") as wildcardtmp:

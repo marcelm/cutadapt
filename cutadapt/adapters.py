@@ -173,7 +173,6 @@ class Adapter(object):
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
 		self.indels = indels
-		assert where in (PREFIX, SUFFIX) or self.indels
 		self.wildcard_flags = 0
 		self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set('ACGT')
 		if read_wildcards:
@@ -203,6 +202,11 @@ class Adapter(object):
 		self.aligner = align.Aligner(self.sequence, self.max_error_rate,
 			flags=self.where, degenerate=self.wildcard_flags)
 		self.aligner.min_overlap = self.min_overlap
+		if not self.indels:
+			# TODO
+			# When indels are disallowed, an entirely different algorithm
+			# should be used.
+			self.aligner.indel_cost = 100000
 
 	def __repr__(self):
 		read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)
@@ -284,8 +288,7 @@ class Adapter(object):
 				len(self.sequence), 0, self._front_flag, self, read)
 		else:
 			# try approximate matching
-			if not self.indels:
-				assert self.where in (PREFIX, SUFFIX)
+			if not self.indels and self.where in (PREFIX, SUFFIX):
 				if self.where == PREFIX:
 					alignment = align.compare_prefixes(self.sequence, read_seq, self.wildcard_flags)
 				else:

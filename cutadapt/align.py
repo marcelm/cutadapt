@@ -4,8 +4,6 @@ Alignment module.
 """
 from __future__ import print_function, division, absolute_import
 
-import sys
-
 from cutadapt._align import Aligner, compare_prefixes, locate
 
 # flags for global alignment

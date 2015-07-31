@@ -376,8 +376,7 @@ def get_option_parser():
 			"of the matching region) (default: %default)")
 	group.add_option("--no-indels", action='store_false', dest='indels', default=True,
 		help="Do not allow indels in the alignments (allow only mismatches). "
-			"Currently only supported for anchored adapters. (default: allow "
-			"both mismatches and indels)")
+			"(default: allow both mismatches and indels)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
 		help="Try to remove adapters at most COUNT times. Useful when an "
 			"adapter gets appended multiple times (default: %default).")
@@ -716,8 +715,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			for name, seq, where in gather_adapters(back, anywhere, front):
 				if not seq:
 					parser.error("The adapter sequence is empty.")
-				if not options.indels and where not in (PREFIX, SUFFIX):
-					parser.error("Not allowing indels is currently supported only for anchored 5' and 3' adapters.")
 				adapter = ADAPTER_CLASS(seq, where, options.error_rate,
 					options.overlap, options.match_read_wildcards,
 					options.match_adapter_wildcards, name=name, indels=options.indels)
