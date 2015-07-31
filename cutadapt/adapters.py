@@ -201,8 +201,8 @@ class Adapter(object):
 		self.adjacent_bases = { 'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0 }
 
 		self.aligner = align.Aligner(self.sequence, self.max_error_rate,
-			flags=self.where, degenerate=self.wildcard_flags,
-			min_overlap=self.min_overlap)
+			flags=self.where, degenerate=self.wildcard_flags)
+		self.aligner.min_overlap = self.min_overlap
 
 	def __repr__(self):
 		read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)

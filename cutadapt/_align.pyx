@@ -189,7 +189,7 @@ cdef class Aligner:
 	cdef _Entry* column  # one column of the DP matrix
 	cdef double max_error_rate
 	cdef int flags
-	cdef int min_overlap
+	cdef int _min_overlap
 	cdef bint wildcard_ref
 	cdef bint wildcard_query
 	cdef bint debug
@@ -197,18 +197,25 @@ cdef class Aligner:
 	cdef bytes _reference  # TODO rename to translated_reference or so
 	cdef str str_reference
 
-	def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0, int min_overlap=1):
+	def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0):
 		self.max_error_rate = max_error_rate
 		self.flags = flags
 		self.wildcard_ref = degenerate & ALLOW_WILDCARD_SEQ1
 		self.wildcard_query = degenerate & ALLOW_WILDCARD_SEQ2
 		self.str_reference = reference
 		self.reference = reference
-		if min_overlap < 1:
-			raise ValueError("minimum overlap must be at least 1")
-		self.min_overlap = min_overlap
+		self._min_overlap = 1
 		self.debug = False
 		self._dpmatrix = None
+
+	property min_overlap:
+		def __get__(self):
+			return self._min_overlap
+
+		def __set__(self, int value):
+			if value < 1:
+				raise ValueError("minimum overlap must be at least 1")
+			self._min_overlap = value
 
 	property reference:
 		def __get__(self):
@@ -228,6 +235,10 @@ cdef class Aligner:
 			self.str_reference = reference
 
 	property dpmatrix:
+		"""
+		The dynamic programming matrix as a DPMatrix object. This attribute is
+		usually None, unless debugging has been enabled with enable_debug().
+		"""
 		def __get__(self):
 			return self._dpmatrix
 
@@ -413,7 +424,7 @@ cdef class Aligner:
 				length = m + min(column[m].origin, 0)
 				cost = column[m].cost
 				matches = column[m].matches
-				if length >= self.min_overlap and cost <= length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
+				if length >= self._min_overlap and cost <= length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
 					# update
 					best.matches = matches
 					best.cost = cost
@@ -432,7 +443,7 @@ cdef class Aligner:
 				length = i + min(column[i].origin, 0)
 				cost = column[i].cost
 				matches = column[i].matches
-				if length >= self.min_overlap and cost <= length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
+				if length >= self._min_overlap and cost <= length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
 					# update best
 					best.matches = matches
 					best.cost = cost
@@ -461,7 +472,8 @@ cdef class Aligner:
 
 
 def locate(str reference, str query, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0, int min_overlap=1):
-	aligner = Aligner(reference, max_error_rate, flags, degenerate, min_overlap)
+	aligner = Aligner(reference, max_error_rate, flags, degenerate)
+	aligner.min_overlap = min_overlap
 	return aligner.locate(query)
 
 
