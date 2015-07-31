@@ -330,22 +330,22 @@ cdef class Aligner:
 		if not start_in_ref and not start_in_query:
 			for i in range(m + 1):
 				column[i].matches = 0
-				column[i].cost = max(i, min_n)
+				column[i].cost = max(i, min_n) * self._insertion_cost
 				column[i].origin = 0
 		elif start_in_ref and not start_in_query:
 			for i in range(m + 1):
 				column[i].matches = 0
-				column[i].cost = min_n
+				column[i].cost = min_n * self._insertion_cost
 				column[i].origin = min(0, min_n - i)
 		elif not start_in_ref and start_in_query:
 			for i in range(m + 1):
 				column[i].matches = 0
-				column[i].cost = i
+				column[i].cost = i * self._insertion_cost
 				column[i].origin = max(0, min_n - i)
 		else:
 			for i in range(m + 1):
 				column[i].matches = 0
-				column[i].cost = min(i, min_n)
+				column[i].cost = min(i, min_n) * self._insertion_cost
 				column[i].origin = min_n - i
 
 		if self.debug:
