@@ -8,10 +8,6 @@ DEF SEMIGLOBAL = 15
 DEF ALLOW_WILDCARD_SEQ1 = 1
 DEF ALLOW_WILDCARD_SEQ2 = 2
 
-DEF INSERTION_COST = 1
-DEF DELETION_COST = 1
-DEF MATCH_COST = 0
-DEF MISMATCH_COST = 1
 DEF WILDCARD_CHAR = 'N'
 
 # structure for a DP matrix entry
@@ -189,6 +185,8 @@ cdef class Aligner:
 	cdef _Entry* column  # one column of the DP matrix
 	cdef double max_error_rate
 	cdef int flags
+	cdef int _insertion_cost
+	cdef int _deletion_cost
 	cdef int _min_overlap
 	cdef bint wildcard_ref
 	cdef bint wildcard_query
@@ -207,6 +205,8 @@ cdef class Aligner:
 		self._min_overlap = 1
 		self.debug = False
 		self._dpmatrix = None
+		self._insertion_cost = 1
+		self._deletion_cost = 1
 
 	property min_overlap:
 		def __get__(self):
@@ -214,8 +214,19 @@ cdef class Aligner:
 
 		def __set__(self, int value):
 			if value < 1:
-				raise ValueError("minimum overlap must be at least 1")
+				raise ValueError('Minimum overlap must be at least 1')
 			self._min_overlap = value
+
+	property indel_cost:
+		"""
+		Matches cost 0, mismatches cost 1. Only insertion/deletion costs can be
+		changed.
+		"""
+		def __set__(self, value):
+			if value < 1:
+				raise ValueError('Insertion/deletion cost must be at leat 1')
+			self._insertion_cost = value
+			self._deletion_cost = value
 
 	property reference:
 		def __get__(self):
@@ -370,7 +381,7 @@ cdef class Aligner:
 			if start_in_query:
 				column[0].origin = j
 			else:
-				column[0].cost = j * INSERTION_COST
+				column[0].cost = j * self._insertion_cost
 			for i in range(1, last + 1):
 				if compare_ascii:
 					characters_equal = (s1[i-1] == s2[j-1])
@@ -384,8 +395,8 @@ cdef class Aligner:
 				else:
 					# Characters do not match.
 					cost_diag = tmp_entry.cost + 1
-					cost_deletion = column[i].cost + DELETION_COST
-					cost_insertion = column[i-1].cost + INSERTION_COST
+					cost_deletion = column[i].cost + self._deletion_cost
+					cost_insertion = column[i-1].cost + self._insertion_cost
 
 					if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
 						# MISMATCH
