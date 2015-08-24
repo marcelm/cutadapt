@@ -456,7 +456,7 @@ def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None):
 		elif fileformat == 'sra-fastq' and colorspace:
 			return SRAColorspaceFastqReader(file1)
 		else:
-			raise UnknownFileType("File format {0} is unknown (expected "
+			raise UnknownFileType("File format {0!r} is unknown (expected "
 				"'sra-fastq' (only for colorspace), 'fasta' or 'fastq').".format(fileformat))
 
 	name = None
@@ -482,8 +482,8 @@ def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None):
 		elif ext in ['.fastq', '.fq'] or (ext == '.txt' and name.endswith('_sequence')):
 			return fastq_reader(file1)
 		else:
-			raise UnknownFileType("Could not determine whether this is FASTA "
-				"or FASTQ: file name extension {0} not recognized".format(ext))
+			raise UnknownFileType("Could not determine whether file {0!r} is FASTA "
+				"or FASTQ: file name extension {1!r} not recognized".format(file1, ext))
 
 	# No name available.
 	# autodetect type by reading from the file
