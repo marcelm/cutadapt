@@ -6,10 +6,13 @@ v1.9 (work in progress)
 -----------------------
 
 * Indels in the alignment can now be disabled for all adapter types (use
-  `--no-indels').
-* The new `--debug` switch makes cutadapt print out the alignment matrix.
-* Issue #144: Quality values are now printed in the info file (`--info-file`)
+  ``--no-indels``).
+* The new ``--debug`` switch makes cutadapt print out the alignment matrix.
+* Issue #144: Quality values are now printed in the info file (``--info-file``)
   when trimming FASTQ files.
+* Issue #104: Options ``--prefix`` and ``--suffix``, which modify read names,
+  now accept the placeholder ``{name}`` and will replace it with the name of the
+  found adapter.
 
 v1.8.3
 ------

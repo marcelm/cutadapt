@@ -61,7 +61,9 @@ class PrefixSuffixAdder(object):
 
 	def __call__(self, read):
 		read = read[:]
-		read.name = self.prefix + read.name + self.suffix
+		adapter_name = 'no_adapter' if read.match is None else read.match.adapter.name
+		read.name = self.prefix.replace('{name}', adapter_name) + read.name + \
+			self.suffix.replace('{name}', adapter_name)
 		return read
 
 

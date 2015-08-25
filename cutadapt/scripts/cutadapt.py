@@ -385,8 +385,7 @@ def get_option_parser():
 		help="Do not allow indels in the alignments (allow only mismatches). "
 			"(default: allow both mismatches and indels)")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
-		help="Try to remove adapters at most COUNT times. Useful when an "
-			"adapter gets appended multiple times (default: %default).")
+		help="Remove up to COUNT adapters from each read (default: %default)")
 	group.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
 		help="Minimum overlap length. If the overlap between the read and the "
 			"adapter is shorter than LENGTH, the read is not modified. "
@@ -401,9 +400,8 @@ def get_option_parser():
 
 	group = OptionGroup(parser, "Options for filtering of processed reads")
 	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
-		help="Discard reads that contain the adapter instead of trimming them. "
-			"Also use -O in order to avoid throwing away too many randomly "
-			"matching reads!")
+		help="Discard reads that contain an adapter. Also use -O to avoid "
+			"discarding too many randomly matching reads!")
 	group.add_option("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
 		help="Discard reads that do not contain the adapter.")
 	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
@@ -473,9 +471,9 @@ def get_option_parser():
 	group.add_option("--trim-n", action='store_true', default=False,
 		help="Trim N's on ends of reads.")
 	group.add_option("-x", "--prefix", default='',
-		help="Add this prefix to read names")
+		help="Add this prefix to read names. Use {name} to insert the name of the matching adapter.")
 	group.add_option("-y", "--suffix", default='',
-		help="Add this suffix to read names")
+		help="Add this suffix to read names; can also include {name}")
 	group.add_option("--strip-suffix", action='append', default=[],
 		help="Remove this suffix from read names if present. Can be given multiple times.")
 	group.add_option("--length-tag", metavar="TAG",
@@ -512,11 +510,11 @@ def get_option_parser():
 	group = OptionGroup(parser, "Paired-end options", description="The "
 		"-A/-G/-B/-U options work like their -a/-b/-g/-u counterparts.")
 	group.add_option("-A", dest='adapters2', action='append', default=[], metavar='ADAPTER',
-		help="3' adapter to be removed from the second read in a pair.")
+		help="3' adapter to be removed from second read in a pair.")
 	group.add_option("-G", dest='front2', action='append', default=[], metavar='ADAPTER',
-		help="5' adapter to be removed from the second read in a pair.")
+		help="5' adapter to be removed from second read in a pair.")
 	group.add_option("-B", dest='anywhere2', action='append', default=[], metavar='ADAPTER',
-		help="5'/3 adapter to be removed from the second read in a pair.")
+		help="5'/3 adapter to be removed from second read in a pair.")
 	group.add_option("-U", dest='cut2', action='append', default=[], type=int, metavar="LENGTH",
 		help="Remove LENGTH bases from the beginning or end of each read (see --cut).")
 	group.add_option("-p", "--paired-output", metavar="FILE",

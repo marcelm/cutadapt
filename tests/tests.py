@@ -147,7 +147,7 @@ def test_gz_multiblock():
 
 def test_suffix():
 	'''-y/--suffix parameter, combined with _F3'''
-	run("-c -e 0.12 -a 330201030313112312 -y _my_suffix --strip-f3", "suffix.fastq", "solid.csfasta", 'solid.qual')
+	run("-c -e 0.12 -a 1=330201030313112312 -y _my_suffix_{name} --strip-f3", "suffix.fastq", "solid.csfasta", 'solid.qual')
 
 def test_read_wildcard():
 	'''test wildcards in reads'''

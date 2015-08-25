@@ -747,6 +747,39 @@ abbreviated)::
     cutadapt -a file:barcodes.fasta --no-trim --untrimmed-o untrimmed.fastq.gz -o trimmed-{name}.fastq.gz input.fastq.gz
 
 
+Modifying read names
+--------------------
+
+If you feel the need to modify the names of processed reads, some of the
+following options may be useful.
+
+Use ``-y`` or ``--suffix`` to append a text to read names. The given string can
+contain the placeholder ``{name}``, which will be replaced with the name of the
+adapter found in that read. For example, writing ::
+
+    cutadapt -a adapter1=ACGT -y ' we found {name}' input.fastq
+
+changes a read named ``read1`` to ``read1 we found adapter1`` if the adapter
+``ACGT`` was found. The options ``-x``/``--prefix`` work the same, but the text
+is added in front of the read name. For both options, spaces need to be
+specified explicitly, as in the above example. If no adapter was found in a
+read, the text ``no_adapter`` is inserted for ``{name}``.
+
+In order to remove a suffix of each read name, use ``--strip-suffix``.
+
+Some old 454 read files contain the length of the read in the name::
+
+    >read1 length=17
+    ACGTACGTACAAAAAAA
+
+If you want to update this to the correct length after trimming, use the option
+``--length-tag``. In this example, this would be ``--length-tag 'length='``.
+After trimming, the read would then perhaps look like this::
+
+    >read1 length=10
+    ACGTACGTAC
+
+
 .. _more-than-one:
 
 Trimming more than one adapter from each read
