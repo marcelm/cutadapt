@@ -229,6 +229,12 @@ def test_info_file_times():
 		assert files_equal(cutpath('illumina5.info.txt'), infotmp)
 
 
+def test_info_file_fasta():
+	with temporary_path("infotmp.txt") as infotmp:
+		# Just make sure that it runs
+		run(['--info-file', infotmp, '-a', 'TTAGACATAT', '-g', 'GAGATTGCCA', '--no-indels'], 'no_indels.fasta', 'no_indels.fasta')
+
+
 def test_named_adapter():
 	run("-a MY_ADAPTER=GCCGAACTTCTTAGACTGCCTTAAGGACGT", "illumina.fastq", "illumina.fastq.gz")
 

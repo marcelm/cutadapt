@@ -155,6 +155,9 @@ class AdapterCutter(object):
 			if match:
 				for m in matches:
 					seq = m.read.sequence
+					qualities = m.read.qualities
+					if qualities is None:
+						qualities = ''
 					print(
 						m.read.name,
 						m.errors,
@@ -164,11 +167,15 @@ class AdapterCutter(object):
 						seq[m.rstart:m.rstop],
 						seq[m.rstop:],
 						m.adapter.name,
+						qualities[0:m.rstart],
+						qualities[m.rstart:m.rstop],
+						qualities[m.rstop:],
 						sep='\t', file=self.info_file
 					)
 			else:
 				seq = read.sequence
-				print(read.name, -1, seq, sep='\t', file=self.info_file)
+				qualities = read.qualities if read.qualities is not None else ''
+				print(read.name, -1, seq, qualities, sep='\t', file=self.info_file)
 
 	def __call__(self, read):
 		"""

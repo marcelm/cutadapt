@@ -8,6 +8,8 @@ v1.9 (work in progress)
 * Indels in the alignment can now be disabled for all adapter types (use
   `--no-indels').
 * The new `--debug` switch makes cutadapt print out the alignment matrix.
+* Issue #144: Quality values are now printed in the info file (`--info-file`)
+  when trimming FASTQ files.
 
 v1.8.3
 ------

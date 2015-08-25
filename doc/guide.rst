@@ -1090,28 +1090,34 @@ of the input file (unless `--times` is used, see below). The fields are:
 6. Sequence of the read that was matched to the adapter
 7. Sequence of the read to the right of the adapter match (can be empty)
 8. Name of the found adapter.
+9. Quality values corresponding to sequence left of the adapter match (can be empty)
+10. Quality values corresponding to sequence matched to the adapter (can be empty)
+11. Quality values corresponding to sequence to the right of the adapter match (can be empty)
 
-The concatenation of the fields 5-7 yields the full read sequence. Column 8
-identifies the found adapter. `The section about named
-adapters <named-adapters>` describes how to give a name to an adapter. Adapters
-without a name are numbered starting from 1.
+The concatenation of the fields 5-7 yields the full read sequence. Column 8 identifies
+the found adapter. `The section about named adapters <named-adapters>` describes
+how to give a name to an adapter. Adapters without a name are numbered starting
+from 1. Fields 9-11 are empty if quality values are not available.
+Concatenating them yields the full sequence of quality values.
 
 If no adapter was found, the format is as follows:
 
-1.  Read name
-2.  The value -1
-3.  The read sequence
+1. Read name
+2. The value -1
+3. The read sequence
+4. Quality values
 
-When parsing that file, be aware that additional columns may be added in
+When parsing the file, be aware that additional columns may be added in
 the future. Note also that some fields can be empty, resulting in
 consecutive tabs within a line.
 
 If the ``--times`` option is used and greater than 1, each read can appear
 more than once in the info file. There will be one line for each found adapter,
 all with identical read names. Only for the first of those lines will the
-concatenation of columns 5-7 be identical to the original read sequence. For
-subsequent lines, the shown sequence are the ones that were used in subsequent
-rounds of adapter trimming, that is, they get successively shorter.
+concatenation of columns 5-7 be identical to the original read sequence (and
+accordingly for columns 9-11). For subsequent lines, the shown sequence are the
+ones that were used in subsequent rounds of adapter trimming, that is, they get
+successively shorter.
 
 
 .. _algorithm:
@@ -1149,8 +1155,8 @@ of *x* mean? Is that good or bad? How should a threshold be chosen in order to
 avoid finding alignments with too many errors?
 
 For cutadapt, the adapter alignment algorithm uses *unit costs* instead.
-Mismatches, insertions and deletions are therefore counted as one error, which
-is easier to understand and always to specify a single parameter for the
+This means that mismatches, insertions and deletions are counted as one error, which
+is easier to understand and allows to specify a single parameter for the
 algorithm (the maximum error rate) in order to describe how many errors are
 acceptable.
 
