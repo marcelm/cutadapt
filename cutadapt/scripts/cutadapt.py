@@ -454,7 +454,7 @@ def get_option_parser():
 			"output to same file as trimmed reads)")
 	parser.add_option_group(group)
 
-	group = OptionGroup(parser, "Additional modifications to the reads")
+	group = OptionGroup(parser, "Additional read modifications")
 	group.add_option("-u", "--cut", action='append', default=[], type=int, metavar="LENGTH",
 		help="Remove LENGTH bases from the beginning or end of each read. "
 			"If LENGTH is positive, bases are removed from the beginning of each read. "
@@ -483,6 +483,7 @@ def get_option_parser():
 			"field of the read. Replace the decimal number with the correct "
 			"length of the trimmed read. For example, use --length-tag 'length=' "
 			"to correct fields like 'length=123'.")
+	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Colorspace options")
 	group.add_option("-c", "--colorspace", action='store_true', default=False,
