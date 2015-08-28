@@ -751,7 +751,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
 
-	# Create the processing pipeline consisting of a list of "modifiers".
+	# Create the single-end processing pipeline (a list of "modifiers")
 	modifiers = []
 	if options.cut:
 		if len(options.cut) > 2:
@@ -772,7 +772,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	else:
 		adapter_cutter = None
 
-	# Modifiers that apply to both reads of paired-end reads
+	# Modifiers that apply to both reads of paired-end reads unless in legacy mode
 	modifiers_both = []
 	if options.trim_n:
 		modifiers_both.append(NEndTrimmer())
@@ -827,6 +827,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		len(adapters) + len(adapters2), 's' if len(adapters) + len(adapters2) != 1 else '',
 		options.error_rate * 100,
 		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
+
+	if paired == 'first' and (modifiers_both or cutoffs):
+		logger.warn('Note: Requested read modifications are applied only to the first '
+			'read since paired-end legacy mode is active.')
 
 	start_time = time.clock()
 	try:
