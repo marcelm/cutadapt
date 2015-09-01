@@ -516,7 +516,7 @@ def get_option_parser():
 	group.add_option("-B", dest='anywhere2', action='append', default=[], metavar='ADAPTER',
 		help="5'/3 adapter to be removed from second read in a pair.")
 	group.add_option("-U", dest='cut2', action='append', default=[], type=int, metavar="LENGTH",
-		help="Remove LENGTH bases from the beginning or end of each read (see --cut).")
+		help="Remove LENGTH bases from the beginning or end of each second read (see --cut).")
 	group.add_option("-p", "--paired-output", metavar="FILE",
 		help="Write second read in a pair to FILE.")
 	group.add_option("--untrimmed-paired-output", metavar="FILE",
