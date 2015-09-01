@@ -242,7 +242,7 @@ class AdapterCutter(object):
 		return trimmed_read
 
 
-def process_single_reads(reader, modifiers, writers):
+def process_single_reads(reader, modifiers, filters):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -256,14 +256,14 @@ def process_single_reads(reader, modifiers, writers):
 		total_bp += len(read.sequence)
 		for modifier in modifiers:
 			read = modifier(read)
-		for writer in writers:
-			if writer(read):
+		for filter in filters:
+			if filter(read):
 				break
 
 	return Statistics(n=n, total_bp1=total_bp, total_bp2=None)
 
 
-def process_paired_reads(paired_reader, modifiers, modifiers2, writers):
+def process_paired_reads(paired_reader, modifiers, modifiers2, filters):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -281,9 +281,9 @@ def process_paired_reads(paired_reader, modifiers, modifiers2, writers):
 			read1 = modifier(read1)
 		for modifier in modifiers2:
 			read2 = modifier(read2)
-		for writer in writers:
-			# Stop writing as soon as one of the writers was successful.
-			if writer(read1, read2):
+		for filter in filters:
+			# Stop writing as soon as one of the filters was successful.
+			if filter(read1, read2):
 				break
 	return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
 
@@ -613,7 +613,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			parser.error("Expected one value or two values separated by comma for the quality cutoff")
 	else:
 		cutoffs = None
-	writers = []
+	filters = []
 	too_short_outfile = None  # too short reads go here
 	too_short_filter = None
 	# TODO pass file name to TooShortReadFilter, add a .close() method?
@@ -624,7 +624,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			too_short_outfile = None
 		too_short_filter = TooShortReadFilter(options.minimum_length,
 			too_short_outfile, paired=='both')
-		writers.append(too_short_filter)
+		filters.append(too_short_filter)
 	too_long_outfile = None  # too long reads go here
 	too_long_filter = None
 	if options.maximum_length < sys.maxsize:
@@ -634,10 +634,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			too_long_outfile = None
 		too_long_filter = TooLongReadFilter(options.maximum_length,
 			too_long_outfile, check_second=paired=='both')
-		writers.append(too_long_filter)
+		filters.append(too_long_filter)
 
 	if options.max_n != -1:
-		writers.append(NContentFilter(options.max_n, check_second=paired=='both'))
+		filters.append(NContentFilter(options.max_n, check_second=paired=='both'))
 
 	demultiplexer = None
 	if options.output is not None and '{name}' in options.output:
@@ -651,9 +651,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		if options.discard_untrimmed:
 			untrimmed = None
 		demultiplexer = Demultiplexer(options.output, untrimmed)
-		writers.append(demultiplexer)
-		trimmed_outfile, untrimmed_outfile = None, None
-		trimmed_paired_outfile, untrimmed_paired_outfile = None, None
+		filters.append(demultiplexer)
+		trimmed_outfile, trimmed_paired_outfile = None, None
+		untrimmed_outfile, untrimmed_paired_outfile = None, None
 	else:
 		trimmed_outfile, untrimmed_outfile = trimmed_and_untrimmed_files(
 			default_outfile,
@@ -669,13 +669,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			options.discard_trimmed,
 			options.discard_untrimmed)
 
-		writers.append(DiscardUntrimmedFilter(
+		filters.append(DiscardUntrimmedFilter(
 			untrimmed_outfile, untrimmed_paired_outfile,
 			check_second=paired=='both'))
-		writers.append(DiscardTrimmedFilter(
+		filters.append(DiscardTrimmedFilter(
 			trimmed_outfile, trimmed_paired_outfile,
-			check_second=paired=='both'
-		))
+			check_second=paired=='both'))
 
 	if options.maq:
 		options.colorspace = True
@@ -833,9 +832,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	start_time = time.clock()
 	try:
 		if paired:
-			stats = process_paired_reads(reader, modifiers, modifiers2, writers)
+			stats = process_paired_reads(reader, modifiers, modifiers2, filters)
 		else:
-			stats = process_single_reads(reader, modifiers, writers)
+			stats = process_single_reads(reader, modifiers, filters)
 	except KeyboardInterrupt as e:
 		print("Interrupted", file=sys.stderr)
 		sys.exit(130)
@@ -857,7 +856,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	elapsed_time = time.clock() - start_time
 	if not options.quiet:
 		stats.collect((adapters, adapters2), elapsed_time,
-			modifiers, modifiers2, writers)
+			modifiers, modifiers2, filters)
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
 		with redirect_standard_output(stat_file):
