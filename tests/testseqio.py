@@ -173,3 +173,20 @@ def test_fastq_context_manager():
 		reads = list(sr)
 		assert not sr.fp.closed
 	assert tmp_sr.fp is None
+
+
+def test_interleaved_reader():
+	expected = [
+		(seqio.Sequence('read1/1 some text', 'TTATTTGTCTCCAGC', '##HHHHHHHHHHHHH'),
+		seqio.Sequence('read1/2 other text', 'GCTGGAGACAAATAA', 'HHHHHHHHHHHHHHH')),
+		(seqio.Sequence('read3/1', 'CCAACTTGATATTAATAACA', 'HHHHHHHHHHHHHHHHHHHH'),
+		seqio.Sequence('read3/2', 'TGTTATTAATATCAAGTTGG', '#HHHHHHHHHHHHHHHHHHH'))
+	]
+	reads = list(seqio.InterleavedSequenceReader("tests/cut/interleaved.fastq"))
+	for (r1, r2), (e1, e2) in zip(reads, expected):
+		print(r1, r2, e1, e2)
+
+	assert reads == expected
+	with seqio.open("tests/cut/interleaved.fastq", interleaved=True) as f:
+		reads = list(f)
+	assert reads == expected

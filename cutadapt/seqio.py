@@ -421,6 +421,43 @@ class PairedSequenceReader(object):
 	def __exit__(self, *args):
 		self.close()
 
+	def __del__(self):
+		self.close()
+
+
+class InterleavedSequenceReader(object):
+	"""
+	Read paired-end reads from an interleaved FASTQ file.
+	"""
+	def __init__(self, file, colorspace=False, fileformat=None):
+		self.reader = open(file, colorspace=colorspace, fileformat=fileformat)
+		self.delivers_qualities = self.reader.delivers_qualities
+
+	def __iter__(self):
+		# Avoid usage of zip() below since it will consume one item too many.
+		it = iter(self.reader)
+		for r1 in it:
+			try:
+				r2 = next(it)
+			except StopIteration:
+				raise FormatError("Interleaved input file incomplete: Last record has no partner.")
+			if not sequence_names_match(r1, r2):
+				raise FormatError("Reads are improperly paired. Name '{0}' "
+					"(first) does not match '{1}' (second).".format(r1.name, r2.name))
+			yield (r1, r2)
+
+	def close(self):
+		self.reader.close()
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, *args):
+		self.close()
+
+	def __del__(self):
+		self.close()
+
 
 class UnknownFileType(Exception):
 	"""
@@ -428,16 +465,19 @@ class UnknownFileType(Exception):
 	"""
 
 
-def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None):
+def open(file1, file2=None, qualfile=None,
+	colorspace=False, fileformat=None, interleaved=False):
 	"""
 	Open sequence file in FASTA or FASTQ format. Parameters file1, file2 and
 	qualfile will be passed to xopen and can therefore be paths to regular or
-	compressed files or file-like objects. If only file1 is provided, a
-	FastaReader or FastqReader (for single-end reads) is returned. If file2
-	is also provided, a PairedSequenceReader is returned. If qualfile is
-	given, a FastaQualReader from file1 and qualfile is returned. One of file2
-	and qualfile must always be None (no paired-end data is supported when
-	reading qualfiles).
+	compressed files or file-like objects. If only file1 is provided and
+	interleaved is True, an InterleavedSequenceReader (for paired-end reads) is
+	returned. If only file1 is provided and interleaved is False, a FastaReader
+	or FastqReader (for single-end reads) is returned. If file2 is also
+	provided, a PairedSequenceReader is returned. If qualfile is given, a
+	FastaQualReader from file1 and qualfile is returned. One of file2 and
+	qualfile must always be None (no paired-end data is supported when reading
+	qualfiles).
 
 	If the colorspace parameter is set to True, the returned readers are
 	ColorspaceFastaReader, ColorspaceFastqReader or ColorspaceFastaQualReader
@@ -450,10 +490,15 @@ def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None):
 	be skipped by setting fileformat to one of 'fasta', 'fastq', 'sra-fastq'.
 	Colorspace is not auto-detected and must always be requested explicitly.
 	"""
+	if interleaved and (file2 is not None or qualfile is not None):
+		raise ValueError("When interleaved is set, file2 and qualfile must be None")
 	if file2 is not None and qualfile is not None:
 		raise ValueError("Setting both file2 and qualfile is not supported")
 	if file2 is not None:
 		return PairedSequenceReader(file1, file2, colorspace, fileformat)
+
+	if interleaved:
+		return InterleavedSequenceReader(file1, colorspace, fileformat)
 
 	if qualfile is not None:
 		if colorspace:
