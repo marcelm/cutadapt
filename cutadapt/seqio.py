@@ -364,6 +364,20 @@ class ColorspaceFastaQualReader(FastaQualReader):
 		super(ColorspaceFastaQualReader, self).__init__(fastafile, qualfile, sequence_class=ColorspaceSequence)
 
 
+def sequence_names_match(r1, r2):
+	"""
+	Check whether the sequences r1 and r2 have identical names (ignoring /1 and
+	/2 suffixes).
+	"""
+	name1 = r1.name.split(None, 1)[0]
+	name2 = r2.name.split(None, 1)[0]
+	if name1[-2:-1] == '/':
+		name1 = name1[:-2]
+	if name2[-2:-1] == '/':
+		name2 = name2[:-2]
+	return name1 == name2
+
+
 class PairedSequenceReader(object):
 	"""
 	Wrap two SequenceReader instances, making sure that reads are
@@ -392,16 +406,20 @@ class PairedSequenceReader(object):
 				r2 = next(it2)
 			except StopIteration:
 				raise FormatError("Reads are improperly paired. There are more reads in file 1 than in file 2.")
-
-			name1 = r1.name.split(None, 1)[0]
-			name2 = r2.name.split(None, 1)[0]
-			if name1[-2:-1] == '/':
-				name1 = name1[:-2]
-			if name2[-2:-1] == '/':
-				name2 = name2[:-2]
-			if name1 != name2:
-				raise FormatError("Reads are improperly paired. Read name '{0}' in file 1 not equal to '{1}' in file 2.".format(name1, name2))
+			if not sequence_names_match(r1, r2):
+				raise FormatError("Reads are improperly paired. Read name '{0}' "
+					"in file 1 does not match '{1}' in file 2.".format(r1.name, r2.name))
 			yield (r1, r2)
+
+	def close(self):
+		self.reader1.close()
+		self.reader2.close()
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, *args):
+		self.close()
 
 
 class UnknownFileType(Exception):
