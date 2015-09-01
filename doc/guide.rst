@@ -585,6 +585,15 @@ The following limitations still exist:
 * Demultiplexing is not yet supported with paired-end data.
 
 
+Interleaved paired-end reads
+----------------------------
+
+* Use `--interleaved`
+* Input FASTQ must be interleaved and output will be written interleaved.
+* Legacy mode (in which only the first read in a pair is modified) is *disabled*.
+
+
+
 Legacy paired-end read trimming
 -------------------------------
 

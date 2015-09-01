@@ -533,6 +533,8 @@ def get_option_parser():
 		help="Remove LENGTH bases from the beginning or end of each second read (see --cut).")
 	group.add_option("-p", "--paired-output", metavar="FILE",
 		help="Write second read in a pair to FILE.")
+	group.add_option("--interleaved", action='store_true', default=False,
+		help="Read and write interleaved paired-end reads.")
 	group.add_option("--untrimmed-paired-output", metavar="FILE",
 		help="Write the second read in a pair to this FILE when no adapter "
 			"was found in the first read. Use this option together with "
@@ -570,17 +572,21 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		# Modify first read only, keep second in sync (-p given, but not -A/-G/-B/-U).
 		# This exists for backwards compatibility ('legacy mode').
 		paired = 'first'
-	if options.adapters2 or options.front2 or options.anywhere2 or options.cut2:
+	if options.adapters2 or options.front2 or options.anywhere2 or options.cut2 or options.interleaved:
 		# Full paired-end trimming when both -p and -A/-G/-B/-U given
 		# Also the read modifications (such as quality trimming) are applied
 		# to second read.
 		paired = 'both'
 
-	if paired and len(args) == 1:
+	if paired and len(args) == 1 and not options.interleaved:
 		parser.error("When paired-end trimming is enabled via -A/-G/-B/-U or -p, "
 			"two input files are required.")
+	if options.interleaved and len(args) != 1:
+		parser.error("When reading interleaved files, only one input file may "
+			"be given.")
 	if paired:
-		input_paired_filename = args[1]
+		if not options.interleaved:
+			input_paired_filename = args[1]
 		quality_filename = None
 	else:
 		input_paired_filename = None
@@ -592,12 +598,13 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			quality_filename = None
 
 	if paired:
-		if not options.paired_output:
-			parser.error("When paired-end trimming is enabled via -A/-G/-B/-U, "
-				"a second output file needs to be specified via -p (--paired-output).")
-		if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
-			parser.error("When trimming paired-end reads, you must use either none "
-				"or both of the --untrimmed-output/--untrimmed-paired-output options.")
+		if not options.interleaved:
+			if not options.paired_output:
+				parser.error("When paired-end trimming is enabled via -A/-G/-B/-U, "
+					"a second output file needs to be specified via -p (--paired-output).")
+			if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
+				parser.error("When trimming paired-end reads, you must use either none "
+					"or both of the --untrimmed-output/--untrimmed-paired-output options.")
 	else:
 		if options.untrimmed_paired_output:
 			parser.error("Option --untrimmed-paired-output can only be used when "
