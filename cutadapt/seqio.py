@@ -594,13 +594,13 @@ class UnknownFileType(Exception):
 
 
 def open(file1, file2=None, qualfile=None,
-	colorspace=False, fileformat=None, interleaved=False):
+	colorspace=False, fileformat=None, interleaved=False, mode='r'):
 	"""
 	Open sequence file in FASTA or FASTQ format. Parameters file1, file2 and
-	qualfile will be passed to xopen and can therefore be paths to regular or
-	compressed files or file-like objects. If only file1 is provided and
-	interleaved is True, an InterleavedSequenceReader (for paired-end reads) is
-	returned. If only file1 is provided and interleaved is False, a FastaReader
+	qualfile can be paths to regular or compressed files or file-like objects.
+	
+	If only file1 is provided and interleaved is True, an
+	InterleavedSequenceReader (for paired-end reads) is returned. If only file1 is provided and interleaved is False, a FastaReader
 	or FastqReader (for single-end reads) is returned. If file2 is also
 	provided, a PairedSequenceReader is returned. If qualfile is given, a
 	FastaQualReader from file1 and qualfile is returned. One of file2 and
@@ -618,45 +618,64 @@ def open(file1, file2=None, qualfile=None,
 	be skipped by setting fileformat to one of 'fasta', 'fastq', 'sra-fastq'.
 	Colorspace is not auto-detected and must always be requested explicitly.
 	"""
+	if mode not in ('r', 'w'):
+		raise ValueError("Mode must be 'r' or 'w'")
 	if interleaved and (file2 is not None or qualfile is not None):
 		raise ValueError("When interleaved is set, file2 and qualfile must be None")
 	if file2 is not None and qualfile is not None:
 		raise ValueError("Setting both file2 and qualfile is not supported")
 	if file2 is not None:
-		return PairedSequenceReader(file1, file2, colorspace, fileformat)
+		if mode == 'r':
+			return PairedSequenceReader(file1, file2, colorspace, fileformat)
+		else:
+			return PairedSequenceWriter(file1, file2, colorspace, fileformat)
 
 	if interleaved:
-		return InterleavedSequenceReader(file1, colorspace, fileformat)
+		if mode == 'r':
+			return InterleavedSequenceReader(file1, colorspace, fileformat)
+		else:
+			return InterleavedSequenceWriter(file1, colorspace, fileformat)
 
 	if qualfile is not None:
+		if mode == 'w':
+			raise NotImplementedError('Writing to csfasta/qual not supported')
 		if colorspace:
 			# read from .(CS)FASTA/.QUAL
 			return ColorspaceFastaQualReader(file1, qualfile)
 		else:
 			return FastaQualReader(file1, qualfile)
 	# read from FASTA or FASTQ
-	fastq_reader = ColorspaceFastqReader if colorspace else FastqReader
-	fasta_reader = ColorspaceFastaReader if colorspace else FastaReader
+	if mode == 'r':
+		fastq_handler = ColorspaceFastqReader if colorspace else FastqReader
+		fasta_handler = ColorspaceFastaReader if colorspace else FastaReader
+	else:
+		fastq_handler = ColorspaceFastqWriter if colorspace else FastqWriter
+		fasta_handler = ColorspaceFastaWriter if colorspace else FastaWriter
 
-	if fileformat is not None:
+	if fileformat is not None:  # explict file format given
 		fileformat = fileformat.lower()
 		if fileformat == 'fasta':
-			return fasta_reader(file1)
+			return fasta_handler(file1)
 		elif fileformat == 'fastq':
-			return fastq_reader(file1)
+			return fastq_handler(file1)
 		elif fileformat == 'sra-fastq' and colorspace:
+			if mode == 'w':
+				raise NotImplementedError('Writing to sra-fastq not supported')
 			return SRAColorspaceFastqReader(file1)
 		else:
 			raise UnknownFileType("File format {0!r} is unknown (expected "
 				"'sra-fastq' (only for colorspace), 'fasta' or 'fastq').".format(fileformat))
 
+	if mode == 'w':
+		raise NotImplementedError('autodetection of file type for output files not implemented')
+
+	# Try to detect the file format
 	name = None
 	if file1 == "-":
 		file1 = sys.stdin
 	elif isinstance(file1, basestring):
 		name = file1
-	elif hasattr(file1, "name"):
-		# Assume that 'file1' is an open file1
+	elif hasattr(file1, "name"):  # file1 seems to be an open file-like object
 		name = file1.name
 
 	if name is not None:
@@ -669,9 +688,9 @@ def open(file1, file2=None, qualfile=None,
 		name, ext = splitext(name)
 		ext = ext.lower()
 		if ext in ['.fasta', '.fa', '.fna', '.csfasta', '.csfa']:
-			return fasta_reader(file1)
+			return fasta_handler(file1)
 		elif ext in ['.fastq', '.fq'] or (ext == '.txt' and name.endswith('_sequence')):
-			return fastq_reader(file1)
+			return fastq_handler(file1)
 		else:
 			raise UnknownFileType("Could not determine whether file {0!r} is FASTA "
 				"or FASTQ: file name extension {1!r} not recognized".format(file1, ext))
@@ -683,7 +702,7 @@ def open(file1, file2=None, qualfile=None,
 			# Skip comment lines (needed for csfasta)
 			continue
 		if line.startswith('>'):
-			return fasta_reader(FileWithPrependedLine(file1, line))
+			return fasta_handler(FileWithPrependedLine(file1, line))
 		if line.startswith('@'):
-			return fastq_reader(FileWithPrependedLine(file1, line))
+			return fastq_handler(FileWithPrependedLine(file1, line))
 	raise UnknownFileType("File is neither FASTQ nor FASTA.")
