@@ -669,15 +669,13 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			options.discard_trimmed,
 			options.discard_untrimmed)
 
-		if untrimmed_outfile or untrimmed_paired_outfile:
-			writers.append(DiscardUntrimmedFilter(untrimmed_outfile,
-				untrimmed_paired_outfile, check_second=paired=='both'))
-		writer = DiscardTrimmedFilter(
+		writers.append(DiscardUntrimmedFilter(
+			untrimmed_outfile, untrimmed_paired_outfile,
+			check_second=paired=='both'))
+		writers.append(DiscardTrimmedFilter(
 			trimmed_outfile, trimmed_paired_outfile,
 			check_second=paired=='both'
-		)
-		writers.append(writer)
-		del writer
+		))
 
 	if options.maq:
 		options.colorspace = True

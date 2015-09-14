@@ -167,3 +167,12 @@ def test_paired_end_A_only():
 		in1='paired.1.fastq', in2='paired.2.fastq',
 		expected1='paired-onlyA.1.fastq', expected2='paired-onlyA.2.fastq'
 	)
+
+
+def test_discard_untrimmed():
+	# issue #146
+	# the first adapter is a sequence cut out from the first read
+	run_paired('-a CTCCAGCTTAGACATATC -A XXXXXXXX --discard-untrimmed',
+		in1='paired.1.fastq', in2='paired.2.fastq',
+		expected1='empty.fastq', expected2='empty.fastq'
+	)
