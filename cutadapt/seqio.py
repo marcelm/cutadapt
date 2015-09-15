@@ -1,8 +1,9 @@
 # coding: utf-8
 """
+Sequence I/O classes: Reading and writing of FASTA and FASTQ files.
+
 TODO
 
-- write a module docstring
 - are the Colorspace... classes needed? only used by open, where we could set
   the sequence_class directly
 - the twoheaders thing is not necessary, easier to have an attribute that
@@ -10,6 +11,7 @@ TODO
 - Sequence.name should be Sequence.description or so (reserve .name for the part
   before the first space)
 - ensure all Readers and Writers are context managers
+- ensure FastaWriter and FastqWriter are as fast as Sequence.write
 """
 from __future__ import print_function, division, absolute_import
 import sys
@@ -527,6 +529,13 @@ class FastaWriter(object):
 		self.close()
 
 
+class ColorspaceFastaWriter(FastaWriter):
+	def write(self, record):
+		name = record.name
+		sequence = record.primer + record.sequence
+		super(ColorspaceFastaWriter, self).write(name, sequence)
+
+
 class FastqWriter(object):
 	"""
 	Write sequences with qualities in FASTQ format.
@@ -584,6 +593,14 @@ class FastqWriter(object):
 
 	def __exit__(self, *args):
 		self.close()
+
+
+class ColorspaceFastqWriter(FastqWriter):
+	def write(self, record):
+		name = record.name
+		sequence = record.primer + record.sequence
+		qualities = record.qualities
+		super(ColorspaceFastqWriter, self).write(name, sequence, qualities)
 
 
 class UnknownFileType(Exception):
