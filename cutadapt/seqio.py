@@ -192,7 +192,7 @@ class FastaReader(object):
 			self._file_passed = False
 		else:
 			self._file_passed = True
-		self.fp = file
+		self._file = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = False
 		self._delimiter = '\n' if keep_linebreaks else ''
@@ -203,7 +203,7 @@ class FastaReader(object):
 		"""
 		name = None
 		seq = []
-		for i, line in enumerate(self.fp):
+		for i, line in enumerate(self._file):
 			# strip() also removes DOS line breaks
 			line = line.strip()
 			if not line:
@@ -225,12 +225,12 @@ class FastaReader(object):
 			yield self.sequence_class(name, self._delimiter.join(seq), None)
 
 	def close(self):
-		if not self._file_passed and self.fp is not None:
-			self.fp.close()
-			self.fp = None
+		if not self._file_passed and self._file is not None:
+			self._file.close()
+			self._file = None
 
 	def __enter__(self):
-		if self.fp is None:
+		if self._file is None:
 			raise ValueError("I/O operation on closed FastaReader")
 		return self
 
@@ -260,7 +260,7 @@ class FastqReader(object):
 			self._file_passed = False
 		else:
 			self._file_passed = True
-		self.fp = file
+		self._file = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
@@ -269,7 +269,7 @@ class FastqReader(object):
 		Return tuples: (name, sequence, qualities).
 		qualities is a string and it contains the unmodified, encoded qualities.
 		"""
-		for i, line in enumerate(self.fp):
+		for i, line in enumerate(self._file):
 			if i % 4 == 0:
 				if not line.startswith('@'):
 					raise FormatError("At line {0}: Expected a line starting with '@'".format(i+1))
@@ -296,12 +296,12 @@ class FastqReader(object):
 				yield self.sequence_class(name, sequence, qualities, twoheaders=twoheaders)
 
 	def close(self):
-		if not self._file_passed and self.fp is not None:
-			self.fp.close()
-			self.fp = None
+		if not self._file_passed and self._file is not None:
+			self._file.close()
+			self._file = None
 
 	def __enter__(self):
-		if self.fp is None:
+		if self._file is None:
 			raise ValueError("I/O operation on closed FastqReader")
 		return self
 
