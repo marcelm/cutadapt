@@ -572,7 +572,7 @@ class FastqWriter(object):
 			two = name
 		else:
 			two = ''
-		print("@{0}\n{1}\n+{2}\n{3}".format(name, force_str(sequence), two, force_str(qualities)), file=self._file)
+		print("@{0}\n{1}\n+{2}\n{3}".format(name, sequence, two, qualities), file=self._file)
 
 	def close(self):
 		self._file.close()
