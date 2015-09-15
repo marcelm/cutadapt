@@ -289,22 +289,24 @@ def process_paired_reads(paired_reader, modifiers, modifiers2, filters):
 	return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
 
 
-def trimmed_and_untrimmed_files(
+def trimmed_and_untrimmed_writers(
 		default_output,
-		output_path,
-		untrimmed_path,
+		output_path, output_paired_path,
+		untrimmed_path, untrimmed_paired_path,
 		discard_trimmed,
-		discard_untrimmed
+		discard_untrimmed,
+		fileformat,
+		colorspace,
 		):
 	"""
 	Figure out (from command-line parameters) where trimmed and untrimmed reads
 	should be written.
 
-	Return a pair (trimmed, untrimmed). The values are either open file-like
-	objects or None, in which case no output should be produced. The objects may
-	be identical (for example: (sys.stdout, sys.stdout)).
+	Return a pair (trimmed_writer, untrimmed_writer). The values are either
+	Fasta/FastqWriters (depending on fileformat) or None, in which case no
+	output should be produced.
 
-	The parameters are sorted: Later parameters have higher precedence.
+	Later parameters have higher precedence.
 
 	default_output -- If nothing else is specified below, this file-like object
 		is returned for both trimmed and untrimmed output.
@@ -313,29 +315,40 @@ def trimmed_and_untrimmed_files(
 	discard_trimmed -- bool, overrides earlier options.
 	discard_untrimmed -- bool, overrides earlier options.
 	"""
+	def open_writer(path_or_file, path_or_file2=None):
+		return seqio.open(path_or_file, path_or_file2,
+			mode='w', colorspace=colorspace, fileformat=fileformat)
+
 	if discard_trimmed:
 		if discard_untrimmed:
 			untrimmed = None
 		elif untrimmed_path is not None:
-			untrimmed = xopen(untrimmed_path, 'w')
+			untrimmed = open_writer(untrimmed_path, untrimmed_paired_path)
 		elif output_path is not None:
-			untrimmed = xopen(output_path, 'w')
+			untrimmed = open_writer(output_path, output_paired_path)
 		else:
-			untrimmed = default_output
+			# should only happen for single-end data
+			untrimmed = open_writer(default_output)
 		return (None, untrimmed)
+
 	if discard_untrimmed:
-		trimmed = default_output
+		trimmed = open_writer(default_output)
 		if output_path is not None:
-			trimmed = xopen(output_path, 'w')
+			trimmed = open_writer(output_path, output_paired_path)
 		return (trimmed, None)
 
-	trimmed = default_output
-	untrimmed = default_output
+	trimmed = None
+	untrimmed = None
 	if output_path is not None:
-		trimmed = untrimmed = xopen(output_path, 'w')
+		trimmed = untrimmed = open_writer(output_path, output_paired_path)
 	if untrimmed_path is not None:
-		untrimmed = xopen(untrimmed_path, 'w')
-
+		untrimmed = open_writer(untrimmed_path, untrimmed_paired_path)
+	if trimmed is None or untrimmed is None:
+		default_writer = open_writer(default_output)
+		if trimmed is None:
+			trimmed = default_writer
+		if untrimmed is None:
+			untrimmed = default_writer
 	return (trimmed, untrimmed)
 
 
@@ -605,6 +618,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 				fileformat=options.format)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
+	fileformat = 'fastq' if reader.delivers_qualities else 'fasta'
 
 	if options.quality_cutoff is not None:
 		cutoffs = options.quality_cutoff.split(',')
@@ -623,26 +637,28 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	else:
 		cutoffs = None
 	filters = []
-	too_short_outfile = None  # too short reads go here
+	too_short_writer = None  # too short reads go here
 	too_short_filter = None
 	# TODO pass file name to TooShortReadFilter, add a .close() method?
 	if options.minimum_length > 0:
 		if options.too_short_output:
-			too_short_outfile = xopen(options.too_short_output, 'w')
+			too_short_writer = seqio.open(options.too_short_output, mode='w',
+				fileformat=fileformat, colorspace=options.colorspace)
 		else:
-			too_short_outfile = None
+			too_short_writer = None
 		too_short_filter = TooShortReadFilter(options.minimum_length,
-			too_short_outfile, paired=='both')
+			too_short_writer, paired=='both')
 		filters.append(too_short_filter)
-	too_long_outfile = None  # too long reads go here
+	too_long_writer = None  # too long reads go here
 	too_long_filter = None
 	if options.maximum_length < sys.maxsize:
 		if options.too_long_output is not None:
-			too_long_outfile = xopen(options.too_long_output, 'w')
+			too_long_writer = seqio.open(options.too_long_output,
+				mode='w', fileformat=fileformat, colorspace=options.colorspace)
 		else:
-			too_long_outfile = None
+			too_long_writer = None
 		too_long_filter = TooLongReadFilter(options.maximum_length,
-			too_long_outfile, check_second=paired=='both')
+			too_long_writer, check_second=paired=='both')
 		filters.append(too_long_filter)
 
 	if options.max_n != -1:
@@ -659,31 +675,26 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			untrimmed = options.untrimmed_output
 		if options.discard_untrimmed:
 			untrimmed = None
-		fileformat = 'fastq' if reader.delivers_qualities else 'fasta'
-		demultiplexer = Demultiplexer(options.output, untrimmed, fileformat=fileformat)
+		demultiplexer = Demultiplexer(options.output, untrimmed,
+			fileformat=fileformat, colorspace=colorspace)
 		filters.append(demultiplexer)
-		trimmed_outfile, trimmed_paired_outfile = None, None
-		untrimmed_outfile, untrimmed_paired_outfile = None, None
+		trimmed_writer = None
+		untrimmed_writer = None
 	else:
-		trimmed_outfile, untrimmed_outfile = trimmed_and_untrimmed_files(
+		trimmed_writer, untrimmed_writer = trimmed_and_untrimmed_writers(
 			default_outfile,
-			options.output,
-			options.untrimmed_output,
+			options.output, options.paired_output,
+			options.untrimmed_output, options.untrimmed_paired_output,
 			options.discard_trimmed,
-			options.discard_untrimmed)
-
-		trimmed_paired_outfile, untrimmed_paired_outfile = trimmed_and_untrimmed_files(
-			None,  # applies when not trimming paired-end data
-			options.paired_output,
-			options.untrimmed_paired_output,
-			options.discard_trimmed,
-			options.discard_untrimmed)
+			options.discard_untrimmed,
+			fileformat=fileformat,
+			colorspace=options.colorspace)
 
 		filters.append(DiscardUntrimmedFilter(
-			untrimmed_outfile, untrimmed_paired_outfile,
+			untrimmed_writer,
 			check_second=paired=='both'))
 		filters.append(DiscardTrimmedFilter(
-			trimmed_outfile, trimmed_paired_outfile,
+			trimmed_writer,
 			check_second=paired=='both'))
 
 	if options.maq:
@@ -852,9 +863,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		sys.exit("cutadapt: error: {0}".format(e))
 
 	# close open files
-	for f in [trimmed_outfile, untrimmed_outfile, trimmed_paired_outfile,
-			untrimmed_paired_outfile, options.rest_file, options.wildcard_file,
-			options.info_file, too_short_outfile, too_long_outfile,
+	for f in [trimmed_writer, untrimmed_writer,
+			options.rest_file, options.wildcard_file,
+			options.info_file, too_short_writer, too_long_writer,
 			options.info_file, demultiplexer]:
 		if f is not None and f is not sys.stdin and f is not sys.stdout:
 			f.close()
