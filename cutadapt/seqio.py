@@ -509,11 +509,11 @@ class FastaWriter(object):
 		else:
 			name = name_or_seq
 		if self.line_length is not None:
-			print('>{}'.format(name), file=self._file)
+			print('>{0}'.format(name), file=self._file)
 			for i in range(0, len(sequence), self.line_length):
 				print(sequence[i:i+self.line_length], file=self._file)
 		else:
-			print('>{}'.format(name), sequence, file=self._file, sep='\n')
+			print('>{0}'.format(name), sequence, file=self._file, sep='\n')
 
 	def close(self):
 		self._file.close()
