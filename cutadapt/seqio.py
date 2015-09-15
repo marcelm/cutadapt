@@ -392,8 +392,10 @@ def sequence_names_match(r1, r2):
 
 class PairedSequenceReader(object):
 	"""
-	Wrap two SequenceReader instances, making sure that reads are
-	properly paired.
+	Read paired-end reads from two files.
+
+	Wraps two SequenceReader instances, making sure that reads are properly
+	paired.
 	"""
 	def __init__(self, file1, file2, colorspace=False, fileformat=None):
 		self.reader1 = open(file1, colorspace=colorspace, fileformat=fileformat)
@@ -401,6 +403,9 @@ class PairedSequenceReader(object):
 		self.delivers_qualities = self.reader1.delivers_qualities
 
 	def __iter__(self):
+		"""
+		Iterate over the paired reads. Each item is a pair of Sequence objects.
+		"""
 		# Avoid usage of zip() below since it will consume one item too many.
 		it1, it2 = iter(self.reader1), iter(self.reader2)
 		while True:
@@ -468,6 +473,117 @@ class InterleavedSequenceReader(object):
 		self.close()
 
 	def __del__(self):
+		self.close()
+
+
+class FastaWriter(object):
+	"""
+	Write FASTA-formatted sequences to a file.
+	"""
+	def __init__(self, file, line_length=80):
+		"""
+		If line_length is not None, the lines will
+		be wrapped after line_length characters.
+		"""
+		self.line_length = line_length if line_length != 0 else None
+		if isinstance(file, str):
+			file = xopen(file, 'w')
+		self._file = file
+
+	def write(self, name_or_seq, sequence=None):
+		"""Write an entry to the the FASTA file.
+
+		If only one parameter (name_or_seq) is given, it must have
+		attributes .name and .sequence, which are then used.
+		Otherwise, the first parameter must be the name and the second
+		the sequence.
+
+		The effect is that you can write this:
+		writer.write("name", "ACCAT")
+		or
+		writer.write(Sequence("name", "ACCAT"))
+		"""
+		if sequence is None:
+			name = name_or_seq.name
+			sequence = name_or_seq.sequence
+		else:
+			name = name_or_seq
+		sequence = force_str(sequence)
+		if self.line_length is not None:
+			print('>{}'.format(name), file=self._file)
+			for i in range(0, len(sequence), self.line_length):
+				print(sequence[i:i+self.line_length], file=self._file)
+		else:
+			print('>{}'.format(name), sequence, file=self._file, sep='\n')
+
+	def close(self):
+		self._file.close()
+
+	def __enter__(self):
+		if self._file.closed:
+			raise ValueError("I/O operation on closed file")
+		return self
+
+	def __exit__(self, *args):
+		self.close()
+
+
+class FastqWriter(object):
+	"""
+	Write sequences with qualities in FASTQ format.
+
+	FASTQ files are formatted like this:
+	@read name
+	SEQUENCE
+	+
+	QUALITIS
+	"""
+	def __init__(self, file, twoheaders=False):
+		"""
+		If twoheaders is set, then the read name will be repeated after
+		the plus sign (which is redundant and therefore not
+		recommended).
+		"""
+		self.twoheaders = twoheaders
+		if isinstance(file, str):
+			file = xopen(file, "w")
+		self._file = file
+
+	def write(self, name_or_seq, sequence=None, qualities=None):
+		"""
+		Write an entry to the the FASTQ file.
+
+		If only one parameter (name_or_seq) is given, it must have
+		attributes .name, .sequence and .qualities, which are then
+		used. Otherwise, all three parameters must be given and
+		name_or_seq must be the name of the sequence.
+
+		The effect is that you can write this:
+		fq.write("name", "ACCAT", "#!!&B")
+		or
+		fq.write(Sequence("name", "ACCAT", "#!!&B"))
+		"""
+		if sequence is None:
+			name = name_or_seq.name
+			sequence = name_or_seq.sequence
+			qualities = name_or_seq.qualities
+		else:
+			name = name_or_seq
+		if self.twoheaders:
+			two = name
+		else:
+			two = ''
+		print("@{0}\n{1}\n+{2}\n{3}".format(name, force_str(sequence), two, force_str(qualities)), file=self._file)
+
+	def close(self):
+		self._file.close()
+
+	def __enter__(self):
+		if self._file.closed:
+			raise ValueError("I/O operation on closed file")
+		return self
+
+	def __exit__(self, *args):
 		self.close()
 
 
