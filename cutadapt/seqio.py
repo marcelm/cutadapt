@@ -1,4 +1,16 @@
 # coding: utf-8
+"""
+TODO
+
+- write a module docstring
+- are the Colorspace... classes needed? only used by open, where we could set
+  the sequence_class directly
+- the twoheaders thing is not necessary, easier to have an attribute that
+  contains the second header
+- Sequence.name should be Sequence.description or so (reserve .name for the part
+  before the first space)
+- ensure all Readers and Writers are context managers
+"""
 from __future__ import print_function, division, absolute_import
 import sys
 from os.path import splitext
