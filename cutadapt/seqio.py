@@ -508,7 +508,6 @@ class FastaWriter(object):
 			sequence = name_or_seq.sequence
 		else:
 			name = name_or_seq
-		sequence = force_str(sequence)
 		if self.line_length is not None:
 			print('>{}'.format(name), file=self._file)
 			for i in range(0, len(sequence), self.line_length):
