@@ -597,6 +597,14 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error("The input file format must be either 'fasta', 'fastq' or "
 			"'sra-fastq' (not '{0}').".format(options.format))
 
+	# Open input file(s)
+	try:
+		reader = seqio.open(input_filename, file2=input_paired_filename,
+				qualfile=quality_filename, colorspace=options.colorspace,
+				fileformat=options.format)
+	except (seqio.UnknownFileType, IOError) as e:
+		parser.error(e)
+
 	if options.quality_cutoff is not None:
 		cutoffs = options.quality_cutoff.split(',')
 		if len(cutoffs) == 1:
@@ -740,13 +748,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			quality_filename is None and \
 			options.max_n == -1:
 		parser.error("You need to provide at least one adapter sequence.")
-
-	try:
-		reader = seqio.open(input_filename, file2=input_paired_filename,
-				qualfile=quality_filename, colorspace=options.colorspace,
-				fileformat=options.format)
-	except (seqio.UnknownFileType, IOError) as e:
-		parser.error(e)
 
 	# Create the single-end processing pipeline (a list of "modifiers")
 	modifiers = []
