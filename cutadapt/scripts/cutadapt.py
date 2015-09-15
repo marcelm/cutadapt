@@ -653,12 +653,13 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			parser.error("Do not use --discard-trimmed when demultiplexing.")
 		if paired:
 			parser.error("Demultiplexing not supported for paired-end files, yet.")
-		untrimmed = options.output.format(name='unknown')
+		untrimmed = options.output.replace('{name}', 'unknown')
 		if options.untrimmed_output:
 			untrimmed = options.untrimmed_output
 		if options.discard_untrimmed:
 			untrimmed = None
-		demultiplexer = Demultiplexer(options.output, untrimmed)
+		fileformat = 'fastq' if reader.delivers_qualities else 'fasta'
+		demultiplexer = Demultiplexer(options.output, untrimmed, fileformat=fileformat)
 		filters.append(demultiplexer)
 		trimmed_outfile, trimmed_paired_outfile = None, None
 		untrimmed_outfile, untrimmed_paired_outfile = None, None

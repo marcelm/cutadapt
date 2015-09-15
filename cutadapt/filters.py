@@ -9,7 +9,8 @@ somewhere or filtered (should be discarded). Filters and writers are currently
 not distinguished: The idea is that at least one of the filters will apply.
 """
 from __future__ import print_function, division, absolute_import
-from cutadapt.xopen import xopen
+from .xopen import xopen
+from . import seqio
 
 # Constants used when returning from a Filter’s __call__ method to improve
 # readability (it is unintuitive that "return True" means "discard the read").
@@ -22,7 +23,7 @@ class Filter(object):
 	def __init__(self, check_second=True):
 		"""
 		check_second -- whether the second read in a pair is also checked for
-		its length. If True, the read is discarded if *any* of the two reads are
+		its length. If True, the read is discarded if *any* of the two reads
 		fulfills the criteria for discarding a read.
 		"""
 		self.check_second = check_second
@@ -147,7 +148,7 @@ class Demultiplexer(object):
 	depending on which adapter matches. Files are created when the first read
 	is written to them.
 	"""
-	def __init__(self, path_template, untrimmed_path):
+	def __init__(self, path_template, untrimmed_path, fileformat):
 		"""
 		path_template must contain the string '{name}', which will be replaced
 		with the name of the adapter to form the final output path.
@@ -157,34 +158,35 @@ class Demultiplexer(object):
 		assert '{name}' in path_template
 		self.template = path_template
 		self.untrimmed_path = untrimmed_path
-		self.untrimmed_outfile = None
-		self.files = dict()
+		self.untrimmed_writer = None
+		self.writers = dict()
 		self.written = 0
 		self.written_bp = [0, 0]
+		self.fileformat = fileformat
 
 	def __call__(self, read1, read2=None):
 		if read2 is None:
 			# single-end read
 			if read1.match is None:
-				if self.untrimmed_outfile is None and self.untrimmed_path is not None:
-					self.untrimmed_outfile = xopen(self.untrimmed_path, 'w')
-				if self.untrimmed_outfile is not None:
+				if self.untrimmed_writer is None and self.untrimmed_path is not None:
+					self.untrimmed_writer = seqio.open(self.untrimmed_path, mode='w', fileformat=self.fileformat)
+				if self.untrimmed_writer is not None:
 					self.written += 1
 					self.written_bp[0] += len(read1)
-					read1.write(self.untrimmed_outfile)
+					self.untrimmed_writer.write(read1)
 			else:
 				name = read1.match.adapter.name
-				if name not in self.files:
-					self.files[name] = xopen(self.template.format(name=name), 'w')
+				if name not in self.writers:
+					self.writers[name] = seqio.open(self.template.replace('{name}', name), mode='w', fileformat=self.fileformat)
 				self.written += 1
 				self.written_bp[0] += len(read1)
-				read1.write(self.files[name])
+				self.writers[name].write(read1)
 			return DISCARD
 		else:
 			assert False, "Not supported"  # pragma: no cover
 
 	def close(self):
-		for f in self.files.values():
-			f.close()
-		if self.untrimmed_outfile is not None:
-			self.untrimmed_outfile.close()
+		for w in self.writers.values():
+			w.close()
+		if self.untrimmed_writer is not None:
+			self.untrimmed_writer.close()
