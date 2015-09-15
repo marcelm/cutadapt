@@ -178,7 +178,6 @@ class TestSeqioOpen:
 
 
 class TestInterleavedReader:
-
 	def test(self):
 		expected = [
 			(Sequence('read1/1 some text', 'TTATTTGTCTCCAGC', '##HHHHHHHHHHHHH'),
@@ -229,6 +228,14 @@ class TestFastaWriter:
 		with open(self.path) as t:
 			assert t.read() == '>name\nCCATA\n>name2\nHELLO\n'
 
+	def test_write_to_file_like_object(self):
+		sio = StringIO()
+		with FastaWriter(sio) as fw:
+			fw.write(Sequence("name", "CCATA"))
+			fw.write(Sequence("name2", "HELLO"))
+			assert sio.getvalue() == '>name\nCCATA\n>name2\nHELLO\n'
+		assert fw._file.closed
+
 
 class TestFastqWriter:
 	def setup(self):
@@ -254,3 +261,10 @@ class TestFastqWriter:
 		with open(self.path) as t:
 			assert t.read() == '@name\nCCATA\n+name\n!#!#!\n@name2\nHELLO\n+name2\n&&&!&&\n'
 
+	def test_write_to_file_like_object(self):
+		sio = StringIO()
+		with FastqWriter(sio) as fq:
+			fq.write("name", "CCATA", "!#!#!")
+			fq.write("name2", "HELLO", "&&&!&&")
+			assert sio.getvalue() == '@name\nCCATA\n+\n!#!#!\n@name2\nHELLO\n+\n&&&!&&\n'
+		assert fq._file.closed
