@@ -261,12 +261,12 @@ class TestFastqWriter:
 			assert t.read() == '@name\nCCATA\n+\n!#!#!\n@name2\nHELLO\n+\n&&&!&&\n'
 
 	def test_twoheaders(self):
-		with FastqWriter(self.path, twoheaders=True) as fq:
-			fq.write("name", "CCATA", "!#!#!")
-			fq.write("name2", "HELLO", "&&&!&&")
+		with FastqWriter(self.path) as fq:
+			fq.write(Sequence("name", "CCATA", "!#!#!", twoheaders=True))
+			fq.write(Sequence("name2", "HELLO", "&&&!&", twoheaders=True))
 		assert fq._file.closed
 		with open(self.path) as t:
-			assert t.read() == '@name\nCCATA\n+name\n!#!#!\n@name2\nHELLO\n+name2\n&&&!&&\n'
+			assert t.read() == '@name\nCCATA\n+name\n!#!#!\n@name2\nHELLO\n+name2\n&&&!&\n'
 
 	def test_write_to_file_like_object(self):
 		sio = StringIO()

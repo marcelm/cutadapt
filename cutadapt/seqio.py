@@ -548,13 +548,12 @@ class FastqWriter(object):
 	+
 	QUALITIS
 	"""
-	def __init__(self, file, twoheaders=False):
+	def __init__(self, file):
 		"""
 		If twoheaders is set, then the read name will be repeated after
 		the plus sign (which is redundant and therefore not
 		recommended).
 		"""
-		self.twoheaders = twoheaders
 		if isinstance(file, str):
 			file = xopen(file, "w")
 		self._file = file
@@ -577,13 +576,11 @@ class FastqWriter(object):
 			name = name_or_seq.name
 			sequence = name_or_seq.sequence
 			qualities = name_or_seq.qualities
+			name2 = name if name_or_seq.twoheaders else ''
 		else:
 			name = name_or_seq
-		if self.twoheaders:
-			two = name
-		else:
-			two = ''
-		print("@{0}\n{1}\n+{2}\n{3}".format(name, sequence, two, qualities), file=self._file)
+			name2 = ''
+		print("@{0}\n{1}\n+{2}\n{3}".format(name, sequence, name2, qualities), file=self._file)
 
 	def close(self):
 		self._file.close()
