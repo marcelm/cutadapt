@@ -602,6 +602,27 @@ class ColorspaceFastqWriter(FastqWriter):
 		super(ColorspaceFastqWriter, self).write(name, sequence, qualities)
 
 
+class PairedSequenceWriter(object):
+	def __init__(self, file1, file2, colorspace=False, fileformat='fastq'):
+		self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w')
+		self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w')
+
+	def write(self, read1, read2):
+		self._writer1.write(read1)
+		self._writer2.write(read2)
+
+	def __enter__(self):
+		# TODO do not allow this twice
+		return self
+
+	def __exit__(self, *args):
+		self.close()
+
+	def close(self):
+		self._writer1.close()
+		self._writer2.close()
+
+
 class UnknownFileType(Exception):
 	"""
 	Raised when open could not autodetect the file type.
