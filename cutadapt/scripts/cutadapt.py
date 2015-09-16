@@ -624,7 +624,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	try:
 		reader = seqio.open(input_filename, file2=input_paired_filename,
 				qualfile=quality_filename, colorspace=options.colorspace,
-				fileformat=options.format)
+				fileformat=options.format, interleaved=options.interleaved)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
 	fileformat = 'fastq' if reader.delivers_qualities else 'fasta'
