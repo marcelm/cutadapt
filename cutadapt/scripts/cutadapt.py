@@ -264,7 +264,7 @@ def process_single_reads(reader, modifiers, filters):
 	return Statistics(n=n, total_bp1=total_bp, total_bp2=None)
 
 
-def process_paired_reads(paired_reader, modifiers, modifiers2, filters):
+def process_paired_reads(paired_reader, modifiers1, modifiers2, filters):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -278,7 +278,7 @@ def process_paired_reads(paired_reader, modifiers, modifiers2, filters):
 		n += 1
 		total1_bp += len(read1.sequence)
 		total2_bp += len(read2.sequence)
-		for modifier in modifiers:
+		for modifier in modifiers1:
 			read1 = modifier(read1)
 		for modifier in modifiers2:
 			read2 = modifier(read2)
