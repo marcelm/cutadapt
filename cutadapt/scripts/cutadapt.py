@@ -585,7 +585,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error("When reading interleaved files, only one input file may "
 			"be given.")
 	if paired:
-		if not options.interleaved:
+		if options.interleaved:
+			input_paired_filename = None
+		else:
 			input_paired_filename = args[1]
 		quality_filename = None
 	else:
