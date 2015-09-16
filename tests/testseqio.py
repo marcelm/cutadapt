@@ -213,12 +213,13 @@ class TestFastaWriter:
 
 	def test_linelength(self):
 		with FastaWriter(self.path, line_length=3) as fw:
-			fw.write("name", "CCAT")
-			fw.write("name2", "TACCAG")
+			fw.write("r1", "ACG")
+			fw.write("r2", "CCAT")
+			fw.write("r3", "TACCAG")
 		assert fw._file.closed
 		with open(self.path) as t:
 			d = t.read()
-			assert d == '>name\nCCA\nT\n>name2\nTAC\nCAG\n'
+			assert d == '>r1\nACG\n>r2\nCCA\nT\n>r3\nTAC\nCAG\n'
 
 	def test_write_sequence_object(self):
 		with FastaWriter(self.path) as fw:
@@ -235,6 +236,12 @@ class TestFastaWriter:
 			fw.write(Sequence("name2", "HELLO"))
 			assert sio.getvalue() == '>name\nCCATA\n>name2\nHELLO\n'
 		assert fw._file.closed
+
+	def test_write_zero_length_sequence(self):
+		sio = StringIO()
+		with FastaWriter(sio) as fw:
+			fw.write(Sequence("name", ""))
+			assert sio.getvalue() == '>name\n\n', '{0!r}'.format(sio.getvalue())
 
 
 class TestFastqWriter:
