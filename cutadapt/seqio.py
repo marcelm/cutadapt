@@ -482,7 +482,7 @@ class FastaWriter(object):
 	"""
 	Write FASTA-formatted sequences to a file.
 	"""
-	def __init__(self, file, line_length=80):
+	def __init__(self, file, line_length=None):
 		"""
 		If line_length is not None, the lines will
 		be wrapped after line_length characters.
