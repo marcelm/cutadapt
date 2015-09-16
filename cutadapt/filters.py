@@ -2,11 +2,17 @@
 """
 Classes for writing and filtering of processed reads.
 
-To determine what happens to a read, a list of filters is created and each
-one is called in turn (via its __call__ method) until one returns True.
+A Filter is a callable that has the read as its only argument. If it is called,
+it returns True if the read should be filtered (discarded), and False if not.
+
+To be used, a filter needs to be wrapped in one of the redirector classes.
+They are called so because they can redirect filtered reads to a file if so
+desired. They also keep statistics.
+
+To determine what happens to a read, a list of redirectors with different
+filters is created and each redirector is called in turn until one returns True.
 The read is then assumed to have been "consumed", that is, either written
-somewhere or filtered (should be discarded). Filters and writers are currently
-not distinguished: The idea is that at least one of the filters will apply.
+somewhere or filtered (should be discarded).
 """
 from __future__ import print_function, division, absolute_import
 from .xopen import xopen
@@ -18,90 +24,116 @@ DISCARD = True
 KEEP = False
 
 
-class Filter(object):
-	"""Abstract base class for filters"""
-	def __init__(self, check_second=True):
-		"""
-		check_second -- whether the second read in a pair is also checked for
-		its length. If True, the read is discarded if *any* of the two reads
-		fulfills the criteria for discarding a read.
-		"""
-		self.check_second = check_second
-		self.filtered = 0  # statistics
+class Redirector(object):
+	"""
+	Redirect discarded reads to the given writer. This is for single-end reads.
+	"""
+	def __init__(self, writer, filter):
+		self.filtered = 0
+		self.writer = writer
+		self.filter = filter
+		self.written = 0  # no of written reads  TODO move to writer
+		self.written_bp = [0, 0]
 
-	def discard(self, read):
-		"""
-		Return True if read should be discarded (implement this in a derived class).
-		"""
-		raise NotImplementedError()
-
-	def __call__(self, read1, read2=None):
-		if self.discard(read1) or (
-				self.check_second and read2 is not None and self.discard(read2)):
+	def __call__(self, read):
+		if self.filter(read):
 			self.filtered += 1
+			if self.writer is not None:
+				self.writer.write(read)
+				self.written += 1
+				self.written_bp[0] += len(read)
 			return DISCARD
 		return KEEP
 
 
-class RedirectingFilter(Filter):
+class PairedRedirector(object):
 	"""
-	Abstract base class for a filter that writes the reads it discards to a
-	separate output file.
+	Redirect discarded reads to the given writer. This is for paired-end reads,
+	using the 'new-style' filtering where both reads are inspected. That is, if
+	any of the reads match the filtering criteria, then the entire pair is
+	discarded.
 	"""
-	def __init__(self, writer=None, check_second=True):
-		super(RedirectingFilter, self).__init__(check_second)
+	def __init__(self, writer, filter):
+		self.filtered = 0
 		self.writer = writer
+		self.filter = filter
 		self.written = 0  # no of written reads or read pairs  TODO move to writer
 		self.written_bp = [0, 0]
 
-	def __call__(self, read1, read2=None):
-		if super(RedirectingFilter, self).__call__(read1, read2) == DISCARD:
+	def __call__(self, read1, read2):
+		if self.filter(read1) or self.filter(read2):
+			self.filtered += 1
+			# discard read
 			if self.writer is not None:
 				self.writer.write(read1, read2)
 				self.written += 1
 				self.written_bp[0] += len(read1)
-				if read2 is not None:
-					self.written_bp[1] += len(read2)
+				self.written_bp[1] += len(read2)
 			return DISCARD
 		return KEEP
 
 
-class TooShortReadFilter(RedirectingFilter):
-	def __init__(self, minimum_length, too_short_writer, check_second=True):
-		# TODO paired_outfile is left at its default value None (read2 is silently discarded)
-		super(TooShortReadFilter, self).__init__(writer=too_short_writer, check_second=check_second)
+class LegacyPairedRedirector(object):
+	"""
+	Redirect discarded reads to the given writer. This is for paired-end reads,
+	using the 'legacy' filtering mode (backwards compatibility). That is, if
+	the first read matches the filtering criteria, the pair is discarded. The
+	second read is not inspected.
+	"""
+	def __init__(self, writer, filter):
+		self.filtered = 0
+		self.writer = writer
+		self.filter = filter
+		self.written = 0  # no of written reads or read pairs  TODO move to writer
+		self.written_bp = [0, 0]
+
+	def __call__(self, read1, read2):
+		if self.filter(read1):
+			self.filtered += 1
+			# discard read
+			if self.writer is not None:
+				self.writer.write(read1, read2)
+				self.written += 1
+				self.written_bp[0] += len(read1)
+				self.written_bp[1] += len(read2)
+			return DISCARD
+		return KEEP
+
+
+class TooShortReadFilter(object):
+	# TODO paired_outfile is left at its default value None (read2 is silently discarded)
+	def __init__(self, minimum_length):
 		self.minimum_length = minimum_length
 
-	def discard(self, read):
+	def __call__(self, read):
 		return len(read) < self.minimum_length
 
 
-class TooLongReadFilter(RedirectingFilter):
-	def __init__(self, maximum_length, too_long_writer, check_second=True):
-		super(TooLongReadFilter, self).__init__(writer=too_long_writer, check_second=check_second)
+class TooLongReadFilter(object):
+	def __init__(self, maximum_length):
 		self.maximum_length = maximum_length
 
-	def discard(self, read):
+	def __call__(self, read):
 		return len(read) > self.maximum_length
 
 
-class NContentFilter(Filter):
+class NContentFilter(object):
 	"""
-	Discards reads over a given threshold of N's. It handles both raw counts of Ns as well
+	Discards a reads that has a number of 'N's over a given threshold. It handles both raw counts of Ns as well
 	as proportions. Note, for raw counts, it is a greater than comparison, so a cutoff
 	of '1' will keep reads with a single N in it.
 	"""
-	def __init__(self, count, check_second=True):
+	def __init__(self, count):
 		"""
 		Count -- if it is below 1.0, it will be considered a proportion, and above and equal to
 		1 will be considered as discarding reads with a number of N's greater than this cutoff.
 		"""
-		super(NContentFilter, self).__init__(check_second)
 		assert count >= 0
 		self.is_proportion = count < 1.0
 		self.cutoff = count
 
-	def discard(self, read):
+	def __call__(self, read):
+		"""Return True when the read should be discarded"""
 		n_count = read.sequence.lower().count('n')
 		if self.is_proportion:
 			if len(read) == 0:
@@ -112,29 +144,19 @@ class NContentFilter(Filter):
 		return False
 
 
-class DiscardUntrimmedFilter(RedirectingFilter):
+class DiscardUntrimmedFilter(object):
 	"""
-	A Filter that discards untrimmed reads.
+	Return True if read is untrimmed.
 	"""
-	def __init__(self, untrimmed_writer, check_second=True):
-		super(DiscardUntrimmedFilter, self).__init__(
-			writer=untrimmed_writer,
-			check_second=check_second)
-
-	def discard(self, read):
+	def __call__(self, read):
 		return read.match is None
 
 
-class DiscardTrimmedFilter(RedirectingFilter):
+class DiscardTrimmedFilter(object):
 	"""
-	A filter that discards trimmed reads.
+	Return True if read is trimmed.
 	"""
-	def __init__(self, trimmed_writer, check_second=True):
-		super(DiscardTrimmedFilter, self).__init__(
-			writer=trimmed_writer,
-			check_second=check_second)
-
-	def discard(self, read):
+	def __call__(self, read):
 		return read.match is not None
 
 

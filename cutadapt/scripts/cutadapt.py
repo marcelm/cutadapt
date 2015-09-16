@@ -77,8 +77,9 @@ from cutadapt.adapters import (Adapter, ColorspaceAdapter, gather_adapters,
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer)
-from cutadapt.filters import (TooShortReadFilter, TooLongReadFilter,
-	Demultiplexer, NContentFilter, DiscardUntrimmedFilter, DiscardTrimmedFilter)
+from cutadapt.filters import (Redirector, PairedRedirector,
+	LegacyPairedRedirector, TooShortReadFilter, TooLongReadFilter,
+	Demultiplexer, NContentFilter,DiscardUntrimmedFilter, DiscardTrimmedFilter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
 from cutadapt.compat import next
 
@@ -645,33 +646,31 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			parser.error("Expected one value or two values separated by comma for the quality cutoff")
 	else:
 		cutoffs = None
+
+	if not paired:
+		filter_wrapper = Redirector
+	elif paired == 'first':
+		filter_wrapper = LegacyPairedRedirector
+	elif paired == 'both':
+		filter_wrapper = PairedRedirector
 	filters = []
+	# TODO open_files = []
 	too_short_writer = None  # too short reads go here
-	too_short_filter = None
 	# TODO pass file name to TooShortReadFilter, add a .close() method?
 	if options.minimum_length > 0:
 		if options.too_short_output:
 			too_short_writer = seqio.open(options.too_short_output, mode='w',
 				fileformat=fileformat, colorspace=options.colorspace)
-		else:
-			too_short_writer = None
-		too_short_filter = TooShortReadFilter(options.minimum_length,
-			too_short_writer, paired=='both')
-		filters.append(too_short_filter)
+		filters.append(filter_wrapper(too_short_writer, TooShortReadFilter(options.minimum_length)))
 	too_long_writer = None  # too long reads go here
-	too_long_filter = None
 	if options.maximum_length < sys.maxsize:
 		if options.too_long_output is not None:
 			too_long_writer = seqio.open(options.too_long_output,
 				mode='w', fileformat=fileformat, colorspace=options.colorspace)
-		else:
-			too_long_writer = None
-		too_long_filter = TooLongReadFilter(options.maximum_length,
-			too_long_writer, check_second=paired=='both')
-		filters.append(too_long_filter)
+		filters.append(filter_wrapper(too_long_writer, TooLongReadFilter(options.maximum_length)))
 
 	if options.max_n != -1:
-		filters.append(NContentFilter(options.max_n, check_second=paired=='both'))
+		filters.append(filter_wrapper(None, NContentFilter(options.max_n)))
 
 	demultiplexer = None
 	if options.output is not None and '{name}' in options.output:
@@ -685,7 +684,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		if options.discard_untrimmed:
 			untrimmed = None
 		demultiplexer = Demultiplexer(options.output, untrimmed,
-			fileformat=fileformat, colorspace=colorspace)
+			fileformat=fileformat, colorspace=options.colorspace)
 		filters.append(demultiplexer)
 		trimmed_writer = None
 		untrimmed_writer = None
@@ -699,12 +698,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			fileformat=fileformat,
 			colorspace=options.colorspace)
 
-		filters.append(DiscardUntrimmedFilter(
-			untrimmed_writer,
-			check_second=paired=='both'))
-		filters.append(DiscardTrimmedFilter(
-			trimmed_writer,
-			check_second=paired=='both'))
+		filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
+		filters.append(filter_wrapper(trimmed_writer, DiscardTrimmedFilter()))
 
 	if options.maq:
 		options.colorspace = True

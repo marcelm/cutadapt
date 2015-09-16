@@ -4,7 +4,7 @@ Tests write output (should it return True or False or write)
 """
 from __future__ import print_function, division, absolute_import
 
-from cutadapt.filters import NContentFilter, DISCARD, KEEP
+from cutadapt.filters import NContentFilter, DISCARD, KEEP, LegacyPairedRedirector, PairedRedirector
 from cutadapt.seqio import Sequence
 
 def test_ncontentfilter():
@@ -32,10 +32,11 @@ def test_ncontentfilter_paired():
 		('ANAA', 'AANA', 1, KEEP),
 	]
 	for seq1, seq2, count, expected in params:
-		filter = NContentFilter(count=count, check_second=False)
-		filter_cs = NContentFilter(count=count, check_second=True)
+		filter = NContentFilter(count=count)
+		filter_legacy = LegacyPairedRedirector(None, filter)
+		filter_both = PairedRedirector(None, filter)
 		read1 = Sequence('read1', seq1, qualities='#'*len(seq1))
 		read2 = Sequence('read1', seq2, qualities='#'*len(seq2))
-		assert filter(read1, read2) == filter(read1)
+		assert filter_legacy(read1, read2) == filter(read1)
 		# discard entire pair if one of the reads fulfills criteria
-		assert filter_cs(read1, read2) == expected
+		assert filter_both(read1, read2) == expected

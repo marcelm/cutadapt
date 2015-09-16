@@ -39,17 +39,17 @@ class Statistics:
 		self.written_bp = [0, 0]
 		self.too_many_n = None
 		for w in writers:
-			if isinstance(w, TooShortReadFilter):
-				self.too_short = w.filtered
-			elif isinstance(w, TooLongReadFilter):
-				self.too_long = w.filtered
-			elif isinstance(w, NContentFilter):
-				self.too_many_n = w.filtered
-			elif isinstance(w, (DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer)):
+			if isinstance(w, Demultiplexer) or isinstance(w.filter, (DiscardTrimmedFilter, DiscardUntrimmedFilter)):
 				self.written += w.written
 				if self.n > 0:
 					self.written_fraction = self.written / self.n
 				self.written_bp = self.written_bp[0] + w.written_bp[0], self.written_bp[1] + w.written_bp[1]
+			elif isinstance(w.filter, TooShortReadFilter):
+				self.too_short = w.filtered
+			elif isinstance(w.filter, TooLongReadFilter):
+				self.too_long = w.filtered
+			elif isinstance(w.filter, NContentFilter):
+				self.too_many_n = w.filtered
 		assert self.written is not None
 
 		self.with_adapters = [0, 0]
