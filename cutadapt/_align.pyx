@@ -360,7 +360,7 @@ cdef class Aligner:
 		best.matches = 0
 
 		# Ukkonen's trick: index of the last cell that is less than k.
-		cdef int last = k + 1
+		cdef int last = min(m, k + 1)
 		if start_in_ref:
 			last = m
 

@@ -2,8 +2,21 @@
 from __future__ import print_function, division, absolute_import
 
 from cutadapt.align import (locate, compare_prefixes, compare_suffixes,
-	ALLOW_WILDCARD_SEQ1, ALLOW_WILDCARD_SEQ2)
+	ALLOW_WILDCARD_SEQ1, ALLOW_WILDCARD_SEQ2, Aligner)
 from cutadapt.adapters import BACK
+
+
+class TestAligner():
+	def test(self):
+		reference = 'CTCCAGCTTAGACATATC'
+		aligner = Aligner(reference, 0.1, flags=BACK)
+		aligner.locate('CC')
+
+	def test_100_percent_error_rate(self):
+		reference = 'GCTTAGACATATC'
+		aligner = Aligner(reference, 1.0, flags=BACK)
+		aligner.locate('CAA')
+
 
 def test_polya():
 	s = 'AAAAAAAAAAAAAAAAA'
