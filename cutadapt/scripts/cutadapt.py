@@ -68,6 +68,7 @@ import errno
 from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
 import logging
 import platform
+import textwrap
 
 from cutadapt import seqio, __version__
 from cutadapt.xopen import xopen
@@ -828,8 +829,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
 
 	if paired == 'first' and (modifiers_both or cutoffs):
-		logger.warn('Note: Requested read modifications are applied only to the first '
-			'read since paired-end legacy mode is active.')
+		logger.warn('\n'.join(textwrap.wrap('WARNING: Requested read '
+			'modifications are applied only to the first '
+			'read since backwards compatibility mode is enabled. '
+			'To modify both reads, also use any of the -A/-B/-G/-U options. '
+			'Use a dummy adapter sequence when necessary: -A XXX')))
 
 	start_time = time.clock()
 	try:
