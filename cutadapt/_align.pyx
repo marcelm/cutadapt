@@ -372,80 +372,82 @@ cdef class Aligner:
 		cdef bint characters_equal
 		cdef _Entry tmp_entry
 
-		# iterate over columns
-		for j in range(min_n + 1, max_n + 1):
-			# remember first entry
-			tmp_entry = column[0]
+		with nogil:
+			# iterate over columns
+			for j in range(min_n + 1, max_n + 1):
+				# remember first entry
+				tmp_entry = column[0]
 
-			# fill in first entry in this column
-			if start_in_query:
-				column[0].origin = j
-			else:
-				column[0].cost = j * self._insertion_cost
-			for i in range(1, last + 1):
-				if compare_ascii:
-					characters_equal = (s1[i-1] == s2[j-1])
+				# fill in first entry in this column
+				if start_in_query:
+					column[0].origin = j
 				else:
-					characters_equal = (s1[i-1] & s2[j-1]) != 0
-				if characters_equal:
-					# Characters match: This cannot be an indel.
-					cost = tmp_entry.cost
-					origin = tmp_entry.origin
-					matches = tmp_entry.matches + 1
-				else:
-					# Characters do not match.
-					cost_diag = tmp_entry.cost + 1
-					cost_deletion = column[i].cost + self._deletion_cost
-					cost_insertion = column[i-1].cost + self._insertion_cost
-
-					if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
-						# MISMATCH
-						cost = cost_diag
-						origin = tmp_entry.origin
-						matches = tmp_entry.matches
-					elif cost_insertion <= cost_deletion:
-						# INSERTION
-						cost = cost_insertion
-						origin = column[i-1].origin
-						matches = column[i-1].matches
+					column[0].cost = j * self._insertion_cost
+				for i in range(1, last + 1):
+					if compare_ascii:
+						characters_equal = (s1[i-1] == s2[j-1])
 					else:
-						# DELETION
-						cost = cost_deletion
-						origin = column[i].origin
-						matches = column[i].matches
+						characters_equal = (s1[i-1] & s2[j-1]) != 0
+					if characters_equal:
+						# Characters match: This cannot be an indel.
+						cost = tmp_entry.cost
+						origin = tmp_entry.origin
+						matches = tmp_entry.matches + 1
+					else:
+						# Characters do not match.
+						cost_diag = tmp_entry.cost + 1
+						cost_deletion = column[i].cost + self._deletion_cost
+						cost_insertion = column[i-1].cost + self._insertion_cost
 
-				# remember current cell for next iteration
-				tmp_entry = column[i]
+						if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
+							# MISMATCH
+							cost = cost_diag
+							origin = tmp_entry.origin
+							matches = tmp_entry.matches
+						elif cost_insertion <= cost_deletion:
+							# INSERTION
+							cost = cost_insertion
+							origin = column[i-1].origin
+							matches = column[i-1].matches
+						else:
+							# DELETION
+							cost = cost_deletion
+							origin = column[i].origin
+							matches = column[i].matches
 
-				column[i].cost = cost
-				column[i].origin = origin
-				column[i].matches = matches
-			if self.debug:
-				for i in range(last + 1):
-					self._dpmatrix.set_entry(i, j, column[i].cost)
-			while last >= 0 and column[last].cost > k:
-				last -= 1
-			# last can be -1 here, but will be incremented next.
-			# TODO if last is -1, can we stop searching?
-			if last < m:
-				last += 1
-			elif stop_in_query:
-				# Found a match. If requested, find best match in last row.
-				# length of the aligned part of the reference
-				length = m + min(column[m].origin, 0)
-				cost = column[m].cost
-				matches = column[m].matches
-				if length >= self._min_overlap and cost <= length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
-					# update
-					best.matches = matches
-					best.cost = cost
-					best.origin = column[m].origin
-					best.ref_stop = m
-					best.query_stop = j
-					if cost == 0 and matches == m:
-						# exact match, stop early
-						break
-			# column finished
+					# remember current cell for next iteration
+					tmp_entry = column[i]
+
+					column[i].cost = cost
+					column[i].origin = origin
+					column[i].matches = matches
+				if self.debug:
+					with gil:
+						for i in range(last + 1):
+							self._dpmatrix.set_entry(i, j, column[i].cost)
+				while last >= 0 and column[last].cost > k:
+					last -= 1
+				# last can be -1 here, but will be incremented next.
+				# TODO if last is -1, can we stop searching?
+				if last < m:
+					last += 1
+				elif stop_in_query:
+					# Found a match. If requested, find best match in last row.
+					# length of the aligned part of the reference
+					length = m + min(column[m].origin, 0)
+					cost = column[m].cost
+					matches = column[m].matches
+					if length >= self._min_overlap and cost <= length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
+						# update
+						best.matches = matches
+						best.cost = cost
+						best.origin = column[m].origin
+						best.ref_stop = m
+						best.query_stop = j
+						if cost == 0 and matches == m:
+							# exact match, stop early
+							break
+				# column finished
 
 		if max_n == n:
 			first_i = 0 if stop_in_ref else m
