@@ -27,6 +27,18 @@ def run_interleaved(params, inpath, expected):
 		assert files_equal(cutpath(expected), tmp)
 
 
+def run_interleaved2(params, inpath, expected1, expected2):
+	if type(params) is str:
+		params = params.split()
+	with temporary_path("temp-paired.1.fastq") as p1:
+		with temporary_path("temp-paired.2.fastq") as p2:
+			params += ['--interleaved', '-o', p1, '-p', p2]
+		params += [datapath(inpath)]
+		assert cutadapt.main(params) is None
+		assert files_equal(cutpath(expected), p1)
+		assert files_equal(cutpath(expected), p2)
+
+
 def test_paired_separate():
 	'''test separate trimming of paired-end reads'''
 	run('-a TTAGACATAT', 'paired-separate.1.fastq', 'paired.1.fastq')
@@ -122,7 +134,7 @@ def test_unmatched_read_names():
 		with open(swapped, 'w') as f:
 			f.writelines(lines)
 		with redirect_stderr():
-			cutadapt.main('-a XX --paired-output out.fastq'.split() + [swapped, datapath('paired.2.fastq')])
+			cutadapt.main('-a XX -o out1.fastq --paired-output out2.fastq'.split() + [swapped, datapath('paired.2.fastq')])
 
 
 def test_legacy_minlength():
@@ -192,3 +204,21 @@ def test_interleaved():
 	run_interleaved('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
 		inpath='interleaved.fastq', expected='interleaved.fastq'
 	)
+
+
+@raises(SystemExit)
+def test_interleaved_no_paired_output():
+	with temporary_path("temp-paired.1.fastq") as p1:
+		with temporary_path("temp-paired.2.fastq") as p2:
+			params = '-a XX --interleaved'.split()
+			with redirect_stderr():
+				params += [ '-o', p1, '-p1', p2, 'paired.1.fastq', 'paired.2.fastq']
+				cutadapt.main(params)
+
+"""
+def test_interleaved_input_paired_output():
+	'''single-pass interleaved paired-end with -q and -m, paired output'''
+	run_interleaved2('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
+		inpath='interleaved.fastq', expected1='pairedq1.fastq', expected2='pairedq2.fastq'
+	)
+"""

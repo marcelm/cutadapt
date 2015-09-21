@@ -588,10 +588,19 @@ The following limitations still exist:
 Interleaved paired-end reads
 ----------------------------
 
-* Use `--interleaved`
-* Input FASTQ must be interleaved and output will be written interleaved.
-* Legacy mode (in which only the first read in a pair is modified) is *disabled*.
+Paired-end reads can be read from a single FASTQ file in which the entries for
+the first and second read from each pair alternate. The first read in each pair
+comes before the second. Enable this file format by adding the ``--interleaved``
+option to the command-line. For example::
 
+    cutadapt --interleaved -q 20 -a ACGT -A TGCA -o trimmed.fastq reads.fastq
+
+The output FASTQ file will also be written interleaved. Cutadapt will detect if
+the input file is not properly interleaved by checking whether read names match
+and whether the file contains an even number of entries.
+
+When ``--interleaved`` is used, legacy mode is disabled (that is,
+read-modification options such as ``-q`` always apply to both reads).
 
 
 Legacy paired-end read trimming
@@ -637,7 +646,7 @@ Finally, remove the temporary files::
 Please see the previous section for a much simpler way of trimming paired-end
 reads!
 
-In the legacy paired-end mode, the read-modifying options such as ``-q`` only
+In legacy paired-end mode, the read-modifying options such as ``-q`` only
 apply to the first file in each call to cutadapt (first ``reads.1.fastq``, then
 ``tmp.2.fastq`` in this example). Reads in the second file are not affected by those
 options, but by the filtering options: If a read in the first file is
@@ -736,7 +745,7 @@ file in which ``{name}`` is replaced with ``unknown``.
 
 .. note:
     Demultiplexing is currently only supported for single-end reads. Paired-end
-    support is planned for the next version.
+    support is planned for one of the next versions.
 
 Example::
 
@@ -989,7 +998,7 @@ at most one file*. You cannot write reads to more than one output file.
 
 In the following, the term "processed read" refers to a read which has been
 quality trimmed (if ``-q`` has been used) and in which all found adapters have
-been removed. A processed read may be identical with the input read if no
+been removed. A processed read may be identical to the input read if no
 bases were quality-trimmed and no adapters were found.
 
 ``--minimum-length N`` or ``-m N``
@@ -1160,6 +1169,8 @@ concatenation of columns 5-7 be identical to the original read sequence (and
 accordingly for columns 9-11). For subsequent lines, the shown sequence are the
 ones that were used in subsequent rounds of adapter trimming, that is, they get
 successively shorter.
+
+Columns 9-11 have been added in cutadapt version 1.9.
 
 
 .. _algorithm:

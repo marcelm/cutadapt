@@ -298,6 +298,7 @@ def trimmed_and_untrimmed_writers(
 		discard_untrimmed,
 		fileformat,
 		colorspace,
+		interleaved
 		):
 	"""
 	Figure out (from command-line parameters) where trimmed and untrimmed reads
@@ -318,7 +319,8 @@ def trimmed_and_untrimmed_writers(
 	"""
 	def open_writer(path_or_file, path_or_file2=None):
 		return seqio.open(path_or_file, path_or_file2,
-			mode='w', colorspace=colorspace, fileformat=fileformat)
+			mode='w', colorspace=colorspace, fileformat=fileformat,
+			interleaved=interleaved)
 
 	if discard_trimmed:
 		if discard_untrimmed:
@@ -690,7 +692,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			options.discard_trimmed,
 			options.discard_untrimmed,
 			fileformat=fileformat,
-			colorspace=options.colorspace)
+			colorspace=options.colorspace,
+			interleaved=options.interleaved)
 
 		filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
 		filters.append(filter_wrapper(trimmed_writer, DiscardTrimmedFilter()))
