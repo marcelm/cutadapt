@@ -565,9 +565,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	elif len(args) > 2:
 		parser.error("Too many parameters.")
 	input_filename = args[0]
+	if input_filename.endswith('.qual'):
+		parser.error("If a .qual file is given, it must be the second argument.")
 
 	# Find out which 'mode' we need to use.
-	# Default: single-read trimming (neither -p nor -A/-G/-B/-U given)
+	# Default: single-read trimming (neither -p nor -A/-G/-B/-U/--interleaved given)
 	paired = False
 	if options.paired_output:
 		# Modify first read only, keep second in sync (-p given, but not -A/-G/-B/-U).
@@ -575,8 +577,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		paired = 'first'
 	if options.adapters2 or options.front2 or options.anywhere2 or options.cut2 or options.interleaved:
 		# Full paired-end trimming when both -p and -A/-G/-B/-U given
-		# Also the read modifications (such as quality trimming) are applied
-		# to second read.
+		# Read modifications (such as quality trimming) are applied also to second read.
 		paired = 'both'
 
 	if paired and len(args) == 1 and not options.interleaved:
@@ -585,36 +586,29 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if options.interleaved and len(args) != 1:
 		parser.error("When reading interleaved files, only one input file may "
 			"be given.")
-	if paired:
-		if options.interleaved:
-			input_paired_filename = None
-		else:
-			input_paired_filename = args[1]
-		quality_filename = None
-	else:
-		input_paired_filename = None
-		if len(args) == 2:
-			if args[0].endswith('.qual'):
-				parser.error("The QUAL file must be the second argument.")
-			quality_filename = args[1]
-		else:
-			quality_filename = None
-
-	if paired:
-		if not options.interleaved:
-			if not options.paired_output:
-				parser.error("When paired-end trimming is enabled via -A/-G/-B/-U, "
-					"a second output file needs to be specified via -p (--paired-output).")
-			if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
-				parser.error("When trimming paired-end reads, you must use either none "
-					"or both of the --untrimmed-output/--untrimmed-paired-output options.")
-	else:
+	if not paired:
 		if options.untrimmed_paired_output:
 			parser.error("Option --untrimmed-paired-output can only be used when "
 				"trimming paired-end reads (with option -p).")
-		if input_filename.endswith('.qual'):
-			parser.error("Need a FASTA file in addition to the QUAL file.")
-		if options.format is not None and quality_filename is not None:
+
+	# Assign input_paired_filename and quality_filename
+	input_paired_filename = None
+	quality_filename = None
+	if paired:
+		if not options.interleaved:
+			input_paired_filename = args[1]
+			if not options.paired_output:
+				parser.error("When paired-end trimming is enabled via -A/-G/-B/-U, "
+					"a second output file needs to be specified via -p (--paired-output).")
+			if not options.output:
+				parser.error("When you use -p or --paired-output, you must also "
+					"use the -o option.")
+			if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
+				parser.error("When trimming paired-end reads, you must use either none "
+					"or both of the --untrimmed-output/--untrimmed-paired-output options.")
+	elif len(args) == 2:
+		quality_filename = args[1]
+		if options.format is not None:
 			parser.error("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
