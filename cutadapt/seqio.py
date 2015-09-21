@@ -547,9 +547,11 @@ class FastqWriter(object):
 
 		The record must have attributes .name, .sequence and .qualities.
 		"""
-		name2 = record.name if record.twoheaders else ''
-		print("@{0:s}\n{1:s}\n+{2:s}\n{3:s}".format(
-			record.name, record.sequence, name2, record.qualities), file=self._file)
+		s = '@' + record.name + '\n' + record.sequence + '\n+'
+		if record.twoheaders:
+			s += record.name
+		s += '\n' + record.qualities + '\n'
+		self._file.write(s)
 
 	def writeseq(self, name, sequence, qualities):
 		print("@{0:s}\n{1:s}\n+\n{2:s}".format(
