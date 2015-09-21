@@ -12,6 +12,8 @@ TODO
   before the first space)
 - ensure all Readers and Writers are context managers
 - ensure FastaWriter and FastqWriter are as fast as Sequence.write
+- when a file-like object is passed, then it should not be closed by the
+  reader/writer classes
 """
 from __future__ import print_function, division, absolute_import
 import sys
@@ -621,6 +623,27 @@ class PairedSequenceWriter(object):
 	def close(self):
 		self._writer1.close()
 		self._writer2.close()
+
+
+class InterleavedSequenceWriter(object):
+	"""
+	Write paired-end reads to an interleaved FASTA or FASTQ file
+	"""
+	def __init__(self, file, colorspace=False, fileformat='fastq'):
+		self._writer = open(file, colorspace=colorspace, fileformat=fileformat, mode='w')
+
+	def write(self, read1, read2):
+		self._writer.write(read1)
+		self._writer.write(read2)
+
+	def close(self):
+		self._writer.close()
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, *args):
+		self.close()
 
 
 class UnknownFileType(Exception):

@@ -9,7 +9,7 @@ from nose.tools import raises
 from tempfile import mkdtemp
 from cutadapt.seqio import (Sequence, ColorspaceSequence, FormatError,
 	FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
-	FastaWriter, FastqWriter, open as openseq)
+	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq)
 from cutadapt.compat import StringIO
 
 
@@ -275,3 +275,19 @@ class TestFastqWriter:
 			fq.write("name2", "HELLO", "&&&!&&")
 			assert sio.getvalue() == '@name\nCCATA\n+\n!#!#!\n@name2\nHELLO\n+\n&&&!&&\n'
 		assert fq._file.closed
+
+
+class TestInterleavedWriter:
+	def test(self):
+		reads = [
+			(Sequence('A/1 comment', 'TTA', '##H'),
+			Sequence('A/2 comment', 'GCT', 'HH#')),
+			(Sequence('B/1', 'CC', 'HH'),
+			Sequence('B/2', 'TG', '#H'))
+		]
+		sio = StringIO()
+		with InterleavedSequenceWriter(sio) as writer:
+			for read1, read2 in reads:
+				writer.write(read1, read2)
+			# TODO should be outside the 'with' block
+			assert sio.getvalue() == '@A/1 comment\nTTA\n+\n##H\n@A/2 comment\nGCT\n+\nHH#\n@B/1\nCC\n+\nHH\n@B/2\nTG\n+\n#H\n'
