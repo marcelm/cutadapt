@@ -560,29 +560,19 @@ class FastqWriter(object):
 			file = xopen(file, "w")
 		self._file = file
 
-	def write(self, name_or_seq, sequence=None, qualities=None):
+	def write(self, record):
 		"""
-		Write an entry to the the FASTQ file.
+		Write a Sequence record to the the FASTQ file.
 
-		If only one parameter (name_or_seq) is given, it must have
-		attributes .name, .sequence and .qualities, which are then
-		used. Otherwise, all three parameters must be given and
-		name_or_seq must be the name of the sequence.
-
-		The effect is that you can write this:
-		fq.write("name", "ACCAT", "#!!&B")
-		or
-		fq.write(Sequence("name", "ACCAT", "#!!&B"))
+		The record must have attributes .name, .sequence and .qualities.
 		"""
-		if sequence is None:
-			name = name_or_seq.name
-			sequence = name_or_seq.sequence
-			qualities = name_or_seq.qualities
-			name2 = name if name_or_seq.twoheaders else ''
-		else:
-			name = name_or_seq
-			name2 = ''
-		print("@{0}\n{1}\n+{2}\n{3}".format(name, sequence, name2, qualities), file=self._file)
+		name2 = record.name if record.twoheaders else ''
+		print("@{0:s}\n{1:s}\n+{2:s}\n{3:s}".format(
+			record.name, record.sequence, name2, record.qualities), file=self._file)
+
+	def writeseq(self, name, sequence, qualities):
+		print("@{0:s}\n{1:s}\n+\n{2:s}".format(
+			name, sequence, qualities), file=self._file)
 
 	def close(self):
 		self._file.close()
@@ -601,7 +591,7 @@ class ColorspaceFastqWriter(FastqWriter):
 		name = record.name
 		sequence = record.primer + record.sequence
 		qualities = record.qualities
-		super(ColorspaceFastqWriter, self).write(name, sequence, qualities)
+		super(ColorspaceFastqWriter, self).writeseq(name, sequence, qualities)
 
 
 class PairedSequenceWriter(object):

@@ -254,8 +254,8 @@ class TestFastqWriter:
 
 	def test(self):
 		with FastqWriter(self.path) as fq:
-			fq.write("name", "CCATA", "!#!#!")
-			fq.write("name2", "HELLO", "&&&!&&")
+			fq.writeseq("name", "CCATA", "!#!#!")
+			fq.writeseq("name2", "HELLO", "&&&!&&")
 		assert fq._file.closed
 		with open(self.path) as t:
 			assert t.read() == '@name\nCCATA\n+\n!#!#!\n@name2\nHELLO\n+\n&&&!&&\n'
@@ -271,8 +271,9 @@ class TestFastqWriter:
 	def test_write_to_file_like_object(self):
 		sio = StringIO()
 		with FastqWriter(sio) as fq:
-			fq.write("name", "CCATA", "!#!#!")
-			fq.write("name2", "HELLO", "&&&!&&")
+			fq.writeseq("name", "CCATA", "!#!#!")
+			fq.writeseq("name2", "HELLO", "&&&!&&")
+			# TODO should be outside the 'with' block
 			assert sio.getvalue() == '@name\nCCATA\n+\n!#!#!\n@name2\nHELLO\n+\n&&&!&&\n'
 		assert fq._file.closed
 
