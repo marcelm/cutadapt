@@ -6,8 +6,6 @@ TODO
 
 - are the Colorspace... classes needed? only used by open, where we could set
   the sequence_class directly
-- the twoheaders thing is not necessary, easier to have an attribute that
-  contains the second header
 - Sequence.name should be Sequence.description or so (reserve .name for the part
   before the first space)
 - ensure all Readers and Writers are context managers
@@ -42,12 +40,12 @@ def _shorten(s, n=100):
 class Sequence(object):
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
-	def __init__(self, name, sequence, qualities=None, twoheaders=False, match=None):
+	def __init__(self, name, sequence, qualities=None, name2='', match=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
-		self.twoheaders = twoheaders
+		self.name2 = name2
 		self.match = match
 		if qualities is not None:
 			if len(qualities) != len(sequence):
@@ -61,7 +59,7 @@ class Sequence(object):
 			self.name,
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
-		    self.twoheaders,
+		    self.name2,
 		    self.match)
 
 	def __repr__(self):
@@ -89,7 +87,7 @@ except ImportError:
 
 
 class ColorspaceSequence(Sequence):
-	def __init__(self, name, sequence, qualities, primer=None, twoheaders=False, match=None):
+	def __init__(self, name, sequence, qualities, primer=None, name2='', match=None):
 		# In colorspace, the first character is the last nucleotide of the primer base
 		# and the second character encodes the transition from the primer base to the
 		# first real base of the read.
@@ -103,7 +101,7 @@ class ColorspaceSequence(Sequence):
 			raise FormatError("In read named {0!r}: length of colorspace quality "
 				"sequence ({1}) and length of read ({2}) do not match (primer "
 				"is: {3!r})".format(rname, len(qualities), len(sequence), self.primer))
-		super(ColorspaceSequence, self).__init__(name, sequence, qualities, twoheaders, match)
+		super(ColorspaceSequence, self).__init__(name, sequence, qualities, name2, match)
 		if not self.primer in ('A', 'C', 'G', 'T'):
 			raise FormatError("Primer base is {0!r} in read {1!r}, but it "
 				"should be one of A, C, G, T.".format(
@@ -121,13 +119,13 @@ class ColorspaceSequence(Sequence):
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
 			self.primer,
-			self.twoheaders,
+			self.name2,
 			self.match)
 
 
-def sra_colorspace_sequence(name, sequence, qualities, twoheaders):
+def sra_colorspace_sequence(name, sequence, qualities, name2):
 	"""Factory for an SRA colorspace sequence (which has one quality value too many)"""
-	return ColorspaceSequence(name, sequence, qualities[1:], twoheaders=twoheaders)
+	return ColorspaceSequence(name, sequence, qualities[1:], name2=name2)
 
 
 class FileWithPrependedLine(object):
@@ -233,7 +231,7 @@ class FastqReader(object):
 	"""
 	_file_passed = True
 
-	def __init__(self, file, sequence_class=Sequence):
+	def __init__(self, file, sequence_class=Sequence): # TODO could be a class attribute
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
@@ -265,19 +263,19 @@ class FastqReader(object):
 				if not line.startswith('+'):
 					raise FormatError("At line {0}: Expected a line starting with '+'".format(i+1))
 				if len(line) > 1:
-					twoheaders = True
-					if not line[1:] == name:
+					if line[1:] != name:
 						raise FormatError(
 							"At line {0}: Sequence descriptions in the FASTQ file do not match "
 							"({1!r} != {2!r}).\n"
 							"The second sequence description must be either empty "
 							"or equal to the first description.".format(
-								i+1, name, line.rstrip()[1:]))
+								i+1, name, line[1:].rstrip()))
+					name2 = name
 				else:
-					twoheaders = False
+					name2 = ''
 			elif i % 4 == 3:
 				qualities = line.rstrip('\n\r')
-				yield self.sequence_class(name, sequence, qualities, twoheaders=twoheaders)
+				yield self.sequence_class(name, sequence, qualities, name2=name2)
 
 	def close(self):
 		if not self._file_passed and self._file is not None:
@@ -532,11 +530,6 @@ class FastqWriter(object):
 	QUALITIS
 	"""
 	def __init__(self, file):
-		"""
-		If twoheaders is set, then the read name will be repeated after
-		the plus sign (which is redundant and therefore not
-		recommended).
-		"""
 		if isinstance(file, str):
 			file = xopen(file, "w")
 		self._file = file
@@ -547,10 +540,8 @@ class FastqWriter(object):
 
 		The record must have attributes .name, .sequence and .qualities.
 		"""
-		s = '@' + record.name + '\n' + record.sequence + '\n+'
-		if record.twoheaders:
-			s += record.name
-		s += '\n' + record.qualities + '\n'
+		s = ('@' + record.name + '\n' + record.sequence + '\n+' +
+				record.name2 + '\n' + record.qualities + '\n')
 		self._file.write(s)
 
 	def writeseq(self, name, sequence, qualities):

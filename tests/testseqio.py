@@ -272,8 +272,8 @@ class TestFastqWriter:
 
 	def test_twoheaders(self):
 		with FastqWriter(self.path) as fq:
-			fq.write(Sequence("name", "CCATA", "!#!#!", twoheaders=True))
-			fq.write(Sequence("name2", "HELLO", "&&&!&", twoheaders=True))
+			fq.write(Sequence("name", "CCATA", "!#!#!", name2="name"))
+			fq.write(Sequence("name2", "HELLO", "&&&!&", name2="name2"))
 		assert fq._file.closed
 		with open(self.path) as t:
 			assert t.read() == '@name\nCCATA\n+name\n!#!#!\n@name2\nHELLO\n+name2\n&&&!&\n'

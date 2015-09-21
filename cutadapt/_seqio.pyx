@@ -35,16 +35,16 @@ cdef class Sequence(object):
 		public str name
 		public str sequence
 		public str qualities
+		public str name2
 		public object match
-		public bint twoheaders
 
-	def __init__(self, str name, str sequence, str qualities=None,
-			  bint twoheaders=False, match=None):
+	def __init__(self, str name, str sequence, str qualities=None, str name2='',
+			match=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
-		self.twoheaders = twoheaders
+		self.name2 = name2
 		self.match = match
 		if qualities is not None and len(qualities) != len(sequence):
 			rname = _shorten(name)
@@ -57,7 +57,7 @@ cdef class Sequence(object):
 			self.name,
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
-			self.twoheaders,
+			self.name2,
 			self.match)
 
 	def __repr__(self):
@@ -82,7 +82,7 @@ cdef class Sequence(object):
 			raise NotImplementedError()
 
 	def __reduce__(self):
-		return (Sequence, (self.name, self.sequence, self.qualities, self.twoheaders))
+		return (Sequence, (self.name, self.sequence, self.qualities, self.name2))
 
 
 class FastqReader(object):
@@ -93,9 +93,6 @@ class FastqReader(object):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
-
-		colorspace -- Usually (when this is False), there must be n characters in the sequence and
-		n quality values. When this is True, there must be n+1 characters in the sequence and n quality values.
 		"""
 		if isinstance(file, basestring):
 			file = xopen(file)
@@ -108,13 +105,11 @@ class FastqReader(object):
 
 	def __iter__(self):
 		"""
-		Return tuples: (name, sequence, qualities).
-		qualities is a string and it contains the unmodified, encoded qualities.
+		Yield Sequence objects
 		"""
 		cdef int i = 0
 		cdef int strip
-		cdef str line, name, qualities, sequence
-		cdef bint twoheaders
+		cdef str line, name, qualities, sequence, name2
 		sequence_class = self.sequence_class
 
 		it = iter(self.fp)
@@ -134,13 +129,12 @@ class FastqReader(object):
 				sequence = line[:strip]
 			elif i == 2:
 				if line == '+\n':  # check most common case first
-					twoheaders = False
+					name2 = ''
 				else:
 					line = line[:strip]
 					if not (line and line[0] == '+'):
 						raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
 					if len(line) > 1:
-						twoheaders = True
 						if not line[1:] == name:
 							raise FormatError(
 								"At line {0}: Sequence descriptions in the FASTQ file don't match "
@@ -148,14 +142,15 @@ class FastqReader(object):
 								"The second sequence description must be either empty "
 								"or equal to the first description.".format(i+1,
 									name, line[1:]))
+						name2 = name
 					else:
-						twoheaders = False
+						name2 = ''
 			elif i == 3:
 				if len(line) == len(sequence) - strip:
 					qualities = line[:strip]
 				else:
 					qualities = line.rstrip('\r\n')
-				yield sequence_class(name, sequence, qualities, twoheaders=twoheaders)
+				yield sequence_class(name, sequence, qualities, name2=name2)
 			i = (i + 1) % 4
 		if i != 0:
 			raise FormatError("FASTQ file ended prematurely")
