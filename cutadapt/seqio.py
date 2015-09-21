@@ -81,16 +81,6 @@ class Sequence(object):
 	def __ne__(self, other):
 		return not self.__eq__(other)
 
-	def write(self, outfile):
-		if self.qualities is not None:
-			s = '@' + self.name + '\n' + self.sequence + '\n+'
-			if self.twoheaders:
-				s += self.name
-			s += '\n' + self.qualities + '\n'
-		else:
-			s = '>' + self.name + '\n' + self.sequence + '\n'
-		outfile.write(s)
-
 
 try:
 	from ._seqio import Sequence
@@ -133,16 +123,6 @@ class ColorspaceSequence(Sequence):
 			self.primer,
 			self.twoheaders,
 			self.match)
-
-	def write(self, outfile):
-		if self.qualities is not None:
-			s = '@' + self.name + '\n' + self.primer + self.sequence + '\n+'
-			if self.twoheaders:
-				s += self.name
-			s += '\n' + self.qualities + '\n'
-		else:
-			s = '>' + self.name + '\n' + self.primer + self.sequence + '\n'
-		outfile.write(s)
 
 
 def sra_colorspace_sequence(name, sequence, qualities, twoheaders):

@@ -84,16 +84,6 @@ cdef class Sequence(object):
 	def __reduce__(self):
 		return (Sequence, (self.name, self.sequence, self.qualities, self.twoheaders))
 
-	def write(self, outfile):
-		if self.qualities is not None:
-			s = '@' + self.name + '\n' + self.sequence + '\n+'
-			if self.twoheaders:
-				s += self.name
-			s += '\n' + self.qualities + '\n'
-		else:
-			s = '>' + self.name + '\n' + self.sequence + '\n'
-		outfile.write(s)
-
 
 class FastqReader(object):
 	"""
