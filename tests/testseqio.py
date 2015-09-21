@@ -194,6 +194,16 @@ class TestInterleavedReader:
 			reads = list(f)
 		assert reads == expected
 
+	@raises(FormatError)
+	def test_missing_partner(self):
+		s = StringIO('@r1\nACG\n+\nHHH')
+		list(InterleavedSequenceReader(s))
+
+	@raises(FormatError)
+	def test_incorrectly_paired(self):
+		s = StringIO('@r1/1\nACG\n+\nHHH\n@wrong_name\nTTT\n+\nHHH')
+		list(InterleavedSequenceReader(s))
+
 
 class TestFastaWriter:
 	def setup(self):

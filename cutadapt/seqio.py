@@ -463,8 +463,8 @@ class InterleavedSequenceReader(object):
 			except StopIteration:
 				raise FormatError("Interleaved input file incomplete: Last record has no partner.")
 			if not sequence_names_match(r1, r2):
-				raise FormatError("Reads are improperly paired. Name '{0}' "
-					"(first) does not match '{1}' (second).".format(r1.name, r2.name))
+				raise FormatError("Reads are improperly paired. Name {0!r} "
+					"(first) does not match {1!r} (second).".format(r1.name, r2.name))
 			yield (r1, r2)
 
 	def close(self):
