@@ -164,6 +164,8 @@ class FastaReader(object):
 	"""
 	Reader for FASTA files.
 	"""
+	_file_passed = True
+
 	def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence):
 		"""
 		file is a filename or a file-like object.
@@ -174,8 +176,6 @@ class FastaReader(object):
 		if isinstance(file, basestring):
 			file = xopen(file)
 			self._file_passed = False
-		else:
-			self._file_passed = True
 		self._file = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = False
@@ -231,6 +231,8 @@ class FastqReader(object):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
+	_file_passed = True
+
 	def __init__(self, file, sequence_class=Sequence):
 		"""
 		file is a filename or a file-like object.
@@ -242,8 +244,6 @@ class FastqReader(object):
 		if isinstance(file, basestring):
 			file = xopen(file)
 			self._file_passed = False
-		else:
-			self._file_passed = True
 		self._file = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
@@ -313,6 +313,8 @@ class FastaQualReader(object):
 	"""
 	Reader for reads that are stored in .(CS)FASTA and .QUAL files.
 	"""
+	delivers_qualities = True
+
 	def __init__(self, fastafile, qualfile, sequence_class=Sequence):
 		"""
 		fastafile and qualfile are filenames or file-like objects.
@@ -324,7 +326,6 @@ class FastaQualReader(object):
 		self.fastareader = FastaReader(fastafile)
 		self.qualreader = FastaReader(qualfile, keep_linebreaks=True)
 		self.sequence_class = sequence_class
-		self.delivers_qualities = True
 
 	def __iter__(self):
 		"""
