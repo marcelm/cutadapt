@@ -781,8 +781,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 				options.wildcard_file, options.info_file,
 				rest_writer, options.action)
 		modifiers.append(adapter_cutter)
-	else:
-		adapter_cutter = None
 
 	# Modifiers that apply to both reads of paired-end reads unless in legacy mode
 	modifiers_both = []
