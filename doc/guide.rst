@@ -432,6 +432,9 @@ you use this feature. For poly-A trimming, for example, you would write::
     cutadapt -a "A{100}" -o output.fastq input.fastq
 
 
+Other read modifications
+========================
+
 .. _cut-bases:
 
 Removing a fixed number of bases
@@ -510,6 +513,59 @@ The numbers in parentheses are not computed (because 8 is greater than zero),
 but shown here for completeness. The position of the minimum (-25) is used as
 the trimming position. Therefore, the read is trimmed to the first four bases,
 which have quality values 42, 40, 26, 27.
+
+
+Modifying read names
+--------------------
+
+If you feel the need to modify the names of processed reads, some of the
+following options may be useful.
+
+Use ``-y`` or ``--suffix`` to append a text to read names. The given string can
+contain the placeholder ``{name}``, which will be replaced with the name of the
+adapter found in that read. For example, writing ::
+
+    cutadapt -a adapter1=ACGT -y ' we found {name}' input.fastq
+
+changes a read named ``read1`` to ``read1 we found adapter1`` if the adapter
+``ACGT`` was found. The options ``-x``/``--prefix`` work the same, but the text
+is added in front of the read name. For both options, spaces need to be
+specified explicitly, as in the above example. If no adapter was found in a
+read, the text ``no_adapter`` is inserted for ``{name}``.
+
+In order to remove a suffix of each read name, use ``--strip-suffix``.
+
+Some old 454 read files contain the length of the read in the name::
+
+    >read1 length=17
+    ACGTACGTACAAAAAAA
+
+If you want to update this to the correct length after trimming, use the option
+``--length-tag``. In this example, this would be ``--length-tag 'length='``.
+After trimming, the read would then perhaps look like this::
+
+    >read1 length=10
+    ACGTACGTAC
+
+
+Read modification order
+-----------------------
+
+Read modifications are applied in the following order to each read. Steps not
+specified on the command-line are skipped.
+
+1. Unconditional base removal with ``--cut``
+2. Quality trimming (``-q``)
+3. Adapter trimming (``-a``, ``-b``, ``-g`` and uppercase versions)
+4. N-end trimming (``--trim-n``)
+5. Length tag modification (``--length-tag``)
+6. Read name suffixe removal (``--strip-suffix``)
+7. Addition of prefix and suffix to read name (``-x``/``--prefix`` and ``-y``/``--suffix``)
+8. Double-encode the sequence (only colorspace)
+9. Replace negative quality values with zero (zero capping, only colorspace)
+10. Trim primer base (only colorspace)
+
+The last three steps are colorspace-specific.
 
 
 .. _paired-end:
@@ -763,39 +819,6 @@ reads the adapters from a FASTA file (note that ``--untrimmed-output`` can be
 abbreviated)::
 
     cutadapt -a file:barcodes.fasta --no-trim --untrimmed-o untrimmed.fastq.gz -o trimmed-{name}.fastq.gz input.fastq.gz
-
-
-Modifying read names
---------------------
-
-If you feel the need to modify the names of processed reads, some of the
-following options may be useful.
-
-Use ``-y`` or ``--suffix`` to append a text to read names. The given string can
-contain the placeholder ``{name}``, which will be replaced with the name of the
-adapter found in that read. For example, writing ::
-
-    cutadapt -a adapter1=ACGT -y ' we found {name}' input.fastq
-
-changes a read named ``read1`` to ``read1 we found adapter1`` if the adapter
-``ACGT`` was found. The options ``-x``/``--prefix`` work the same, but the text
-is added in front of the read name. For both options, spaces need to be
-specified explicitly, as in the above example. If no adapter was found in a
-read, the text ``no_adapter`` is inserted for ``{name}``.
-
-In order to remove a suffix of each read name, use ``--strip-suffix``.
-
-Some old 454 read files contain the length of the read in the name::
-
-    >read1 length=17
-    ACGTACGTACAAAAAAA
-
-If you want to update this to the correct length after trimming, use the option
-``--length-tag``. In this example, this would be ``--length-tag 'length='``.
-After trimming, the read would then perhaps look like this::
-
-    >read1 length=10
-    ACGTACGTAC
 
 
 .. _more-than-one:
