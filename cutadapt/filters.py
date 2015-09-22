@@ -141,7 +141,6 @@ class NContentFilter(object):
 			return n_count / len(read) > self.cutoff
 		else:
 			return n_count > self.cutoff
-		return False
 
 
 class DiscardUntrimmedFilter(object):
