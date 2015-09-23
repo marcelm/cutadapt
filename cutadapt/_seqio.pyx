@@ -89,6 +89,8 @@ class FastqReader(object):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
+	_close_on_exit = False
+
 	def __init__(self, file, sequence_class=Sequence):
 		"""
 		file is a filename or a file-like object.
@@ -96,10 +98,8 @@ class FastqReader(object):
 		"""
 		if isinstance(file, basestring):
 			file = xopen(file)
-			self._file_passed = False
-		else:
-			self._file_passed = True
-		self.fp = file
+			self._close_on_exit = True
+		self._file = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
@@ -112,7 +112,7 @@ class FastqReader(object):
 		cdef str line, name, qualities, sequence, name2
 		sequence_class = self.sequence_class
 
-		it = iter(self.fp)
+		it = iter(self._file)
 		line = next(it)
 		if not (line and line[0] == '@'):
 			raise FormatError("at line {0}, expected a line starting with '@'".format(i+1))
@@ -156,12 +156,12 @@ class FastqReader(object):
 			raise FormatError("FASTQ file ended prematurely")
 
 	def close(self):
-		if not self._file_passed and self.fp is not None:
-			self.fp.close()
-			self.fp = None
+		if self._close_on_exit and self._file is not None:
+			self._file.close()
+			self._file = None
 
 	def __enter__(self):
-		if self.fp is None:
+		if self._file is None:
 			raise ValueError("I/O operation on closed FastqReader")
 		return self
 

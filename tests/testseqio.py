@@ -132,10 +132,10 @@ class TestFastqReader:
 
 		with FastqReader(filename) as sr:
 			tmp_sr = sr
-			assert not sr.fp.closed
+			assert not sr._file.closed
 			reads = list(sr)
-			assert not sr.fp.closed
-		assert tmp_sr.fp is None
+			assert not sr._file.closed
+		assert tmp_sr._file is None
 
 
 class TestFastaQualReader:
@@ -245,7 +245,7 @@ class TestFastaWriter:
 			fw.write(Sequence("name", "CCATA"))
 			fw.write(Sequence("name2", "HELLO"))
 			assert sio.getvalue() == '>name\nCCATA\n>name2\nHELLO\n'
-		assert fw._file.closed
+		assert not fw._file.closed
 
 	def test_write_zero_length_sequence(self):
 		sio = StringIO()
@@ -283,9 +283,7 @@ class TestFastqWriter:
 		with FastqWriter(sio) as fq:
 			fq.writeseq("name", "CCATA", "!#!#!")
 			fq.writeseq("name2", "HELLO", "&&&!&&")
-			# TODO should be outside the 'with' block
-			assert sio.getvalue() == '@name\nCCATA\n+\n!#!#!\n@name2\nHELLO\n+\n&&&!&&\n'
-		assert fq._file.closed
+		assert sio.getvalue() == '@name\nCCATA\n+\n!#!#!\n@name2\nHELLO\n+\n&&&!&&\n'
 
 
 class TestInterleavedWriter:
@@ -300,5 +298,4 @@ class TestInterleavedWriter:
 		with InterleavedSequenceWriter(sio) as writer:
 			for read1, read2 in reads:
 				writer.write(read1, read2)
-			# TODO should be outside the 'with' block
-			assert sio.getvalue() == '@A/1 comment\nTTA\n+\n##H\n@A/2 comment\nGCT\n+\nHH#\n@B/1\nCC\n+\nHH\n@B/2\nTG\n+\n#H\n'
+		assert sio.getvalue() == '@A/1 comment\nTTA\n+\n##H\n@A/2 comment\nGCT\n+\nHH#\n@B/1\nCC\n+\nHH\n@B/2\nTG\n+\n#H\n'

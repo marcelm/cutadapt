@@ -9,9 +9,6 @@ TODO
 - Sequence.name should be Sequence.description or so (reserve .name for the part
   before the first space)
 - ensure all Readers and Writers are context managers
-- ensure FastaWriter and FastqWriter are as fast as Sequence.write
-- when a file-like object is passed, then it should not be closed by the
-  reader/writer classes
 """
 from __future__ import print_function, division, absolute_import
 import sys
@@ -162,7 +159,7 @@ class FastaReader(object):
 	"""
 	Reader for FASTA files.
 	"""
-	_file_passed = True
+	_close_on_exit = False
 
 	def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence):
 		"""
@@ -173,7 +170,7 @@ class FastaReader(object):
 		"""
 		if isinstance(file, basestring):
 			file = xopen(file)
-			self._file_passed = False
+			self._close_on_exit = True
 		self._file = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = False
@@ -207,7 +204,7 @@ class FastaReader(object):
 			yield self.sequence_class(name, self._delimiter.join(seq), None)
 
 	def close(self):
-		if not self._file_passed and self._file is not None:
+		if self._close_on_exit and self._file is not None:
 			self._file.close()
 			self._file = None
 
@@ -229,7 +226,7 @@ class FastqReader(object):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
-	_file_passed = True
+	_close_on_exit = False
 
 	def __init__(self, file, sequence_class=Sequence): # TODO could be a class attribute
 		"""
@@ -241,7 +238,7 @@ class FastqReader(object):
 		"""
 		if isinstance(file, basestring):
 			file = xopen(file)
-			self._file_passed = False
+			self._close_on_exit = True
 		self._file = file
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
@@ -278,7 +275,7 @@ class FastqReader(object):
 				yield self.sequence_class(name, sequence, qualities, name2=name2)
 
 	def close(self):
-		if not self._file_passed and self._file is not None:
+		if self._close_on_exit and self._file is not None:
 			self._file.close()
 			self._file = None
 
@@ -463,6 +460,8 @@ class FastaWriter(object):
 	"""
 	Write FASTA-formatted sequences to a file.
 	"""
+	_close_on_exit = False
+
 	def __init__(self, file, line_length=None):
 		"""
 		If line_length is not None, the lines will
@@ -471,6 +470,7 @@ class FastaWriter(object):
 		self.line_length = line_length if line_length != 0 else None
 		if isinstance(file, str):
 			file = xopen(file, 'w')
+			self._close_on_exit = True
 		self._file = file
 
 	def write(self, name_or_seq, sequence=None):
@@ -501,7 +501,8 @@ class FastaWriter(object):
 			print('>{0}'.format(name), sequence, file=self._file, sep='\n')
 
 	def close(self):
-		self._file.close()
+		if self._close_on_exit:
+			self._file.close()
 
 	def __enter__(self):
 		if self._file.closed:
@@ -529,9 +530,12 @@ class FastqWriter(object):
 	+
 	QUALITIS
 	"""
+	_close_on_exit = False
+
 	def __init__(self, file):
 		if isinstance(file, str):
 			file = xopen(file, "w")
+			self._close_on_exit = True
 		self._file = file
 
 	def write(self, record):
@@ -549,7 +553,8 @@ class FastqWriter(object):
 			name, sequence, qualities), file=self._file)
 
 	def close(self):
-		self._file.close()
+		if self._close_on_exit:
+			self._file.close()
 
 	def __enter__(self):
 		if self._file.closed:
