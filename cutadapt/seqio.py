@@ -8,7 +8,6 @@ TODO
   the sequence_class directly
 - Sequence.name should be Sequence.description or so (reserve .name for the part
   before the first space)
-- ensure all Readers and Writers are context managers
 """
 from __future__ import print_function, division, absolute_import
 import sys
@@ -144,15 +143,15 @@ class FileWithPrependedLine(object):
 		if not line.endswith('\n'):
 			line += '\n'
 		self.first_line = line
-		self.file = file
+		self._file = file
 
 	def __iter__(self):
 		yield self.first_line
-		for line in self.file:
+		for line in self._file:
 			yield line
 
 	def close(self):
-		self.file.close()
+		self._file.close()
 
 
 class FastaReader(object):
@@ -418,9 +417,6 @@ class PairedSequenceReader(object):
 	def __exit__(self, *args):
 		self.close()
 
-	def __del__(self):
-		self.close()
-
 
 class InterleavedSequenceReader(object):
 	"""
@@ -450,9 +446,6 @@ class InterleavedSequenceReader(object):
 		return self
 
 	def __exit__(self, *args):
-		self.close()
-
-	def __del__(self):
 		self.close()
 
 
@@ -582,16 +575,16 @@ class PairedSequenceWriter(object):
 		self._writer1.write(read1)
 		self._writer2.write(read2)
 
+	def close(self):
+		self._writer1.close()
+		self._writer2.close()
+
 	def __enter__(self):
 		# TODO do not allow this twice
 		return self
 
 	def __exit__(self, *args):
 		self.close()
-
-	def close(self):
-		self._writer1.close()
-		self._writer2.close()
 
 
 class InterleavedSequenceWriter(object):
