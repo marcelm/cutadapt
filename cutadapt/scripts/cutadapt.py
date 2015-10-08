@@ -45,12 +45,11 @@ Input may also be in FASTA format. Compressed input and output is supported and
 auto-detected from the file name (.gz, .xz, .bz2). Use the file name '-' for
 standard input/output. Without the -o option, output is sent to standard output.
 
-Some other available features are:
-  * Various other adapter types (5' adapters, "mixed" 5'/3' adapters etc.)
-  * Trimming a fixed number of bases
-  * Quality trimming
-  * Trimming colorspace reads
-  * Filtering reads by various criteria
+Citation:
+
+Marcel Martin. Cutadapt removes adapter sequences from high-throughput
+sequencing reads. EMBnet.Journal, 17(1):10-12, May 2011.
+http://dx.doi.org/10.14806/ej.17.1.200
 
 Use "cutadapt --help" to see all command-line options.
 See http://cutadapt.readthedocs.org/ for full documentation.
