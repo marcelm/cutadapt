@@ -14,6 +14,7 @@ v1.9 (work in progress)
   Fixes issue #104.
 * Interleaved FASTQ files: With the ``--interleaved`` switch, paired-end reads
   will be read from and written to interleaved FASTQ files. Fixes issue #113.
+* Thanks to Wolfgang Gerlach, there is now a Dockerfile.
 * The new ``--debug`` switch makes cutadapt print out the alignment matrix.
 
 v1.8.3
