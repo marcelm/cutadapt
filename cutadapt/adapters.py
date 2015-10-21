@@ -41,6 +41,8 @@ def parse_adapter(sequence, where):
 		return (sequence[1:], PREFIX)
 	if where == BACK and sequence.endswith('$'):
 		return (sequence[:-1], SUFFIX)
+	if where == BACK and sequence.endswith('...'):
+		return (sequence[:-3], PREFIX)
 	return (sequence, where)
 
 

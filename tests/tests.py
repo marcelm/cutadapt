@@ -194,6 +194,9 @@ def test_literal_N2_brace_notation():
 def test_anchored_front():
 	run("-g ^FRONTADAPT -N", "anchored.fasta", "anchored.fasta")
 
+def test_anchored_front_ellipsis_notation():
+	run("-a FRONTADAPT... -N", "anchored.fasta", "anchored.fasta")
+
 def test_anchored_back():
 	run("-a BACKADAPTER$ -N", "anchored-back.fasta", "anchored-back.fasta")
 

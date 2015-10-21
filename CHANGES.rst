@@ -14,6 +14,8 @@ v1.9 (work in progress)
   Fixes issue #104.
 * Interleaved FASTQ files: With the ``--interleaved`` switch, paired-end reads
   will be read from and written to interleaved FASTQ files. Fixes issue #113.
+* Anchored 5' adapters can now be specified by writing ``-a SEQUENCE...`` (note
+  the three dots).
 * Thanks to Wolfgang Gerlach, there is now a Dockerfile.
 * The new ``--debug`` switch makes cutadapt print out the alignment matrix.
 
