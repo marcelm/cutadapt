@@ -173,12 +173,8 @@ class Adapter(object):
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min_overlap
 		self.indels = indels
-		self.wildcard_flags = 0
 		self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set('ACGT')
-		if read_wildcards:
-			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ2
-		if self.adapter_wildcards:
-			self.wildcard_flags |= align.ALLOW_WILDCARD_SEQ1
+		self.read_wildcards = read_wildcards
 		# redirect trimmed() to appropriate function depending on adapter type
 		trimmers = {
 			FRONT: self._trimmed_front,
@@ -200,7 +196,7 @@ class Adapter(object):
 		self.adjacent_bases = { 'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0 }
 
 		self.aligner = align.Aligner(self.sequence, self.max_error_rate,
-			flags=self.where, degenerate=self.wildcard_flags)
+			flags=self.where, wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
 		self.aligner.min_overlap = self.min_overlap
 		if not self.indels:
 			# TODO
@@ -209,14 +205,11 @@ class Adapter(object):
 			self.aligner.indel_cost = 100000
 
 	def __repr__(self):
-		read_wildcards = bool(align.ALLOW_WILDCARD_SEQ2 & self.wildcard_flags)
 		return '<Adapter(name="{name}", sequence="{sequence}", where={where}, '\
 			'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
 			'read_wildcards={read_wildcards}, '\
 			'adapter_wildcards={adapter_wildcards}, '\
-			'indels={indels})>'.format(
-				read_wildcards=read_wildcards,
-				**vars(self))
+			'indels={indels})>'.format(**vars(self))
 
 	def enable_debug(self):
 		"""
@@ -290,9 +283,11 @@ class Adapter(object):
 			# try approximate matching
 			if not self.indels and self.where in (PREFIX, SUFFIX):
 				if self.where == PREFIX:
-					alignment = align.compare_prefixes(self.sequence, read_seq, self.wildcard_flags)
+					alignment = align.compare_prefixes(self.sequence, read_seq,
+						wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
 				else:
-					alignment = align.compare_suffixes(self.sequence, read_seq, self.wildcard_flags)
+					alignment = align.compare_suffixes(self.sequence, read_seq,
+						wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
 				astart, astop, rstart, rstop, matches, errors = alignment
 				if astop - astart >= self.min_overlap and errors / (astop - astart) <= self.max_error_rate:
 					match = AdapterMatch(*(alignment + (self._front_flag, self, read)))

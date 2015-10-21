@@ -5,10 +5,6 @@ DEF START_WITHIN_SEQ2 = 2
 DEF STOP_WITHIN_SEQ1 = 4
 DEF STOP_WITHIN_SEQ2 = 8
 DEF SEMIGLOBAL = 15
-DEF ALLOW_WILDCARD_SEQ1 = 1
-DEF ALLOW_WILDCARD_SEQ2 = 2
-
-DEF WILDCARD_CHAR = 'N'
 
 # structure for a DP matrix entry
 ctypedef struct _Entry:
@@ -175,7 +171,7 @@ cdef class Aligner:
 	It is always the case that at least one of start1 and start2 is zero.
 
 	IUPAC wildcard characters can be allowed in the reference and the query
-	by setting the appropriate bit in the 'degenerate' flag.
+	by setting the appropriate flags.
 
 	If neither flag is set, the full ASCII alphabet is used for comparison.
 	If any of the flags is set, all non-IUPAC characters in the sequences
@@ -195,11 +191,11 @@ cdef class Aligner:
 	cdef bytes _reference  # TODO rename to translated_reference or so
 	cdef str str_reference
 
-	def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0):
+	def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, bint wildcard_ref=False, bint wildcard_query=False):
 		self.max_error_rate = max_error_rate
 		self.flags = flags
-		self.wildcard_ref = degenerate & ALLOW_WILDCARD_SEQ1
-		self.wildcard_query = degenerate & ALLOW_WILDCARD_SEQ2
+		self.wildcard_ref = wildcard_ref
+		self.wildcard_query = wildcard_query
 		self.str_reference = reference
 		self.reference = reference
 		self._min_overlap = 1
@@ -484,17 +480,16 @@ cdef class Aligner:
 		PyMem_Free(self.column)
 
 
-def locate(str reference, str query, double max_error_rate, int flags=SEMIGLOBAL, int degenerate=0, int min_overlap=1):
-	aligner = Aligner(reference, max_error_rate, flags, degenerate)
+def locate(str reference, str query, double max_error_rate, int flags=SEMIGLOBAL, bint wildcard_ref=False, bint wildcard_query=False, int min_overlap=1):
+	aligner = Aligner(reference, max_error_rate, flags, wildcard_ref, wildcard_query)
 	aligner.min_overlap = min_overlap
 	return aligner.locate(query)
 
 
-def compare_prefixes(str ref, str query, int degenerate=0):
+def compare_prefixes(str ref, str query, bint wildcard_ref=False, bint wildcard_query=False):
 	"""
 	Find out whether one string is the prefix of the other one, allowing
-	IUPAC wildcards if the appropriate bit is set in the degenerate flag
-	parameter.
+	IUPAC wildcards in ref and/or query if the appropriate flag is set.
 
 	This is used to find an anchored 5' adapter (type 'FRONT') in the 'no indels' mode.
 	This is very simple as only the number of errors needs to be counted.
@@ -507,8 +502,6 @@ def compare_prefixes(str ref, str query, int degenerate=0):
 	cdef bytes ref_bytes = ref.encode('ascii')
 	cdef char* r_ptr
 	cdef char* q_ptr
-	cdef bint wildcard_ref = degenerate & ALLOW_WILDCARD_SEQ1
-	cdef bint wildcard_query = degenerate & ALLOW_WILDCARD_SEQ2
 	cdef int length = min(m, n)
 	cdef int i, matches = 0
 	cdef bint compare_ascii = False
