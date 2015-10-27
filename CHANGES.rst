@@ -16,6 +16,8 @@ v1.9 (work in progress)
   will be read from and written to interleaved FASTQ files. Fixes issue #113.
 * Anchored 5' adapters can now be specified by writing ``-a SEQUENCE...`` (note
   the three dots).
+* Fix ``--discard-untrimmed`` and ``--discard-trimmed`` not working as expected
+  in paired-end mode (issue #146).
 * Thanks to Wolfgang Gerlach, there is now a Dockerfile.
 * The new ``--debug`` switch makes cutadapt print out the alignment matrix.
 
