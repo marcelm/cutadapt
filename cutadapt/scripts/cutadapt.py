@@ -667,6 +667,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if options.max_n != -1:
 		filters.append(filter_wrapper(None, NContentFilter(options.max_n)))
 
+	if int(options.discard_trimmed) + int(options.discard_untrimmed) + int(options.untrimmed_output is not None) > 1:
+		parser.error("Only one of the --discard-trimmed, --discard-untrimmed "
+			"and --untrimmed-output options can be used at the same time.")
 	demultiplexer = None
 	if options.output is not None and '{name}' in options.output:
 		if options.discard_trimmed:
@@ -693,9 +696,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			fileformat=fileformat,
 			colorspace=options.colorspace,
 			interleaved=options.interleaved)
-
-		filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
-		filters.append(filter_wrapper(trimmed_writer, DiscardTrimmedFilter()))
+		if options.discard_trimmed:
+			filters.append(filter_wrapper(None, DiscardTrimmedFilter()))
+			filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
+		else:
+			filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
+			filters.append(filter_wrapper(trimmed_writer, DiscardTrimmedFilter()))
 
 	if options.maq:
 		options.colorspace = True

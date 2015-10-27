@@ -199,6 +199,13 @@ def test_discard_untrimmed():
 	)
 
 
+def test_discard_trimmed():
+	run_paired('-A C -O 1 --discard-trimmed',  # applies everywhere
+		in1='paired.1.fastq', in2='paired.2.fastq',
+		expected1='empty.fastq', expected2='empty.fastq'
+	)
+
+
 def test_interleaved():
 	'''single-pass interleaved paired-end with -q and -m'''
 	run_interleaved('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
