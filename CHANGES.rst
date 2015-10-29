@@ -18,6 +18,8 @@ v1.9 (work in progress)
   the three dots).
 * Fix ``--discard-untrimmed`` and ``--discard-trimmed`` not working as expected
   in paired-end mode (issue #146).
+* The minimum overlap is now automatically reduced to the adapter length if it
+  is too large. Fixes part of issue #153.
 * Thanks to Wolfgang Gerlach, there is now a Dockerfile.
 * The new ``--debug`` switch makes cutadapt print out the alignment matrix.
 

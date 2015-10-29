@@ -173,7 +173,7 @@ class Adapter(object):
 		self.sequence = self.parse_braces(sequence.upper().replace('U', 'T'))
 		self.where = where
 		self.max_error_rate = max_error_rate
-		self.min_overlap = min_overlap
+		self.min_overlap = min(min_overlap, len(self.sequence))
 		self.indels = indels
 		self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set('ACGT')
 		self.read_wildcards = read_wildcards
