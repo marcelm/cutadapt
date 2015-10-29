@@ -1,0 +1,10 @@
+>r1 5' adapter and 3' adapter
+CCCCCCCCCC
+>r5 only 5' adapter
+CCCCCCCCCCGGGGGGG
+>r3 5' adapter, partial 3' adapter
+CCCGGCCCCC
+>r4 only 3' adapter
+GGGGGGGGGGCCCCCCCCCCTTTTTTTTTTGGGGGGG
+>r2 without any adapter
+GGGGGGGGGGGGGGGGGGG

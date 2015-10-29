@@ -373,3 +373,7 @@ def test_quiet_is_quiet():
 
 def test_nextseq():
 	run('--nextseq-trim 22', 'nextseq.fastq', 'nextseq.fastq')
+
+
+def test_linked():
+	run('-a AAAAAAAAAA...TTTTTTTTTT', 'linked.fasta', 'linked.fasta')
