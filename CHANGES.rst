@@ -2,8 +2,8 @@
 Changes
 =======
 
-v1.9 (work in progress)
------------------------
+v1.9
+----
 
 * Indels in the alignment can now be disabled for all adapter types (use
   ``--no-indels``).
