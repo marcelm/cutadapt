@@ -3,7 +3,7 @@ from __future__ import print_function, division, absolute_import
 from nose.tools import raises, assert_raises
 
 from cutadapt.seqio import Sequence
-from cutadapt.adapters import Adapter, AdapterMatch, ColorspaceAdapter, FRONT, BACK
+from cutadapt.adapters import Adapter, AdapterMatch, ColorspaceAdapter, FRONT, BACK, parse_braces
 
 def test_issue_52():
 	adapter = Adapter(
@@ -69,16 +69,16 @@ def test_color():
 
 
 def test_parse_braces():
-	assert Adapter.parse_braces('') == ''
-	assert Adapter.parse_braces('A') == 'A'
-	assert Adapter.parse_braces('A{0}') == ''
-	assert Adapter.parse_braces('A{1}') == 'A'
-	assert Adapter.parse_braces('A{2}') == 'AA'
-	assert Adapter.parse_braces('A{2}C') == 'AAC'
-	assert Adapter.parse_braces('ACGTN{3}TGACCC') == 'ACGTNNNTGACCC'
-	assert Adapter.parse_braces('ACGTN{10}TGACCC') == 'ACGTNNNNNNNNNNTGACCC'
-	assert Adapter.parse_braces('ACGTN{3}TGA{4}CCC') == 'ACGTNNNTGAAAACCC'
-	assert Adapter.parse_braces('ACGTN{0}TGA{4}CCC') == 'ACGTTGAAAACCC'
+	assert parse_braces('') == ''
+	assert parse_braces('A') == 'A'
+	assert parse_braces('A{0}') == ''
+	assert parse_braces('A{1}') == 'A'
+	assert parse_braces('A{2}') == 'AA'
+	assert parse_braces('A{2}C') == 'AAC'
+	assert parse_braces('ACGTN{3}TGACCC') == 'ACGTNNNTGACCC'
+	assert parse_braces('ACGTN{10}TGACCC') == 'ACGTNNNNNNNNNNTGACCC'
+	assert parse_braces('ACGTN{3}TGA{4}CCC') == 'ACGTNNNTGAAAACCC'
+	assert parse_braces('ACGTN{0}TGA{4}CCC') == 'ACGTTGAAAACCC'
 
 
 def test_parse_braces_fail():
@@ -86,7 +86,7 @@ def test_parse_braces_fail():
 			'A{4}{3}', 'A{b}', 'A{6X}', 'A{X6}']:
 		print(expression)
 		try:
-			Adapter.parse_braces(expression)
+			parse_braces(expression)
 		except ValueError as e:
 			print(e)
-		assert_raises(ValueError, lambda: Adapter.parse_braces(expression))
+		assert_raises(ValueError, lambda: parse_braces(expression))

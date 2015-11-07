@@ -46,6 +46,46 @@ def parse_adapter(sequence, where):
 	return (sequence, where)
 
 
+def parse_braces(sequence):
+	"""
+	Replace all occurrences of ``x{n}`` (where x is any character) with n
+	occurrences of x. Raise ValueError if the expression cannot be parsed.
+
+	>>> parse_braces('TGA{5}CT')
+	TGAAAAACT
+	"""
+	# Simple DFA with four states, encoded in prev
+	result = ''
+	prev = None
+	for s in re.split('(\{|\})', sequence):
+		if s == '':
+			continue
+		if prev is None:
+			if s == '{':
+				raise ValueError('"{" must be used after a character')
+			if s == '}':
+				raise ValueError('"}" cannot be used here')
+			prev = s
+			result += s
+		elif prev == '{':
+			prev = int(s)
+			if not 0 <= prev <= 10000:
+				raise ValueError('Value {} invalid'.format(prev))
+		elif isinstance(prev, int):
+			if s != '}':
+				raise ValueError('"}" expected')
+			result = result[:-1] + result[-1] * prev
+			prev = None
+		else:
+			if s != '{':
+				raise ValueError('Expected "{"')
+			prev = '{'
+	# Check if we are in a non-terminating state
+	if isinstance(prev, int) or prev == '{':
+		raise ValueError("Unterminated expression")
+	return result
+
+
 def gather_adapters(back, anywhere, front):
 	"""
 	Yield (name, seq, where) tuples from which Adapter instances can be built.
@@ -167,7 +207,7 @@ class Adapter(object):
 			name=None, indels=True):
 		self.debug = False
 		self.name = generate_adapter_name() if name is None else name
-		self.sequence = self.parse_braces(sequence.upper().replace('U', 'T'))
+		self.sequence = parse_braces(sequence.upper().replace('U', 'T'))
 		self.where = where
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min(min_overlap, len(self.sequence))
@@ -217,46 +257,6 @@ class Adapter(object):
 		"""
 		self.debug = True
 		self.aligner.enable_debug()
-
-	@staticmethod
-	def parse_braces(sequence):
-		"""
-		Replace all occurrences of ``x{n}`` (where x is any character) with n
-		occurrences of x. Raise ValueError if the expression cannot be parsed.
-
-		>>> parse_braces('TGA{5}CT')
-		TGAAAAACT
-		"""
-		# Simple DFA with four states, encoded in prev
-		result = ''
-		prev = None
-		for s in re.split('(\{|\})', sequence):
-			if s == '':
-				continue
-			if prev is None:
-				if s == '{':
-					raise ValueError('"{" must be used after a character')
-				if s == '}':
-					raise ValueError('"}" cannot be used here')
-				prev = s
-				result += s
-			elif prev == '{':
-				prev = int(s)
-				if not 0 <= prev <= 10000:
-					raise ValueError('Value {} invalid'.format(prev))
-			elif isinstance(prev, int):
-				if s != '}':
-					raise ValueError('"}" expected')
-				result = result[:-1] + result[-1] * prev
-				prev = None
-			else:
-				if s != '{':
-					raise ValueError('Expected "{"')
-				prev = '{'
-		# Check if we are in a non-terminating state
-		if isinstance(prev, int) or prev == '{':
-			raise ValueError("Unterminated expression")
-		return result
 
 	def match_to(self, read):
 		"""
