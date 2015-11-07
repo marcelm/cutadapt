@@ -1,4 +1,10 @@
 # coding: utf-8
+"""
+This module implements all the read modifications that cutadapt supports.
+A modifier must be callable. It is implemented as a function if no parameters
+need to be stored, and as a class with a __call__ method if there are parameters
+(or statistics).
+"""
 from __future__ import print_function, division, absolute_import
 import re
 from cutadapt.qualtrim import quality_trim_index
