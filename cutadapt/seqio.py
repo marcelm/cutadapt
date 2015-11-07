@@ -4,8 +4,6 @@ Sequence I/O classes: Reading and writing of FASTA and FASTQ files.
 
 TODO
 
-- are the Colorspace... classes needed? only used by open, where we could set
-  the sequence_class directly
 - Sequence.name should be Sequence.description or so (reserve .name for the part
   before the first space)
 """

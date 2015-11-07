@@ -298,7 +298,7 @@ class Adapter(object):
 			else:
 				alignment = self.aligner.locate(read_seq)
 				if self.debug:
-					print(self.aligner.dpmatrix)
+					print(self.aligner.dpmatrix)  # pragma: no cover
 				if alignment is None:
 					match = None
 				else:
@@ -371,7 +371,7 @@ class ColorspaceAdapter(Adapter):
 			self.aligner.reference = asequence
 			alignment = self.aligner.locate(read.sequence)
 			if self.debug:
-				print(self.aligner.dpmatrix)
+				print(self.aligner.dpmatrix)  # pragma: no cover
 			if alignment is not None:
 				match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
 			else:
