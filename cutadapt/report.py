@@ -9,7 +9,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
-from .modifiers import QualityTrimmer
+from .modifiers import QualityTrimmer, AdapterCutter
 from .filters import (TooShortReadFilter, TooLongReadFilter,
 	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, NContentFilter)
 
@@ -38,6 +38,7 @@ class Statistics:
 		self.written = 0
 		self.written_bp = [0, 0]
 		self.too_many_n = None
+		# Collect statistics from writers/filters
 		for w in writers:
 			if isinstance(w, Demultiplexer) or isinstance(w.filter, (DiscardTrimmedFilter, DiscardUntrimmedFilter)):
 				self.written += w.written
@@ -52,25 +53,20 @@ class Statistics:
 				self.too_many_n = w.filtered
 		assert self.written is not None
 
+		# Collect statistics from modifiers
 		self.with_adapters = [0, 0]
-		for i in (0, 1):
-			for adapter in adapters_pair[i]:
-				self.with_adapters[i] += sum(adapter.lengths_front.values())
-				self.with_adapters[i] += sum(adapter.lengths_back.values())
+		self.quality_trimmed_bp = [0, 0]
+		self.did_quality_trimming = False
+		for i, modifiers_list in [(0, modifiers), (1, modifiers2)]:
+			for modifier in modifiers_list:
+				if isinstance(modifier, QualityTrimmer):
+					self.quality_trimmed_bp[i] = modifier.trimmed_bases
+					self.did_quality_trimming = True
+				elif isinstance(modifier, AdapterCutter):
+					self.with_adapters[i] += modifier.with_adapters
 		self.with_adapters_fraction = [ (v / self.n if self.n > 0 else 0) for v in self.with_adapters ]
-
-		self.quality_trimmed_bp = [qtrimmed(modifiers), qtrimmed(modifiers2)]
-
-		if self.quality_trimmed_bp[0] is not None or self.quality_trimmed_bp[1] is not None:
-			self.did_quality_trimming = True
-			if self.quality_trimmed_bp[0] is None:
-				self.quality_trimmed_bp[0] = 0
-			if self.quality_trimmed_bp[1] is None:
-				self.quality_trimmed_bp[1] = 0
-			self.quality_trimmed = sum(self.quality_trimmed_bp)
-			self.quality_trimmed_fraction = self.quality_trimmed / self.total_bp if self.total_bp > 0 else 0.0
-		else:
-			self.did_quality_trimming = False
+		self.quality_trimmed = sum(self.quality_trimmed_bp)
+		self.quality_trimmed_fraction = self.quality_trimmed / self.total_bp if self.total_bp > 0 else 0.0
 
 		self.total_written_bp = sum(self.written_bp)
 		self.total_written_bp_fraction = self.total_written_bp / self.total_bp if self.total_bp > 0 else 0.0
@@ -158,17 +154,6 @@ def print_adjacent_bases(bases, sequence):
 		return True
 	print()
 	return False
-
-
-def qtrimmed(modifiers):
-	"""
-	Look for a QualityTrimmer in the given list of modifiers and return its
-	trimmed_bases attribute. If not found, return None.
-	"""
-	for m in modifiers:
-		if isinstance(m, QualityTrimmer):
-			return m.trimmed_bases
-	return None
 
 
 @contextmanager
