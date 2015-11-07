@@ -31,7 +31,7 @@ class AdapterCutter(object):
 		self.info_file = info_file
 		self.rest_writer = rest_writer
 		self.action = action
-		self.reads_matched = 0
+		self.with_adapters = 0
 
 	def _best_match(self, read):
 		"""
@@ -150,8 +150,7 @@ class AdapterCutter(object):
 			trimmed_read = read
 			trimmed_read.match = matches[-1]
 
-		self.reads_matched += 1  # TODO move to filter class
-
+		self.with_adapters += 1
 		return trimmed_read
 
 
