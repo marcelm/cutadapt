@@ -56,7 +56,7 @@ as expected::
 
     cutadapt -a AACCGGTT -o output.fastq.gz input.fastq.gz
 
-Note that the all of cutadapt's options that expect a file name support this.
+All of cutadapt's options that expect a file name support this.
 
 Files compressed with bzip2 (``.bz2``) or xz (``.xz``) are also supported, but
 only if the Python installation includes the proper modules. xz files require
