@@ -115,7 +115,7 @@ class FastqReader(object):
 		it = iter(self._file)
 		line = next(it)
 		if not (line and line[0] == '@'):
-			raise FormatError("at line {0}, expected a line starting with '@'".format(i+1))
+			raise FormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
 		strip = -2 if line.endswith('\r\n') else -1
 		name = line[1:strip]
 
@@ -123,7 +123,7 @@ class FastqReader(object):
 		for line in it:
 			if i == 0:
 				if not (line and line[0] == '@'):
-					raise FormatError("at line {0}, expected a line starting with '@'".format(i+1))
+					raise FormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
 				name = line[1:strip]
 			elif i == 1:
 				sequence = line[:strip]
@@ -133,7 +133,7 @@ class FastqReader(object):
 				else:
 					line = line[:strip]
 					if not (line and line[0] == '+'):
-						raise FormatError("at line {0}, expected a line starting with '+'".format(i+1))
+						raise FormatError("Line {0} in FASTQ file is expected to start with '+', but found {1!r}".format(i+1, line[:10]))
 					if len(line) > 1:
 						if not line[1:] == name:
 							raise FormatError(

@@ -248,14 +248,14 @@ class FastqReader(object):
 		for i, line in enumerate(self._file):
 			if i % 4 == 0:
 				if not line.startswith('@'):
-					raise FormatError("At line {0}: Expected a line starting with '@'".format(i+1))
+					raise FormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
 				name = line.strip()[1:]
 			elif i % 4 == 1:
 				sequence = line.strip()
 			elif i % 4 == 2:
 				line = line.strip()
 				if not line.startswith('+'):
-					raise FormatError("At line {0}: Expected a line starting with '+'".format(i+1))
+					raise FormatError("Line {0} in FASTQ file is expected to start with '+', but found {1!r}".format(i+1, line[:10]))
 				if len(line) > 1:
 					if line[1:] != name:
 						raise FormatError(
