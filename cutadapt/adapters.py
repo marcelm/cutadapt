@@ -109,7 +109,7 @@ def gather_adapters(back, anywhere, front):
 				yield (name, seq, w)
 
 
-class AdapterMatch(object):
+class Match(object):
 	"""
 	TODO creating instances of this class is relatively slow and responsible for quite some runtime.
 	"""
@@ -130,7 +130,7 @@ class AdapterMatch(object):
 		self.length = self.astop - self.astart
 
 	def __str__(self):
-		return 'AdapterMatch(astart={0}, astop={1}, rstart={2}, rstop={3}, matches={4}, errors={5})'.format(
+		return 'Match(astart={0}, astop={1}, rstart={2}, rstop={3}, matches={4}, errors={5})'.format(
 			self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
 
 	def _guess_is_front(self):
@@ -262,7 +262,7 @@ class Adapter(object):
 		"""
 		Attempt to match this adapter to the given read.
 
-		Return an AdapterMatch instance if a match was found;
+		Return an Match instance if a match was found;
 		return None if no match was found given the matching criteria (minimum
 		overlap length, maximum error rate).
 		"""
@@ -277,7 +277,7 @@ class Adapter(object):
 			else:
 				pos = read_seq.find(self.sequence)
 		if pos >= 0:
-			match = AdapterMatch(
+			match = Match(
 				0, len(self.sequence), pos, pos + len(self.sequence),
 				len(self.sequence), 0, self._front_flag, self, read)
 		else:
@@ -291,7 +291,7 @@ class Adapter(object):
 						wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
 				astart, astop, rstart, rstop, matches, errors = alignment
 				if astop - astart >= self.min_overlap and errors / (astop - astart) <= self.max_error_rate:
-					match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
+					match = Match(*(alignment + (self._front_flag, self, read)))
 				else:
 					match = None
 			else:
@@ -302,7 +302,7 @@ class Adapter(object):
 					match = None
 				else:
 					astart, astop, rstart, rstop, matches, errors = alignment
-					match = AdapterMatch(astart, astop, rstart, rstop, matches, errors, self._front_flag, self, read)
+					match = Match(astart, astop, rstart, rstop, matches, errors, self._front_flag, self, read)
 
 		if match is None:
 			return None
@@ -353,7 +353,7 @@ class ColorspaceAdapter(Adapter):
 		self.aligner.reference = self.sequence
 
 	def match_to(self, read):
-		"""Return AdapterMatch instance"""
+		"""Return Match instance"""
 		if self.where != PREFIX:
 			return super(ColorspaceAdapter, self).match_to(read)
 		# create artificial adapter that includes a first color that encodes the
@@ -362,7 +362,7 @@ class ColorspaceAdapter(Adapter):
 
 		pos = 0 if read.sequence.startswith(asequence) else -1
 		if pos >= 0:
-			match = AdapterMatch(
+			match = Match(
 				0, len(asequence), pos, pos + len(asequence),
 				len(asequence), 0, self._front_flag, self, read)
 		else:
@@ -372,7 +372,7 @@ class ColorspaceAdapter(Adapter):
 			if self.debug:
 				print(self.aligner.dpmatrix)  # pragma: no cover
 			if alignment is not None:
-				match = AdapterMatch(*(alignment + (self._front_flag, self, read)))
+				match = Match(*(alignment + (self._front_flag, self, read)))
 			else:
 				match = None
 

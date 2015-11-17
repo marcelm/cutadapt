@@ -29,7 +29,7 @@ cdef class Sequence(object):
 	ascii(qual+33).
 
 	If an adapter has been matched to the sequence, the 'match' attribute is
-	set to the corresponding AdapterMatch instance.
+	set to the corresponding Match instance.
 	"""
 	cdef:
 		public str name

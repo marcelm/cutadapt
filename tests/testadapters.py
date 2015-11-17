@@ -3,7 +3,8 @@ from __future__ import print_function, division, absolute_import
 from nose.tools import raises, assert_raises
 
 from cutadapt.seqio import Sequence
-from cutadapt.adapters import Adapter, AdapterMatch, ColorspaceAdapter, FRONT, BACK, parse_braces
+from cutadapt.adapters import (Adapter, Match, ColorspaceAdapter, FRONT,
+	BACK, parse_braces)
 
 def test_issue_52():
 	adapter = Adapter(
@@ -14,7 +15,7 @@ def test_issue_52():
 		read_wildcards=False,
 		adapter_wildcards=True)
 	read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
-	am = AdapterMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, front=None, adapter=adapter, read=read)
+	am = Match(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, front=None, adapter=adapter, read=read)
 	assert am.wildcards() == 'GGC'
 	"""
 	The result above should actually be 'CGGC' since the correct

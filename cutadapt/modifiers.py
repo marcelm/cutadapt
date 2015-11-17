@@ -37,7 +37,7 @@ class AdapterCutter(object):
 		"""
 		Find the best matching adapter in the given read.
 
-		Return either an AdapterMatch instance or None if there are no matches.
+		Return either an Match instance or None if there are no matches.
 		"""
 		best = None
 		for adapter in self.adapters:
@@ -94,7 +94,7 @@ class AdapterCutter(object):
 		"""
 		Determine the adapter that best matches the given read.
 		Since the best adapter is searched repeatedly, a list
-		of AdapterMatch instances is returned, which
+		of Match instances is returned, which
 		need to be applied consecutively to the read.
 		The list is empty if there are no adapter matches.
 
