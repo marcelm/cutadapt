@@ -79,7 +79,7 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 	NEndTrimmer, AdapterCutter)
 from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedirector,
 	LegacyPairedRedirector, TooShortReadFilter, TooLongReadFilter,
-	Demultiplexer, NContentFilter,DiscardUntrimmedFilter, DiscardTrimmedFilter)
+	Demultiplexer, NContentFilter, DiscardUntrimmedFilter, DiscardTrimmedFilter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
 from cutadapt.compat import next
 
@@ -224,9 +224,10 @@ def get_option_parser():
 	group.add_option("--no-trim", dest='action', action='store_const', const=None,
 		help="Match and redirect reads to output/untrimmed-output as usual, "
 			"but do not remove adapters.")
-	group.add_option("--max-n", type=float, default=-1.0, metavar="LENGTH",
-		help="The max proportion of N's allowed in a read. A number < 1 will be treated as a proportion while"
-			 " a number > 1 will be treated as the maximum number of N's contained.")
+	group.add_option("--max-n", type=float, default=-1.0, metavar="COUNT",
+		help="Discard reads with too many N bases. If COUNT is an integer, it "
+			"is treated as the absolute number of N bases. If it is between 0 "
+			"and 1, it is treated as the proportion of N's allowed in a read.")
 	group.add_option("--mask-adapter", dest='action', action='store_const', const='mask',
 		help="Mask adapters with 'N' characters instead of trimming them.")
 	parser.add_option_group(group)
@@ -327,6 +328,13 @@ def get_option_parser():
 		help="Remove LENGTH bases from the beginning or end of each second read (see --cut).")
 	group.add_option("-p", "--paired-output", metavar="FILE",
 		help="Write second read in a pair to FILE.")
+	# Setting the default for pair_filter to None allows us to find out whether
+	# the option was used at all.
+	group.add_option("--pair-filter", metavar='(any|both)', default=None,
+		choices=("any", "both"),
+		help="Which of the reads in a paired-end read have to match the "
+			"filtering criterion in order for it to be filtered. "
+			"Default: any.")
 	group.add_option("--interleaved", action='store_true', default=False,
 		help="Read and write interleaved paired-end reads.")
 	group.add_option("--untrimmed-paired-output", metavar="FILE",
@@ -368,7 +376,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		# Modify first read only, keep second in sync (-p given, but not -A/-G/-B/-U).
 		# This exists for backwards compatibility ('legacy mode').
 		paired = 'first'
-	if options.adapters2 or options.front2 or options.anywhere2 or options.cut2 or options.interleaved:
+	# Any of these options switch off legacy mode
+	if (options.adapters2 or options.front2 or options.anywhere2 or
+		options.cut2 or options.interleaved or options.pair_filter):
 		# Full paired-end trimming when both -p and -A/-G/-B/-U given
 		# Read modifications (such as quality trimming) are applied also to second read.
 		paired = 'both'
@@ -437,12 +447,15 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	open_writer = functools.partial(seqio.open, mode='w', fileformat=fileformat,
 		colorspace=options.colorspace, interleaved=options.interleaved)
 
+	if options.pair_filter is None:
+		options.pair_filter = 'any'
+	min_affected = 2 if options.pair_filter == 'both' else 1
 	if not paired:
 		filter_wrapper = Redirector
 	elif paired == 'first':
 		filter_wrapper = LegacyPairedRedirector
 	elif paired == 'both':
-		filter_wrapper = PairedRedirector
+		filter_wrapper = functools.partial(PairedRedirector, min_affected=min_affected)
 	filters = []
 	# TODO open_files = []
 	too_short_writer = None  # too short reads go here

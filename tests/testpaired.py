@@ -229,3 +229,10 @@ def test_interleaved_input_paired_output():
 		inpath='interleaved.fastq', expected1='pairedq1.fastq', expected2='pairedq2.fastq'
 	)
 """
+
+
+def test_pair_filter():
+	run_paired('--pair-filter=both -a TTAGACATAT -A GGAGTA -m 14',
+		in1='paired.1.fastq', in2='paired.2.fastq',
+		expected1='paired-filterboth.1.fastq', expected2='paired-filterboth.2.fastq'
+	)

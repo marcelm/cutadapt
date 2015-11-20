@@ -85,19 +85,27 @@ class Redirector(object):
 class PairedRedirector(object):
 	"""
 	Redirect discarded reads to the given writer. This is for paired-end reads,
-	using the 'new-style' filtering where both reads are inspected. That is, if
-	any of the reads match the filtering criteria, then the entire pair is
-	discarded.
+	using the 'new-style' filtering where both reads are inspected. That is,
+	the entire pair is discarded if at least 1 or 2 of the reads match the
+	filtering criteria.
 	"""
-	def __init__(self, writer, filter):
+	def __init__(self, writer, filter, min_affected=1):
+		"""
+		min_affected -- values 1 and 2 are allowed.
+			1 means: the pair is discarded if any read matches
+			2 means: the pair is discarded if both reads match
+		"""
+		if not min_affected in (1, 2):
+			raise ValueError("min_affected must be 1 or 2")
 		self.filtered = 0
 		self.writer = writer
 		self.filter = filter
+		self._min_affected = min_affected
 		self.written = 0  # no of written reads or read pairs  TODO move to writer
 		self.written_bp = [0, 0]
 
 	def __call__(self, read1, read2):
-		if self.filter(read1) or self.filter(read2):
+		if self.filter(read1) + self.filter(read2) >= self._min_affected:
 			self.filtered += 1
 			# discard read
 			if self.writer is not None:
