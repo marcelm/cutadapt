@@ -84,9 +84,4 @@ def test_parse_braces():
 def test_parse_braces_fail():
 	for expression in ['{', '}', '{}', '{5', '{1}', 'A{-7}', 'A{', 'A{1', 'N{7', 'AN{7', 'A{4{}',
 			'A{4}{3}', 'A{b}', 'A{6X}', 'A{X6}']:
-		print(expression)
-		try:
-			parse_braces(expression)
-		except ValueError as e:
-			print(e)
 		assert_raises(ValueError, lambda: parse_braces(expression))
