@@ -65,6 +65,7 @@ import sys
 import time
 import errno
 from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
+import functools
 import logging
 import platform
 import textwrap
@@ -76,7 +77,7 @@ from cutadapt.adapters import (Adapter, ColorspaceAdapter, gather_adapters,
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer, AdapterCutter)
-from cutadapt.filters import (Redirector, PairedRedirector,
+from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedirector,
 	LegacyPairedRedirector, TooShortReadFilter, TooLongReadFilter,
 	Demultiplexer, NContentFilter,DiscardUntrimmedFilter, DiscardTrimmedFilter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
@@ -143,71 +144,6 @@ def process_paired_reads(paired_reader, modifiers1, modifiers2, filters):
 			if filter(read1, read2):
 				break
 	return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
-
-
-def trimmed_and_untrimmed_writers(
-		default_output,
-		output_path, output_paired_path,
-		untrimmed_path, untrimmed_paired_path,
-		discard_trimmed,
-		discard_untrimmed,
-		fileformat,
-		colorspace,
-		interleaved
-		):
-	"""
-	Figure out (from command-line parameters) where trimmed and untrimmed reads
-	should be written.
-
-	Return a pair (trimmed_writer, untrimmed_writer). The values are either
-	Fasta/FastqWriters (depending on fileformat) or None, in which case no
-	output should be produced.
-
-	Later parameters have higher precedence.
-
-	default_output -- If nothing else is specified below, this file-like object
-		is returned for both trimmed and untrimmed output.
-	output_path -- Path to output file for both trimmed and untrimmed output.
-	untrimmed_path -- Path to an output file for untrimmed reads.
-	discard_trimmed -- bool, overrides earlier options.
-	discard_untrimmed -- bool, overrides earlier options.
-	"""
-	def open_writer(path_or_file, path_or_file2=None):
-		return seqio.open(path_or_file, path_or_file2,
-			mode='w', colorspace=colorspace, fileformat=fileformat,
-			interleaved=interleaved)
-
-	if discard_trimmed:
-		if discard_untrimmed:
-			untrimmed = None
-		elif untrimmed_path is not None:
-			untrimmed = open_writer(untrimmed_path, untrimmed_paired_path)
-		elif output_path is not None:
-			untrimmed = open_writer(output_path, output_paired_path)
-		else:
-			# should only happen for single-end data
-			untrimmed = open_writer(default_output)
-		return (None, untrimmed)
-
-	if discard_untrimmed:
-		trimmed = open_writer(default_output)
-		if output_path is not None:
-			trimmed = open_writer(output_path, output_paired_path)
-		return (trimmed, None)
-
-	trimmed = None
-	untrimmed = None
-	if output_path is not None:
-		trimmed = untrimmed = open_writer(output_path, output_paired_path)
-	if untrimmed_path is not None:
-		untrimmed = open_writer(untrimmed_path, untrimmed_paired_path)
-	if trimmed is None or untrimmed is None:
-		default_writer = open_writer(default_output)
-		if trimmed is None:
-			trimmed = default_writer
-		if untrimmed is None:
-			untrimmed = default_writer
-	return (trimmed, untrimmed)
 
 
 def get_option_parser():
@@ -498,6 +434,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	else:
 		cutoffs = None
 
+	open_writer = functools.partial(seqio.open, mode='w', fileformat=fileformat,
+		colorspace=options.colorspace, interleaved=options.interleaved)
+
 	if not paired:
 		filter_wrapper = Redirector
 	elif paired == 'first':
@@ -510,14 +449,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	# TODO pass file name to TooShortReadFilter, add a .close() method?
 	if options.minimum_length > 0:
 		if options.too_short_output:
-			too_short_writer = seqio.open(options.too_short_output, mode='w',
-				fileformat=fileformat, colorspace=options.colorspace)
+			too_short_writer = open_writer(options.too_short_output)
 		filters.append(filter_wrapper(too_short_writer, TooShortReadFilter(options.minimum_length)))
 	too_long_writer = None  # too long reads go here
 	if options.maximum_length < sys.maxsize:
 		if options.too_long_output is not None:
-			too_long_writer = seqio.open(options.too_long_output,
-				mode='w', fileformat=fileformat, colorspace=options.colorspace)
+			too_long_writer = open_writer(options.too_long_output)
 		filters.append(filter_wrapper(too_long_writer, TooLongReadFilter(options.maximum_length)))
 
 	if options.max_n != -1:
@@ -527,6 +464,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error("Only one of the --discard-trimmed, --discard-untrimmed "
 			"and --untrimmed-output options can be used at the same time.")
 	demultiplexer = None
+	untrimmed_writer = None
+	writer = None
 	if options.output is not None and '{name}' in options.output:
 		if options.discard_trimmed:
 			parser.error("Do not use --discard-trimmed when demultiplexing.")
@@ -540,24 +479,29 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		demultiplexer = Demultiplexer(options.output, untrimmed,
 			fileformat=fileformat, colorspace=options.colorspace)
 		filters.append(demultiplexer)
-		trimmed_writer = None
-		untrimmed_writer = None
 	else:
-		trimmed_writer, untrimmed_writer = trimmed_and_untrimmed_writers(
-			default_outfile,
-			options.output, options.paired_output,
-			options.untrimmed_output, options.untrimmed_paired_output,
-			options.discard_trimmed,
-			options.discard_untrimmed,
-			fileformat=fileformat,
-			colorspace=options.colorspace,
-			interleaved=options.interleaved)
+		# Set up the remaining filters to deal with --discard-trimmed,
+		# --discard-untrimmed and --untrimmed-output. These options
+		# are mutually exclusive in order to avoid brain damage.
 		if options.discard_trimmed:
 			filters.append(filter_wrapper(None, DiscardTrimmedFilter()))
+		elif options.discard_untrimmed:
+			filters.append(filter_wrapper(None, DiscardUntrimmedFilter()))
+		elif options.untrimmed_output:
+			untrimmed_writer = open_writer(options.untrimmed_output,
+				options.untrimmed_paired_output)
 			filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
+
+		# Finally, figure out where the reads that passed all the previous
+		# filters should go.
+		if options.output is not None:
+			writer = open_writer(options.output, options.paired_output)
 		else:
-			filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
-			filters.append(filter_wrapper(trimmed_writer, DiscardTrimmedFilter()))
+			writer = open_writer(default_outfile)
+		if not paired:
+			filters.append(NoFilter(writer))
+		else:
+			filters.append(PairedNoFilter(writer))
 
 	if options.maq:
 		options.colorspace = True
@@ -723,7 +667,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		sys.exit("cutadapt: error: {0}".format(e))
 
 	# close open files
-	for f in [trimmed_writer, untrimmed_writer,
+	for f in [writer, untrimmed_writer,
 			options.rest_file, options.wildcard_file,
 			options.info_file, too_short_writer, too_long_writer,
 			options.info_file, demultiplexer]:

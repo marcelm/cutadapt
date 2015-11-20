@@ -10,7 +10,7 @@ from contextlib import contextmanager
 import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
 from .modifiers import QualityTrimmer, AdapterCutter
-from .filters import (TooShortReadFilter, TooLongReadFilter,
+from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
 	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, NContentFilter)
 
 
@@ -40,7 +40,7 @@ class Statistics:
 		self.too_many_n = None
 		# Collect statistics from writers/filters
 		for w in writers:
-			if isinstance(w, Demultiplexer) or isinstance(w.filter, (DiscardTrimmedFilter, DiscardUntrimmedFilter)):
+			if isinstance(w, (NoFilter, PairedNoFilter, Demultiplexer)) or isinstance(w.filter, (DiscardTrimmedFilter, DiscardUntrimmedFilter)):
 				self.written += w.written
 				if self.n > 0:
 					self.written_fraction = self.written / self.n

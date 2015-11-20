@@ -24,6 +24,42 @@ DISCARD = True
 KEEP = False
 
 
+class NoFilter(object):
+	"""
+	No filtering, just send each read to the given writer.
+	"""
+	def __init__(self, writer):
+		self.filtered = 0
+		self.writer = writer
+		self.filter = filter
+		self.written = 0  # no of written reads  TODO move to writer
+		self.written_bp = [0, 0]
+
+	def __call__(self, read):
+		self.writer.write(read)
+		self.written += 1
+		self.written_bp[0] += len(read)
+		return DISCARD
+
+
+class PairedNoFilter(object):
+	"""
+	No filtering, just send each paired-end read to the given writer.
+	"""
+	def __init__(self, writer):
+		self.filtered = 0
+		self.writer = writer
+		self.written = 0  # no of written reads or read pairs  TODO move to writer
+		self.written_bp = [0, 0]
+
+	def __call__(self, read1, read2):
+		self.writer.write(read1, read2)
+		self.written += 1
+		self.written_bp[0] += len(read1)
+		self.written_bp[1] += len(read2)
+		return DISCARD
+
+
 class Redirector(object):
 	"""
 	Redirect discarded reads to the given writer. This is for single-end reads.
