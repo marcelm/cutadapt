@@ -246,15 +246,12 @@ def print_report(stats, adapters_pair):
 			where = adapter.where
 			assert where == ANYWHERE or (where in (BACK, SUFFIX) and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
 
-			name = str(adapter.name)
-			if not adapter.name_is_generated:
-				name = "'{0}'".format(name)
 			if stats.paired:
 				extra = 'First read: ' if which_in_pair == 0 else 'Second read: '
 			else:
 				extra = ''
 
-			print("=" * 3, extra + "Adapter", name, "=" * 3)
+			print("=" * 3, extra + "Adapter", adapter.name, "=" * 3)
 			print()
 			print("Sequence: {0}; Type: {1}; Length: {2}; Trimmed: {3} times.".
 				format(adapter.sequence, ADAPTER_TYPES[adapter.where],

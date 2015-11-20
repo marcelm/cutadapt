@@ -128,6 +128,12 @@ class AdapterMatch(object):
 			return self.read.sequence[self.rstop:]
 
 
+def generate_adapter_name(_start=[1]):
+	name = str(_start[0])
+	_start[0] += 1
+	return name
+
+
 class Adapter(object):
 	"""
 	An adapter knows how to match itself to a read.
@@ -156,20 +162,11 @@ class Adapter(object):
 	name -- optional name of the adapter. If not provided, the name is set to a
 		unique number.
 	"""
-	automatic_name = 1
-
 	def __init__(self, sequence, where, max_error_rate, min_overlap=3,
 			read_wildcards=False, adapter_wildcards=True,
 			name=None, indels=True):
 		self.debug = False
-		if name is None:
-			self.name = str(self.__class__.automatic_name)
-			self.__class__.automatic_name += 1
-			self.name_is_generated = True
-		else:
-			self.name = name
-			self.name_is_generated = False
-
+		self.name = generate_adapter_name() if name is None else name
 		self.sequence = self.parse_braces(sequence.upper().replace('U', 'T'))
 		self.where = where
 		self.max_error_rate = max_error_rate
