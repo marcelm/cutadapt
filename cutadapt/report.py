@@ -8,7 +8,7 @@ import sys
 from collections import namedtuple
 from contextlib import contextmanager
 import textwrap
-from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE
+from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE, LINKED
 from .modifiers import QualityTrimmer, AdapterCutter
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
 	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, NContentFilter)
@@ -85,7 +85,8 @@ ADAPTER_TYPES = {
 	FRONT: "regular 5'",
 	PREFIX: "anchored 5'",
 	SUFFIX: "anchored 3'",
-	ANYWHERE: "variable 5'/3'"
+	ANYWHERE: "variable 5'/3'",
+	LINKED: "linked",
 }
 
 
@@ -229,7 +230,7 @@ def print_report(stats, adapters_pair):
 			total_back = sum(adapter.lengths_back.values())
 			total = total_front + total_back
 			where = adapter.where
-			assert where == ANYWHERE or (where in (BACK, SUFFIX) and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
+			assert where in (ANYWHERE, LINKED) or (where in (BACK, SUFFIX) and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
 
 			if stats.paired:
 				extra = 'First read: ' if which_in_pair == 0 else 'Second read: '
@@ -238,9 +239,17 @@ def print_report(stats, adapters_pair):
 
 			print("=" * 3, extra + "Adapter", adapter.name, "=" * 3)
 			print()
-			print("Sequence: {0}; Type: {1}; Length: {2}; Trimmed: {3} times.".
-				format(adapter.sequence, ADAPTER_TYPES[adapter.where],
-					len(adapter.sequence), total))
+			if where == LINKED:
+				print("Sequence: {0}...{1}; Type: linked; Length: {2}+{3}; Trimmed: {4} times; Half matches: {5}".
+					format(adapter.front_adapter.sequence,
+						adapter.back_adapter.sequence,
+						len(adapter.front_adapter.sequence),
+						len(adapter.back_adapter.sequence),
+						total_front, total_back))
+			else:
+				print("Sequence: {0}; Type: {1}; Length: {2}; Trimmed: {3} times.".
+					format(adapter.sequence, ADAPTER_TYPES[adapter.where],
+						len(adapter.sequence), total))
 			if total == 0:
 				print()
 				continue
@@ -254,6 +263,20 @@ def print_report(stats, adapters_pair):
 				print()
 				print("Overview of removed sequences (3' or within)")
 				print_histogram(adapter.lengths_back, len(adapter), stats.n, adapter.max_error_rate, adapter.errors_back)
+			elif where == LINKED:
+				print()
+				print_error_ranges(len(adapter.front_adapter), adapter.front_adapter.max_error_rate)
+				print_error_ranges(len(adapter.back_adapter), adapter.back_adapter.max_error_rate)
+				print("Overview of removed sequences at 5' end")
+				print_histogram(adapter.front_adapter.lengths_front,
+					len(adapter.front_adapter), stats.n,
+					adapter.front_adapter.max_error_rate,
+					adapter.front_adapter.errors_front)
+				print()
+				print("Overview of removed sequences at 3' end")
+				print_histogram(adapter.back_adapter.lengths_back,
+					len(adapter.back_adapter), stats.n,
+					adapter.back_adapter.max_error_rate, adapter.back_adapter.errors_back)
 			elif where in (FRONT, PREFIX):
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)

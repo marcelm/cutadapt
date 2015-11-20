@@ -11,11 +11,13 @@ from cutadapt.seqio import ColorspaceSequence, FastaReader
 
 # Constants for the find_best_alignment function.
 # The function is called with SEQ1 as the adapter, SEQ2 as the read.
+# TODO get rid of those constants, use strings instead
 BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
 FRONT = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.START_WITHIN_SEQ1
 PREFIX = align.STOP_WITHIN_SEQ2
 SUFFIX = align.START_WITHIN_SEQ2
 ANYWHERE = align.SEMIGLOBAL
+LINKED = 'linked'
 
 
 def parse_braces(sequence):
@@ -88,16 +90,23 @@ class AdapterParser(object):
 		where = types[cmdline_type]
 		if where == FRONT and spec.startswith('^'):  # -g ^ADAPTER
 			sequence, where = spec[1:], PREFIX
-		elif where == BACK and :
+		elif where == BACK:
 			sequence1, middle, sequence2 = spec.partition('...')
 			if middle == '...':
 				if not sequence1:  # -a ...ADAPTER
 					sequence = sequence1[3:]
 				elif not sequence2:  # -a ADAPTER...
 					sequence, where = spec[:-3], PREFIX
+				else:  # -a ADAPTER1...ADAPTER2
+					if self.colorspace:
+						raise NotImplementedError('Using linked adapters in colorspace is not supported')
+					if sequence1.startswith('^') or sequence2.endswith('$'):
+						raise NotImplementedError('Using "$" or "^" when '
+							'specifying a linked adapter is not supported')
+					return LinkedAdapter(sequence1, sequence2, name=name,
+						**self.constructor_args)
 			elif spec.endswith('$'):   # -a ADAPTER$
 				sequence, where = spec[:-1], SUFFIX
-
 		if not sequence:
 			raise ValueError("The adapter sequence is empty.")
 
@@ -250,6 +259,7 @@ class Adapter(object):
 		self.debug = False
 		self.name = _generate_adapter_name() if name is None else name
 		self.sequence = parse_braces(sequence.upper().replace('U', 'T'))
+		assert len(self.sequence) > 0
 		self.where = where
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min(min_overlap, len(self.sequence))
@@ -451,3 +461,86 @@ class ColorspaceAdapter(Adapter):
 
 	def __repr__(self):
 		return '<ColorspaceAdapter(sequence={0!r}, where={1})>'.format(self.sequence, self.where)
+
+
+class LinkedMatch(object):
+	"""
+	Represent a match of a LinkedAdapter.
+
+	TODO
+	It shouldn’t be necessary to have both a Match and a LinkedMatch class.
+	"""
+	def __init__(self, front_match, back_match, adapter):
+		self.front_match = front_match
+		self.back_match = back_match
+		self.adapter = adapter
+		assert front_match is not None
+
+
+class LinkedAdapter(object):
+	"""
+	"""
+	def __init__(self, front_sequence, back_sequence,
+			front_anchored=True, back_anchored=False, name=None, **kwargs):
+		"""
+		kwargs are passed on to individual Adapter constructors
+		"""
+		assert front_anchored and not back_anchored
+		where1 = PREFIX if front_anchored else FRONT
+		where2 = SUFFIX if back_anchored else BACK
+		self.front_anchored = front_anchored
+		self.back_anchored = back_anchored
+
+		# The following attributes are needed for the report
+		self.where = LINKED
+		self.name = _generate_adapter_name() if name is None else name
+		self.front_adapter = Adapter(front_sequence, where=where1, name=None, **kwargs)
+		self.back_adapter = Adapter(back_sequence, where=where2, name=None, **kwargs)
+
+	def enable_debug(self):
+		self.front_adapter.enable_debug()
+		self.back_adapter.enable_debug()
+
+	def match_to(self, read):
+		"""
+		Match the linked adapters against the given read. If the 'front' adapter
+		is not found, the 'back' adapter is not searched for.
+		"""
+		front_match = self.front_adapter.match_to(read)
+		if front_match is None:
+			return None
+		# TODO use match.trimmed() instead as soon as that does not update
+		# statistics anymore
+		read = read[front_match.rstop:]
+		back_match = self.back_adapter.match_to(read)
+		return LinkedMatch(front_match, back_match, self)
+
+	def trimmed(self, match):
+		front_trimmed = self.front_adapter.trimmed(match.front_match)
+		if match.back_match:
+			return self.back_adapter.trimmed(match.back_match)
+		else:
+			return front_trimmed
+
+	# Lots of forwarders (needed for the report). I’m sure this can be done
+	# in a better way.
+
+	@property
+	def lengths_front(self):
+		return self.front_adapter.lengths_front
+
+	@property
+	def lengths_back(self):
+		return self.back_adapter.lengths_back
+
+	@property
+	def errors_front(self):
+		return self.front_adapter.errors_front
+
+	@property
+	def errors_back(self):
+		return self.back_adapter.errors_back
+
+	@property
+	def adjacent_bases(self):
+		return self.back_adapter.adjacent_bases
