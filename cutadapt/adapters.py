@@ -260,9 +260,11 @@ class Adapter(object):
 
 	def match_to(self, read):
 		"""
-		Try to match this adapter to the given read and return an AdapterMatch instance.
+		Attempt to match this adapter to the given read.
 
-		Return None if the minimum overlap length is not met or the error rate is too high.
+		Return an AdapterMatch instance if a match was found;
+		return None if no match was found given the matching criteria (minimum
+		overlap length, maximum error rate).
 		"""
 		read_seq = read.sequence.upper()
 		pos = -1
