@@ -204,6 +204,11 @@ def get_option_parser():
 	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
 		default=True, dest='match_adapter_wildcards',
 		help="Do not interpret IUPAC wildcards in adapters.")
+	group.add_option("--no-trim", dest='action', action='store_const', const=None,
+		help="Match and redirect reads to output/untrimmed-output as usual, "
+			"but do not remove adapters.")
+	group.add_option("--mask-adapter", dest='action', action='store_const', const='mask',
+		help="Mask adapters with 'N' characters instead of trimming them.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional read modifications")
@@ -252,15 +257,10 @@ def get_option_parser():
 			"Reads that are too long even before adapter removal "
 			"are also discarded. In colorspace, an initial primer "
 			"is not counted (default: no limit).")
-	group.add_option("--no-trim", dest='action', action='store_const', const=None,
-		help="Match and redirect reads to output/untrimmed-output as usual, "
-			"but do not remove adapters.")
 	group.add_option("--max-n", type=float, default=-1.0, metavar="COUNT",
 		help="Discard reads with too many N bases. If COUNT is an integer, it "
 			"is treated as the absolute number of N bases. If it is between 0 "
 			"and 1, it is treated as the proportion of N's allowed in a read.")
-	group.add_option("--mask-adapter", dest='action', action='store_const', const='mask',
-		help="Mask adapters with 'N' characters instead of trimming them.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
