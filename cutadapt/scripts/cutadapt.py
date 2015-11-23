@@ -206,6 +206,37 @@ def get_option_parser():
 		help="Do not interpret IUPAC wildcards in adapters.")
 	parser.add_option_group(group)
 
+	group = OptionGroup(parser, "Additional read modifications")
+	group.add_option("-u", "--cut", action='append', default=[], type=int, metavar="LENGTH",
+		help="Remove LENGTH bases from the beginning or end of each read. "
+			"If LENGTH is positive, bases are removed from the beginning of each read. "
+			"If LENGTH is negative, bases are removed from the end of each read. "
+			"This option can be specified twice if the LENGTHs have different signs.")
+	group.add_option("-q", "--quality-cutoff", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
+		help="Trim low-quality bases from 5' and/or 3' ends of reads before "
+			"adapter removal. If one value is given, only the 3' end is trimmed. "
+			"If two comma-separated cutoffs are given, the 5' end is trimmed with "
+			"the first cutoff, the 3' end with the second. See documentation for "
+			"the algorithm. (default: no trimming)")
+	group.add_option("--quality-base", type=int, default=33,
+		help="Assume that quality values in FASTQ are encoded as ascii(quality "
+			"+ QUALITY_BASE). This needs to be set to 64 for some old Illumina "
+			"FASTQ files. Default: %default")
+	group.add_option("--trim-n", action='store_true', default=False,
+		help="Trim N's on ends of reads.")
+	group.add_option("-x", "--prefix", default='',
+		help="Add this prefix to read names. Use {name} to insert the name of the matching adapter.")
+	group.add_option("-y", "--suffix", default='',
+		help="Add this suffix to read names; can also include {name}")
+	group.add_option("--strip-suffix", action='append', default=[],
+		help="Remove this suffix from read names if present. Can be given multiple times.")
+	group.add_option("--length-tag", metavar="TAG",
+		help="Search for TAG followed by a decimal number in the description "
+			"field of the read. Replace the decimal number with the correct "
+			"length of the trimmed read. For example, use --length-tag 'length=' "
+			"to correct fields like 'length=123'.")
+	parser.add_option_group(group)
+
 	group = OptionGroup(parser, "Options for filtering of processed reads")
 	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
 		help="Discard reads that contain an adapter. Also use -O to avoid "
@@ -259,37 +290,6 @@ def get_option_parser():
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
 		help="Write reads that do not contain the adapter to FILE. (default: "
 			"output to same file as trimmed reads)")
-	parser.add_option_group(group)
-
-	group = OptionGroup(parser, "Additional read modifications")
-	group.add_option("-u", "--cut", action='append', default=[], type=int, metavar="LENGTH",
-		help="Remove LENGTH bases from the beginning or end of each read. "
-			"If LENGTH is positive, bases are removed from the beginning of each read. "
-			"If LENGTH is negative, bases are removed from the end of each read. "
-			"This option can be specified twice if the LENGTHs have different signs.")
-	group.add_option("-q", "--quality-cutoff", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
-		help="Trim low-quality bases from 5' and/or 3' ends of reads before "
-			"adapter removal. If one value is given, only the 3' end is trimmed. "
-			"If two comma-separated cutoffs are given, the 5' end is trimmed with "
-			"the first cutoff, the 3' end with the second. See documentation for "
-			"the algorithm. (default: no trimming)")
-	group.add_option("--quality-base", type=int, default=33,
-		help="Assume that quality values in FASTQ are encoded as ascii(quality "
-			"+ QUALITY_BASE). This needs to be set to 64 for some old Illumina "
-			"FASTQ files. Default: %default")
-	group.add_option("--trim-n", action='store_true', default=False,
-		help="Trim N's on ends of reads.")
-	group.add_option("-x", "--prefix", default='',
-		help="Add this prefix to read names. Use {name} to insert the name of the matching adapter.")
-	group.add_option("-y", "--suffix", default='',
-		help="Add this suffix to read names; can also include {name}")
-	group.add_option("--strip-suffix", action='append', default=[],
-		help="Remove this suffix from read names if present. Can be given multiple times.")
-	group.add_option("--length-tag", metavar="TAG",
-		help="Search for TAG followed by a decimal number in the description "
-			"field of the read. Replace the decimal number with the correct "
-			"length of the trimmed read. For example, use --length-tag 'length=' "
-			"to correct fields like 'length=123'.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Colorspace options")
