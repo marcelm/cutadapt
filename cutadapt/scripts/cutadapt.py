@@ -338,10 +338,16 @@ def get_option_parser():
 	group.add_option("--interleaved", action='store_true', default=False,
 		help="Read and write interleaved paired-end reads.")
 	group.add_option("--untrimmed-paired-output", metavar="FILE",
-		help="Write the second read in a pair to this FILE when no adapter "
+		help="Write second read in a pair to this FILE when no adapter "
 			"was found in the first read. Use this option together with "
 			"--untrimmed-output when trimming paired-end reads. (Default: output "
 			"to same file as trimmed reads.)")
+	group.add_option("--too-short-paired-output", metavar="FILE", default=None,
+		help="Write second read in a pair to this file if pair is too short. "
+			"Use together with --too-short-output.")
+	group.add_option("--too-long-paired-output", metavar="FILE", default=None,
+		help="Write second read in a pair to this file if pair is too long. "
+			"Use together with --too-long-output.")
 	parser.add_option_group(group)
 
 	return parser
@@ -378,7 +384,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		paired = 'first'
 	# Any of these options switch off legacy mode
 	if (options.adapters2 or options.front2 or options.anywhere2 or
-		options.cut2 or options.interleaved or options.pair_filter):
+		options.cut2 or options.interleaved or options.pair_filter or
+		options.too_short_paired_output or options.too_long_paired_output):
 		# Full paired-end trimming when both -p and -A/-G/-B/-U given
 		# Read modifications (such as quality trimming) are applied also to second read.
 		paired = 'both'
@@ -462,12 +469,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	# TODO pass file name to TooShortReadFilter, add a .close() method?
 	if options.minimum_length > 0:
 		if options.too_short_output:
-			too_short_writer = open_writer(options.too_short_output)
+			too_short_writer = open_writer(options.too_short_output, options.too_short_paired_output)
 		filters.append(filter_wrapper(too_short_writer, TooShortReadFilter(options.minimum_length)))
 	too_long_writer = None  # too long reads go here
 	if options.maximum_length < sys.maxsize:
 		if options.too_long_output is not None:
-			too_long_writer = open_writer(options.too_long_output)
+			too_long_writer = open_writer(options.too_long_output, options.too_long_paired_output)
 		filters.append(filter_wrapper(too_long_writer, TooLongReadFilter(options.maximum_length)))
 
 	if options.max_n != -1:

@@ -2,6 +2,12 @@
 Changes
 =======
 
+v2.0 (in development)
+---------------------
+
+* Add ``--pair-filter`` option.
+* Add ``--too-short-paired-output`` and ``--too-long-paired-output`` options.
+
 v1.9
 ----
 

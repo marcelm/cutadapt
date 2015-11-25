@@ -236,3 +236,27 @@ def test_pair_filter():
 		in1='paired.1.fastq', in2='paired.2.fastq',
 		expected1='paired-filterboth.1.fastq', expected2='paired-filterboth.2.fastq'
 	)
+
+
+def test_too_short_paired_output():
+	with temporary_path("temp-too-short.1.fastq") as p1:
+		with temporary_path("temp-too-short.2.fastq") as p2:
+			run_paired('-a TTAGACATAT -A CAGTGGAGTA -m 14 --too-short-output '
+				'{0} --too-short-paired-output {1}'.format(p1, p2),
+				in1='paired.1.fastq', in2='paired.2.fastq',
+				expected1='paired.1.fastq', expected2='paired.2.fastq'
+			)
+			assert files_equal(cutpath('paired-too-short.1.fastq'), p1)
+			assert files_equal(cutpath('paired-too-short.2.fastq'), p2)
+
+
+def test_too_long_output():
+	with temporary_path("temp-too-long.1.fastq") as p1:
+		with temporary_path("temp-too-long.2.fastq") as p2:
+			run_paired('-a TTAGACATAT -A CAGTGGAGTA -M 14 --too-long-output '
+				'{0} --too-long-paired-output {1}'.format(p1, p2),
+				in1='paired.1.fastq', in2='paired.2.fastq',
+				expected1='paired-too-short.1.fastq', expected2='paired-too-short.2.fastq'
+			)
+			assert files_equal(cutpath('paired.1.fastq'), p1)
+			assert files_equal(cutpath('paired.2.fastq'), p2)
