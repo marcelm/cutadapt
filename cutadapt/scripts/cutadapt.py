@@ -416,6 +416,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
 				parser.error("When trimming paired-end reads, you must use either none "
 					"or both of the --untrimmed-output/--untrimmed-paired-output options.")
+			if options.too_short_output and not options.too_short_paired_output:
+				parser.error("When using --too-short-output with paired-end "
+					"reads, you also need to use --too-short-paired-output")
+			if options.too_long_output and not options.too_long_paired_output:
+				parser.error("When using --too-long-output with paired-end "
+					"reads, you also need to use --too-long-paired-output")
 	elif len(args) == 2:
 		quality_filename = args[1]
 		if options.format is not None:
