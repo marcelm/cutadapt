@@ -260,3 +260,13 @@ def test_too_long_output():
 			)
 			assert files_equal(cutpath('paired.1.fastq'), p1)
 			assert files_equal(cutpath('paired.2.fastq'), p2)
+
+
+@raises(SystemExit)
+def test_too_short_output_paired_option_missing():
+	with temporary_path("temp-too-short.1.fastq") as p1:
+		run_paired('-a TTAGACATAT -A CAGTGGAGTA -m 14 --too-short-output '
+			'{0}'.format(p1),
+			in1='paired.1.fastq', in2='paired.2.fastq',
+			expected1='paired.1.fastq', expected2='paired.2.fastq'
+		)
