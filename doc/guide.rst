@@ -717,7 +717,7 @@ The following limitations still exist:
 .. _filtering-paired:
 
 Filtering paired-end reads
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 
 The :ref:`filtering options listed above <filtering>` can also be used when
 trimming paired-end data. Since there are two reads, however, the filtering

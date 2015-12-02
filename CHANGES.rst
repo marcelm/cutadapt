@@ -2,11 +2,13 @@
 Changes
 =======
 
-v2.0 (in development)
----------------------
+v1.9.1
+------
 
-* Add ``--pair-filter`` option.
+* Added ``--pair-filter`` option, which :ref:`modifies how filtering criteria
+  apply to paired-end reads <filtering-paired>`
 * Add ``--too-short-paired-output`` and ``--too-long-paired-output`` options.
+* Fix incorrect number of trimmed bases reported if ``--times`` option was used.
 
 v1.9
 ----
