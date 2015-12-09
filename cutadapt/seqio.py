@@ -53,8 +53,8 @@ class Sequence(object):
 			self.name,
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
-		    self.name2,
-		    self.match)
+			self.name2,
+			self.match)
 
 	def __repr__(self):
 		qstr = ''
@@ -152,23 +152,31 @@ class FileWithPrependedLine(object):
 		self._file.close()
 
 
-class FastaReader(object):
+class GZipMixin(object):
+	def __init__(self, *args, **kwargs):
+		_file = args[0]
+		if hasattr(_file, 'read') and hasattr(_file, 'name') and splitext(_file.name)[1].lower() in ('.bz2', '.xz', '.gz'):
+			_file = _file.name
+		if isinstance(_file, basestring):
+			_file = xopen(_file)
+			self._close_on_exit = True
+		self._file = _file
+
+
+class FastaReader(GZipMixin):
 	"""
 	Reader for FASTA files.
 	"""
 	_close_on_exit = False
 
-	def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence):
+	def __init__(self, _file, keep_linebreaks=False, sequence_class=Sequence):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then it is passed to xopen().
 
 		keep_linebreaks -- whether to keep newline characters in the sequence
 		"""
-		if isinstance(file, basestring):
-			file = xopen(file)
-			self._close_on_exit = True
-		self._file = file
+		super(FastaReader, self).__init__(_file, keep_linebreaks=keep_linebreaks, sequence_class=sequence_class)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = False
 		self._delimiter = '\n' if keep_linebreaks else ''
@@ -215,17 +223,17 @@ class FastaReader(object):
 
 
 class ColorspaceFastaReader(FastaReader):
-	def __init__(self, file, keep_linebreaks=False):
-		super(ColorspaceFastaReader, self).__init__(file, keep_linebreaks, sequence_class=ColorspaceSequence)
+	def __init__(self, _file, keep_linebreaks=False):
+		super(ColorspaceFastaReader, self).__init__(_file, keep_linebreaks, sequence_class=ColorspaceSequence)
 
 
-class FastqReader(object):
+class FastqReader(GZipMixin):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
 	_close_on_exit = False
 
-	def __init__(self, file, sequence_class=Sequence): # TODO could be a class attribute
+	def __init__(self, _file, sequence_class=Sequence): # TODO could be a class attribute
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
@@ -233,10 +241,7 @@ class FastqReader(object):
 		The sequence_class should be a class such as Sequence or
 		ColorspaceSequence.
 		"""
-		if isinstance(file, basestring):
-			file = xopen(file)
-			self._close_on_exit = True
-		self._file = file
+		super(FastqReader, self).__init__(_file, sequence_class=sequence_class)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
