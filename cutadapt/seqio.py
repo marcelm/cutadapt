@@ -152,15 +152,23 @@ class FileWithPrependedLine(object):
 		self._file.close()
 
 
-class GZipMixin(object):
+# This addresses the issue that the Object signature changed to not include *args or **kwargs. It is
+# put in so MRO works as expected.
+class Object(object):
 	def __init__(self, *args, **kwargs):
-		_file = args[0]
-		if hasattr(_file, 'read') and hasattr(_file, 'name') and splitext(_file.name)[1].lower() in ('.bz2', '.xz', '.gz'):
-			_file = _file.name
-		if isinstance(_file, basestring):
-			_file = xopen(_file)
+		super(Object, self).__init__()
+
+
+class GZipMixin(Object):
+	def __init__(self, *args, **kwargs):
+		super(GZipMixin, self).__init__(*args, **kwargs)
+		file = args[0]
+		if hasattr(file, 'read') and hasattr(file, 'name') and splitext(file.name)[1].lower() in ('.bz2', '.xz', '.gz'):
+			file = file.name
+		if isinstance(file, basestring):
+			file = xopen(file)
 			self._close_on_exit = True
-		self._file = _file
+		self._file = file
 
 
 class FastaReader(GZipMixin):
