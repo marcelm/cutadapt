@@ -24,7 +24,7 @@ improvements.
 - instead of trimming, convert adapter to lowercase
 - warn when given adapter sequence contains non-IUPAC characters
 - try multithreading again, this time use os.pipe() or 0mq
-
+- extensible file type detection
 
 Specifying adapters
 -------------------

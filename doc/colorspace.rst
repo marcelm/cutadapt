@@ -98,10 +98,31 @@ Bowtie
 ------
 
 Quality values of colorspace reads are sometimes negative. Bowtie gets
-confused and prints this message:
+confused and prints this message::
 
     Encountered a space parsing the quality string for read xyz
 
 BWA also has a problem with such data. Cutadapt therefore converts
 negative quality values to zero in colorspace data. Use the option
 ``--no-zero-cap`` to turn this off.
+
+.. _sra-fastq:
+
+Sequence Read Archive
+---------------------
+
+The Sequence Read Archive provides files in a special "SRA" file format. When
+the ``fastq-dump`` program from the sra-toolkit package is used to convert
+these ``.sra`` files to FASTQ format, colorspace reads will get an extra
+quality value in the beginning of each read. You may get an error like this::
+
+    cutadapt: error: In read named 'xyz': length of colorspace quality
+    sequence (36) and length of read (35) do not match (primer is: 'T')
+
+To make cutadapt ignore the extra quality base, add ``--format=sra-fastq`` to
+your command-line, as in this example::
+
+    cutadapt -c --format=sra-fastq -a CGCCTTGGCCG sra.fastq > trimmed.fastq
+
+When you use ``--format=sra-fastq``, the spurious quality value will be removed
+from all reads in the file.
