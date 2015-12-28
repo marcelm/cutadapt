@@ -158,9 +158,9 @@ def get_option_parser():
 
 	group = OptionGroup(parser, "Options that influence how the adapters are found",
 		description="Each of the three parameters -a, -b, -g can be used "
-			"multiple times and in any combination to search for an entire set of "
-			"adapters of possibly different types. Only the best matching "
-			"adapter is trimmed from each read (but see the --times option). "
+			"multiple times and in any combination to search for set of "
+			"adapters. Only the best matching adapter is trimmed from the read "
+			"(but see the --times option). "
 			"Instead of giving an adapter directly, you can also write "
 			"file:FILE and the adapter sequences will be read from the given "
 			"FASTA FILE.")
