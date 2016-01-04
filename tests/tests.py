@@ -8,8 +8,8 @@ import os
 import sys
 from nose.tools import raises
 from cutadapt.scripts import cutadapt
+from cutadapt.compat import StringIO
 from .utils import run, files_equal, datapath, cutpath, redirect_stderr, temporary_path
-
 
 def test_example():
 	run('-N -b ADAPTER', 'example.fa', 'example.fa')
@@ -353,3 +353,19 @@ def test_max_n():
 	run('--max-n 2', 'maxn2.fasta', 'maxn.fasta')
 	run('--max-n 0.2', 'maxn0.2.fasta', 'maxn.fasta')
 	run('--max-n 0.4', 'maxn0.4.fasta', 'maxn.fasta')
+
+
+def test_quiet_is_quiet():
+	captured_standard_output = StringIO()
+	captured_standard_error = StringIO()
+	try:
+		old_stdout = sys.stdout
+		old_stderr = sys.stderr
+		sys.stdout = captured_standard_output
+		sys.stderr = captured_standard_error
+		cutadapt.main(['-o', '/dev/null', '--quiet', '-a', 'XXXX', datapath('illumina.fastq.gz')])
+	finally:
+		sys.stdout = old_stdout
+		sys.stderr = old_stderr
+	assert captured_standard_output.getvalue() == ''
+	assert captured_standard_error.getvalue() == ''

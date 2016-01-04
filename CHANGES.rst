@@ -2,6 +2,12 @@
 Changes
 =======
 
+in development
+--------------
+
+* Fix issue #167: Option ``--quiet`` was not entirely quiet.
+
+
 v1.9.1
 ------
 

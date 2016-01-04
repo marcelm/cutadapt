@@ -83,7 +83,7 @@ from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedire
 from cutadapt.report import Statistics, print_report, redirect_standard_output
 from cutadapt.compat import next
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class CutadaptOptionParser(OptionParser):
 	def get_usage(self):
@@ -144,6 +144,19 @@ def process_paired_reads(paired_reader, modifiers1, modifiers2, filters):
 			if filter(read1, read2):
 				break
 	return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
+
+
+def setup_logging(stdout=False, quiet=False):
+	"""
+	Attach handler to the global logger object
+	"""
+	# Due to backwards compatibility, logging output is sent to standard output
+	# instead of standard error if the -o option is used.
+	stream_handler = logging.StreamHandler(sys.stdout if stdout else sys.stderr)
+	stream_handler.setFormatter(logging.Formatter('%(message)s'))
+	stream_handler.setLevel(logging.ERROR if quiet else logging.INFO)
+	logger.setLevel(logging.INFO)
+	logger.addHandler(stream_handler)
 
 
 def get_option_parser():
@@ -265,7 +278,7 @@ def get_option_parser():
 
 	group = OptionGroup(parser, "Options that influence what gets output to where")
 	group.add_option("--quiet", default=False, action='store_true',
-		help="Do not print a report at the end.")
+		help="Print only error messages.")
 	group.add_option("-o", "--output", metavar="FILE",
 		help="Write modified reads to FILE. FASTQ or FASTA format is chosen "
 			"depending on input. The summary report is sent to standard output. "
@@ -361,11 +374,14 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	default_outfile is the file to which trimmed reads are sent if the ``-o``
 	parameter is not used.
 	"""
-	logging.basicConfig(level=logging.INFO, format='%(message)s')  #  %(levelname)s
 	parser = get_option_parser()
 	if cmdlineargs is None:
 		cmdlineargs = sys.argv[1:]
 	options, args = parser.parse_args(args=cmdlineargs)
+	# Setup logging only if there are not already handlers (can happen when we
+	# this function is being called externally such as from unit tests)
+	if not logging.root.handlers:
+		setup_logging(stdout=bool(options.output), quiet=options.quiet)
 
 	if len(args) == 0:
 		parser.error("At least one parameter needed: name of a FASTA or FASTQ file.")
@@ -657,11 +673,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			adapter_cutter2 = None
 		modifiers2.extend(modifiers_both)
 
-	# Due to backwards compatibility, from here on logging output needs to be
-	# sent to standard output instead of standard error if the -o option is used.
-	if options.output:
-		logger.root.handlers = []
-		logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
 	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
 	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
@@ -670,7 +681,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
 
 	if paired == 'first' and (modifiers_both or cutoffs):
-		logger.warn('\n'.join(textwrap.wrap('WARNING: Requested read '
+		logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
 			'modifications are applied only to the first '
 			'read since backwards compatibility mode is enabled. '
 			'To modify both reads, also use any of the -A/-B/-G/-U options. '
