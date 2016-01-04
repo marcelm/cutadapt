@@ -378,7 +378,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if cmdlineargs is None:
 		cmdlineargs = sys.argv[1:]
 	options, args = parser.parse_args(args=cmdlineargs)
-	# Setup logging only if there are not already handlers (can happen when we
+	# Setup logging only if there are not already any handlers (can happen when
 	# this function is being called externally such as from unit tests)
 	if not logging.root.handlers:
 		setup_logging(stdout=bool(options.output), quiet=options.quiet)
