@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # kate: word-wrap off; remove-trailing-spaces all;
 #
-# Copyright (c) 2010-2015 Marcel Martin <marcel.martin@scilifelab.se>
+# Copyright (c) 2010-2016 Marcel Martin <marcel.martin@scilifelab.se>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 
 """
 cutadapt version %version
-Copyright (C) 2010-2015 Marcel Martin <marcel.martin@scilifelab.se>
+Copyright (C) 2010-2016 Marcel Martin <marcel.martin@scilifelab.se>
 
 cutadapt removes adapter sequences from high-throughput sequencing reads.
 
@@ -166,54 +166,50 @@ def get_option_parser():
 		help="Print debugging information.")
 	parser.add_option("-f", "--format",
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
-			"Ignored when reading csfasta/qual files (default: auto-detect "
-			"from file name extension).")
+			"Ignored when reading csfasta/qual files. Default: auto-detect "
+			"from file name extension.")
 
-	group = OptionGroup(parser, "Options that influence how the adapters are found",
-		description="Each of the three parameters -a, -b, -g can be used "
-			"multiple times and in any combination to search for set of "
-			"adapters. Only the best matching adapter is trimmed from the read "
-			"(but see the --times option). "
-			"Instead of giving an adapter directly, you can also write "
-			"file:FILE and the adapter sequences will be read from the given "
-			"FASTA FILE.")
+	group = OptionGroup(parser, "Finding adapters:",
+		description="Parameters -a, -g, -b specify adapters to be removed from "
+			"each read (or from the first read in a pair if data is paired). "
+			"If specified multiple times, only the best matching adapter is "
+			"trimmed (but see the --times option). When the special notation "
+			"'file:FILE' is used, adapter sequences are read from the given "
+			"FASTA file.")
 	group.add_option("-a", "--adapter", action="append", default=[], metavar="ADAPTER",
 		dest="adapters",
-		help="Sequence of an adapter that was ligated to the 3' end. The "
-			"adapter itself and anything that follows is trimmed. If the "
-			"adapter sequence ends with the '$' character, the adapter is "
-			"anchored to the end of the read and only found if it is a "
-			"suffix of the read.")
+		help="Sequence of an adapter ligated to the 3' end (paired data: of the "
+			"first read). The adapter and subsequent bases are trimmed. If a "
+			"'$' character is appended ('anchoring'), the adapter is only "
+			"found if it is a suffix of the read.")
 	group.add_option("-g", "--front", action="append", default=[], metavar="ADAPTER",
-		help="Sequence of an adapter that was ligated to the 5' end. If the "
-		"adapter sequence starts with the character '^', the adapter is "
-		"'anchored'. An anchored adapter must appear in its entirety at the "
-		"5' end of the read (it is a prefix of the read). A non-anchored adapter may "
-		"appear partially at the 5' end, or it may occur within the read. If it is "
-		"found within a read, the sequence preceding the adapter is also trimmed. "
-		"In all cases, the adapter itself is trimmed.")
+		help="Sequence of an adapter ligated to the 5' end (paired data: of the "
+			"first read). The adapter and any preceding bases are trimmed. "
+			"Partial matches at the 5' end are allowed. If a '^' character is "
+			"prepended ('anchoring'), the adapter is only found if it is a "
+			"prefix of the read.")
 	group.add_option("-b", "--anywhere", action="append", default=[], metavar="ADAPTER",
-		help="Sequence of an adapter that was ligated to the 5' or 3' end. If "
-			"the adapter is found within the read or overlapping the 3' end of "
-			"the read, the behavior is the same as for the -a option. If the "
-			"adapter overlaps the 5' end (beginning of the read), the initial "
-			"portion of the read matching the adapter is trimmed, but anything "
-			"that follows is kept.")
+		help="Sequence of an adapter that may be ligated to the 5' or 3' end "
+			"(paired data: of the first read). Both types of matches as "
+			"described under -a und -g are allowed. If the first base of the "
+			"read is part of the match, the behavior is as with -g, otherwise "
+			"as with -a. This option is mostly for rescuing failed library "
+			"preparations - do not use if you know which end your adapter was "
+			"ligated to!")
 	group.add_option("-e", "--error-rate", type=float, default=0.1,
 		help="Maximum allowed error rate (no. of errors divided by the length "
-			"of the matching region) (default: %default)")
+			"of the matching region). Default: %default")
 	group.add_option("--no-indels", action='store_false', dest='indels', default=True,
-		help="Do not allow indels in the alignments (allow only mismatches). "
-			"(default: allow both mismatches and indels)")
+		help="Allow only mismatches in alignments. "
+			"Default: allow both mismatches and indels")
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
-		help="Remove up to COUNT adapters from each read (default: %default)")
-	group.add_option("-O", "--overlap", type=int, metavar="LENGTH", default=3,
-		help="Minimum overlap length. If the overlap between the read and the "
-			"adapter is shorter than LENGTH, the read is not modified. "
-			"This reduces the no. of bases trimmed purely due to short random "
-			"adapter matches (default: %default).")
+		help="Remove up to COUNT adapters from each read. Default: %default")
+	group.add_option("-O", "--overlap", type=int, metavar="MINLENGTH", default=3,
+		help="If the overlap between the read and the adapter is shorter than "
+			"MINLENGTH, the read is not modified. Reduces the no. of bases "
+			"trimmed due to random adapter matches. Default: %default")
 	group.add_option("--match-read-wildcards", action="store_true", default=False,
-		help="Allow IUPAC wildcards in reads (default: %default).")
+		help="Interpret IUPAC wildcards in reads. Default: %default")
 	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
 		default=True, dest='match_adapter_wildcards',
 		help="Do not interpret IUPAC wildcards in adapters.")
@@ -226,16 +222,16 @@ def get_option_parser():
 
 	group = OptionGroup(parser, "Additional read modifications")
 	group.add_option("-u", "--cut", action='append', default=[], type=int, metavar="LENGTH",
-		help="Remove LENGTH bases from the beginning or end of each read. "
-			"If LENGTH is positive, bases are removed from the beginning of each read. "
-			"If LENGTH is negative, bases are removed from the end of each read. "
-			"This option can be specified twice if the LENGTHs have different signs.")
+		help="Remove bases from each read (first read only if paired). "
+			"If LENGTH is positive, remove bases from the beginning. "
+			"If LENGTH is negative, remove bases from the end. "
+			"Can be used twice if LENGTHs have different signs.")
 	group.add_option("-q", "--quality-cutoff", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
-		help="Trim low-quality bases from 5' and/or 3' ends of reads before "
-			"adapter removal. If one value is given, only the 3' end is trimmed. "
-			"If two comma-separated cutoffs are given, the 5' end is trimmed with "
-			"the first cutoff, the 3' end with the second. See documentation for "
-			"the algorithm. (default: no trimming)")
+		help="Trim low-quality bases from 5' and/or 3' ends of each read before "
+			"adapter removal. Applied to both reads if data is paired. If one "
+			"value is given, only the 3' end is trimmed. If two "
+			"comma-separated cutoffs are given, the 5' end is trimmed with "
+			"the first cutoff, the 3' end with the second.")
 	group.add_option("--quality-base", type=int, default=33,
 		help="Assume that quality values in FASTQ are encoded as ascii(quality "
 			"+ QUALITY_BASE). This needs to be set to 64 for some old Illumina "
@@ -255,7 +251,7 @@ def get_option_parser():
 			"to correct fields like 'length=123'.")
 	parser.add_option_group(group)
 
-	group = OptionGroup(parser, "Options for filtering of processed reads")
+	group = OptionGroup(parser, "Filtering of processed reads")
 	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
 		help="Discard reads that contain an adapter. Also use -O to avoid "
 			"discarding too many randomly matching reads!")
@@ -264,26 +260,26 @@ def get_option_parser():
 	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
 		help="Discard trimmed reads that are shorter than LENGTH. Reads that "
 			"are too short even before adapter removal are also discarded. In "
-			"colorspace, an initial primer is not counted (default: 0).")
+			"colorspace, an initial primer is not counted. Default: 0")
 	group.add_option("-M", "--maximum-length", type=int, default=sys.maxsize, metavar="LENGTH",
 		help="Discard trimmed reads that are longer than LENGTH. "
 			"Reads that are too long even before adapter removal "
 			"are also discarded. In colorspace, an initial primer "
-			"is not counted (default: no limit).")
+			"is not counted. Default: no limit")
 	group.add_option("--max-n", type=float, default=-1.0, metavar="COUNT",
 		help="Discard reads with too many N bases. If COUNT is an integer, it "
 			"is treated as the absolute number of N bases. If it is between 0 "
 			"and 1, it is treated as the proportion of N's allowed in a read.")
 	parser.add_option_group(group)
 
-	group = OptionGroup(parser, "Options that influence what gets output to where")
+	group = OptionGroup(parser, "Output")
 	group.add_option("--quiet", default=False, action='store_true',
 		help="Print only error messages.")
 	group.add_option("-o", "--output", metavar="FILE",
-		help="Write modified reads to FILE. FASTQ or FASTA format is chosen "
+		help="Write trimmed reads to FILE. FASTQ or FASTA format is chosen "
 			"depending on input. The summary report is sent to standard output. "
 			"Use '{name}' in FILE to demultiplex reads into multiple "
-			"files. (default: trimmed reads are written to standard output)")
+			"files. Default: write to standard output")
 	group.add_option("--info-file", metavar="FILE",
 		help="Write information about each read and its adapter matches into FILE. "
 			"See the documentation for the file format.")
@@ -296,13 +292,13 @@ def get_option_parser():
 			"alignment, this will often not be accurate.")
 	group.add_option("--too-short-output", metavar="FILE",
 		help="Write reads that are too short (according to length specified by "
-		"-m) to FILE. (default: discard reads)")
+		"-m) to FILE. Default: discard reads")
 	group.add_option("--too-long-output", metavar="FILE",
 		help="Write reads that are too long (according to length specified by "
-		"-M) to FILE. (default: discard reads)")
+		"-M) to FILE. Default: discard reads")
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
-		help="Write reads that do not contain the adapter to FILE. (default: "
-			"output to same file as trimmed reads)")
+		help="Write reads that do not contain the adapter to FILE. Default: "
+			"output to same file as trimmed reads")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Colorspace options")
@@ -320,8 +316,8 @@ def get_option_parser():
 			"-t, --strip-f3 and -y '/1'.")
 	group.add_option("--no-zero-cap", dest='zero_cap', action='store_false',
 		help="Do not change negative quality values to zero in colorspace "
-			"data. By default, they are changed to zero since many tools have "
-			"problems with negative qualities.")
+			"data. By default, they are since many tools have problems with "
+			"negative qualities.")
 	group.add_option("--zero-cap", "-z", action='store_true',
 		help="Change negative quality values to zero. This is enabled "
 		"by default when -c/--colorspace is also enabled. Use the above option "
@@ -330,7 +326,8 @@ def get_option_parser():
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Paired-end options", description="The "
-		"-A/-G/-B/-U options work like their -a/-b/-g/-u counterparts.")
+		"-A/-G/-B/-U options work like their -a/-b/-g/-u counterparts, but "
+		"are applied to the second read in each pair.")
 	group.add_option("-A", dest='adapters2', action='append', default=[], metavar='ADAPTER',
 		help="3' adapter to be removed from second read in a pair.")
 	group.add_option("-G", dest='front2', action='append', default=[], metavar='ADAPTER',
@@ -338,7 +335,7 @@ def get_option_parser():
 	group.add_option("-B", dest='anywhere2', action='append', default=[], metavar='ADAPTER',
 		help="5'/3 adapter to be removed from second read in a pair.")
 	group.add_option("-U", dest='cut2', action='append', default=[], type=int, metavar="LENGTH",
-		help="Remove LENGTH bases from the beginning or end of each second read (see --cut).")
+		help="Remove LENGTH bases from second read in a pair (see --cut).")
 	group.add_option("-p", "--paired-output", metavar="FILE",
 		help="Write second read in a pair to FILE.")
 	# Setting the default for pair_filter to None allows us to find out whether
@@ -347,14 +344,14 @@ def get_option_parser():
 		choices=("any", "both"),
 		help="Which of the reads in a paired-end read have to match the "
 			"filtering criterion in order for it to be filtered. "
-			"Default: any.")
+			"Default: any")
 	group.add_option("--interleaved", action='store_true', default=False,
 		help="Read and write interleaved paired-end reads.")
 	group.add_option("--untrimmed-paired-output", metavar="FILE",
 		help="Write second read in a pair to this FILE when no adapter "
 			"was found in the first read. Use this option together with "
-			"--untrimmed-output when trimming paired-end reads. (Default: output "
-			"to same file as trimmed reads.)")
+			"--untrimmed-output when trimming paired-end reads. Default: output "
+			"to same file as trimmed reads")
 	group.add_option("--too-short-paired-output", metavar="FILE", default=None,
 		help="Write second read in a pair to this file if pair is too short. "
 			"Use together with --too-short-output.")
