@@ -2,24 +2,7 @@
 # cython: profile=False
 from __future__ import print_function, division, absolute_import
 from .xopen import xopen
-
-# TODO
-# the following function and class cannot be imported from seqio.py
-# since we would get circular imports
-
-class FormatError(Exception):
-	"""
-	Raised when an input file (FASTA or FASTQ) is malformatted.
-	"""
-
-
-def _shorten(s, n=100):
-	"""Shorten string s to at most n characters, appending "..." if necessary."""
-	if s is None:
-		return None
-	if len(s) > n:
-		s = s[:n-3] + '...'
-	return s
+from .seqio import _shorten, FormatError
 
 
 cdef class Sequence(object):

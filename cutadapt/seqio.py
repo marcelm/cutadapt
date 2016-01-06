@@ -10,8 +10,8 @@ TODO
 from __future__ import print_function, division, absolute_import
 import sys
 from os.path import splitext
-from cutadapt.xopen import xopen
-from cutadapt.compat import zip, basestring
+from .xopen import xopen
+from .compat import zip, basestring
 
 __author__ = "Marcel Martin"
 
@@ -286,7 +286,7 @@ class FastqReader(object):
 
 
 try:
-	from ._seqio import FastqReader, FormatError
+	from ._seqio import FastqReader
 except ImportError:
 	pass
 
