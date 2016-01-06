@@ -2,7 +2,7 @@
 # cython: profile=False
 from __future__ import print_function, division, absolute_import
 from .xopen import xopen
-from .seqio import _shorten, FormatError
+from .seqio import _shorten, FormatError, SequenceReader
 
 
 cdef class Sequence(object):
@@ -68,21 +68,16 @@ cdef class Sequence(object):
 		return (Sequence, (self.name, self.sequence, self.qualities, self.name2))
 
 
-class FastqReader(object):
+class FastqReader(SequenceReader):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
-	_close_on_exit = False
-
 	def __init__(self, file, sequence_class=Sequence):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
 		"""
-		if isinstance(file, basestring):
-			file = xopen(file)
-			self._close_on_exit = True
-		self._file = file
+		super(FastqReader, self).__init__(file)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
@@ -137,16 +132,3 @@ class FastqReader(object):
 			i = (i + 1) % 4
 		if i != 0:
 			raise FormatError("FASTQ file ended prematurely")
-
-	def close(self):
-		if self._close_on_exit and self._file is not None:
-			self._file.close()
-			self._file = None
-
-	def __enter__(self):
-		if self._file is None:
-			raise ValueError("I/O operation on closed FastqReader")
-		return self
-
-	def __exit__(self, *args):
-		self.close()
