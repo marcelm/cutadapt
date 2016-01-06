@@ -152,23 +152,46 @@ class FileWithPrependedLine(object):
 		self._file.close()
 
 
-class FastaReader(object):
-	"""
-	Reader for FASTA files.
-	"""
+class SequenceReader(object):
+	"""Read possibly compressed files containing sequences"""
 	_close_on_exit = False
 
-	def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence):
+	def __init__(self, file):
 		"""
-		file is a filename or a file-like object.
-		If file is a filename, then it is passed to xopen().
-
-		keep_linebreaks -- whether to keep newline characters in the sequence
+		file is a path or a file-like object. In both cases, the file may
+		be compressed (.gz, .bz2, .xz).
 		"""
 		if isinstance(file, basestring):
 			file = xopen(file)
 			self._close_on_exit = True
 		self._file = file
+
+	def close(self):
+		if self._close_on_exit and self._file is not None:
+			self._file.close()
+			self._file = None
+
+	def __enter__(self):
+		if self._file is None:
+			raise ValueError("I/O operation on closed SequenceReader")
+		return self
+
+	def __exit__(self, *args):
+		self.close()
+
+
+class FastaReader(SequenceReader):
+	"""
+	Reader for FASTA files.
+	"""
+	def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence):
+		"""
+		file is a path or a file-like object. In both cases, the file may
+		be compressed (.gz, .bz2, .xz).
+
+		keep_linebreaks -- whether to keep newline characters in the sequence
+		"""
+		super(FastaReader, self).__init__(file)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = False
 		self._delimiter = '\n' if keep_linebreaks else ''
@@ -199,19 +222,6 @@ class FastaReader(object):
 
 		if name is not None:
 			yield self.sequence_class(name, self._delimiter.join(seq), None)
-
-	def close(self):
-		if self._close_on_exit and self._file is not None:
-			self._file.close()
-			self._file = None
-
-	def __enter__(self):
-		if self._file is None:
-			raise ValueError("I/O operation on closed FastaReader")
-		return self
-
-	def __exit__(self, *args):
-		self.close()
 
 
 class ColorspaceFastaReader(FastaReader):
