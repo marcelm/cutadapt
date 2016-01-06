@@ -7,7 +7,7 @@ need to be stored, and as a class with a __call__ method if there are parameters
 """
 from __future__ import print_function, division, absolute_import
 import re
-from cutadapt.qualtrim import quality_trim_index
+from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
 from cutadapt.compat import maketrans
 
 
@@ -248,6 +248,18 @@ def PrimerTrimmer(read):
 	read = read[1:]
 	read.primer = ''
 	return read
+
+
+class NextseqQualityTrimmer(object):
+	def __init__(self, cutoff, base):
+		self.cutoff = cutoff
+		self.base = base
+		self.trimmed_bases = 0
+
+	def __call__(self, read):
+		stop = nextseq_trim_index(read, self.cutoff, self.base)
+		self.trimmed_bases += len(read) - stop
+		return read[:stop]
 
 
 class QualityTrimmer(object):

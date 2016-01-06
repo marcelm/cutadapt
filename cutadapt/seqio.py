@@ -101,6 +101,7 @@ class SequenceReader(object):
 	def __exit__(self, *args):
 		self.close()
 
+
 try:
 	from ._seqio import Sequence
 except ImportError:

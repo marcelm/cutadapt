@@ -76,7 +76,7 @@ from cutadapt.adapters import (Adapter, ColorspaceAdapter, gather_adapters,
 	BACK, FRONT, PREFIX, SUFFIX, ANYWHERE)
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
-	NEndTrimmer, AdapterCutter)
+	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer)
 from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedirector,
 	LegacyPairedRedirector, TooShortReadFilter, TooLongReadFilter,
 	Demultiplexer, NContentFilter, DiscardUntrimmedFilter, DiscardTrimmedFilter)
@@ -232,6 +232,9 @@ def get_option_parser():
 			"value is given, only the 3' end is trimmed. If two "
 			"comma-separated cutoffs are given, the 5' end is trimmed with "
 			"the first cutoff, the 3' end with the second.")
+	group.add_option("--nextseq-trim", type=int, default=None, metavar="3'CUTOFF",
+		help="NextSeq-specific quality trimming (each read). Trims also dark "
+			"cycles appearing as high-quality G bases (EXPERIMENTAL).")
 	group.add_option("--quality-base", type=int, default=33,
 		help="Assume that quality values in FASTQ are encoded as ascii(quality "
 			"+ QUALITY_BASE). This needs to be set to 64 for some old Illumina "
@@ -600,6 +603,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		raise
 
 	if not adapters and not adapters2 and not cutoffs and \
+			options.nextseq_trim is None and \
 			options.cut == [] and options.cut2 == [] and \
 			options.minimum_length == 0 and \
 			options.maximum_length == sys.maxsize and \
@@ -617,6 +621,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		for cut in options.cut:
 			if cut != 0:
 				modifiers.append(UnconditionalCutter(cut))
+
+	if options.nextseq_trim is not None:
+		modifiers.append(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
 
 	if cutoffs:
 		modifiers.append(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))

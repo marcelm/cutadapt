@@ -5,6 +5,9 @@ Changes
 in development
 --------------
 
+* Added experimental ``--nextseq-trim`` option for quality trimming of NextSeq
+  data. This is necessary because that machine cannot distinguish between G and
+  reaching the end of the fragment (it encodes G as 'black').
 * Fix issue #167: Option ``--quiet`` was not entirely quiet.
 
 

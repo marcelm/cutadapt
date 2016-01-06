@@ -369,3 +369,7 @@ def test_quiet_is_quiet():
 		sys.stderr = old_stderr
 	assert captured_standard_output.getvalue() == ''
 	assert captured_standard_error.getvalue() == ''
+
+
+def test_nextseq():
+	run('--nextseq-trim 22', 'nextseq.fastq', 'nextseq.fastq')
