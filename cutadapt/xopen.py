@@ -155,6 +155,7 @@ def xopen(filename, mode='r'):
 	elif filename.endswith('.gz'):
 		if PY3:
 			if 't' in mode:
+				# gzip.open in Python 3.2 does not support modes 'rt' and 'wt''
 				return io.TextIOWrapper(gzip.open(filename, mode[0]))
 			else:
 				if 'r' in mode:
