@@ -53,8 +53,8 @@ class Sequence(object):
 			self.name,
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
-		    self.name2,
-		    self.match)
+			self.name2,
+			self.match)
 
 	def __repr__(self):
 		qstr = ''
