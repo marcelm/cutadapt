@@ -255,6 +255,7 @@ class FastqReader(object):
 		Return tuples: (name, sequence, qualities).
 		qualities is a string and it contains the unmodified, encoded qualities.
 		"""
+		i = 3
 		for i, line in enumerate(self._file):
 			if i % 4 == 0:
 				if not line.startswith('@'):
@@ -280,6 +281,8 @@ class FastqReader(object):
 			elif i % 4 == 3:
 				qualities = line.rstrip('\n\r')
 				yield self.sequence_class(name, sequence, qualities, name2=name2)
+		if i % 4 != 3:
+			raise FormatError("FASTQ file ended prematurely")
 
 	def close(self):
 		if self._close_on_exit and self._file is not None:
