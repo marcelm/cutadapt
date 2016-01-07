@@ -385,6 +385,32 @@ Insertions and deletions can be disallowed by using the option
 See also the :ref:`section on details of the alignment algorithm <algorithm>`.
 
 
+Multiple adapter occurrences within a single read
+-------------------------------------------------
+
+If a single read contains multiple copies of the same adapter, the basic rule is
+that the leftmost match is used for both 5' and 3' adapters. For example, when
+searching for a 3' adapter in ::
+
+    cccccADAPTERgggggADAPTERttttt
+
+the read will be trimmed to ::
+
+    ccccc
+
+When the adapter is a 5' adapter instead, the read will be trimmed to ::
+
+    gggggADAPTERttttt
+
+The above applies when both occurrences of the adapter are *exact* matches, and
+it also applies when both occurrences of the adapter are *inexact* matches (that
+is, it has at least one indel or mismatch). However, if one match is exact, but
+the other is inexact, then the exact match wins, even if it is not the leftmost
+one! The reason for this behavior is that cutadapt searches for exact matches
+first and, to improve performance, skips the error-tolerant matching step if an
+exact match was found.
+
+
 Reducing random matches
 -----------------------
 
