@@ -72,8 +72,7 @@ import textwrap
 
 from cutadapt import seqio, __version__
 from cutadapt.xopen import xopen
-from cutadapt.adapters import (Adapter, ColorspaceAdapter, gather_adapters,
-	BACK, FRONT, PREFIX, SUFFIX, ANYWHERE)
+from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer)
@@ -579,28 +578,22 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			parser.error('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
 
-	ADAPTER_CLASS = ColorspaceAdapter if options.colorspace else Adapter
-	try:
-		# TODO refactor this a bit
-		def collect(back, anywhere, front):
-			adapters = []
-			for name, seq, where in gather_adapters(back, anywhere, front):
-				if not seq:
-					parser.error("The adapter sequence is empty.")
-				adapter = ADAPTER_CLASS(seq, where, options.error_rate,
-					options.overlap, options.match_read_wildcards,
-					options.match_adapter_wildcards, name=name, indels=options.indels)
-				if options.debug:
-					adapter.enable_debug()
-				adapters.append(adapter)
-			return adapters
+	adapter_parser = AdapterParser(options.error_rate,
+		options.overlap, options.match_read_wildcards,
+		options.match_adapter_wildcards, options.indels, options.colorspace)
 
-		adapters = collect(options.adapters, options.anywhere, options.front)
-		adapters2 = collect(options.adapters2, options.anywhere2, options.front2)
+	try:
+		adapters = adapter_parser.parse_multi(options.adapters, options.anywhere, options.front)
+		adapters2 = adapter_parser.parse_multi(options.adapters2, options.anywhere2, options.front2)
 	except IOError as e:
 		if e.errno == errno.ENOENT:
 			parser.error(e)
 		raise
+	except ValueError as e:
+		parser.error(e)
+	if options.debug:
+		for adapter in adapters + adapters2:
+			adapter.enable_debug()
 
 	if not adapters and not adapters2 and not cutoffs and \
 			options.nextseq_trim is None and \

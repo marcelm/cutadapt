@@ -18,34 +18,6 @@ SUFFIX = align.START_WITHIN_SEQ2
 ANYWHERE = align.SEMIGLOBAL
 
 
-def parse_adapter_name(seq):
-	"""
-	Parse an adapter given as 'name=adapt' into 'name' and 'adapt'.
-	"""
-	fields = seq.split('=', 1)
-	if len(fields) > 1:
-		name, seq = fields
-		name = name.strip()
-	else:
-		name = None
-	seq = seq.strip()
-	return name, seq
-
-
-def parse_adapter(sequence, where):
-	"""
-	Recognize anchored adapter sequences and return a corrected tuple
-	(sequence, where).
-	"""
-	if where == FRONT and sequence.startswith('^'):
-		return (sequence[1:], PREFIX)
-	if where == BACK and sequence.endswith('$'):
-		return (sequence[:-1], SUFFIX)
-	if where == BACK and sequence.endswith('...'):
-		return (sequence[:-3], PREFIX)
-	return (sequence, where)
-
-
 def parse_braces(sequence):
 	"""
 	Replace all occurrences of ``x{n}`` (where x is any character) with n
@@ -86,27 +58,95 @@ def parse_braces(sequence):
 	return result
 
 
-def gather_adapters(back, anywhere, front):
+class AdapterParser(object):
 	"""
-	Yield (name, seq, where) tuples from which Adapter instances can be built.
-	This generator deals with the notation for anchored 5'/3' adapters and also
-	understands the ``file:`` syntax for reading adapters from an external FASTA
-	file.
+	Factory for Adapter classes that all use the same parameters (error rate,
+	indels etc.).
 	"""
-	for adapter_list, where in ((back, BACK), (anywhere, ANYWHERE), (front, FRONT)):
-		for seq in adapter_list:
-			if seq.startswith('file:'):
-				# read adapter sequences from a file
-				path = seq[5:]
-				with FastaReader(path) as fasta:
-					for record in fasta:
-						name = record.name.split(None, 1)[0]
-						seq, w = parse_adapter(record.sequence, where)
-						yield (name, seq, w)
-			else:
-				name, seq = parse_adapter_name(seq)
-				seq, w = parse_adapter(seq, where)
-				yield (name, seq, w)
+	def __init__(self, error_rate=0.1, overlap=3, read_wildcards=False,
+			adapter_wildcards=True, indels=True, colorspace=False):
+		self.error_rate = error_rate
+		self.overlap = overlap
+		self.read_wildcards = read_wildcards
+		self.adapter_wildcards = adapter_wildcards
+		self.indels = indels
+		self.adapter_class = ColorspaceAdapter if colorspace else Adapter
+
+	def parse(self, spec, name=None, cmdline_type='back'):
+		"""
+		Parse an adapter specification not using ``file:`` notation and return
+		an object of an appropriate Adapter class. The notation for anchored
+		5' and 3' adapters is supported. If the name parameter is None, then
+		an attempt is made to extract the name from the specification
+		(If spec is 'name=ADAPTER', name will be 'name'.)
+
+		cmdline_type -- describes which commandline parameter was used (``-a``
+		is 'back', ``-b`` is 'anywhere', and ``-g`` is 'front').
+		"""
+		if name is None:
+			name, spec = self._extract_name(spec)
+		sequence = spec
+		types = dict(back=BACK, front=FRONT, anywhere=ANYWHERE)
+		if cmdline_type not in types:
+			raise ValueError('cmdline_type cannot be {0!r}'.format(cmdline_type))
+		where = types[cmdline_type]
+		if where == FRONT and spec.startswith('^'):
+			sequence, where = spec[1:], PREFIX
+		elif where == BACK and spec.endswith('$'):
+			sequence, where = spec[:-1], SUFFIX
+		elif where == BACK and spec.endswith('...'):
+			sequence, where = spec[:-3], PREFIX
+		if not sequence:
+			raise ValueError("The adapter sequence is empty.")
+
+		return self.adapter_class(sequence, where, self.error_rate,
+			self.overlap, self.read_wildcards,
+			self.adapter_wildcards, name=name, indels=self.indels)
+
+	def parse_with_file(self, spec, cmdline_type='back'):
+		"""
+		Parse an adapter specification and yield appropriate Adapter classes.
+		This works like the parse() function above, but also supports the
+		``file:`` notation for reading adapters from an external FASTA
+		file. Since a file can contain multiple adapters, this
+		function is a generator.
+		"""
+		if spec.startswith('file:'):
+			# read adapter sequences from a file
+			with FastaReader(spec[5:]) as fasta:
+				for record in fasta:
+					name = record.name.split(None, 1)[0]
+					yield self.parse(record.sequence, name, cmdline_type)
+		else:
+			name, spec = self._extract_name(spec)
+			yield self.parse(spec, name, cmdline_type)
+
+	def _extract_name(self, spec):
+		"""
+		Parse an adapter specification given as 'name=adapt' into 'name' and 'adapt'.
+		"""
+		fields = spec.split('=', 1)
+		if len(fields) > 1:
+			name, spec = fields
+			name = name.strip()
+		else:
+			name = None
+		spec = spec.strip()
+		return name, spec
+
+	def parse_multi(self, back, anywhere, front):
+		"""
+		Parse all three types of commandline options that can be used to
+		specify adapters. back, anywhere and front are lists of strings,
+		corresponding to the respective commandline types (-a, -b, -g).
+
+		Return a list of appropriate Adapter classes.
+		"""
+		adapters = []
+		for specs, cmdline_type in (back, 'back'), (anywhere, 'anywhere'), (front, 'front'):
+			for spec in specs:
+				adapters.extend(self.parse_with_file(spec, cmdline_type))
+		return adapters
 
 
 class Match(object):
