@@ -168,7 +168,7 @@ class Match(object):
 			return self.read.sequence[self.rstop:]
 
 
-def generate_adapter_name(_start=[1]):
+def _generate_adapter_name(_start=[1]):
 	name = str(_start[0])
 	_start[0] += 1
 	return name
@@ -206,7 +206,7 @@ class Adapter(object):
 			read_wildcards=False, adapter_wildcards=True,
 			name=None, indels=True):
 		self.debug = False
-		self.name = generate_adapter_name() if name is None else name
+		self.name = _generate_adapter_name() if name is None else name
 		self.sequence = parse_braces(sequence.upper().replace('U', 'T'))
 		self.where = where
 		self.max_error_rate = max_error_rate
