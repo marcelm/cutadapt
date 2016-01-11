@@ -578,9 +578,13 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			parser.error('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
 
-	adapter_parser = AdapterParser(options.error_rate,
-		options.overlap, options.match_read_wildcards,
-		options.match_adapter_wildcards, options.indels, options.colorspace)
+	adapter_parser = AdapterParser(
+		colorspace=options.colorspace,
+		max_error_rate=options.error_rate,
+		min_overlap=options.overlap,
+		read_wildcards=options.match_read_wildcards,
+		adapter_wildcards=options.match_adapter_wildcards,
+		indels=options.indels)
 
 	try:
 		adapters = adapter_parser.parse_multi(options.adapters, options.anywhere, options.front)

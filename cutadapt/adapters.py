@@ -61,15 +61,11 @@ def parse_braces(sequence):
 class AdapterParser(object):
 	"""
 	Factory for Adapter classes that all use the same parameters (error rate,
-	indels etc.).
+	indels etc.). The given **kwargs will be passed to the Adapter constructors.
 	"""
-	def __init__(self, error_rate=0.1, overlap=3, read_wildcards=False,
-			adapter_wildcards=True, indels=True, colorspace=False):
-		self.error_rate = error_rate
-		self.overlap = overlap
-		self.read_wildcards = read_wildcards
-		self.adapter_wildcards = adapter_wildcards
-		self.indels = indels
+	def __init__(self, colorspace=False, **kwargs):
+		self.colorspace = colorspace
+		self.constructor_args = kwargs
 		self.adapter_class = ColorspaceAdapter if colorspace else Adapter
 
 	def parse(self, spec, name=None, cmdline_type='back'):
@@ -90,18 +86,22 @@ class AdapterParser(object):
 		if cmdline_type not in types:
 			raise ValueError('cmdline_type cannot be {0!r}'.format(cmdline_type))
 		where = types[cmdline_type]
-		if where == FRONT and spec.startswith('^'):
+		if where == FRONT and spec.startswith('^'):  # -g ^ADAPTER
 			sequence, where = spec[1:], PREFIX
-		elif where == BACK and spec.endswith('$'):
-			sequence, where = spec[:-1], SUFFIX
-		elif where == BACK and spec.endswith('...'):
-			sequence, where = spec[:-3], PREFIX
+		elif where == BACK and :
+			sequence1, middle, sequence2 = spec.partition('...')
+			if middle == '...':
+				if not sequence1:  # -a ...ADAPTER
+					sequence = sequence1[3:]
+				elif not sequence2:  # -a ADAPTER...
+					sequence, where = spec[:-3], PREFIX
+			elif spec.endswith('$'):   # -a ADAPTER$
+				sequence, where = spec[:-1], SUFFIX
+
 		if not sequence:
 			raise ValueError("The adapter sequence is empty.")
 
-		return self.adapter_class(sequence, where, self.error_rate,
-			self.overlap, self.read_wildcards,
-			self.adapter_wildcards, name=name, indels=self.indels)
+		return self.adapter_class(sequence, where, name=name, **self.constructor_args)
 
 	def parse_with_file(self, spec, cmdline_type='back'):
 		"""
@@ -242,9 +242,8 @@ class Adapter(object):
 	name -- optional name of the adapter. If not provided, the name is set to a
 		unique number.
 	"""
-	def __init__(self, sequence, where, max_error_rate, min_overlap=3,
-			read_wildcards=False, adapter_wildcards=True,
-			name=None, indels=True):
+	def __init__(self, sequence, where, max_error_rate=0.1, min_overlap=3,
+			read_wildcards=False, adapter_wildcards=True, name=None, indels=True):
 		self.debug = False
 		self.name = _generate_adapter_name() if name is None else name
 		self.sequence = parse_braces(sequence.upper().replace('U', 'T'))
