@@ -112,9 +112,6 @@ class AdapterCutter(object):
 			if match is None:
 				# nothing found
 				break
-			assert match.length > 0
-			assert match.errors / match.length <= match.adapter.max_error_rate
-			assert match.length - match.errors > 0
 			matches.append(match)
 			trimmed_read = match.adapter.trimmed(match)
 

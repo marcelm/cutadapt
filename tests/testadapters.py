@@ -10,7 +10,7 @@ def test_issue_52():
 	adapter = Adapter(
 		sequence='GAACTCCAGTCACNNNNN',
 		where=BACK,
-		max_error_rate=0.1,
+		max_error_rate=0.12,
 		min_overlap=5,
 		read_wildcards=False,
 		adapter_wildcards=True)

@@ -168,6 +168,9 @@ class Match(object):
 		# indels, this may be different from the number of characters
 		# in the read.
 		self.length = self.astop - self.astart
+		assert self.length > 0
+		assert self.errors / self.length <= self.adapter.max_error_rate
+		assert self.length - self.errors > 0
 
 	def __str__(self):
 		return 'Match(astart={0}, astop={1}, rstart={2}, rstop={3}, matches={4}, errors={5})'.format(
