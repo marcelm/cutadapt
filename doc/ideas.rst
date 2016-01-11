@@ -29,9 +29,9 @@ improvements.
 Specifying adapters
 -------------------
 
-The idea is to deprecate the ``-b`` and ``-g`` parameters. Only ``-a`` is used
-with a special syntax for each adapter type. This makes it a bit easier to add
-new adapter types in the feature.
+The idea is to deprecate the ``-b``,  ``-g`` and ``-u`` parameters. Only ``-a``
+is used with a special syntax for each adapter type. This makes it a bit easier
+to add new adapter types in the feature.
 
 .. csv-table::
 
@@ -40,7 +40,9 @@ new adapter types in the feature.
     front,``-g ADAPTER``,``-a ADAPTER...``
     prefix,``-g ^ADAPTER``,``-a ^ADAPTER...`` (or have anchoring by default?)
     anywhere,``-b ADAPTER``, ``-a ...ADAPTER...`` ???
-    paired,(not implemented),``-a ADAPTER...ADAPTER`` or ``-a ^ADAPTER...ADAPTER``
+    unconditional,``-u +10``,``-a 10...`` (collides with colorspace)
+    unconditional,``-u -10``,``-a ...10$``
+    linked,(not implemented),``-a ADAPTER...ADAPTER`` or ``-a ^ADAPTER...ADAPTER``
 
 Or add only ``-a ADAPTER...`` as an alias for ``-g ^ADAPTER`` and
 ``-a ...ADAPTER`` as an alias for ``-a ADAPTER``.
@@ -98,4 +100,3 @@ Available/used letters for command-line options
 * Remaining characters: All uppercase letters except A, B, G, M, N, O, U
 * Lowercase letters: i, j, k, l, s, w
 * Planned/reserved: Q (paired-end quality trimming), j (multithreading)
-
