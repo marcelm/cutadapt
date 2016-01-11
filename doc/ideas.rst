@@ -25,6 +25,7 @@ improvements.
 - warn when given adapter sequence contains non-IUPAC characters
 - try multithreading again, this time use os.pipe() or 0mq
 - extensible file type detection
+- the --times setting should be an attribute of Adapter
 
 Specifying adapters
 -------------------
