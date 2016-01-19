@@ -134,6 +134,7 @@ Adapter type                                        Command-line option
 :ref:`Anchored 3' adapter <anchored-3adapters>`     ``-a ADAPTER$``
 :ref:`Anchored 5' adapter <anchored-5adapters>`     ``-g ^ADAPTER``
 :ref:`5' or 3' (both possible) <anywhere-adapters>` ``-b ADAPTER``
+:ref:`Linked adapter <linked-adapters>`              ``-a ADAPTER1...ADAPTER2``
 =================================================== ===========================
 
 Here is an illustration of the allowed adapter locations relative to the read
@@ -288,6 +289,20 @@ Using ``-a ADAPTER$`` will result in::
     MYSEQUENCEADAPTERSOMETHINGELSE
 
 Only the middle read is trimmed at all.
+
+
+.. _linked-adapters:
+
+Linked adapters
+---------------
+
+This is a combination of a 5' and a 3' adapter. Use ``-a ADAPTER1...ADAPTER2``
+to search for a linked adapter. ADAPTER1 is interpreted as an anchored 5'
+adapter, which is searched for first. Only if ADAPTER1 is found will then
+ADAPTER2 be searched for,  which is a regular 3' adapter.
+
+This feature is experimental and will probably break when used in combination
+with some other options, such as ``--info-file``, ``--mask-adapter``.
 
 
 .. _anywhere-adapters:
