@@ -607,7 +607,8 @@ class UnknownFileType(Exception):
 
 
 def open(file1, file2=None, qualfile=None,
-	colorspace=False, fileformat=None, interleaved=False, mode='r'):
+	colorspace=False, fileformat=None, interleaved=False, mode='r',
+	qualities=None):
 	"""
 	Open sequence file in FASTA or FASTQ format. Parameters file1, file2 and
 	qualfile can be paths to regular or compressed files or file-like objects.
@@ -679,35 +680,44 @@ def open(file1, file2=None, qualfile=None,
 			raise UnknownFileType("File format {0!r} is unknown (expected "
 				"'sra-fastq' (only for colorspace), 'fasta' or 'fastq').".format(fileformat))
 
-	if mode == 'w':
-		raise NotImplementedError('autodetection of file type for output files not implemented')
-
 	# Try to detect the file format
 	name = None
 	if file1 == "-":
-		file1 = sys.stdin
+		file1 = sys.stdin if mode == 'r' else sys.stdout
 	elif isinstance(file1, basestring):
 		name = file1
 	elif hasattr(file1, "name"):  # file1 seems to be an open file-like object
 		name = file1.name
 
 	if name is not None:
-		if name.endswith('.gz'):
-			name = name[:-3]
-		elif name.endswith('.xz'):
-			name = name[:-3]
-		elif name.endswith('.bz2'):
-			name = name[:-4]
+		for ext in ('.gz', '.xz', '.bz2'):
+			if name.endswith(ext):
+				name = name[:-len(ext)]
+				break
 		name, ext = splitext(name)
 		ext = ext.lower()
 		if ext in ['.fasta', '.fa', '.fna', '.csfasta', '.csfa']:
-			return fasta_handler(file1)
+			format = 'fasta'
 		elif ext in ['.fastq', '.fq'] or (ext == '.txt' and name.endswith('_sequence')):
-			return fastq_handler(file1)
+			format = 'fastq'
+		elif mode == 'w' and qualities is True:
+			format = 'fastq'
+		elif mode == 'w' and qualities is False:
+			format = 'fasta'
 		else:
 			raise UnknownFileType("Could not determine whether file {0!r} is FASTA "
 				"or FASTQ: file name extension {1!r} not recognized".format(file1, ext))
+		if format == 'fastq' and qualities is False:
+			raise ValueError("Output format cannot be FASTQ since no quality "
+				"values are available.")
+		if format == 'fastq':
+			return fastq_handler(file1)
+		else:
+			return fasta_handler(file1)
 
+	if mode == 'w':
+		raise UnknownFileType('Cannot determine whether to write in FASTA or '
+			'FASTQ format')
 	# No name available.
 	# autodetect type by reading from the file
 	for line in file1:

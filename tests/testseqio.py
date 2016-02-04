@@ -153,6 +153,12 @@ class TestFastaQualReader:
 
 
 class TestSeqioOpen:
+	def setup(self):
+		self._tmpdir = mkdtemp()
+
+	def teardown(self):
+		shutil.rmtree(self._tmpdir)
+
 	def test_sequence_reader(self):
 		# test the autodetection
 		with openseq("tests/data/simple.fastq") as f:
@@ -175,6 +181,35 @@ class TestSeqioOpen:
 		f = StringIO(open("tests/data/simple.fasta").read())
 		reads = list(openseq(f))
 		assert reads == simple_fasta
+
+	def test_autodetect_fasta_format(self):
+		path = os.path.join(self._tmpdir, 'tmp.fasta')
+		with openseq(path, mode='w') as f:
+			assert isinstance(f, FastaWriter)
+			for seq in simple_fastq:
+				f.write(seq)
+		assert list(openseq(path)) == simple_fasta
+
+	def test_write_qualities_to_fasta(self):
+		path = os.path.join(self._tmpdir, 'tmp.fasta')
+		with openseq(path, mode='w', qualities=True) as f:
+			assert isinstance(f, FastaWriter)
+			for seq in simple_fastq:
+				f.write(seq)
+		assert list(openseq(path)) == simple_fasta
+
+	def test_autodetect_fastq_format(self):
+		path = os.path.join(self._tmpdir, 'tmp.fastq')
+		with openseq(path, mode='w') as f:
+			assert isinstance(f, FastqWriter)
+			for seq in simple_fastq:
+				f.write(seq)
+		assert list(openseq(path)) == simple_fastq
+
+	@raises(ValueError)
+	def test_fastq_qualities_missing(self):
+		path = os.path.join(self._tmpdir, 'tmp.fastq')
+		openseq(path, mode='w', qualities=False)
 
 
 class TestInterleavedReader:
