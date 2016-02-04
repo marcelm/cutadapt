@@ -39,7 +39,7 @@ def files_equal(path1, path2):
 def run(params, expected, inpath, inpath2=None):
 	if type(params) is str:
 		params = params.split()
-	with temporary_path('tmp.fastaq') as tmp_fastaq:
+	with temporary_path(expected) as tmp_fastaq:
 		params += ['-o', tmp_fastaq ] # TODO not parallelizable
 		params += [ datapath(inpath) ]
 		if inpath2:
