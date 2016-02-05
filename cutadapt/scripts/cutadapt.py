@@ -453,7 +453,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 				fileformat=options.format, interleaved=options.interleaved)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
-	fileformat = 'fastq' if reader.delivers_qualities else 'fasta'
 
 	if options.quality_cutoff is not None:
 		cutoffs = options.quality_cutoff.split(',')
@@ -472,8 +471,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	else:
 		cutoffs = None
 
-	open_writer = functools.partial(seqio.open, mode='w', fileformat=fileformat,
-		colorspace=options.colorspace, interleaved=options.interleaved)
+	open_writer = functools.partial(seqio.open, mode='w',
+		qualities=reader.delivers_qualities, colorspace=options.colorspace,
+		interleaved=options.interleaved)
 
 	if options.pair_filter is None:
 		options.pair_filter = 'any'
@@ -518,7 +518,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		if options.discard_untrimmed:
 			untrimmed = None
 		demultiplexer = Demultiplexer(options.output, untrimmed,
-			fileformat=fileformat, colorspace=options.colorspace)
+			qualities=reader.delivers_qualities, colorspace=options.colorspace)
 		filters.append(demultiplexer)
 	else:
 		# Set up the remaining filters to deal with --discard-trimmed,

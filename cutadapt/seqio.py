@@ -559,9 +559,9 @@ class ColorspaceFastqWriter(FastqWriter):
 
 
 class PairedSequenceWriter(object):
-	def __init__(self, file1, file2, colorspace=False, fileformat='fastq'):
-		self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w')
-		self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w')
+	def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None):
+		self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
+		self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
 
 	def write(self, read1, read2):
 		self._writer1.write(read1)
@@ -583,8 +583,8 @@ class InterleavedSequenceWriter(object):
 	"""
 	Write paired-end reads to an interleaved FASTA or FASTQ file
 	"""
-	def __init__(self, file, colorspace=False, fileformat='fastq'):
-		self._writer = open(file, colorspace=colorspace, fileformat=fileformat, mode='w')
+	def __init__(self, file, colorspace=False, fileformat='fastq', qualities=None):
+		self._writer = open(file, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
 
 	def write(self, read1, read2):
 		self._writer.write(read1)
@@ -606,31 +606,39 @@ class UnknownFileType(Exception):
 	"""
 
 
-def open(file1, file2=None, qualfile=None,
-	colorspace=False, fileformat=None, interleaved=False, mode='r',
-	qualities=None):
+def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
+	interleaved=False, mode='r', qualities=None):
 	"""
-	Open sequence file in FASTA or FASTQ format. Parameters file1, file2 and
-	qualfile can be paths to regular or compressed files or file-like objects.
-	
-	If only file1 is provided and interleaved is True, an
-	InterleavedSequenceReader (for paired-end reads) is returned. If only file1 is provided and interleaved is False, a FastaReader
-	or FastqReader (for single-end reads) is returned. If file2 is also
-	provided, a PairedSequenceReader is returned. If qualfile is given, a
-	FastaQualReader from file1 and qualfile is returned. One of file2 and
-	qualfile must always be None (no paired-end data is supported when reading
-	qualfiles).
+	Open sequence files in FASTA or FASTQ format for reading or writing. This is
+	a factory that returns an instance of one of the ...Reader or ...Writer
+	classes also defined in this module.
 
-	If the colorspace parameter is set to True, the returned readers are
-	ColorspaceFastaReader, ColorspaceFastqReader or ColorspaceFastaQualReader
-	instead.
+	file1, file2, qualfile -- Paths to regular or compressed files or file-like
+		objects. Use file1 if data is single-end. If also file2 is provided,
+		sequences are paired. If qualfile is given, then file1 must be a FASTA
+		file and sequences are single-end. One of file2 and qualfile must always
+		be None (no paired-end data is supported when reading qualfiles).
 
-	If possible, file format is autodetected by inspecting the file name:
-	.fasta/.fa, .fastq/.fq and some other extensions are allowed. If the
-	file name is not available (when reading from standard input), the file is
-	read and the file type determined from the content. The autodetection can
-	be skipped by setting fileformat to one of 'fasta', 'fastq', 'sra-fastq'.
-	Colorspace is not auto-detected and must always be requested explicitly.
+	mode -- Either 'r' for reading or 'w' for writing.
+
+	interleaved -- If True, then file1 contains interleaved paired-end data.
+		file2 and qualfile must be None in this case.
+
+	colorspace -- If True, instances of the Colorspace... classes
+		are returned.
+
+	fileformat -- If set to None, file format is autodetected from the file name
+		extension. Set to 'fasta', 'fastq', or 'sra-fastq' to not auto-detect.
+		Colorspace is not auto-detected and must always be requested explicitly.
+
+	qualities -- When mode is 'w' and fileformat is None, this can be set to
+		True or False to specify whether the written sequences will have quality
+		values. This is is used in two ways:
+		* If the output format cannot be determined (unrecognized extension
+		  etc), no exception is raised, but fasta or fastq format is chosen
+		  appropriately.
+		* When False (no qualities available), an exception is raised when the
+		  auto-detected output format is FASTQ.
 	"""
 	if mode not in ('r', 'w'):
 		raise ValueError("Mode must be 'r' or 'w'")
@@ -642,13 +650,13 @@ def open(file1, file2=None, qualfile=None,
 		if mode == 'r':
 			return PairedSequenceReader(file1, file2, colorspace, fileformat)
 		else:
-			return PairedSequenceWriter(file1, file2, colorspace, fileformat)
+			return PairedSequenceWriter(file1, file2, colorspace, fileformat, qualities)
 
 	if interleaved:
 		if mode == 'r':
 			return InterleavedSequenceReader(file1, colorspace, fileformat)
 		else:
-			return InterleavedSequenceWriter(file1, colorspace, fileformat)
+			return InterleavedSequenceWriter(file1, colorspace, fileformat, qualities)
 
 	if qualfile is not None:
 		if mode == 'w':
@@ -658,38 +666,50 @@ def open(file1, file2=None, qualfile=None,
 			return ColorspaceFastaQualReader(file1, qualfile)
 		else:
 			return FastaQualReader(file1, qualfile)
-	# read from FASTA or FASTQ
+
+	# All the multi-file things have been dealt with, delegate rest to the
+	# single-file function.
+	return _seqopen1(file1, colorspace=colorspace, fileformat=fileformat,
+		mode=mode, qualities=qualities)
+
+
+def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None):
+	"""
+	Open a single sequence file. See description above.
+	"""
 	if mode == 'r':
 		fastq_handler = ColorspaceFastqReader if colorspace else FastqReader
 		fasta_handler = ColorspaceFastaReader if colorspace else FastaReader
-	else:
+	elif mode == 'w':
 		fastq_handler = ColorspaceFastqWriter if colorspace else FastqWriter
 		fasta_handler = ColorspaceFastaWriter if colorspace else FastaWriter
+	else:
+		raise ValueError("Mode must be 'r' or 'w'")
 
-	if fileformat is not None:  # explict file format given
+	if fileformat:  # Explict file format given
 		fileformat = fileformat.lower()
 		if fileformat == 'fasta':
-			return fasta_handler(file1)
+			return fasta_handler(file)
 		elif fileformat == 'fastq':
-			return fastq_handler(file1)
+			return fastq_handler(file)
 		elif fileformat == 'sra-fastq' and colorspace:
 			if mode == 'w':
 				raise NotImplementedError('Writing to sra-fastq not supported')
-			return SRAColorspaceFastqReader(file1)
+			return SRAColorspaceFastqReader(file)
 		else:
 			raise UnknownFileType("File format {0!r} is unknown (expected "
 				"'sra-fastq' (only for colorspace), 'fasta' or 'fastq').".format(fileformat))
 
-	# Try to detect the file format
+	# Detect file format
 	name = None
-	if file1 == "-":
-		file1 = sys.stdin if mode == 'r' else sys.stdout
-	elif isinstance(file1, basestring):
-		name = file1
-	elif hasattr(file1, "name"):  # file1 seems to be an open file-like object
-		name = file1.name
+	if file == "-":
+		file = sys.stdin if mode == 'r' else sys.stdout
+	elif isinstance(file, basestring):
+		name = file
+	elif hasattr(file, "name"):  # seems to be an open file-like object
+		name = file.name
 
-	if name is not None:
+	if name:
 		for ext in ('.gz', '.xz', '.bz2'):
 			if name.endswith(ext):
 				name = name[:-len(ext)]
@@ -701,31 +721,36 @@ def open(file1, file2=None, qualfile=None,
 		elif ext in ['.fastq', '.fq'] or (ext == '.txt' and name.endswith('_sequence')):
 			format = 'fastq'
 		elif mode == 'w' and qualities is True:
+			# Format not recognized, but know we want to write reads with qualities
 			format = 'fastq'
 		elif mode == 'w' and qualities is False:
+			# Same, but we know that we want to write reads without qualities
 			format = 'fasta'
 		else:
 			raise UnknownFileType("Could not determine whether file {0!r} is FASTA "
-				"or FASTQ: file name extension {1!r} not recognized".format(file1, ext))
+				"or FASTQ: file name extension {1!r} not recognized".format(file, ext))
 		if format == 'fastq' and qualities is False:
 			raise ValueError("Output format cannot be FASTQ since no quality "
 				"values are available.")
 		if format == 'fastq':
-			return fastq_handler(file1)
+			return fastq_handler(file)
 		else:
-			return fasta_handler(file1)
+			return fasta_handler(file)
 
 	if mode == 'w':
+		if qualities is True:
+			return fastq_handler(file)
+		elif qualities is False:
+			return fasta_handler(file)
 		raise UnknownFileType('Cannot determine whether to write in FASTA or '
 			'FASTQ format')
-	# No name available.
-	# autodetect type by reading from the file
-	for line in file1:
+	# No name available. Try to autodetect type by reading from the file.
+	for line in file:
 		if line.startswith('#'):
 			# Skip comment lines (needed for csfasta)
 			continue
 		if line.startswith('>'):
-			return fasta_handler(FileWithPrependedLine(file1, line))
+			return fasta_handler(FileWithPrependedLine(file, line))
 		if line.startswith('@'):
-			return fastq_handler(FileWithPrependedLine(file1, line))
+			return fastq_handler(FileWithPrependedLine(file, line))
 	raise UnknownFileType("File is neither FASTQ nor FASTA.")

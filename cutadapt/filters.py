@@ -209,7 +209,7 @@ class Demultiplexer(object):
 	depending on which adapter matches. Files are created when the first read
 	is written to them.
 	"""
-	def __init__(self, path_template, untrimmed_path, fileformat, colorspace):
+	def __init__(self, path_template, untrimmed_path, colorspace, qualities):
 		"""
 		path_template must contain the string '{name}', which will be replaced
 		with the name of the adapter to form the final output path.
@@ -223,8 +223,8 @@ class Demultiplexer(object):
 		self.writers = dict()
 		self.written = 0
 		self.written_bp = [0, 0]
-		self.fileformat = fileformat
 		self.colorspace = colorspace
+		self.qualities = qualities
 
 	def __call__(self, read1, read2=None):
 		if read2 is None:
@@ -232,7 +232,7 @@ class Demultiplexer(object):
 			if read1.match is None:
 				if self.untrimmed_writer is None and self.untrimmed_path is not None:
 					self.untrimmed_writer = seqio.open(self.untrimmed_path,
-						mode='w', fileformat=self.fileformat, colorspace=self.colorspace)
+						mode='w', colorspace=self.colorspace, qualities=self.qualities)
 				if self.untrimmed_writer is not None:
 					self.written += 1
 					self.written_bp[0] += len(read1)
@@ -241,7 +241,7 @@ class Demultiplexer(object):
 				name = read1.match.adapter.name
 				if name not in self.writers:
 					self.writers[name] = seqio.open(self.template.replace('{name}', name),
-						mode='w', fileformat=self.fileformat, colorspace=self.colorspace)
+						mode='w', colorspace=self.colorspace, qualities=self.qualities)
 				self.written += 1
 				self.written_bp[0] += len(read1)
 				self.writers[name].write(read1)

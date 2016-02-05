@@ -9,8 +9,8 @@ from .utils import run, files_equal, datapath, cutpath, redirect_stderr, tempora
 def run_paired(params, in1, in2, expected1, expected2):
 	if type(params) is str:
 		params = params.split()
-	with temporary_path("temp-paired.1.fastq") as p1:
-		with temporary_path("temp-paired.2.fastq") as p2:
+	with temporary_path('tmp1-' + expected1) as p1:
+		with temporary_path('tmp2-' + expected2) as p2:
 			params += ['-o', p1, '-p', p2]
 			params += [datapath(in1), datapath(in2)]
 			assert cutadapt.main(params) is None
@@ -21,17 +21,18 @@ def run_paired(params, in1, in2, expected1, expected2):
 def run_interleaved(params, inpath, expected):
 	if type(params) is str:
 		params = params.split()
-	with temporary_path("temp-interleaved.fastq") as tmp:
+	with temporary_path(expected) as tmp:
 		params += ['--interleaved', '-o', tmp, datapath(inpath)]
 		assert cutadapt.main(params) is None
 		assert files_equal(cutpath(expected), tmp)
 
 
 def run_interleaved2(params, inpath, expected1, expected2):
+	assert False  # unused function
 	if type(params) is str:
 		params = params.split()
-	with temporary_path("temp-paired.1.fastq") as p1:
-		with temporary_path("temp-paired.2.fastq") as p2:
+	with temporary_path('tmp1-' + expected1) as p1:
+		with temporary_path('tmp2-' + expected2) as p2:
 			params += ['--interleaved', '-o', p1, '-p', p2]
 		params += [datapath(inpath)]
 		assert cutadapt.main(params) is None

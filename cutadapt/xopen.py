@@ -100,10 +100,11 @@ class GzipReader:
 	def __exit__(self, *exc_info):
 		self.close()
 
+
 def xopen(filename, mode='r'):
 	"""
 	Replacement for the "open" function that can also open files that have
-	been compressed with gzip or bzip2. If the filename is '-', standard
+	been compressed with gzip, bzip2 or xz. If the filename is '-', standard
 	output (mode 'w') or input (mode 'r') is returned. If the filename ends
 	with .gz, the file is opened with a pipe to the gzip program. If that
 	does not work, then gzip.open() is used (the gzip module is slower than

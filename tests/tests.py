@@ -377,3 +377,7 @@ def test_nextseq():
 
 def test_linked():
 	run('-a AAAAAAAAAA...TTTTTTTTTT', 'linked.fasta', 'linked.fasta')
+
+
+def test_fasta():
+	run('-a TTAGACATATCTCCGTCG', 'small.fasta', 'small.fastq')
