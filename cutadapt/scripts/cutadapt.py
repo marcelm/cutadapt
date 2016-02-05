@@ -605,7 +605,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			options.minimum_length == 0 and \
 			options.maximum_length == sys.maxsize and \
 			quality_filename is None and \
-			options.max_n == -1:
+			options.max_n == -1 and not options.trim_n:
 		parser.error("You need to provide at least one adapter sequence.")
 
 	# Create the single-end processing pipeline (a list of "modifiers")
