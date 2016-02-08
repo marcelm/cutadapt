@@ -12,6 +12,9 @@ in development
 * Added experimental ``--nextseq-trim`` option for quality trimming of NextSeq
   data. This is necessary because that machine cannot distinguish between G and
   reaching the end of the fragment (it encodes G as 'black').
+* Even when trimming FASTQ files, output can now be FASTA (quality values are
+  simply dropped). Use the ``-o``/``-p`` options with a file name that ends in
+  ``.fasta`` or ``.fa`` to enable this.
 * Fix issue #167: Option ``--quiet`` was not entirely quiet.
 
 v1.9.1
