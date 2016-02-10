@@ -99,7 +99,7 @@ class RestFileWriter(object):
 			print(rest, match.read.name, file=self.file)
 
 
-def process_single_reads(reader, modifiers, filters):
+def process_single_reads(reader, modifiers, filters, n_progress=-1):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -108,6 +108,14 @@ def process_single_reads(reader, modifiers, filters):
 	"""
 	n = 0  # no. of processed reads
 	total_bp = 0
+	if n_progress != -1:
+		try:
+			from easydev import Progress
+			pb = Progress(n_progress)
+			count = 0
+		except:
+			n_progress = -1
+
 	for read in reader:
 		n += 1
 		total_bp += len(read.sequence)
@@ -116,11 +124,15 @@ def process_single_reads(reader, modifiers, filters):
 		for filter in filters:
 			if filter(read):
 				break
+		if n_progress != -1:
+			count += 1
+			pb.animate(count)
 
 	return Statistics(n=n, total_bp1=total_bp, total_bp2=None)
 
 
-def process_paired_reads(paired_reader, modifiers1, modifiers2, filters):
+def process_paired_reads(paired_reader, modifiers1, modifiers2, filters,
+                         n_progress=-1):
 	"""
 	Loop over reads, find adapters, trim reads, apply modifiers and
 	output modified reads.
@@ -130,6 +142,15 @@ def process_paired_reads(paired_reader, modifiers1, modifiers2, filters):
 	n = 0  # no. of processed reads
 	total1_bp = 0
 	total2_bp = 0
+
+	if n_progress != -1:
+		try:
+			from easydev import Progress
+			pb = Progress(n_progress)
+			count = 0
+		except:
+			n_progress = -1
+
 	for read1, read2 in paired_reader:
 		n += 1
 		total1_bp += len(read1.sequence)
@@ -142,6 +163,10 @@ def process_paired_reads(paired_reader, modifiers1, modifiers2, filters):
 			# Stop writing as soon as one of the filters was successful.
 			if filter(read1, read2):
 				break
+		if n_progress != -1:
+			count += 1
+			pb.animate(count)
+
 	return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
 
 
@@ -162,6 +187,8 @@ def get_option_parser():
 	parser = CutadaptOptionParser(usage=__doc__, version=__version__)
 
 	parser.add_option("--debug", action='store_true', default=False,
+		help="Print debugging information.")
+	parser.add_option("--progress", action='store_true', default=False,
 		help="Print debugging information.")
 	parser.add_option("-f", "--format",
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
@@ -448,9 +475,21 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	# Open input file(s)
 	try:
+		if options.progress:
+            # if we want a progress bar, we must parse the file.
+            # this takes some time but negligeable compared to the whole
+            # analysis
+			reader = seqio.open(input_filename, file2=input_paired_filename,
+				qualfile=quality_filename, colorspace=options.colorspace,
+				fileformat=options.format, interleaved=options.interleaved)
+			n_progress = sum([1 for read in reader])
+		else:
+			n_progress = -1
+
 		reader = seqio.open(input_filename, file2=input_paired_filename,
 				qualfile=quality_filename, colorspace=options.colorspace,
 				fileformat=options.format, interleaved=options.interleaved)
+
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
 
@@ -691,9 +730,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	start_time = time.clock()
 	try:
 		if paired:
-			stats = process_paired_reads(reader, modifiers, modifiers2, filters)
+			stats = process_paired_reads(reader, modifiers, modifiers2, filters,
+                n_progress=n_progress)
 		else:
-			stats = process_single_reads(reader, modifiers, filters)
+			stats = process_single_reads(reader, modifiers, filters,
+                n_progress=n_progress)
 	except KeyboardInterrupt as e:
 		print("Interrupted", file=sys.stderr)
 		sys.exit(130)

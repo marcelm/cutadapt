@@ -107,6 +107,7 @@ setup(
 	license = 'MIT',
 	ext_modules = extensions,
 	packages = ['cutadapt', 'cutadapt.scripts'],
+	install_requires = ['easydev'],
 	scripts = ['bin/cutadapt'],
 	classifiers = [
 		"Development Status :: 5 - Production/Stable",
