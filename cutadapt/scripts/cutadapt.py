@@ -189,7 +189,7 @@ def get_option_parser():
 	parser.add_option("--debug", action='store_true', default=False,
 		help="Print debugging information.")
 	parser.add_option("--progress", action='store_true', default=False,
-		help="Print debugging information.")
+		help="Show progress bar.")
 	parser.add_option("-f", "--format",
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
