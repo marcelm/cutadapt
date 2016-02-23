@@ -21,3 +21,12 @@ See the documentation for alternative ways of installing the program.
 The original error message follows.
 """.format(sys.executable))
 		raise
+
+# constant names used for the possible filtering results
+TOO_SHORT   = "TOO_SHORT"
+TOO_LONG    = "TOO_LONG"
+N_CONTENT   = "N_CONTENT"
+TRIMMED     = "TRIMMED"
+UNTRIMMED   = "UNTRIMMED"
+REST        = "REST"
+DEFAULT     = "DEFAULT"
