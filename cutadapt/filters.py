@@ -14,6 +14,7 @@ by a filter, and which one.
 from __future__ import print_function, division, absolute_import
 from .xopen import xopen
 from . import seqio
+from enum import Enum
 
 class SingleWrapper(object):
     """
@@ -58,16 +59,21 @@ class PairedWrapper(object):
             self.filtered += 1
             return self.filter.code
 
-def wrap_filters(filters, paired, min_affected):
-    if paired == "both":
-        return [PairedWrapper(f, min_affected) for f in filters]
-    else:
-        return [SingleWrapper(f), for f in filters]
+class FilterFactory(object):
+    def __init__(self, paired, min_affected):
+        self.paired = paired
+        self.min_affected = min_affected
+    
+    def __call__(self, filter_type, *args, **kwargs):
+        f = filter_type.value(*args, **kwargs)
+        if self.paired == "both":
+            return PairedWrapper(f, self.min_affected)
+        else:
+            return SingleWrapper(f)
 
 class TooShortReadFilter(object):
     def __init__(self, minimum_length):
         self.minimum_length = minimum_length
-        self.code = TOO_SHORT
     
     def __call__(self, read):
         return len(read) < self.minimum_length
@@ -75,7 +81,6 @@ class TooShortReadFilter(object):
 class TooLongReadFilter(object):
     def __init__(self, maximum_length):
         self.maximum_length = maximum_length
-        self.code = TOO_LONG
     
     def __call__(self, read):
         return len(read) > self.maximum_length
@@ -94,7 +99,6 @@ class NContentFilter(object):
         assert count >= 0
         self.is_proportion = count < 1.0
         self.cutoff = count
-        self.code = N_CONTENT
 
     def __call__(self, read):
         """Return True when the read should be discarded"""
@@ -110,9 +114,6 @@ class UntrimmedFilter(object):
     """
     Return True if read is untrimmed.
     """
-    def __init__(self):
-        self.code = UNTRIMMED
-    
     def __call__(self, read):
         return read.match is None
 
@@ -120,8 +121,18 @@ class DiscardTrimmedFilter(object):
     """
     Return True if read is trimmed.
     """
-    def __init__(self):
-        self.code = TRIMMED
-    
     def __call__(self, read):
         return read.match is not None
+
+class NoFilter(object):
+    def __call__(self, read):
+        return False
+
+# Enum of filter types
+class FilterType(Enum):
+    TOO_SHORT   = TooShortReadFilter
+    TOO_LONG    = TooLongReadFilter
+    N_CONTENT   = NContentFilter
+    TRIMMED     = TrimmedFilter
+    UNTRIMMED   = UntrimmedFilter
+    DEFAULT     = NoFilter

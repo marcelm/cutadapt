@@ -31,13 +31,13 @@ def _shorten(s, n=100):
 class Sequence(object):
     """qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
-    def __init__(self, name, sequence, qualities=None, name2='', match=None):
+    def __init__(self, name, sequence, qualities=None, name2='', matches=None):
         """Set qualities to None if there are no quality values"""
         self.name = name
         self.sequence = sequence
         self.qualities = qualities
         self.name2 = name2
-        self.match = match
+        self.set_matches(matches)
         self.original_length = len(sequence)
         if qualities is not None:
             if len(qualities) != len(sequence):
@@ -51,6 +51,10 @@ class Sequence(object):
         if self.match:
             trimmed_len -= self.match.length
         return trimmed_length > len(self)
+    
+    def set_matches(self, matches):
+        self.matches = matches
+        self.match = matches[-1] if matches else None
     
     def __getitem__(self, key):
         """slicing"""
@@ -200,7 +204,7 @@ except ImportError:
 
 
 class ColorspaceSequence(Sequence):
-    def __init__(self, name, sequence, qualities, primer=None, name2='', match=None):
+    def __init__(self, name, sequence, qualities, primer=None, name2='', matches=None):
         # In colorspace, the first character is the last nucleotide of the primer base
         # and the second character encodes the transition from the primer base to the
         # first real base of the read.
@@ -214,7 +218,7 @@ class ColorspaceSequence(Sequence):
             raise FormatError("In read named {0!r}: length of colorspace quality "
                 "sequence ({1}) and length of read ({2}) do not match (primer "
                 "is: {3!r})".format(rname, len(qualities), len(sequence), self.primer))
-        super(ColorspaceSequence, self).__init__(name, sequence, qualities, name2, match)
+        super(ColorspaceSequence, self).__init__(name, sequence, qualities, name2, matches)
         if not self.primer in ('A', 'C', 'G', 'T'):
             raise FormatError("Primer base is {0!r} in read {1!r}, but it "
                 "should be one of A, C, G, T.".format(

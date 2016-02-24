@@ -49,46 +49,6 @@ class AdapterCutter(object):
                 best = match
         return best
 
-    def _write_info(self, read, matches):
-        """
-        Write to the info, wildcard and rest files.
-        # TODO
-        # This design with a read having a .match attribute and
-        # a match having a .read attribute is really confusing.
-        """
-        match = read.match
-        if self.rest_writer and match:
-            self.rest_writer.write(match)
-
-        if self.wildcard_file and match:
-            print(match.wildcards(), read.name, file=self.wildcard_file)
-
-        if self.info_file:
-            if match:
-                for m in matches:
-                    seq = m.read.sequence
-                    qualities = m.read.qualities
-                    if qualities is None:
-                        qualities = ''
-                    print(
-                        m.read.name,
-                        m.errors,
-                        m.rstart,
-                        m.rstop,
-                        seq[0:m.rstart],
-                        seq[m.rstart:m.rstop],
-                        seq[m.rstop:],
-                        m.adapter.name,
-                        qualities[0:m.rstart],
-                        qualities[m.rstart:m.rstop],
-                        qualities[m.rstop:],
-                        sep='\t', file=self.info_file
-                    )
-            else:
-                seq = read.sequence
-                qualities = read.qualities if read.qualities is not None else ''
-                print(read.name, -1, seq, qualities, sep='\t', file=self.info_file)
-
     def __call__(self, read):
         """
         Determine the adapter that best matches the given read.
@@ -114,9 +74,8 @@ class AdapterCutter(object):
             matches.append(match)
             trimmed_read = match.adapter.trimmed(match)
 
-        trimmed_read.match = matches[-1] if matches else None
-        self._write_info(trimmed_read, matches)
-
+        trimmed_read.set_matches(matches)
+        
         if not matches:
             return trimmed_read
 
@@ -144,7 +103,7 @@ class AdapterCutter(object):
             assert len(trimmed_read.sequence) == len(read)
         elif self.action is None:
             trimmed_read = read
-            trimmed_read.match = matches[-1]
+            trimmed_read.set_matches(matches)
 
         self.with_adapters += 1
         return trimmed_read
