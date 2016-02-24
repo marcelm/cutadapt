@@ -71,12 +71,12 @@ from cutadapt.scripts import cutadapt as cutadapt_script
 from cutadapt import seqio
 from cutadapt.xopen import xopen
 from cutadapt.adapters import AdapterParser
-from cutadapt.modifiers import *
+from cutadapt.modifiers import ModType, create_modifier
 from cutadapt.filters import FilterType, FilterFactory
 from cutadapt.report import Statistics, print_report, redirect_standard_output
 from cutadapt.compat import next
 
-import collections
+from collections import OrderedDict, namedtuple
 import logging
 from optparse import OptionParser, OptionGroup
 import platform
@@ -85,7 +85,7 @@ import time
 
 logger = logging.getLogger()
 
-TrimResult = collections.namedtuple("TrimResult", ('read1', 'read2', 'dest'))
+TrimResult = namedtuple("TrimResult", ('read1', 'read2', 'dest'))
 
 def main(cmdlineargs=None, default_outfile=sys.stdout):
     """
@@ -124,54 +124,62 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
         else:
             quality_filename = args[1]
 
-    # Open input file(s)
+    reader = writers = None
     try:
-        reader = seqio.open(input_filename, file2=input_paired_filename,
-            qualfile=quality_filename, colorspace=options.colorspace, fileformat=options.format, 
-            interleaved=options.interleaved)
-    except (seqio.UnknownFileType, IOError) as e:
-        parser.error(e)
+        try:
+            # Open input file(s)
+            reader = seqio.open(input_filename, file2=input_paired_filename,
+                qualfile=quality_filename, colorspace=options.colorspace, 
+                fileformat=options.format, interleaved=options.interleaved)
+        except (seqio.UnknownFileType, IOError) as e:
+            parser.error(e)
+        
+        qualities = reader.delivers_qualities
+        has_qual_file = quality_filename is not None
+        writers = Writers(options, qualities, default_outfile)
+        modifiers, adapters = create_modifiers(options, paired, qualities, has_qual_file, parser)
+        min_affected = 2 if options.pair_filter == 'both' else 1
+        filters = create_filters(options, paired, min_affected)
 
-    writers = Writers(options, reader.delivers_qualities)
-    modifiers1, modifiers2, adapters = create_modifiers(options, paired, parser)
-    min_affected = 2 if options.pair_filter == 'both' else 1
-    filters = create_filters(options, paired, min_affected)
+        logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
+        logger.info("Command line parameters: %s", " ".join(cmdlineargs))
+        num_adapters = len(adapters[0]) + len(adapters[1])
+        logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
+            num_adapters, 's' if num_adapters > 1 else '', options.error_rate * 100,
+            { False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
+        if paired == 'first' and (len(modifiers[1]) > 0 or options.quality_cutoff):
+            import textwrap
+            logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
+                'modifications are applied only to the first '
+                'read since backwards compatibility mode is enabled. '
+                'To modify both reads, also use any of the -A/-B/-G/-U options. '
+                'Use a dummy adapter sequence when necessary: -A XXX')))
 
-    logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
-    logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-    num_adapters = len(adapters[0]) + len(adapters[1])
-    logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
-        num_adapters, 's' if num_adapters > 1 else '', options.error_rate * 100,
-        { False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
-    if paired == 'first' and (modifiers_both or options.quality_cutoff):
-        logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
-            'modifications are applied only to the first '
-            'read since backwards compatibility mode is enabled. '
-            'To modify both reads, also use any of the -A/-B/-G/-U options. '
-            'Use a dummy adapter sequence when necessary: -A XXX')))
+        start_time = time.clock()
 
-    start_time = time.clock()
-
-    if options.threads == 1:
-        # Run cutadapt normally
-        stats = run_cutadapt_serial(
-            paired, reader, writers, modifiers1, modifiers2, filters)
+        if options.threads == 1:
+            # Run cutadapt normally
+            stats = run_cutadapt_serial(paired, reader, writers, modifiers, filters)
     
-    else:
-        # Run multiprocessing version
-        stats = run_cutadapt_parallel(
-            paired, reader, writers, modifiers1, modifiers2, filters, options.threads)
+        else:
+            # Run multiprocessing version
+            stats = run_cutadapt_parallel(paired, reader, writers, modifiers, filters, options.threads)
 
-    # close open files
-    writers.close()
-
-    elapsed_time = time.clock() - start_time
-    if not options.quiet:
-        stats.collect(adapters, elapsed_time, modifiers1, modifiers2, filters)
-        # send statistics to stderr if result was sent to stdout
-        stat_file = sys.stderr if options.output is None else None
-        with redirect_standard_output(stat_file):
-            print_report(stats, adapters)
+        elapsed_time = time.clock() - start_time
+        
+        if not options.quiet:
+            stats.collect(adapters, elapsed_time, modifiers, filters, writers)
+            # send statistics to stderr if result was sent to stdout
+            stat_file = sys.stderr if options.output is None else None
+            with redirect_standard_output(stat_file):
+                print_report(stats, adapters)
+    
+    finally:
+        # close open files
+        if reader:
+            reader.close()
+        if writers:
+            writers.close()
 
 def get_option_parser():
     class CutadaptOptionParser(OptionParser):
@@ -508,13 +516,14 @@ def validate_options(options, args, parser):
             parser.error("Do not use --discard-trimmed when demultiplexing.")
         if paired:
             parser.error("Demultiplexing not supported for paired-end files, yet.")
-
+    
     if options.maq:
         options.colorspace = True
         options.double_encode = True
         options.trim_primer = True
-        options.strip_suffix.append('_F3')
         options.suffix = "/1"
+    if options.strip_f3 or options.maq:
+        options.strip_suffix.append('_F3')
     if options.zero_cap is None:
         options.zero_cap = options.colorspace
     if options.trim_primer and not options.colorspace:
@@ -552,26 +561,31 @@ def validate_options(options, args, parser):
     return paired
 
 def create_filters(options, paired, min_affected):
-    filters = []
+    filters = OrderedDict()
     filter_factory = FilterFactory(paired, min_affected)
     
+    def add_filter(filter_type, *args, **kwargs):
+        f = filter_factory(filter_type, *args, **kwargs)
+        filters[filter_type] = f
+    
     if options.minimum_length > 0:
-        filters.append(filter_factory(FilterType.TOO_SHORT, options.minimum_length))
+        add_filter(FilterType.TOO_SHORT, options.minimum_length)
     
     if options.maximum_length < sys.maxsize:
-        filters.append(filter_factory(FilterType.TOO_LONG, options.maximum_length))
+        add_filter(FilterType.TOO_LONG, options.maximum_length)
     
     if options.max_n >= 0:
-        filters.append(filter_Factory(FilterType.N_CONTENT, options.max_n))
+        add_filter(FilterType.N_CONTENT, options.max_n)
     
     if options.discard_trimmed:
-        filters.append(filter_factory(FilterType.TRIMMED))
-    elif options.discard_untrimmed:
-        filters.append(filter_factory(FilterType.UNTRIMMED))
+        add_filter(FilterType.TRIMMED)
+    
+    if options.discard_untrimmed or options.untrimmed_output:
+        add_filter(FilterType.UNTRIMMED)
     
     return filters
 
-def create_modifiers(options, paired, parser):
+def create_modifiers(options, paired, qualities, has_qual_file, parser):
     adapter_parser = AdapterParser(
         colorspace=options.colorspace,
         max_error_rate=options.error_rate,
@@ -598,91 +612,103 @@ def create_modifiers(options, paired, parser):
             options.cut == [] and options.cut2 == [] and \
             options.minimum_length == 0 and \
             options.maximum_length == sys.maxsize and \
-            quality_filename is None and \
+            not has_qual_file and \
             options.max_n == -1 and not options.trim_n:
         parser.error("You need to provide at least one adapter sequence.")
     
     # Create the single-end processing pipeline (a list of "modifiers")
-    modifiers = []
+    modifiers = [OrderedDict(), OrderedDict()]
+    
+    def add_modifier(mod_type, *args, _dest=None, **kwargs):
+        if _dest is None:
+            mod = create_modifier(mod_type, *args, **kwargs)
+            for d in modifiers:
+                d[mod_type] = mod
+        else:
+            modifiers[_dest-1][mod_type] = create_modifier(mod_type, *args, **kwargs)
+    
     if options.cut:
-        for cut in options.cut:
-            if cut != 0:
-                modifiers.append(UnconditionalCutter(cut))
+        add_modifier(ModType.CUT, options.cut, _dest=1)
     
     if options.nextseq_trim is not None:
-        modifiers.append(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
+        add_modifier(ModType.TRIM_NEXTSEQ_QUAL, options.nextseq_trim, options.quality_base, _dest=1)
     
     if options.quality_cutoff:
-        modifiers.append(QualityTrimmer(options.quality_cutoff[0], options.quality_cutoff[1], 
-            options.quality_base))
+        add_modifier(ModType.TRIM_QUAL, options.quality_cutoff[0], 
+            options.quality_cutoff[1], options.quality_base, _dest=1)
     
     if adapters:
-        adapter_cutter = AdapterCutter(adapters, options.times, options.action)
-        modifiers.append(adapter_cutter)
+        add_modifier(ModType.ADAPTER, adapters, times=options.times, action=options.action, _dest=1)
     
     # For paired-end data, create a second processing pipeline.
     # However, if no second-read adapters were given (via -A/-G/-B/-U), we need to
     # be backwards compatible and *no modifications* are done to the second read.
-    modifiers2 = []
     if paired == 'both':
         if options.cut2:
-            for cut in options.cut2:
-                if cut != 0:
-                    modifiers2.append(UnconditionalCutter(cut))
+            add_modifier(ModType.CUT, options.cut2, _dest=2)
     
         if options.quality_cutoff:
-            modifiers2.append(QualityTrimmer(options.quality_cutoff[0], options.quality_cutoff[1], 
-                options.quality_base))
+            add_modifier(ModType.TRIM_QUAL, options.quality_cutoff[0], 
+                options.quality_cutoff[1], options.quality_base, _dest=2),
         
         if adapters2:
-            adapter_cutter2 = AdapterCutter(adapters2, options.times, options.action)
-            modifiers2.append(adapter_cutter2)
-        else:
-            adapter_cutter2 = None
+            add_modifier(ModType.ADAPTER, adapters, times=options.times, action=options.action, _dest=2)
 
     # Modifiers that apply to both reads of paired-end reads unless in legacy mode
-    modifiers_both = []
     
     if options.rrbs or options.wgbs:
         # trim two additional bases from adapter-trimmed sequences
-        modifiers_both.append(AdapterTrimmedClipper(-2))
+        add_modifier(ModType.CLIP_ADAPTER_TRIMMED, modifiers, -2)
     
     if options.trim_n:
-        modifiers_both.append(NEndTrimmer())
+        add_modifier(ModType.TRIM_END_N)
     
     if options.length_tag:
-        modifiers_both.append(LengthTagModifier(options.length_tag))
+        add_modifier(ModType.LENGTH_TAG, options.length_tag)
     
-    if options.strip_f3:
-        options.strip_suffix.append('_F3')
-    
-    for suffix in options.strip_suffix:
-        modifiers_both.append(SuffixRemover(suffix))
+    if options.strip_suffix:
+        add_modifier(ModType.REMOVE_SUFFIX, options.strip_suffix)
     
     if options.prefix or options.suffix:
-        modifiers_both.append(PrefixSuffixAdder(options.prefix, options.suffix))
+        add_modifier(ModType.ADD_PREFIX_SUFFIX, options.prefix, options.suffix)
     
     if options.double_encode:
-        modifiers_both.append(DoubleEncoder())
+        add_modifier(ModType.CS_DOUBLE_ENCODE)
     
-    if options.zero_cap and reader.delivers_qualities:
-        modifiers_both.append(ZeroCapper(quality_base=options.quality_base))
+    if options.zero_cap and qualities:
+        add_modifier(ModType.ZERO_CAP, quality_base=options.quality_base)
     
     if options.trim_primer:
-        modifiers_both.append(PrimerTrimmer)
+        add_modifier(ModType.CS_TRIM_PRIMER)
     
-    if len(modifiers_both) > 0:
-        modifiers.extend(modifiers_both)
-        modifiers2.extend(modifiers_both)
-    
-    return (modifiers, modifiers2, (adapters, adapters2))
+    return (modifiers, (adapters, adapters2))
 
-class SeqFileWriter(object):
+class SingleEndWriter(object):
     def __init__(self, handle):
         self.handle = handle
+        self.written = 0
+        self.read1_bp = 0
+        self.read2_bp = 0
     
+    def write(self, read1, read2=None):
+        assert read2 is None
+        self.handle.write(read1)
+        self.written += 1
+        self.read1_bp += len(read1)
+    
+    @property
+    def written_bp(self):
+        return (self.read1_bp, self.read2_bp)
+    
+    def close(self):
+        self.handle.close()
+
+class PairedEndWriter(SingleEndWriter):
     def write(self, read1, read2):
-        
+        self.handle.write(read1, read2)
+        self.written += 1
+        self.read1_bp += len(read1)
+        self.read2_bp += len(read2)
 
 class RestFileWriter(object):
     def __init__(self, file):
@@ -694,17 +720,21 @@ class RestFileWriter(object):
             print(rest, match.read.name, file=self.file)
 
 class Writers(object):
-    def __init__(self, options, qualities):
+    def __init__(self, options, qualities, default_outfile):
         self.writers = {}
         self.mux_writers = {}
         self.output = options.output
-        self.qualities = qualities
-        self.colorspace = options.colorspace
         self.multiplexed = options.output is not None and '{name}' in options.output
         self.discarded = 0
         
+        self.open_args = dict(
+            qualities=qualities,
+            colorspace=options.colorspace, 
+            interleaved=options.interleaved
+        )
+        
         if options.minimum_length > 0 and options.too_short_output:
-            self.writers[FilterType.TOO_SHORT] = SeqFileWriter(self._open_file(
+            self.writers[FilterType.TOO_SHORT] = self._create_writer(
                 options.too_short_output, options.too_short_paired_output)
     
         if options.maximum_length < sys.maxsize and options.too_long_output is not None:
@@ -713,16 +743,17 @@ class Writers(object):
         
         if not self.multiplexed:
             if options.output is not None:
-                self.writers[FilterType.DEFAULT] = self._create_writer(
+                self.writers[FilterType.NONE] = self._create_writer(
                     options.output, options.paired_output)
-            else:
-                self.writers[FilterType.DEFAULT] = self._create_writer(default_outfile)
+            elif not (options.discard_trimmed and options.untrimmed_output):
+                self.writers[FilterType.NONE] = self._create_writer(default_outfile)
         
-        self.untrimmed_writer = None
         if not options.discard_untrimmed:
             if self.multiplexed:
                 untrimmed = options.untrimmed_output or options.output.replace('{name}', 'unknown')
-                self.writers[FilterType.UNTRIMMED] = self._create_writer(untrimmed)
+                writer = self._create_writer(untrimmed)
+                self.writers[FilterType.UNTRIMMED] = writer
+                self.writers[FilterType.NONE] = writer
             elif options.untrimmed_output:
                 self.writers[FilterType.UNTRIMMED] = self._create_writer(
                     options.untrimmed_output, options.untrimmed_paired_output)
@@ -741,21 +772,35 @@ class Writers(object):
         if options.wildcard_file is not None:
             self.wildcard_file = xopen(options.wildcard_file, 'w')
     
+    def summary(self):
+        written = sum(w.written for w in self.writers.values())
+        written_bp = (
+            sum(w.read1_bp for w in self.writers.values()),
+            sum(w.read2_bp for w in self.writers.values()),
+        )
+        return (written, written_bp)
+        
     def write(self, dest, read1, read2=None):
-        if dest == DEFAULT:
-            if self.multiplexed:
+        writer = None
+
+        if dest == FilterType.NONE:
+            if not self.multiplexed:
+                writer = self.writers[FilterType.NONE]
+            elif read1.match:
                 name = read1.match.adapter.name
                 if name not in self.mux_writers:
-                    self.mux_writers[name] = self._create_writer(self.output.replace('{name}', name))
-                self.mux_writers[name].write(read1, read2)
-            else:
-                self.writers[DEFAULT].write(read1, read2)
-        elif dest in self.writers:
-            self.writers[dest].write(read1, read2)
-        else:
-            # ignored
-            self.discarded += 1
+                    self.mux_writers[name] = self._create_writer(
+                        self.output.replace('{name}', name))
+                writer = self.mux_writers[name]
+
+        if writer is None and dest in self.writers:
+            writer = self.writers[dest]
         
+        if writer is not None:
+            writer.write(read1, read2)
+        else:
+            self.discarded += 1
+
         self._write_info(read1)
         if read2:
             self._write_info(read2)
@@ -794,9 +839,14 @@ class Writers(object):
                 qualities = read.qualities if read.qualities is not None else ''
                 print(read.name, -1, seq, qualities, sep='\t', file=self.info_file)
     
-    def _create_writer(file1, file2=None):
-        return SeqFileWriter(seqio.open(file1, file2, mode='w', qualities=self.qualities, 
-            colorspace=self.colorspace, interleaved=self.interleaved))
+    def _create_writer(self, file1, file2=None):
+        writer = seqio.open(file1, file2, mode='w', **self.open_args)
+        if isinstance(writer, seqio.SingleRecordWriter):
+            return SingleEndWriter(writer)
+        elif isinstance(writer, seqio.PairRecordWriter):
+            return PairedEndWriter(writer)
+        else:
+            raise Exception("Unrecognized type of writer {}".format(writer.__class__))
         
     def close(self):
         def close(f):
@@ -810,34 +860,34 @@ class Writers(object):
         for f in [self.info_file, self.wildcard_file, self.rest_file]:
             close(f)
 
-def run_cutadapt_serial(paired, reader, writers, modifiers1, modifiers2, filters):
+def run_cutadapt_serial(paired, reader, writers, modifiers, filters):
     try:
         n = 0  # no. of processed reads
         total1_bp = 0
         total2_bp = 0 if paired else None
         for record in reader:
             n += 1
-            dest = DEFAULT
+            dest = FilterType.NONE
             if paired:
                 read1, read2 = record
                 total1_bp += len(read1.sequence)
                 total2_bp += len(read2.sequence)
-                for mod in modifiers1:
-                    read1 = mod(reads1)
-                for mod in modifiers2:
+                for mod in modifiers[0].values():
+                    read1 = mod(read1)
+                for mod in modifiers[1].values():
                     read2 = mod(read2)
                 reads = [read1, read2]
             else:
                 read = record
                 total1_bp += len(read.sequence)
-                for mod in modifiers1:
+                for mod in modifiers[0].values():
                     read = mod(read)
                 reads = [read]
             
-            for f in filters:
-                dest = f(*reads)
-                # Stop writing as soon as one of the filters was successful.
-                if dest is not None:
+            for filter_type, f in filters.items():
+                if f(*reads):
+                    dest = filter_type
+                    # Stop writing as soon as one of the filters was successful.
                     break
             
             writers.write(dest, *reads)
@@ -854,7 +904,7 @@ def run_cutadapt_serial(paired, reader, writers, modifiers1, modifiers2, filters
     except (seqio.FormatError, EOFError) as e:
         sys.exit("cutadapt: error: {0}".format(e))
 
-def run_cutadapt_parallel(paired, reader, modifiers, modifiers2, filters, threads):
+def run_cutadapt_parallel(paired, reader, modifiers, filters, threads):
     from multiprocessing import Process, Queue, cpu_count
 
     read_queue = Queue()

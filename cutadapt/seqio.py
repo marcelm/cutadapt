@@ -237,7 +237,7 @@ class ColorspaceSequence(Sequence):
             self.qualities[key] if self.qualities is not None else None,
             self.primer,
             self.name2,
-            self.match)
+            self.matches)
 
 
 def sra_colorspace_sequence(name, sequence, qualities, name2):
@@ -441,7 +441,6 @@ class ColorspaceFastaQualReader(FastaQualReader):
     def __init__(self, fastafile, qualfile):
         super(ColorspaceFastaQualReader, self).__init__(fastafile, qualfile, sequence_class=ColorspaceSequence)
 
-
 def sequence_names_match(r1, r2):
     """
     Check whether the sequences r1 and r2 have identical names (ignoring /1 and
@@ -454,7 +453,6 @@ def sequence_names_match(r1, r2):
     if name2[-2:-1] == '/':
         name2 = name2[:-2]
     return name1 == name2
-
 
 class PairedSequenceReader(object):
     """
@@ -504,7 +502,6 @@ class PairedSequenceReader(object):
     def __exit__(self, *args):
         self.close()
 
-
 class InterleavedSequenceReader(object):
     """
     Read paired-end reads from an interleaved FASTQ file.
@@ -535,24 +532,45 @@ class InterleavedSequenceReader(object):
     def __exit__(self, *args):
         self.close()
 
+class FileWriter(object):
+    def __init__(self, file):
+        if isinstance(file, str):
+            self._file = xopen(file, 'w')
+            self._close_on_exit = True
+        else:
+            self._file = file
+            self._close_on_exit = False
+    
+    def close(self):
+        if self._close_on_exit:
+            self._file.close()
+    
+    def __enter__(self):
+        if self._file.closed:
+            raise ValueError("I/O operation on closed file")
+        return self
 
-class FastaWriter(object):
+    def __exit__(self, *args):
+        self.close()
+
+class SingleRecordWriter(object):
+    """Public interface to single-record files"""
+    def write(self, record):
+        raise NotImplementedError()
+
+class FastaWriter(FileWriter, SingleRecordWriter):
     """
     Write FASTA-formatted sequences to a file.
     """
-    _close_on_exit = False
 
     def __init__(self, file, line_length=None):
         """
         If line_length is not None, the lines will
         be wrapped after line_length characters.
         """
+        FileWriter.__init__(self, file)
         self.line_length = line_length if line_length != 0 else None
-        if isinstance(file, str):
-            file = xopen(file, 'w')
-            self._close_on_exit = True
-        self._file = file
-
+    
     def write(self, name_or_seq, sequence=None):
         """Write an entry to the the FASTA file.
 
@@ -571,6 +589,7 @@ class FastaWriter(object):
             sequence = name_or_seq.sequence
         else:
             name = name_or_seq
+        
         if self.line_length is not None:
             print('>{0}'.format(name), file=self._file)
             for i in range(0, len(sequence), self.line_length):
@@ -580,27 +599,13 @@ class FastaWriter(object):
         else:
             print('>{0}'.format(name), sequence, file=self._file, sep='\n')
 
-    def close(self):
-        if self._close_on_exit:
-            self._file.close()
-
-    def __enter__(self):
-        if self._file.closed:
-            raise ValueError("I/O operation on closed file")
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
-
 class ColorspaceFastaWriter(FastaWriter):
     def write(self, record):
         name = record.name
         sequence = record.primer + record.sequence
         super(ColorspaceFastaWriter, self).write(name, sequence)
 
-
-class FastqWriter(object):
+class FastqWriter(FileWriter, SingleRecordWriter):
     """
     Write sequences with qualities in FASTQ format.
 
@@ -610,14 +615,6 @@ class FastqWriter(object):
     +
     QUALITIS
     """
-    _close_on_exit = False
-
-    def __init__(self, file):
-        if isinstance(file, str):
-            file = xopen(file, "w")
-            self._close_on_exit = True
-        self._file = file
-
     def write(self, record):
         """
         Write a Sequence record to the the FASTQ file.
@@ -632,19 +629,6 @@ class FastqWriter(object):
         print("@{0:s}\n{1:s}\n+\n{2:s}".format(
             name, sequence, qualities), file=self._file)
 
-    def close(self):
-        if self._close_on_exit:
-            self._file.close()
-
-    def __enter__(self):
-        if self._file.closed:
-            raise ValueError("I/O operation on closed file")
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
-
 class ColorspaceFastqWriter(FastqWriter):
     def write(self, record):
         name = record.name
@@ -652,8 +636,21 @@ class ColorspaceFastqWriter(FastqWriter):
         qualities = record.qualities
         super(ColorspaceFastqWriter, self).writeseq(name, sequence, qualities)
 
+class PairRecordWriter(object):
+    """Public interface to paired-record files"""
+    def write(self, read1, read2):
+        raise NotImplementedError()
+    def close(self):
+        raise NotImplementedError()
+    
+    def __enter__(self):
+        # TODO do not allow this twice
+        return self
 
-class PairedSequenceWriter(object):
+    def __exit__(self, *args):
+        self.close()
+
+class PairedSequenceWriter(PairRecordWriter):
     def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None):
         self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
         self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
@@ -666,15 +663,7 @@ class PairedSequenceWriter(object):
         self._writer1.close()
         self._writer2.close()
 
-    def __enter__(self):
-        # TODO do not allow this twice
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
-
-class InterleavedSequenceWriter(object):
+class InterleavedSequenceWriter(PairRecordWriter):
     """
     Write paired-end reads to an interleaved FASTA or FASTQ file
     """
@@ -688,18 +677,10 @@ class InterleavedSequenceWriter(object):
     def close(self):
         self._writer.close()
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
-
 class UnknownFileType(Exception):
     """
     Raised when open could not autodetect the file type.
     """
-
 
 def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
     interleaved=False, mode='r', qualities=None):
@@ -766,7 +747,6 @@ def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
     # single-file function.
     return _seqopen1(file1, colorspace=colorspace, fileformat=fileformat,
         mode=mode, qualities=qualities)
-
 
 def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None):
     """

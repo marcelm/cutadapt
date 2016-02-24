@@ -16,6 +16,9 @@ from .xopen import xopen
 from . import seqio
 from enum import Enum
 
+DISCARD = True
+KEEP = False
+
 class SingleWrapper(object):
     """
     This is for single-end reads and for paired-end reads, using the 'legacy' filtering mode 
@@ -29,7 +32,8 @@ class SingleWrapper(object):
     def __call__(self, read1, read2=None):
         if self.filter(read1):
             self.filtered += 1
-            return self.filter.code
+            return DISCARD
+        return KEEP
 
 class PairedWrapper(object):
     """
@@ -57,7 +61,8 @@ class PairedWrapper(object):
             failures += 1
         if failures >= self.min_affected:
             self.filtered += 1
-            return self.filter.code
+            return DISCARD
+        return KEEP
 
 class FilterFactory(object):
     def __init__(self, paired, min_affected):
@@ -117,7 +122,7 @@ class UntrimmedFilter(object):
     def __call__(self, read):
         return read.match is None
 
-class DiscardTrimmedFilter(object):
+class TrimmedFilter(object):
     """
     Return True if read is trimmed.
     """
@@ -135,4 +140,4 @@ class FilterType(Enum):
     N_CONTENT   = NContentFilter
     TRIMMED     = TrimmedFilter
     UNTRIMMED   = UntrimmedFilter
-    DEFAULT     = NoFilter
+    NONE        = NoFilter

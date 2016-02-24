@@ -6,6 +6,7 @@ need to be stored, and as a class with a __call__ method if there are parameters
 (or statistics).
 """
 from __future__ import print_function, division, absolute_import
+from enum import Enum
 import re
 from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
 from cutadapt.compat import maketrans
@@ -17,8 +18,7 @@ class AdapterCutter(object):
     times parameter.
     """
 
-    def __init__(self, adapters, times=1, wildcard_file=None, info_file=None,
-            rest_writer=None, action='trim'):
+    def __init__(self, adapters, times=1, action='trim'):
         """
         adapters -- list of Adapter objects
 
@@ -26,9 +26,6 @@ class AdapterCutter(object):
         """
         self.adapters = adapters
         self.times = times
-        self.wildcard_file = wildcard_file
-        self.info_file = info_file
-        self.rest_writer = rest_writer
         self.action = action
         self.with_adapters = 0
 
@@ -115,14 +112,15 @@ class UnconditionalCutter(object):
     If the length is positive, the bases are removed from the beginning of the read.
     If the length is negative, the bases are removed from the end of the read.
     """
-    def __init__(self, length):
-        self.length = length
+    def __init__(self, lengths):
+        self.beg_length = sum(l for l in lengths if l > 0)
+        self.end_length = sum(l for l in lengths if l < 0)
 
     def __call__(self, read):
-        if self.length > 0:
-            return read[self.length:]
-        elif self.length < 0:
-            return read[:self.length]
+        if self.end_length < 0:
+            return read[self.beg_length:self.end_length]
+        else:
+            return read[self.beg_length:]
 
 class AdapterTrimmedClipper(UnconditionalCutter):
     """
@@ -167,13 +165,16 @@ class SuffixRemover(object):
     """
     Remove a given suffix from read names.
     """
-    def __init__(self, suffix):
-        self.suffix = suffix
+    def __init__(self, suffixes):
+        self.suffixes = suffixes
 
     def __call__(self, read):
+        name = read.name
+        for s in self.suffixes:
+            if name.endswith(s):
+                name = name[:-len(s)]
         read = read[:]
-        if read.name.endswith(self.suffix):
-            read.name = read.name[:-len(self.suffix)]
+        read.name = name
         return read
 
 class PrefixSuffixAdder(object):
@@ -216,11 +217,12 @@ class ZeroCapper(object):
         read.qualities = read.qualities.translate(self.zero_cap_trans)
         return read
 
-def PrimerTrimmer(read):
-    """Trim primer base from colorspace reads"""
-    read = read[1:]
-    read.primer = ''
-    return read
+class PrimerTrimmer(object):
+    def __call__(self, read):
+        """Trim primer base from colorspace reads"""
+        read = read[1:]
+        read.primer = ''
+        return read
 
 class NextseqQualityTrimmer(object):
     def __init__(self, cutoff, base):
@@ -258,3 +260,21 @@ class NEndTrimmer(object):
         start_cut = start_cut.end() if start_cut else 0
         end_cut = end_cut.start() if end_cut else len(read)
         return read[start_cut:end_cut]
+
+def create_modifier(mod_type, *args, **kwargs):
+    return mod_type.value(*args, **kwargs)
+
+class ModType(Enum):
+    ADAPTER                 = AdapterCutter
+    CUT                     = UnconditionalCutter
+    CLIP_ADAPTER_TRIMMED    = AdapterTrimmedClipper
+    CLIP_QUALITY_TRIMMED    = QualityTrimmedClipper
+    LENGTH_TAG              = LengthTagModifier
+    REMOVE_SUFFIX           = SuffixRemover
+    ADD_PREFIX_SUFFIX       = PrefixSuffixAdder
+    ZERO_CAP                = ZeroCapper
+    TRIM_QUAL               = QualityTrimmer
+    TRIM_NEXTSEQ_QUAL       = NextseqQualityTrimmer
+    CS_DOUBLE_ENCODE        = DoubleEncoder
+    CS_TRIM_PRIMER          = PrimerTrimmer
+    TRIM_END_N              = NEndTrimmer

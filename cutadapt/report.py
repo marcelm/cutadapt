@@ -9,7 +9,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE, LINKED
-from .modifiers import QualityTrimmer, AdapterCutter
+from .modifiers import ModType
 from .filters import *
 
 class Statistics:
@@ -28,55 +28,64 @@ class Statistics:
             self.paired = True
             self.total_bp2 = total_bp2
             self.total_bp += total_bp2
-
-    def collect(self, adapters_pair, time, modifiers, modifiers2, writers):
+    
+    def collect(self, adapters_pair, time, modifiers, filters, writers):
+        """
+        Collect statistics from filters, writers, and modifiers
+        """
+        
         self.time = max(time, 0.01)
-        self.too_short = None
-        self.too_long = None
-        self.written = 0
-        self.written_bp = [0, 0]
-        self.too_many_n = None
-        # Collect statistics from writers/filters
-        for w in writers:
-            if isinstance(w, (NoFilter, PairedNoFilter, Demultiplexer)) or isinstance(w.filter, (DiscardTrimmedFilter, DiscardUntrimmedFilter)):
-                self.written += w.written
-                if self.n > 0:
-                    self.written_fraction = self.written / self.n
-                self.written_bp = self.written_bp[0] + w.written_bp[0], self.written_bp[1] + w.written_bp[1]
-            elif isinstance(w.filter, TooShortReadFilter):
-                self.too_short = w.filtered
-            elif isinstance(w.filter, TooLongReadFilter):
-                self.too_long = w.filtered
-            elif isinstance(w.filter, NContentFilter):
-                self.too_many_n = w.filtered
+        
+        self.written, self.written_bp = writers.summary()
         assert self.written is not None
-
-        # Collect statistics from modifiers
+        
+        if self.n > 0:
+            self.written_fraction = self.written / self.n
+        
+        # TODO: Would be good to have a more generic way for filters
+        # and modifiers to report summary information
+        
+        self.too_short = None
+        self.too_short_fraction = 0
+        if FilterType.TOO_SHORT in filters:
+            self.too_short = filters[FilterType.TOO_SHORT].filtered
+            if self.n > 0:
+                self.too_short_fraction = self.too_short / self.n
+        
+        self.too_long = None
+        self.too_long_fraction = 0
+        if FilterType.TOO_LONG in filters:
+            self.too_long = filters[FilterType.TOO_LONG].filtered
+            if self.n > 0:
+                self.too_long_fraction = self.too_long / self.n
+        
+        self.too_many_n = None
+        self.too_many_n_fraction = 0
+        if FilterType.N_CONTENT in filters:
+            self.too_many_n = filters[FilterType.N_CONTENT].filtered
+            if self.n > 0:
+                self.too_many_n_fraction = self.too_many_n / self.n
+        
         self.with_adapters = [0, 0]
         self.quality_trimmed_bp = [0, 0]
         self.did_quality_trimming = False
-        for i, modifiers_list in [(0, modifiers), (1, modifiers2)]:
-            for modifier in modifiers_list:
-                if isinstance(modifier, QualityTrimmer):
-                    self.quality_trimmed_bp[i] = modifier.trimmed_bases
-                    self.did_quality_trimming = True
-                elif isinstance(modifier, AdapterCutter):
-                    self.with_adapters[i] += modifier.with_adapters
-        self.with_adapters_fraction = [ (v / self.n if self.n > 0 else 0) for v in self.with_adapters ]
-        self.quality_trimmed = sum(self.quality_trimmed_bp)
-        self.quality_trimmed_fraction = self.quality_trimmed / self.total_bp if self.total_bp > 0 else 0.0
-
-        self.total_written_bp = sum(self.written_bp)
-        self.total_written_bp_fraction = self.total_written_bp / self.total_bp if self.total_bp > 0 else 0.0
-
+        for i in (0, 1):
+            if ModType.TRIM_QUAL in modifiers[i]:
+                self.quality_trimmed_bp[i] = modifiers[i][ModType.TRIM_QUAL].trimmed_bases
+                self.did_quality_trimming = True
+                
+            if ModType.ADAPTER in modifiers[i]:
+                self.with_adapters[i] += modifiers[i][ModType.ADAPTER].with_adapters
+                
+        self.with_adapters_fraction = [0, 0]
         if self.n > 0:
-            if self.too_short is not None:
-                self.too_short_fraction = self.too_short / self.n
-            if self.too_long is not None:
-                self.too_long_fraction = self.too_long / self.n
-            if self.too_many_n is not None:
-                self.too_many_n_fraction = self.too_many_n / self.n
-
+            self.with_adapters_fraction = [ (v / self.n) for v in self.with_adapters ]
+        
+        self.quality_trimmed = sum(self.quality_trimmed_bp)
+        self.quality_trimmed_fraction = (self.quality_trimmed / self.total_bp) if self.total_bp > 0 else 0.0
+        
+        self.total_written_bp = sum(self.written_bp)
+        self.total_written_bp_fraction = (self.total_written_bp / self.total_bp) if self.total_bp > 0 else 0.0
 
 ADAPTER_TYPES = {
     BACK: "regular 3'",
@@ -86,7 +95,6 @@ ADAPTER_TYPES = {
     ANYWHERE: "variable 5'/3'",
     LINKED: "linked",
 }
-
 
 def print_error_ranges(adapter_length, error_rate):
     print("No. of allowed errors:")
@@ -100,7 +108,6 @@ def print_error_ranges(adapter_length, error_rate):
     else:
         print("{0}-{1} bp: {2}".format(prev, adapter_length, int(error_rate * adapter_length)))
     print()
-
 
 def print_histogram(d, adapter_length, n, error_rate, errors):
     """
@@ -123,7 +130,6 @@ def print_histogram(d, adapter_length, n, error_rate, errors):
         errs = ' '.join(str(errors[length][e]) for e in range(max_errors+1))
         print(length, count, "{0:.1F}".format(estimate), int(error_rate*min(length, adapter_length)), errs, sep="\t")
     print()
-
 
 def print_adjacent_bases(bases, sequence):
     """
@@ -154,7 +160,6 @@ def print_adjacent_bases(bases, sequence):
     print()
     return False
 
-
 @contextmanager
 def redirect_standard_output(file):
     if file is None:
@@ -164,7 +169,6 @@ def redirect_standard_output(file):
     sys.stdout = file
     yield
     sys.stdout = old_stdout
-
 
 def print_report(stats, adapters_pair):
     """Print report to standard output."""

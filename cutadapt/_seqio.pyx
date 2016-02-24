@@ -22,8 +22,7 @@ cdef class Sequence(object):
         public object matches
         public object match
 
-    def __init__(self, str name, str sequence, str qualities=None, str name2='',
-            matches=None):
+    def __init__(self, str name, str sequence, str qualities=None, str name2='', matches=None):
         """Set qualities to None if there are no quality values"""
         self.name = name
         self.sequence = sequence
@@ -46,7 +45,7 @@ cdef class Sequence(object):
             self.sequence[key],
             self.qualities[key] if self.qualities is not None else None,
             self.name2,
-            self.match)
+            self.matches)
 
     def __repr__(self):
         qstr = ''

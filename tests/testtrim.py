@@ -3,7 +3,7 @@ from __future__ import print_function, division, absolute_import
 
 from cutadapt.seqio import ColorspaceSequence, Sequence
 from cutadapt.adapters import Adapter, ColorspaceAdapter, PREFIX, BACK
-from cutadapt.scripts.cutadapt import AdapterCutter
+from cutadapt.modifiers import AdapterCutter
 
 def test_cs_5p():
 	read = ColorspaceSequence("name", "0123", "DEFG", "T")
