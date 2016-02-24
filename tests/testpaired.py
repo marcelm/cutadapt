@@ -14,9 +14,10 @@ def run_paired(params, in1, in2, expected1, expected2):
             params += ['-o', p1, '-p', p2]
             params += [datapath(in1), datapath(in2)]
             assert cutadapt.main(params) is None
+            with open(cutpath(expected1), "rU") as i: print("[{}]".format(i.read()))
+            with open(p1, "rU") as i: print("<{}>".format(i.read()))
             assert files_equal(cutpath(expected1), p1)
             assert files_equal(cutpath(expected2), p2)
-
 
 def run_interleaved(params, inpath, expected):
     if type(params) is str:

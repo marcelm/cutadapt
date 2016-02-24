@@ -652,7 +652,7 @@ def create_modifiers(options, paired, qualities, has_qual_file, parser):
                 options.quality_cutoff[1], options.quality_base, _dest=2),
         
         if adapters2:
-            add_modifier(ModType.ADAPTER, adapters, times=options.times, action=options.action, _dest=2)
+            add_modifier(ModType.ADAPTER, adapters2, times=options.times, action=options.action, _dest=2)
 
     # Modifiers that apply to both reads of paired-end reads unless in legacy mode
     
