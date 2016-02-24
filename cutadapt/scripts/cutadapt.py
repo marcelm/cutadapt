@@ -76,7 +76,7 @@ from cutadapt.filters import FilterType, FilterFactory
 from cutadapt.report import Statistics, print_report, redirect_standard_output
 from cutadapt.compat import next
 
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 import logging
 from optparse import OptionParser, OptionGroup
 import platform
@@ -84,8 +84,6 @@ import sys
 import time
 
 logger = logging.getLogger()
-
-TrimResult = namedtuple("TrimResult", ('read1', 'read2', 'dest'))
 
 def main(cmdlineargs=None, default_outfile=sys.stdout):
     """
@@ -163,7 +161,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
     
         else:
             # Run multiprocessing version
-            stats = run_cutadapt_parallel(paired, reader, writers, modifiers, filters, options.threads)
+            stats = run_cutadapt_parallel(paired, reader, writers, modifiers, filters, 
+                options.threads, options.batch_size)
 
         elapsed_time = time.clock() - start_time
         
@@ -392,6 +391,8 @@ def get_option_parser():
     group = OptionGroup(parser, "Parallel options")
     group.add_option("--threads", type=int, default=1, metavar="THREADS",
         help="Number of threads to use for read trimming. Set to 0 to use max available threads.")
+    group.add_option("--batch-size", type=int, default=1000, metavar="SIZE",
+        help="Number of records to process in each batch")
     parser.add_option_group(group)
     
     group = OptionGroup(parser, "Method-specific options")
@@ -554,9 +555,6 @@ def validate_options(options, args, parser):
         if options.match_read_wildcards:
             parser.error('IUPAC wildcards not supported in colorspace')
         options.match_adapter_wildcards = False
-
-    if options.threads <= 0:
-        options.threads = cpu_count()
 
     return paired
 
@@ -860,6 +858,33 @@ class Writers(object):
         for f in [self.info_file, self.wildcard_file, self.rest_file]:
             close(f)
 
+def modify_and_filter(record, paired, modifiers, filters):
+    dest = FilterType.NONE
+    bp = [0,0]
+    if paired:
+        read1, read2 = record
+        bp[0] = len(read1.sequence)
+        bp[1] = len(read2.sequence)
+        for mod in modifiers[0].values():
+            read1 = mod(read1)
+        for mod in modifiers[1].values():
+            read2 = mod(read2)
+        reads = [read1, read2]
+    else:
+        read = record
+        bp[0] = len(read.sequence)
+        for mod in modifiers[0].values():
+            read = mod(read)
+        reads = [read]
+    
+    for filter_type, f in filters.items():
+        if f(*reads):
+            dest = filter_type
+            # Stop writing as soon as one of the filters was successful.
+            break
+    
+    return (dest, reads, bp)
+
 def run_cutadapt_serial(paired, reader, writers, modifiers, filters):
     try:
         n = 0  # no. of processed reads
@@ -867,30 +892,11 @@ def run_cutadapt_serial(paired, reader, writers, modifiers, filters):
         total2_bp = 0 if paired else None
         for record in reader:
             n += 1
-            dest = FilterType.NONE
-            if paired:
-                read1, read2 = record
-                total1_bp += len(read1.sequence)
-                total2_bp += len(read2.sequence)
-                for mod in modifiers[0].values():
-                    read1 = mod(read1)
-                for mod in modifiers[1].values():
-                    read2 = mod(read2)
-                reads = [read1, read2]
-            else:
-                read = record
-                total1_bp += len(read.sequence)
-                for mod in modifiers[0].values():
-                    read = mod(read)
-                reads = [read]
-            
-            for filter_type, f in filters.items():
-                if f(*reads):
-                    dest = filter_type
-                    # Stop writing as soon as one of the filters was successful.
-                    break
-            
+            dest, reads, bp = modify_and_filter(record, paired)
             writers.write(dest, *reads)
+            total1_bp += bp[0]
+            if paired:
+                total2_bp += bp[1]
         
         return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
 
@@ -904,13 +910,150 @@ def run_cutadapt_serial(paired, reader, writers, modifiers, filters):
     except (seqio.FormatError, EOFError) as e:
         sys.exit("cutadapt: error: {0}".format(e))
 
-def run_cutadapt_parallel(paired, reader, modifiers, filters, threads):
+def run_cutadapt_parallel(paired, reader, writers, modifiers, filters, threads=None, batch_size=1000):
     from multiprocessing import Process, Queue, cpu_count
-
+    from heapq import nsmallest
+    
+    class PendingQueue(object):
+        def _init(self):
+            self.queue = {}
+            self.min = None
+            
+        def push(self, priority, value):
+            self.queue[priority] = value
+            if self.min is None or priority < self.min:
+                self.min = priority
+        
+        def pop(self):
+            size = len(self.queue)
+            if size == 0:
+                raise Exception("PendingQueue is empty")
+            value = self.queue.pop(self.min)
+            if size == 1:
+                self.min = None
+            else:
+                self.min = min(self.queue.keys())
+            return value
+        
+        @property
+        def empty(self):
+            return len(self.queue) == 0
+        
+    if threads is None or threads <= 0:
+        options.threads = cpu_count()
+    
     read_queue = Queue()
     result_queue = Queue()
-    trimmed_queue = Queue()
+    
+    class WorkerThread(Process):
+        """
+        Thread that processes batches of reads.
+        """
+        pass
+    
+    class WriterThread(Process):
+        """
+        Thread that accepts results from the worker threads 
+        and writes the results to output file(s).
+        """
+        def __init__(self, queue, writers):
+            super(Writer, self).__init__()
+            self.queue = queue
+            self.writers = writers
+            n = 0  # no. of processed reads
+            total1_bp = 0
+            total2_bp = 0
+    
+        def run(self):
+            pending = PendingQueue()
+            cur_batch = 0
+            exhasuted = False
+            
+            def process_batch(records):
+                self.n += len(records)
+                for dest, reads, bp in records:
+                    self.writers.write(dest, *reads)
+                    self.total1_bp += bp[0]
+                    self.total2_bp += bp[1]
+            
+            while True:
+                batch = None
+                
+                if not exhausted:
+                    batch = self.queue.get()
+                
+                if batch is not None:
+                    batch_num, records = batch
+                    if batch_num == cur_batch:
+                        process_batch(records)
+                        cur_batch += 1
+                    else:
+                        pending.push(batch_num, records)
+                elif pending.empty:
+                    break
+                else:
+                    exhausted = True
+                
+                while (not pending.empty) and (cur_batch == pending.min):
+                    process_batch(pending.pop())
+                    cur_batch += 1
+                
+                if pending.empty and exhausted:
+                    break
+                else:
+                    raise Exception("Did not receive all batches")
+    
+    # start WorkerThreads
+    workers = set()
+    for i in range(threads):
+        worker = Worker(queue=read_queue, results=result_queue, )
+        workers.add(worker)
+        worker.start()
+    
+    # start WriterThread
+    writer = WriterThread(queue=result_queue, writers=writers)
+    writer.start()
+    
+    # read from input and queue batches
+    try:
+        dest, reads = modify_and_filter(record, paired)
+        writers.write(dest, *reads)
+        
+        emtpy_batch = [None] * batch_size
+        batch = empty_batch.copy()
+        index = 0
+        for record in reader:
+            n += 1
+            batch[index] = record
+            if index == batch_size:
+                read_queue.put(batch)
+                batch = empty_batch.copy()
+                index = 0
+        
+        if len(batch) > 0:
+            read_queue.put(batch)
+        
+        writer_thread.join()
+        
+        return Statistics(
+            n=writer_thread.n, 
+            total_bp1=writer_thread.total1_bp, 
+            total_bp2=writer_thread.total2_bp
+        )
 
+    except KeyboardInterrupt as e:
+        print("Interrupted", file=sys.stderr)
+        sys.exit(130)
+    except IOError as e:
+        if e.errno == errno.EPIPE:
+            sys.exit(1)
+        raise
+    except (seqio.FormatError, EOFError) as e:
+        sys.exit("cutadapt: error: {0}".format(e))
+    finally:
+        # Shut down all threads
+        
+    
 # class Worker(Process):
 #     def __init__(self, queue=None, results=None, adapter=None, phred64=False):
 #         super(Worker, self).__init__()
@@ -956,59 +1099,8 @@ def run_cutadapt_parallel(paired, reader, modifiers, filters, threads):
 #             results.put(result_batch)
 #             reads = get_func()
 #
-# class Writer(Process):
-#     def __init__(self, queue=None, trimmed=None, outfile=None):
-#         super(Writer, self).__init__()
-#         self.queue = queue
-#         self.trimmed = trimmed
-#         self.outfile = outfile
-#
-#     def run(self):
-#         get_func = self.queue.get
-#         reads = get_func()
-#         with self.outfile as outfile:
-#             kept = 0
-#             while reads is not None:
-#                 for read in reads:
-#                     outfile.write(read)
-#                     kept += 1
-#                 reads = get_func()
-#         self.trimmed.put(kept)
-#
-#
-#
-#
-#     read_queue = Queue()
-#     result_queue = Queue()
-#     trimmed_queue = Queue()
-#
-#     workers = []
-#
-#     def start_workers():
-#         for i in xrange(threads):
-#             worker = Worker(queue=read_queue, results=result_queue, phred64=phred==64, adapter=adapter)
-#             workers.append(worker)
-#             worker.start()
-#
-#     writer = Writer(queue=result_queue, trimmed=trimmed_queue, outfile=dest)
-#     writer.start()
-#
-#     batch = []
-#     for index, read in enumerate(FastqReader(args.infile.name)):
-#         batch.append(read)
-#         if index < 1000 and phred == 33:
-#             if any([i for i in read.qualities if ord(i) > 74]):
-#                 phred = 64
-#         if index % 10000 == 0:
-#             if not workers:
-#                 start_workers()
-#             read_queue.put(batch)
-#             batch = []
-#     if not workers:
-#         start_workers()
-#     read_queue.put(batch)
-#     processed = index+1
-#
+# 
+
 #     # poison pill to stop workers
 #     for i in xrange(threads):
 #         read_queue.put(None)
