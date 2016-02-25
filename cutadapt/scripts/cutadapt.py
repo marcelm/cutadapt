@@ -60,8 +60,8 @@ See http://cutadapt.readthedocs.org/ for full documentation.
 # TrimGalore (http://www.bioinformatics.babraham.ac.uk/projects/download.html#trim_galore)
 # miRge (https://github.com/BarasLab/miRge/blob/master/trim_file.py)
 
-# TODO: how to handle logging in parallel mode?
 # TODO: support reading from a pair of files but writing to interleaved file (including stdout)
+# TODO: finish adding defaults from TrimGalore
 
 from __future__ import print_function, division, absolute_import
 
@@ -89,8 +89,6 @@ import os
 import platform
 import sys
 import time
-
-logger = logging.getLogger()
 
 def main(cmdlineargs=None, default_outfile="-"):
     """
@@ -145,7 +143,8 @@ def main(cmdlineargs=None, default_outfile="-"):
         modifiers, adapters = create_modifiers(options, paired, qualities, has_qual_file, parser)
         min_affected = 2 if options.pair_filter == 'both' else 1
         filters = create_filters(options, paired, min_affected)
-
+        
+        logger = logging.getLogger()
         logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
         logger.info("Command line parameters: %s", " ".join(cmdlineargs))
         num_adapters = len(adapters[0]) + len(adapters[1])
@@ -159,9 +158,9 @@ def main(cmdlineargs=None, default_outfile="-"):
                 'read since backwards compatibility mode is enabled. '
                 'To modify both reads, also use any of the -A/-B/-G/-U options. '
                 'Use a dummy adapter sequence when necessary: -A XXX')))
-
+        
         start_time = time.clock()
-
+        
         if options.threads == 1:
             # Run cutadapt normally
             stats = run_cutadapt_serial(paired, reader, writers, modifiers, filters)
@@ -170,7 +169,7 @@ def main(cmdlineargs=None, default_outfile="-"):
             # Run multiprocessing version
             stats = run_cutadapt_parallel(paired, reader, writers, modifiers, filters, 
                 options.threads, options.batch_size, options.preserve_order)
-
+        
         elapsed_time = time.clock() - start_time
         
         if not options.quiet:
