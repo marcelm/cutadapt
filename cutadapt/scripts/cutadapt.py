@@ -82,6 +82,7 @@ import logging
 from multiprocessing import Process, Queue, Value, cpu_count
 from queue import Empty
 from optparse import OptionParser, OptionGroup
+import os
 import platform
 import sys
 import time
@@ -165,7 +166,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
         else:
             # Run multiprocessing version
             stats = run_cutadapt_parallel(paired, reader, writers, modifiers, filters, 
-                options.threads, options.batch_size)
+                options.threads, options.batch_size, options.preserve_order)
 
         elapsed_time = time.clock() - start_time
         
@@ -396,6 +397,8 @@ def get_option_parser():
         help="Number of threads to use for read trimming. Set to 0 to use max available threads.")
     group.add_option("--batch-size", type=int, default=1000, metavar="SIZE",
         help="Number of records to process in each batch")
+    group.add_option("--preserve-order", action="store_true", default=False,
+        help="Preserve order of reads in input files")
     parser.add_option_group(group)
     
     group = OptionGroup(parser, "Method-specific options")
@@ -704,7 +707,8 @@ class SingleEndWriter(object):
         return (self.read1_bp, self.read2_bp)
     
     def close(self):
-        self.handle.close()
+        if self.handle is not sys.stdout and self.handle is not sys.stderr:
+            self.handle.close()
 
 class PairedEndWriter(SingleEndWriter):
     def write(self, read1, read2):
@@ -724,33 +728,57 @@ class RestFileWriter(object):
 
 class WriterFactory(object):
     def __init__(self, options, qualities):
+        self.output = options.output
         self.open_args = dict(
             qualities=qualities,
             colorspace=options.colorspace, 
             interleaved=options.interleaved
         )
         self.seqfile_paths = dict()
+        self.force_create = set()
         self.rest_path = options.rest_file
         self.info_path = options.info_file
         self.wildcard_path = options.wildcard_file
         self.writers = dict()
-        self.rest_writer = None
+        self._rest_writer = None
     
-    def add_seq_writer(self, filter_type, file1, file2=None):
+    def add_seq_writer(self, filter_type, file1, file2=None, force_create=False):
         self.seqfile_paths[filter_type] = (file1, file2)
+        if force_create and isinstance(file1, str) and file1 != "__stdout__":
+            self.force_create.add(file1)
+            if file2 is not None:
+                self.force_create.add(file2)
+    
+    def has_seq_writer(self, filter_type):
+        return filter_type in self.seqfile_paths
     
     def get_seq_writer(self, filter_type):
         paths = self.seqfile_paths[filter_type]
         if paths not in self.writers:
-            seqfile = seqio.open(*paths, mode='w', **self.open_args)
-            if isinstance(writer, seqio.SingleRecordWriter):
-                writer = SingleEndWriter(writer)
-            elif isinstance(writer, seqio.PairRecordWriter):
-                writer = PairedEndWriter(writer)
-            else:
-                raise Exception("Unrecognized type of writer {}".format(writer.__class__))
-            self.writers[paths] = writer
+            self.writers[paths] = self._create_seq_writer(*paths)
         return self.writers[paths]
+    
+    def get_mux_writer(self, name):
+        path = self.output.format(name=name)
+        if path not in self.writers:
+            self.writers[path] = self._create_seq_writer(path)
+        return self.writers[path]
+        
+    def _create_seq_writer(self, file1, file2=None):
+        # TODO:
+        if file1 == "__stdout__":
+            seqfile = sys.stdout
+            return None
+        elif not isinstance(file1, str):
+            return None
+            
+        seqfile = seqio.open(file1, file2, mode='w', **self.open_args)
+        if isinstance(seqfile, seqio.SingleRecordWriter):
+            return SingleEndWriter(seqfile)
+        elif isinstance(seqfile, seqio.PairRecordWriter):
+            return PairedEndWriter(seqfile)
+        else:
+            raise Exception("Unrecognized type of writer {}".format(writer.__class__))
     
     def get_seq_writers(self):
         seq_writers = set()
@@ -764,17 +792,17 @@ class WriterFactory(object):
         return self.rest_path is not None
     
     @property
-    def get_rest_writer(self):
-        if self.rest_writer is None:
-            self.rest_writer = RestWriter(self._get_file_writer(self.rest_path))
-        return self.rest_writer
+    def rest_writer(self):
+        if self._rest_writer is None:
+            self._rest_writer = RestFileWriter(self._get_file_writer(self.rest_path))
+        return self._rest_writer
     
     @property
     def has_info_writer(self):
         return self.info_path is not None
 
     @property
-    def get_info_writer(self):
+    def info_writer(self):
         return self._get_file_writer(self.info_path)
     
     @property
@@ -782,7 +810,7 @@ class WriterFactory(object):
         return self.wildcard_path is not None
     
     @property
-    def get_wildcard_writer(self):
+    def wildcard_writer(self):
         return self._get_file_writer(self.wildcard_path)    
 
     def _get_file_writer(self, path):
@@ -793,22 +821,20 @@ class WriterFactory(object):
         return self.writers[path]
     
     def close(self):
-        def close(f):
-            if f is not None and f is not sys.stdin and f is not sys.stdout:
-                f.close()
-    
+        # touch any files in force_create that haven't been created
+        for f in self.force_create:
+            if not os.path.exists(f):
+                with open(f, 'a'): os.utime(f, None)
+        # close any open writers
         for writer in self.writers.values():
-            close(writer)
-        for writer in self.mux_writers.values():
-            close(writer)
-        
+            if writer is not None:
+                writer.close()
 
 class Writers(object):
     def __init__(self, options, qualities, default_outfile):
-        self.output = options.output
         self.multiplexed = options.output is not None and '{name}' in options.output
-        self.discarded = 0
         self.writers = WriterFactory(options, qualities)
+        self.discarded = 0
         
         if options.minimum_length > 0 and options.too_short_output:
             self.writers.add_seq_writer(FilterType.TOO_SHORT,
@@ -819,14 +845,17 @@ class Writers(object):
                 options.too_long_output, options.too_long_paired_output)
         
         if not self.multiplexed:
+            # TODO: what happens with paired-end input and stdout output?
             if options.output is not None:
-                self.writers.add_seq_writer(FilterType.NONE, options.output, options.paired_output)
+                self.writers.add_seq_writer(FilterType.NONE, options.output, 
+                    options.paired_output, force_create=True)
             elif not (options.discard_trimmed and options.untrimmed_output):
-                self.writers.add_seq_writer(FilterType.NONE, default_outfile)
+                self.writers.add_seq_writer(FilterType.NONE, default_outfile, 
+                    force_create=True)
         
         if not options.discard_untrimmed:
             if self.multiplexed:
-                untrimmed = options.untrimmed_output or options.output.replace('{name}', 'unknown')
+                untrimmed = options.untrimmed_output or options.output.format(name='unknown')
                 self.writers.add_seq_writer(FilterType.UNTRIMMED, untrimmed)
                 self.writers.add_seq_writer(FilterType.NONE, untrimmed)
             elif options.untrimmed_output:
@@ -835,28 +864,22 @@ class Writers(object):
     
     def summary(self):
         seq_writers = self.writers.get_seq_writers()
-        written = sum(w.written for w in seq_writers.values())
+        written = sum(w.written for w in seq_writers)
         written_bp = (
-            sum(w.read1_bp for w in seq_writers.values()),
-            sum(w.read2_bp for w in seq_writers.values()),
+            sum(w.read1_bp for w in seq_writers),
+            sum(w.read2_bp for w in seq_writers),
         )
         return (written, written_bp)
         
     def write(self, dest, read1, read2=None):
         writer = None
 
-        if dest == FilterType.NONE:
-            if not self.multiplexed:
-                writer = self.writers[FilterType.NONE]
-            elif read1.match:
-                name = read1.match.adapter.name
-                if name not in self.mux_writers:
-                    self.mux_writers[name] = self._create_writer(
-                        self.output.replace('{name}', name))
-                writer = self.mux_writers[name]
-
-        if writer is None and dest in self.writers:
-            writer = self.writers[dest]
+        if dest == FilterType.NONE and self.multiplexed and read1.match:
+            name = read1.match.adapter.name
+            writer = self.writers.get_mux_writer(name)
+        
+        if writer is None and self.writers.has_seq_writer(dest):
+            writer = self.writers.get_seq_writer(dest)
         
         if writer is not None:
             writer.write(read1, read2)
@@ -873,10 +896,10 @@ class Writers(object):
         if self.writers.has_rest_writer and match:
             self.writers.rest_writer.write(match)
         
-        if self.wildcard_file and match:
-            print(match.wildcards(), read.name, file=self.wildcard_file)
+        if self.writers.has_wildcard_writer and match:
+            print(match.wildcards(), read.name, file=self.writers.wildcard_writer)
         
-        if self.info_file:
+        if self.writers.has_info_writer:
             if match:
                 for m in read.matches:
                     seq = m.read.sequence
@@ -895,15 +918,15 @@ class Writers(object):
                         qualities[0:m.rstart],
                         qualities[m.rstart:m.rstop],
                         qualities[m.rstop:],
-                        sep='\t', file=self.info_file
+                        sep='\t', file=self.writers.info_writer
                     )
             else:
                 seq = read.sequence
                 qualities = read.qualities if read.qualities is not None else ''
-                print(read.name, -1, seq, qualities, sep='\t', file=self.info_file)
+                print(read.name, -1, seq, qualities, sep='\t', file=self.writers.info_writer)
     
     def close(self):
-        
+        self.writers.close()
 
 def modify_and_filter(record, paired, modifiers, filters):
     dest = FilterType.NONE
