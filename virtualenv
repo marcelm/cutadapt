@@ -1,0 +1,5 @@
+#source activate root
+#conda update conda
+#conda create -n cutadapt-parallel python=3.5 anaconda
+source activate cutadapt-parallel
+#source deactivate
