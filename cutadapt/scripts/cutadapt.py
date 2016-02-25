@@ -77,7 +77,10 @@ from cutadapt.report import Statistics, print_report, redirect_standard_output
 from cutadapt.compat import next
 
 from collections import OrderedDict
+from heapq import nsmallest
 import logging
+from multiprocessing import Process, Queue, Value, cpu_count
+from queue import Empty
 from optparse import OptionParser, OptionGroup
 import platform
 import sys
@@ -429,6 +432,8 @@ def set_wgbs_defaults(options):
 def set_mirna_defaults(options):
     if options.minimum_length == 0 or options.minimum_length > 16:
         options.minimum_length = 16
+    if options.error_rate < 0.12:
+        options.error_rate = 0.12
 
 def validate_options(options, args, parser):
     if len(args) == 0:
@@ -910,129 +915,54 @@ def run_cutadapt_serial(paired, reader, writers, modifiers, filters):
     except (seqio.FormatError, EOFError) as e:
         sys.exit("cutadapt: error: {0}".format(e))
 
-def run_cutadapt_parallel(paired, reader, writers, modifiers, filters, threads=None, batch_size=1000):
-    from multiprocessing import Process, Queue, cpu_count
-    from heapq import nsmallest
-    
-    class PendingQueue(object):
-        def _init(self):
-            self.queue = {}
-            self.min = None
-            
-        def push(self, priority, value):
-            self.queue[priority] = value
-            if self.min is None or priority < self.min:
-                self.min = priority
-        
-        def pop(self):
-            size = len(self.queue)
-            if size == 0:
-                raise Exception("PendingQueue is empty")
-            value = self.queue.pop(self.min)
-            if size == 1:
-                self.min = None
-            else:
-                self.min = min(self.queue.keys())
-            return value
-        
-        @property
-        def empty(self):
-            return len(self.queue) == 0
-        
+def run_cutadapt_parallel(paired, reader, writers, modifiers, filters, threads=None, 
+                          batch_size=1000, preserve_order=False, max_wait=60):
     if threads is None or threads <= 0:
-        options.threads = cpu_count()
+        threads = min(cpu_count() - 1, 1)
     
     read_queue = Queue()
     result_queue = Queue()
-    
-    class WorkerThread(Process):
-        """
-        Thread that processes batches of reads.
-        """
-        pass
-    
-    class WriterThread(Process):
-        """
-        Thread that accepts results from the worker threads 
-        and writes the results to output file(s).
-        """
-        def __init__(self, queue, writers):
-            super(Writer, self).__init__()
-            self.queue = queue
-            self.writers = writers
-            n = 0  # no. of processed reads
-            total1_bp = 0
-            total2_bp = 0
-    
-        def run(self):
-            pending = PendingQueue()
-            cur_batch = 0
-            exhasuted = False
-            
-            def process_batch(records):
-                self.n += len(records)
-                for dest, reads, bp in records:
-                    self.writers.write(dest, *reads)
-                    self.total1_bp += bp[0]
-                    self.total2_bp += bp[1]
-            
-            while True:
-                batch = None
-                
-                if not exhausted:
-                    batch = self.queue.get()
-                
-                if batch is not None:
-                    batch_num, records = batch
-                    if batch_num == cur_batch:
-                        process_batch(records)
-                        cur_batch += 1
-                    else:
-                        pending.push(batch_num, records)
-                elif pending.empty:
-                    break
-                else:
-                    exhausted = True
-                
-                while (not pending.empty) and (cur_batch == pending.min):
-                    process_batch(pending.pop())
-                    cur_batch += 1
-                
-                if pending.empty and exhausted:
-                    break
-                else:
-                    raise Exception("Did not receive all batches")
+    control = Value('l', 0)
     
     # start WorkerThreads
     workers = set()
     for i in range(threads):
-        worker = Worker(queue=read_queue, results=result_queue, )
+        worker = Worker(read_queue, result_queue, control)
         workers.add(worker)
         worker.start()
     
     # start WriterThread
-    writer = WriterThread(queue=result_queue, writers=writers)
+    if preserve_order:
+        writer = OrderPreservingWriterThread(result_queue, writers, control)
+    else:
+        writer = WriterThread(result_queue, writers, control)
     writer.start()
     
-    # read from input and queue batches
     try:
-        dest, reads = modify_and_filter(record, paired)
-        writers.write(dest, *reads)
-        
+        # Main loop - add batches of records to the queue
         emtpy_batch = [None] * batch_size
         batch = empty_batch.copy()
-        index = 0
+        num_batches = 0
+        batch_index = 0
         for record in reader:
-            n += 1
-            batch[index] = record
-            if index == batch_size:
+            batch[batch_index] = record
+            batch_index += 1
+            if batch_index == batch_size:
                 read_queue.put(batch)
+                num_batches += 1
                 batch = empty_batch.copy()
-                index = 0
+                batch_index = 0
         
         if len(batch) > 0:
             read_queue.put(batch)
+            num_batches += 1
         
+        # Tell the writer thread the max number of
+        # batches to expect
+        with control.get_lock():
+            control.value = num_batches
+        
+        # Wait for the writer to complete
         writer_thread.join()
         
         return Statistics(
@@ -1044,87 +974,171 @@ def run_cutadapt_parallel(paired, reader, writers, modifiers, filters, threads=N
     except KeyboardInterrupt as e:
         print("Interrupted", file=sys.stderr)
         sys.exit(130)
+    
     except IOError as e:
         if e.errno == errno.EPIPE:
             sys.exit(1)
-        raise
+        else:
+            raise
+    
     except (seqio.FormatError, EOFError) as e:
         sys.exit("cutadapt: error: {0}".format(e))
-    finally:
-        # Shut down all threads
-        
     
-# class Worker(Process):
-#     def __init__(self, queue=None, results=None, adapter=None, phred64=False):
-#         super(Worker, self).__init__()
-#         self.queue=queue
-#         self.results = results
-#         self.phred = 64 if phred64 else 33
-#         self.modifiers = [QualityTrimmer(0, 10, self.phred)]
-#         self.adapters = []
-#         self.error_rate = 0.12
-#         self.min_length = 16
-#         if adapter.startswith('+'):
-#             self.modifiers.append(UnconditionalCutter(int(adapter)))
-#         elif adapter == 'none':
-#             self.adapter = None
-#         else:
-#             for name,seq,where in gather_adapters(adapter.split(','), [], []):
-#                 self.adapters.append(Adapter(seq, where, self.error_rate, name=name))
-#             adapter_cutter = AdapterCutter(self.adapters)
-#             self.modifiers.append(adapter_cutter)
-#
-#     def run(self):
-#         # we can't use the sentinel iter(self.queue.get, None) because of some issue with Sequence classes
-#         results = self.results
-#         get_func = self.queue.get
-#         reads = get_func()
-#         modifiers = self.modifiers
-#         min_length = self.min_length
-#         while reads is not None:
-#             result_batch = []
-#             for read in reads:
-#                 for modifier in modifiers:
-#                     read = modifier(read)
-#                 if len(read.sequence) >= min_length:
-#                     try:
-#                         second_header = read.name2
-#                     except AttributeError:
-#                         second_header = read.name if getattr(read, 'twoheaders', False) else ''
-#                     if second_header:
-#                         read_out = '@' + read.name + '\n' + read.sequence + '\n+' + second_header + '\n' +  read.qualities + '\n'
-#                     else:
-#                         read_out = '@' + read.name + '\n' + read.sequence + '\n+\n' + read.qualities + '\n'
-#                     result_batch.append(read_out)
-#             results.put(result_batch)
-#             reads = get_func()
-#
-# 
+    finally:
+        # notify all threads that they should stop
+        with control.get_lock():
+            control.value = -1
+        
+        # Wait for all threads to finish
+        print("Waiting for threads to die...")
+        
+        def kill(t):
+            if t.is_alive():
+                # first try to be nice by waiting
+                t.join(max_wait)
+            if t.is_alive():
+                # if it takes too long, use harsher measures
+                t.terminate()
+                
+        kill(writer_thread)
+        for worker in workers:
+            kill(worker)
 
-#     # poison pill to stop workers
-#     for i in xrange(threads):
-#         read_queue.put(None)
-#
-#     for i in workers:
-#         i.join()
-#
-#     # poison pill for writers
-#     result_queue.put(None)
-#
-#     # wait for writing to finish
-#     writer.join()
-#
-#     trimmed_queue.put(None)
-#
-#     kept_reads = sum([i for i in iter(trimmed_queue.get, None)])
-#
-#     with open('{0}.log'.format(logfile), 'wb') as o:
-#         o.write('Starting reads: {0}\n'.format(processed))
-#         o.write('Processed reads: {0}\n'.format(kept_reads))
-#
-#     sys.stdout.write('{0}\n'.format(phred))
-#     return phred
-    pass
+class PendingQueue(object):
+    def _init(self):
+        self.queue = {}
+        self.min = None
+
+    def push(self, priority, value):
+        self.queue[priority] = value
+        if self.min is None or priority < self.min:
+            self.min = priority
+
+    def pop(self):
+        size = len(self.queue)
+        if size == 0:
+            raise Exception("PendingQueue is empty")
+        value = self.queue.pop(self.min)
+        if size == 1:
+            self.min = None
+        else:
+            self.min = min(self.queue.keys())
+        return value
+
+    @property
+    def empty(self):
+        return len(self.queue) == 0
+
+class WriterThread(Process):
+    """
+    Thread that accepts results from the worker threads 
+    and writes the results to output file(s). Not guaranteed
+    to preserve the original order of sequence records.
+    
+    queue: input queue
+    writers: Writers object used to write results to output files
+    control: a shared value that is 0 unless the thread should
+    die (< 0) or the main process has finished reading records
+    and communicates the total number of batches (> 0).
+    """
+    def __init__(self, queue, writers, control):
+        super(WriterThread, self).__init__()
+        self.queue = queue
+        self.writers = writers
+        self.control = control
+        self.n = 0  # no. of processed reads
+        self.total1_bp = 0
+        self.total2_bp = 0
+        self.seen_batches = set()
+    
+    def run(self):
+        self._init()
+        while self.control.value >= 0:
+            done = False
+            if 0 < self.control.value <= len(self.seen_batches):
+                done = True
+            else:
+                try:
+                    batch = self.queue.get(timeout=1)
+                except Empty:
+                    continue
+                
+                if batch is None:
+                    done = True
+                else:
+                    batch_num, records = batch
+                    self.n += len(records)
+                    self.seen_batches.add(batch_num)
+                    self._process_batch(batch_num, records)
+            
+            if done:
+                self._no_more_batches()
+                break
+    
+    def _init(self):
+        pass
+
+    def _process_batch(self, batch_num, records):
+        self._write_batch(records)
+        
+    def _no_more_batches(self):
+        pass
+    
+    def _write_batch(records):
+        for dest, reads, bp in records:
+            self.writers.write(dest, *reads)
+            self.total1_bp += bp[0]
+            self.total2_bp += bp[1]
+
+class OrderPreservingWriterThread(WriterThread):
+    """
+    Writer thread that is less time/memory efficient, but is
+    guaranteed to preserve the original order of records.
+    """
+    def _init(self):
+        self.pending = PendingQueue()
+        self.cur_batch = 0
+    
+    def _process_batch(self, batch_num, records):
+        if batch_num == self.cur_batch:
+            self._write_batch(batch_num, records)
+            self.cur_batch += 1
+            self._consume_pending()
+        else:
+            self.pending.push(batch_num, records)
+    
+    def _no_more_batches(self):
+        self._consume_pending()
+        if not self.pending.empty:
+            raise Exception("Did not receive all batches")
+    
+    def _consume_pending(self):
+        while (not self.pending.empty) and (self.cur_batch == pending.min):
+            self.write_batch(pending.pop())
+            self.cur_batch += 1
+
+class WorkerThread(Process):
+    """
+    Thread that processes batches of reads.
+    input_queue: queue with batches of records to process
+    output_queue: queue where results are written
+    control: shared value with value 0 unless the thread
+    should die (< 0) or there are no more batches coming (> 0).
+    """
+    def __init__(self, input_queue, output_queue, control):
+        self.input_queue = input_queue
+        self.output_queue = output_queue
+        self.control = control
+    
+    def run(self):
+        while self.control.value >= 0:
+            try:
+                batch = self.input_queue.get(timeout=1)
+                result = modify_and_filter(record, paired)
+                self.output_queue.put(result)
+            except Empty:
+                if self.control.value > 0:
+                    break
 
 if __name__ == '__main__':
     main()
