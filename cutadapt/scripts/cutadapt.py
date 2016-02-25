@@ -897,7 +897,7 @@ def run_cutadapt_serial(paired, reader, writers, modifiers, filters):
         total2_bp = 0 if paired else None
         for record in reader:
             n += 1
-            dest, reads, bp = modify_and_filter(record, paired)
+            dest, reads, bp = modify_and_filter(record, paired, modifiers, filters)
             writers.write(dest, *reads)
             total1_bp += bp[0]
             if paired:
@@ -927,7 +927,7 @@ def run_cutadapt_parallel(paired, reader, writers, modifiers, filters, threads=N
     # start WorkerThreads
     workers = set()
     for i in range(threads):
-        worker = Worker(read_queue, result_queue, control)
+        worker = Worker(read_queue, result_queue, control, paired, modifiers, filters)
         workers.add(worker)
         worker.start()
     
@@ -1125,16 +1125,19 @@ class WorkerThread(Process):
     control: shared value with value 0 unless the thread
     should die (< 0) or there are no more batches coming (> 0).
     """
-    def __init__(self, input_queue, output_queue, control):
+    def __init__(self, input_queue, output_queue, control, paired, modifiers, filters):
         self.input_queue = input_queue
         self.output_queue = output_queue
         self.control = control
+        self.paired = paired
+        self.modifiers = modifiers
+        self.filters = filters
     
     def run(self):
         while self.control.value >= 0:
             try:
                 batch = self.input_queue.get(timeout=1)
-                result = modify_and_filter(record, paired)
+                result = modify_and_filter(record, self.paired, self.modifiers, self.filters)
                 self.output_queue.put(result)
             except Empty:
                 if self.control.value > 0:
