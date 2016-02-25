@@ -60,6 +60,9 @@ See http://cutadapt.readthedocs.org/ for full documentation.
 # TrimGalore (http://www.bioinformatics.babraham.ac.uk/projects/download.html#trim_galore)
 # miRge (https://github.com/BarasLab/miRge/blob/master/trim_file.py)
 
+# TODO: how to handle logging in parallel mode?
+# TODO: support reading from a pair of files but writing to interleaved file (including stdout)
+
 from __future__ import print_function, division, absolute_import
 
 # Print a helpful error message if the extension modules cannot be imported.
@@ -89,7 +92,7 @@ import time
 
 logger = logging.getLogger()
 
-def main(cmdlineargs=None, default_outfile=sys.stdout):
+def main(cmdlineargs=None, default_outfile="-"):
     """
     Main function that evaluates command-line parameters and iterates
     over all reads.
@@ -116,7 +119,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
     elif options.mirna:
         set_mirna_defaults(options)
 
-    paired = validate_options(options, args, parser)
+    paired, multiplexed = validate_options(options, args, parser)
     input_filename = args[0]
     input_paired_filename = None
     quality_filename = None
@@ -138,7 +141,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
         
         qualities = reader.delivers_qualities
         has_qual_file = quality_filename is not None
-        writers = Writers(options, qualities, default_outfile)
+        writers = Writers(options, multiplexed, qualities, default_outfile)
         modifiers, adapters = create_modifiers(options, paired, qualities, has_qual_file, parser)
         min_affected = 2 if options.pair_filter == 'both' else 1
         filters = create_filters(options, paired, min_affected)
@@ -519,8 +522,10 @@ def validate_options(options, args, parser):
     if (options.discard_trimmed or options.discard_untrimmed) and (options.untrimmed_output is not None):
         parser.error("Only one of the --discard-trimmed, --discard-untrimmed "
             "and --untrimmed-output options can be used at the same time.")
-
+    
+    multiplexed = False
     if options.output is not None and '{name}' in options.output:
+        multiplexed = True
         if options.discard_trimmed:
             parser.error("Do not use --discard-trimmed when demultiplexing.")
         if paired:
@@ -564,7 +569,7 @@ def validate_options(options, args, parser):
             parser.error('IUPAC wildcards not supported in colorspace')
         options.match_adapter_wildcards = False
 
-    return paired
+    return (paired, multiplexed)
 
 def create_filters(options, paired, min_affected):
     filters = OrderedDict()
@@ -744,7 +749,7 @@ class WriterFactory(object):
     
     def add_seq_writer(self, filter_type, file1, file2=None, force_create=False):
         self.seqfile_paths[filter_type] = (file1, file2)
-        if force_create and isinstance(file1, str) and file1 != "__stdout__":
+        if force_create and isinstance(file1, str) and file1 != "-":
             self.force_create.add(file1)
             if file2 is not None:
                 self.force_create.add(file2)
@@ -765,13 +770,6 @@ class WriterFactory(object):
         return self.writers[path]
         
     def _create_seq_writer(self, file1, file2=None):
-        # TODO:
-        if file1 == "__stdout__":
-            seqfile = sys.stdout
-            return None
-        elif not isinstance(file1, str):
-            return None
-            
         seqfile = seqio.open(file1, file2, mode='w', **self.open_args)
         if isinstance(seqfile, seqio.SingleRecordWriter):
             return SingleEndWriter(seqfile)
@@ -831,8 +829,8 @@ class WriterFactory(object):
                 writer.close()
 
 class Writers(object):
-    def __init__(self, options, qualities, default_outfile):
-        self.multiplexed = options.output is not None and '{name}' in options.output
+    def __init__(self, options, multiplexed, qualities, default_outfile):
+        self.multiplexed = multiplexed
         self.writers = WriterFactory(options, qualities)
         self.discarded = 0
         
@@ -845,7 +843,6 @@ class Writers(object):
                 options.too_long_output, options.too_long_paired_output)
         
         if not self.multiplexed:
-            # TODO: what happens with paired-end input and stdout output?
             if options.output is not None:
                 self.writers.add_seq_writer(FilterType.NONE, options.output, 
                     options.paired_output, force_create=True)
