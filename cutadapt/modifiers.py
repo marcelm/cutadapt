@@ -128,7 +128,7 @@ class AdapterTrimmedClipper(UnconditionalCutter):
     """
     def __call__(self, read):
         if read.match is not None:
-            UnconditionalCutter.__call__(self, read)
+            super(AdapterTrimmedClipper, self).__call__(self, read)
 
 class QualityTrimmedClipper(object):
     """

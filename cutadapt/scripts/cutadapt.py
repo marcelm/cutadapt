@@ -77,7 +77,7 @@ from cutadapt.xopen import xopen
 from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import ModType, create_modifier
 from cutadapt.filters import FilterType, FilterFactory
-from cutadapt.report import Statistics, print_report, redirect_standard_output
+from cutadapt.report import *
 from cutadapt.compat import next
 
 from collections import OrderedDict
@@ -140,19 +140,19 @@ def main(cmdlineargs=None, default_outfile="-"):
         
         qualities = reader.delivers_qualities
         has_qual_file = quality_filename is not None
-        writers = Writers(options, multiplexed, qualities, default_outfile)
-        modifiers, adapters = create_modifiers(options, paired, qualities, has_qual_file, parser)
         min_affected = 2 if options.pair_filter == 'both' else 1
+        
+        writers = Writers(options, multiplexed, qualities, default_outfile)
+        modifiers, num_adapters = create_modifiers(options, paired, qualities, has_qual_file, parser)
         filters = create_filters(options, paired, min_affected)
         
         logger = logging.getLogger()
         logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
         logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-        num_adapters = len(adapters[0]) + len(adapters[1])
         logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
             num_adapters, 's' if num_adapters > 1 else '', options.error_rate * 100,
             { False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
-        if paired == 'first' and (len(modifiers[1]) > 0 or options.quality_cutoff):
+        if paired == 'first' and (len(modifiers.mod2) > 0 or options.quality_cutoff):
             import textwrap
             logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
                 'modifications are applied only to the first '
@@ -160,25 +160,22 @@ def main(cmdlineargs=None, default_outfile="-"):
                 'To modify both reads, also use any of the -A/-B/-G/-U options. '
                 'Use a dummy adapter sequence when necessary: -A XXX')))
         
+        threads = options.threads
+        if threads is None:
+            threads = min(cpu_count() - 1, 1)
+        
         start_time = time.clock()
         
-        if options.threads == 1:
+        if threads == 1:
             # Run cutadapt normally
-            stats = run_cutadapt_serial(paired, reader, writers, modifiers, filters)
+            summary = run_cutadapt_serial(reader, writers, modifiers, filters)
     
         else:
             # Run multiprocessing version
-            stats = run_cutadapt_parallel(paired, reader, writers, modifiers, filters, 
+            summary = run_cutadapt_parallel(reader, writers, modifiers, filters,
                 options.threads, options.batch_size, options.preserve_order)
         
-        elapsed_time = time.clock() - start_time
-        
-        if not options.quiet:
-            stats.collect(adapters, elapsed_time, modifiers, filters, writers)
-            # send statistics to stderr if result was sent to stdout
-            stat_file = sys.stderr if options.output is None else None
-            with redirect_standard_output(stat_file):
-                print_report(stats, adapters)
+        report = print_report(paired, options, time.clock() - start_time, summary)
     
     finally:
         # close open files
@@ -334,6 +331,8 @@ def get_option_parser():
     group.add_option("--untrimmed-output", default=None, metavar="FILE",
         help="Write reads that do not contain the adapter to FILE. Default: "
             "output to same file as trimmed reads")
+    group.add_option("--report-file", default=None, metavar="FILE",
+        help="Write report to file rather than stdout/stderr.")
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Colorspace options")
@@ -426,8 +425,8 @@ def setup_logging(stdout=False, quiet=False):
     stream_handler = logging.StreamHandler(sys.stdout if stdout else sys.stderr)
     stream_handler.setFormatter(logging.Formatter('%(message)s'))
     stream_handler.setLevel(logging.ERROR if quiet else logging.INFO)
-    logger.setLevel(logging.INFO)
-    logger.addHandler(stream_handler)
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().addHandler(stream_handler)
 
 def set_rrbs_defaults(options):
     pass
@@ -442,13 +441,16 @@ def set_mirna_defaults(options):
         options.error_rate = 0.12
 
 def validate_options(options, args, parser):
+    if options.debug and options.threads is not None and options.threads > 0:
+        parser.error("Cannot use debug mode with multiple threads")
+        
     if len(args) == 0:
         parser.error("At least one parameter needed: name of a FASTA or FASTQ file.")
     elif len(args) > 2:
         parser.error("Too many parameters.")
     if args[0].endswith('.qual'):
         parser.error("If a .qual file is given, it must be the second argument.")
-
+    
     # Find out which 'mode' we need to use.
     # Default: single-read trimming (neither -p nor -A/-G/-B/-U/--interleaved given)
     paired = False
@@ -571,30 +573,98 @@ def validate_options(options, args, parser):
 
     return (paired, multiplexed)
 
-def create_filters(options, paired, min_affected):
-    filters = OrderedDict()
-    filter_factory = FilterFactory(paired, min_affected)
+class Filters(object):
+    def __init__(self, filter_factory):
+        self.filters = OrderedDict()
+        self.filter_factory = filter_factory
     
-    def add_filter(filter_type, *args, **kwargs):
-        f = filter_factory(filter_type, *args, **kwargs)
-        filters[filter_type] = f
+    def add_filter(self, filter_type, *args, **kwargs):
+        self.filters[filter_type] = self.filter_factory(filter_type, *args, **kwargs)
+    
+    def filter(self, read1, read2=None):
+        dest = FilterType.NONE
+        for filter_type, f in self.filters.items():
+            if f(read1, read2):
+                dest = filter_type
+                # Stop writing as soon as one of the filters was successful.
+                break
+        return dest
+    
+    def __contains__(self, filter_type):
+        return filter_type in self.filters
+    
+    def __getitem__(self, filter_type):
+        return self.filters[filter_type]
+
+def create_filters(options, paired, min_affected):
+    filters = Filters(FilterFactory(paired, min_affected))
     
     if options.minimum_length > 0:
-        add_filter(FilterType.TOO_SHORT, options.minimum_length)
+        filters.add_filter(FilterType.TOO_SHORT, options.minimum_length)
     
     if options.maximum_length < sys.maxsize:
-        add_filter(FilterType.TOO_LONG, options.maximum_length)
+        filters.add_filter(FilterType.TOO_LONG, options.maximum_length)
     
     if options.max_n >= 0:
-        add_filter(FilterType.N_CONTENT, options.max_n)
+        filters.add_filter(FilterType.N_CONTENT, options.max_n)
     
     if options.discard_trimmed:
-        add_filter(FilterType.TRIMMED)
+        filters.add_filter(FilterType.TRIMMED)
     
     if options.discard_untrimmed or options.untrimmed_output:
-        add_filter(FilterType.UNTRIMMED)
+        filters.add_filter(FilterType.UNTRIMMED)
     
     return filters
+
+class Modifiers(object):
+    def __init__(self, paired):
+        self.mod1 = OrderedDict()
+        self.mod2 = OrderedDict()
+        self.paired = paired
+    
+    def add_modifier_pair(self, mod_type, *args, **kwargs):
+        args1 = [a[0] for a in args]
+        if not any(a is None for a in args1):
+            self.mod1[mod_type] = create_modifier(mod_type, *args1, **kwargs)
+        
+        if self.paired == "both":
+            args2 = [a[1] for a in args]
+            if not any(a is None for a in args2):
+                self.mod2[mod_type] = create_modifier(mod_type, *args2, **kwargs)
+    
+    def add_modifier(self, mod_type, *args, _first_only=False, **kwargs):
+        mod = create_modifier(mod_type, *args, **kwargs)
+        self.mod1[mod_type] = mod
+        if self.paired == "both" and not _first_only:
+            self.mod2[mod_type] = mod
+    
+    def get_modifier_pair(self, mod_type):
+        return [self.mod1.get(mod_type, None), self.mod2.get(mod_type, None)]
+    
+    def modify(self, record):
+        bp = [0,0]
+        if self.paired:
+            read1, read2 = record
+            bp[0] = len(read1.sequence)
+            bp[1] = len(read2.sequence)
+            for mod in self.mod1.values():
+                read1 = mod(read1)
+            for mod in self.mod2.values():
+                read2 = mod(read2)
+            reads = [read1, read2]
+        else:
+            read = record
+            bp[0] = len(read.sequence)
+            for mod in self.mod1.values():
+                read = mod(read)
+            reads = [read]
+        return (reads, bp)
+    
+    def __getitem__(self, i):
+        if i == 0:
+            return self.mod1
+        else:
+            return self.mod2
 
 def create_modifiers(options, paired, qualities, has_qual_file, parser):
     adapter_parser = AdapterParser(
@@ -606,7 +676,7 @@ def create_modifiers(options, paired, qualities, has_qual_file, parser):
         indels=options.indels)
 
     try:
-        adapters = adapter_parser.parse_multi(options.adapters, options.anywhere, options.front)
+        adapters1 = adapter_parser.parse_multi(options.adapters, options.anywhere, options.front)
         adapters2 = adapter_parser.parse_multi(options.adapters2, options.anywhere2, options.front2)
     except IOError as e:
         if e.errno == errno.ENOENT:
@@ -614,11 +684,8 @@ def create_modifiers(options, paired, qualities, has_qual_file, parser):
         raise
     except ValueError as e:
         parser.error(e)
-    if options.debug:
-        for adapter in adapters + adapters2:
-            adapter.enable_debug()
     
-    if not adapters and not adapters2 and not options.quality_cutoff and \
+    if not adapters1 and not adapters2 and not options.quality_cutoff and \
             options.nextseq_trim is None and \
             options.cut == [] and options.cut2 == [] and \
             options.minimum_length == 0 and \
@@ -627,72 +694,53 @@ def create_modifiers(options, paired, qualities, has_qual_file, parser):
             options.max_n == -1 and not options.trim_n:
         parser.error("You need to provide at least one adapter sequence.")
     
-    # Create the single-end processing pipeline (a list of "modifiers")
-    modifiers = [OrderedDict(), OrderedDict()]
+    if options.debug:
+        for adapter in adapters1 + adapters2:
+            adapter.enable_debug()
     
-    def add_modifier(mod_type, *args, _dest=None, **kwargs):
-        if _dest is None:
-            mod = create_modifier(mod_type, *args, **kwargs)
-            for d in modifiers:
-                d[mod_type] = mod
-        else:
-            modifiers[_dest-1][mod_type] = create_modifier(mod_type, *args, **kwargs)
+    modifiers = Modifiers(paired)
     
-    if options.cut:
-        add_modifier(ModType.CUT, options.cut, _dest=1)
+    if options.cut or options.cut2:
+        modifiers.add_modifier_pair(ModType.CUT, (options.cut, options.cut2))
     
     if options.nextseq_trim is not None:
-        add_modifier(ModType.TRIM_NEXTSEQ_QUAL, options.nextseq_trim, options.quality_base, _dest=1)
+        modifiers.add_modifier(ModType.TRIM_NEXTSEQ_QUAL, options.nextseq_trim, 
+            options.quality_base, _first_only=True)
     
     if options.quality_cutoff:
-        add_modifier(ModType.TRIM_QUAL, options.quality_cutoff[0], 
-            options.quality_cutoff[1], options.quality_base, _dest=1)
+        modifiers.add_modifier(ModType.TRIM_QUAL, options.quality_cutoff[0], 
+            options.quality_cutoff[1], options.quality_base)
     
-    if adapters:
-        add_modifier(ModType.ADAPTER, adapters, times=options.times, action=options.action, _dest=1)
-    
-    # For paired-end data, create a second processing pipeline.
-    # However, if no second-read adapters were given (via -A/-G/-B/-U), we need to
-    # be backwards compatible and *no modifications* are done to the second read.
-    if paired == 'both':
-        if options.cut2:
-            add_modifier(ModType.CUT, options.cut2, _dest=2)
-    
-        if options.quality_cutoff:
-            add_modifier(ModType.TRIM_QUAL, options.quality_cutoff[0], 
-                options.quality_cutoff[1], options.quality_base, _dest=2),
-        
-        if adapters2:
-            add_modifier(ModType.ADAPTER, adapters2, times=options.times, action=options.action, _dest=2)
-
-    # Modifiers that apply to both reads of paired-end reads unless in legacy mode
+    if adapters1 or adapters2:
+        modifiers.add_modifier_pair(ModType.ADAPTER, (adapters1, adapters2), 
+            times=options.times, action=options.action)
     
     if options.rrbs or options.wgbs:
         # trim two additional bases from adapter-trimmed sequences
-        add_modifier(ModType.CLIP_ADAPTER_TRIMMED, modifiers, -2)
+        modifiers.add_modifier(ModType.CLIP_ADAPTER_TRIMMED, (-2,))
     
     if options.trim_n:
-        add_modifier(ModType.TRIM_END_N)
+        modifiers.add_modifier(ModType.TRIM_END_N)
     
     if options.length_tag:
-        add_modifier(ModType.LENGTH_TAG, options.length_tag)
+        modifiers.add_modifier(ModType.LENGTH_TAG, options.length_tag)
     
     if options.strip_suffix:
-        add_modifier(ModType.REMOVE_SUFFIX, options.strip_suffix)
+        modifiers.add_modifier(ModType.REMOVE_SUFFIX, options.strip_suffix)
     
     if options.prefix or options.suffix:
-        add_modifier(ModType.ADD_PREFIX_SUFFIX, options.prefix, options.suffix)
+        modifiers.add_modifier(ModType.ADD_PREFIX_SUFFIX, options.prefix, options.suffix)
     
     if options.double_encode:
-        add_modifier(ModType.CS_DOUBLE_ENCODE)
+        modifiers.add_modifier(ModType.CS_DOUBLE_ENCODE)
     
     if options.zero_cap and qualities:
-        add_modifier(ModType.ZERO_CAP, quality_base=options.quality_base)
+        modifiers.add_modifier(ModType.ZERO_CAP, quality_base=options.quality_base)
     
     if options.trim_primer:
-        add_modifier(ModType.CS_TRIM_PRIMER)
+        modifiers.add_modifier(ModType.CS_TRIM_PRIMER)
     
-    return (modifiers, (adapters, adapters2))
+    return (modifiers, len(adapters1) + len(adapters2))
 
 class SingleEndWriter(object):
     def __init__(self, handle):
@@ -731,12 +779,12 @@ class Writers(object):
             colorspace=options.colorspace, 
             interleaved=options.interleaved
         )
-        self.seqfile_paths = dict()
-        self.force_create = set()
+        self.seqfile_paths = {}
+        self.force_create = {}
         self.rest_path = options.rest_file
         self.info_path = options.info_file
         self.wildcard_path = options.wildcard_file
-        self.writers = dict()
+        self.writers = {}
         self._rest_writer = None
         self.discarded = 0
         
@@ -768,9 +816,9 @@ class Writers(object):
     def add_seq_writer(self, filter_type, file1, file2=None, force_create=False):
         self.seqfile_paths[filter_type] = (file1, file2)
         if force_create and isinstance(file1, str) and file1 != "-":
-            self.force_create.add(file1)
+            self.force_create[file1] = False
             if file2 is not None:
-                self.force_create.add(file2)
+                self.force_create[file2] = False
     
     def has_seq_writer(self, filter_type):
         return filter_type in self.seqfile_paths
@@ -789,6 +837,10 @@ class Writers(object):
         
     def _create_seq_writer(self, file1, file2=None):
         seqfile = seqio.open(file1, file2, mode='w', **self.open_args)
+        if file1 in self.force_create:
+            self.force_create[file1] = True
+        if file2 is not None and file2 in self.force_create:
+            self.force_create[file2] = True
         if isinstance(seqfile, seqio.SingleRecordWriter):
             return SingleEndWriter(seqfile)
         elif isinstance(seqfile, seqio.PairRecordWriter):
@@ -814,7 +866,7 @@ class Writers(object):
         
     def write(self, dest, read1, read2=None):
         writer = None
-
+        
         if dest == FilterType.NONE and self.multiplexed and read1.match:
             name = read1.match.adapter.name
             writer = self.get_mux_writer(name)
@@ -900,56 +952,45 @@ class Writers(object):
     
     def close(self):
         # touch any files in force_create that haven't been created
-        for f in self.force_create:
-            if not os.path.exists(f):
-                with open(f, 'a'): os.utime(f, None)
+        for path, created in self.force_create.items():
+            if not created:
+                with open(path, 'w'): os.utime(path, None)
         # close any open writers
         for writer in self.writers.values():
             if writer is not None:
                 writer.close()
 
-def modify_and_filter(record, paired, modifiers, filters):
-    dest = FilterType.NONE
-    bp = [0,0]
-    if paired:
-        read1, read2 = record
-        bp[0] = len(read1.sequence)
-        bp[1] = len(read2.sequence)
-        for mod in modifiers[0].values():
-            read1 = mod(read1)
-        for mod in modifiers[1].values():
-            read2 = mod(read2)
-        reads = [read1, read2]
-    else:
-        read = record
-        bp[0] = len(read.sequence)
-        for mod in modifiers[0].values():
-            read = mod(read)
-        reads = [read]
-    
-    for filter_type, f in filters.items():
-        if f(*reads):
-            dest = filter_type
-            # Stop writing as soon as one of the filters was successful.
-            break
-    
-    return (dest, reads, bp)
+def summarize_adapters(modifiers):
+    mods = modifiers.get_modifier_pair(ModType.ADAPTER)
+    summary = [{}, {}]
+    if mods[0] is not None:
+        summary[0] = collect_adapter_statistics(mods[0].adapters)
+    if mods[1] is not None:
+        summary[1] = collect_adapter_statistics(mods[1].adapters)
+    return summary
 
-def run_cutadapt_serial(paired, reader, writers, modifiers, filters):
+def run_cutadapt_serial(reader, writers, modifiers, filters):
+    n = 0
+    total_bp1 = 0
+    total_bp2 = 0
+    
     try:
-        n = 0  # no. of processed reads
-        total1_bp = 0
-        total2_bp = 0 if paired else None
         for record in reader:
             n += 1
-            dest, reads, bp = modify_and_filter(record, paired, modifiers, filters)
+            
+            reads, bp = modifiers.modify(record)
+            total_bp1 += bp[0]
+            total_bp2 += bp[1]
+            
+            dest = filters.filter(*reads)
             writers.write(dest, *reads)
-            total1_bp += bp[0]
-            if paired:
-                total2_bp += bp[1]
         
-        return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
-
+        return Summary(
+            collect_writer_statistics(n, total_bp1, total_bp2, writers),
+            collect_process_statistics(modifiers, filters),
+            summarize_adapters(modifiers)
+        ).finish()
+    
     except KeyboardInterrupt as e:
         print("Interrupted", file=sys.stderr)
         sys.exit(130)
@@ -960,32 +1001,38 @@ def run_cutadapt_serial(paired, reader, writers, modifiers, filters):
     except (seqio.FormatError, EOFError) as e:
         sys.exit("cutadapt: error: {0}".format(e))
 
-def run_cutadapt_parallel(paired, reader, writers, modifiers, filters, threads=None, 
+def run_cutadapt_parallel(reader, writers, modifiers, filters, threads=None, 
                           batch_size=1000, preserve_order=False, max_wait=60):
-    if threads is None or threads <= 0:
-        threads = min(cpu_count() - 1, 1)
+    # undocumented way to force program to run in parallel
+    # mode using only one worker thread
+    if threads <= 0:
+        threads = 1
     
     read_queue = Queue()
     result_queue = Queue()
     control = Value('l', 0)
     
-    # start WorkerThreads
-    workers = set()
+    worker_threads = set()
+    worker_summary_queue = Queue()
     for i in range(threads):
-        worker = Worker(read_queue, result_queue, control, paired, modifiers, filters)
-        workers.add(worker)
+        worker = WorkerThread(i, modifiers, filters, 
+            read_queue, result_queue, worker_summary_queue, control)
+        worker_threads.add(worker)
         worker.start()
     
-    # start WriterThread
+    # shared array to hold n, total_bp1, total_bp2
+    writer_summary_queue = Queue()
     if preserve_order:
-        writer = OrderPreservingWriterThread(result_queue, writers, control)
+        writer_thread = OrderPreservingWriterThread(
+            writers, result_queue, writer_summary_queue, control)
     else:
-        writer = WriterThread(result_queue, writers, control)
-    writer.start()
+        writer_thread = WriterThread(
+            writers, result_queue, writer_summary_queue, control)
+    writer_thread.start()
     
     try:
         # Main loop - add batches of records to the queue
-        emtpy_batch = [None] * batch_size
+        empty_batch = [None] * batch_size
         batch = empty_batch.copy()
         num_batches = 0
         batch_index = 0
@@ -993,29 +1040,40 @@ def run_cutadapt_parallel(paired, reader, writers, modifiers, filters, threads=N
             batch[batch_index] = record
             batch_index += 1
             if batch_index == batch_size:
-                read_queue.put(batch)
                 num_batches += 1
+                read_queue.put((num_batches, batch))
                 batch = empty_batch.copy()
                 batch_index = 0
         
-        if len(batch) > 0:
-            read_queue.put(batch)
+        if batch_index > 0 is not None:
             num_batches += 1
+            read_queue.put((num_batches, batch[0:batch_index]))
         
         # Tell the writer thread the max number of
         # batches to expect
         with control.get_lock():
             control.value = num_batches
         
-        # Wait for the writer to complete
+        # Wait for the writer thread to complete
+        # and get the summary
         writer_thread.join()
-        
-        return Statistics(
-            n=writer_thread.n, 
-            total_bp1=writer_thread.total1_bp, 
-            total_bp2=writer_thread.total2_bp
-        )
+        summary = Summary(writer_summary_queue.get())
 
+        # wait for worker threads to complete and get
+        # their summaries
+        for worker in worker_threads:
+            worker.join()
+        
+        # add summary information from worker threads
+        seen_summaries = set()
+        while len(seen_summaries) < threads:
+            thread_index, process_stats, adapter_stats = worker_summary_queue.get()
+            seen_summaries.add(thread_index)
+            summary.add_process_stats(process_stats)
+            summary.add_adapter_stats(adapter_stats)
+        
+        return summary.finish()
+    
     except KeyboardInterrupt as e:
         print("Interrupted", file=sys.stderr)
         sys.exit(130)
@@ -1046,7 +1104,7 @@ def run_cutadapt_parallel(paired, reader, writers, modifiers, filters, threads=N
                 t.terminate()
                 
         kill(writer_thread)
-        for worker in workers:
+        for worker in worker_threads:
             kill(worker)
 
 class PendingQueue(object):
@@ -1074,6 +1132,46 @@ class PendingQueue(object):
     def empty(self):
         return len(self.queue) == 0
 
+class WorkerThread(Process):
+    """
+    Thread that processes batches of reads.
+    input_queue: queue with batches of records to process
+    output_queue: queue where results are written
+    summary_queue: queue where summary information is written
+    control: shared value with value 0 unless the thread
+    should die (< 0) or there are no more batches coming (> 0).
+    """
+    def __init__(self, index, modifiers, filters, 
+                 input_queue, output_queue, summary_queue, control):
+        super(WorkerThread, self).__init__()
+        self.index = index
+        self.modifiers = modifiers
+        self.filters = filters
+        self.input_queue = input_queue
+        self.output_queue = output_queue
+        self.summary_queue = summary_queue
+        self.control = control
+    
+    def run(self):
+        while self.control.value >= 0:
+            try:
+                batch_num, records = self.input_queue.get(timeout=1)
+                result = [self._modify_and_filter(record) for record in records]
+                self.output_queue.put((batch_num, result))
+            except Empty:
+                if self.control.value > 0:
+                    break
+        
+        if self.control.value > 0:
+            process_stats = collect_process_statistics(self.modifiers, self.filters)
+            adapter_stats = summarize_adapters(self.modifiers)
+            self.summary_queue.put((self.index, process_stats, adapter_stats))
+    
+    def _modify_and_filter(record):
+        reads, bp = self.modifiers.modify(record)
+        dest = self.filters.filter(*reads)
+        return (reads, bp, dest)
+
 class WriterThread(Process):
     """
     Thread that accepts results from the worker threads 
@@ -1085,15 +1183,18 @@ class WriterThread(Process):
     control: a shared value that is 0 unless the thread should
     die (< 0) or the main process has finished reading records
     and communicates the total number of batches (> 0).
+    summary: a shared array to hold n (number of records processed),
+    total_bp1 and total_bp2 (total read1 and read2 bp written).
     """
-    def __init__(self, queue, writers, control):
+    def __init__(self, writers, input_queue, summary_queue, control):
         super(WriterThread, self).__init__()
-        self.queue = queue
         self.writers = writers
+        self.queue = input_queue
+        self.summary_queue = summary_queue
         self.control = control
         self.n = 0  # no. of processed reads
-        self.total1_bp = 0
-        self.total2_bp = 0
+        self.total_bp1 = 0
+        self.total_bp2 = 0
         self.seen_batches = set()
     
     def run(self):
@@ -1112,28 +1213,31 @@ class WriterThread(Process):
                     done = True
                 else:
                     batch_num, records = batch
-                    self.n += len(records)
                     self.seen_batches.add(batch_num)
+                    self.n += len(records)
                     self._process_batch(batch_num, records)
             
             if done:
                 self._no_more_batches()
                 break
+        
+        self.summary_queue.put(collect_writer_statistics(
+            self.n, self.total_bp1, self.total_bp2, self.writers))
     
     def _init(self):
         pass
 
     def _process_batch(self, batch_num, records):
-        self._write_batch(records)
+        return self._write_batch(records)
         
     def _no_more_batches(self):
         pass
     
-    def _write_batch(records):
-        for dest, reads, bp in records:
+    def _write_batch(self, records):
+        for reads, bp, dest in records:
             self.writers.write(dest, *reads)
-            self.total1_bp += bp[0]
-            self.total2_bp += bp[1]
+            self.total_bp1 += bp[0]
+            self.total_bp2 += bp[1]
 
 class OrderPreservingWriterThread(WriterThread):
     """
@@ -1142,7 +1246,7 @@ class OrderPreservingWriterThread(WriterThread):
     """
     def _init(self):
         self.pending = PendingQueue()
-        self.cur_batch = 0
+        self.cur_batch = 1
     
     def _process_batch(self, batch_num, records):
         if batch_num == self.cur_batch:
@@ -1161,32 +1265,6 @@ class OrderPreservingWriterThread(WriterThread):
         while (not self.pending.empty) and (self.cur_batch == pending.min):
             self.write_batch(pending.pop())
             self.cur_batch += 1
-
-class WorkerThread(Process):
-    """
-    Thread that processes batches of reads.
-    input_queue: queue with batches of records to process
-    output_queue: queue where results are written
-    control: shared value with value 0 unless the thread
-    should die (< 0) or there are no more batches coming (> 0).
-    """
-    def __init__(self, input_queue, output_queue, control, paired, modifiers, filters):
-        self.input_queue = input_queue
-        self.output_queue = output_queue
-        self.control = control
-        self.paired = paired
-        self.modifiers = modifiers
-        self.filters = filters
-    
-    def run(self):
-        while self.control.value >= 0:
-            try:
-                batch = self.input_queue.get(timeout=1)
-                result = modify_and_filter(record, self.paired, self.modifiers, self.filters)
-                self.output_queue.put(result)
-            except Empty:
-                if self.control.value > 0:
-                    break
 
 if __name__ == '__main__':
     main()
