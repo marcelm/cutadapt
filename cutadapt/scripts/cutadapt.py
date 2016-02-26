@@ -55,7 +55,8 @@ Use "cutadapt --help" to see all command-line options.
 See http://cutadapt.readthedocs.org/ for full documentation.
 """
 
-# This is a fork of Cutadapt that can process 
+# This is a fork of Cutadapt that can use multiple threads to process
+# reads in parallel.
 # This program incorporates code/ideas from the following sources:
 # TrimGalore (http://www.bioinformatics.babraham.ac.uk/projects/download.html#trim_galore)
 # miRge (https://github.com/BarasLab/miRge/blob/master/trim_file.py)
@@ -721,17 +722,9 @@ class PairedEndWriter(SingleEndWriter):
         self.read1_bp += len(read1)
         self.read2_bp += len(read2)
 
-class RestFileWriter(object):
-    def __init__(self, file):
-        self.file = file
-    
-    def write(self, match):
-        rest = match.rest()
-        if len(rest) > 0:
-            print(rest, match.read.name, file=self.file)
-
-class WriterFactory(object):
-    def __init__(self, options, qualities):
+class Writers(object):
+    def __init__(self, options, multiplexed, qualities, default_outfile):
+        self.multiplexed = multiplexed
         self.output = options.output
         self.open_args = dict(
             qualities=qualities,
@@ -745,6 +738,32 @@ class WriterFactory(object):
         self.wildcard_path = options.wildcard_file
         self.writers = dict()
         self._rest_writer = None
+        self.discarded = 0
+        
+        if options.minimum_length > 0 and options.too_short_output:
+            self.add_seq_writer(FilterType.TOO_SHORT,
+                options.too_short_output, options.too_short_paired_output)
+    
+        if options.maximum_length < sys.maxsize and options.too_long_output is not None:
+            self.add_seq_writer(FilterType.TOO_LONG,
+                options.too_long_output, options.too_long_paired_output)
+        
+        if not self.multiplexed:
+            if options.output is not None:
+                self.add_seq_writer(FilterType.NONE, options.output, 
+                    options.paired_output, force_create=True)
+            elif not (options.discard_trimmed and options.untrimmed_output):
+                self.add_seq_writer(FilterType.NONE, default_outfile, 
+                    force_create=True)
+        
+        if not options.discard_untrimmed:
+            if self.multiplexed:
+                untrimmed = options.untrimmed_output or options.output.format(name='unknown')
+                self.add_seq_writer(FilterType.UNTRIMMED, untrimmed)
+                self.add_seq_writer(FilterType.NONE, untrimmed)
+            elif options.untrimmed_output:
+                self.add_seq_writer(FilterType.UNTRIMMED,
+                    options.untrimmed_output, options.untrimmed_paired_output)
     
     def add_seq_writer(self, filter_type, file1, file2=None, force_create=False):
         self.seqfile_paths[filter_type] = (file1, file2)
@@ -783,28 +802,90 @@ class WriterFactory(object):
             if paths in self.writers:
                 seq_writers.add(self.writers[paths])
         return seq_writers
+    
+    def summary(self):
+        seq_writers = self.get_seq_writers()
+        written = sum(w.written for w in seq_writers)
+        written_bp = (
+            sum(w.read1_bp for w in seq_writers),
+            sum(w.read2_bp for w in seq_writers),
+        )
+        return (written, written_bp)
+        
+    def write(self, dest, read1, read2=None):
+        writer = None
 
-    @property
-    def has_rest_writer(self):
-        return self.rest_path is not None
+        if dest == FilterType.NONE and self.multiplexed and read1.match:
+            name = read1.match.adapter.name
+            writer = self.get_mux_writer(name)
+        
+        if writer is None and self.has_seq_writer(dest):
+            writer = self.get_seq_writer(dest)
+        
+        if writer is not None:
+            writer.write(read1, read2)
+        else:
+            self.discarded += 1
+        
+        self._write_info(read1)
+        if read2:
+            self._write_info(read2)
+    
+    def _write_info(self, read):
+        match = read.match
+        
+        if self.rest_path is not None and match:
+            self.rest_writer.write(match)
+        
+        if self.wildcard_path is not None and match:
+            print(match.wildcards(), read.name, file=self.wildcard_writer)
+        
+        if self.info_path is not None:
+            if match:
+                for m in read.matches:
+                    seq = m.read.sequence
+                    qualities = m.read.qualities
+                    if qualities is None:
+                        qualities = ''
+                    print(
+                        m.read.name,
+                        m.errors,
+                        m.rstart,
+                        m.rstop,
+                        seq[0:m.rstart],
+                        seq[m.rstart:m.rstop],
+                        seq[m.rstop:],
+                        m.adapter.name,
+                        qualities[0:m.rstart],
+                        qualities[m.rstart:m.rstop],
+                        qualities[m.rstop:],
+                        sep='\t', file=self.info_writer
+                    )
+            else:
+                seq = read.sequence
+                qualities = read.qualities if read.qualities is not None else ''
+                print(read.name, -1, seq, qualities, sep='\t', file=self.info_writer)
     
     @property
     def rest_writer(self):
         if self._rest_writer is None:
-            self._rest_writer = RestFileWriter(self._get_file_writer(self.rest_path))
-        return self._rest_writer
+            class RestFileWriter(object):
+                def __init__(self, file):
+                    self.file = file
     
-    @property
-    def has_info_writer(self):
-        return self.info_path is not None
-
+                def write(self, match):
+                    rest = match.rest()
+                    if len(rest) > 0:
+                        print(rest, match.read.name, file=self.file)
+            
+            self._rest_writer = RestFileWriter(
+                self._get_file_writer(self.rest_path))
+        
+        return self._rest_writer
+        
     @property
     def info_writer(self):
         return self._get_file_writer(self.info_path)
-    
-    @property
-    def has_wildcard_writer(self):
-        return self.wildcard_path is not None
     
     @property
     def wildcard_writer(self):
@@ -826,103 +907,6 @@ class WriterFactory(object):
         for writer in self.writers.values():
             if writer is not None:
                 writer.close()
-
-class Writers(object):
-    def __init__(self, options, multiplexed, qualities, default_outfile):
-        self.multiplexed = multiplexed
-        self.writers = WriterFactory(options, qualities)
-        self.discarded = 0
-        
-        if options.minimum_length > 0 and options.too_short_output:
-            self.writers.add_seq_writer(FilterType.TOO_SHORT,
-                options.too_short_output, options.too_short_paired_output)
-    
-        if options.maximum_length < sys.maxsize and options.too_long_output is not None:
-            self.writers.add_seq_writer(FilterType.TOO_LONG,
-                options.too_long_output, options.too_long_paired_output)
-        
-        if not self.multiplexed:
-            if options.output is not None:
-                self.writers.add_seq_writer(FilterType.NONE, options.output, 
-                    options.paired_output, force_create=True)
-            elif not (options.discard_trimmed and options.untrimmed_output):
-                self.writers.add_seq_writer(FilterType.NONE, default_outfile, 
-                    force_create=True)
-        
-        if not options.discard_untrimmed:
-            if self.multiplexed:
-                untrimmed = options.untrimmed_output or options.output.format(name='unknown')
-                self.writers.add_seq_writer(FilterType.UNTRIMMED, untrimmed)
-                self.writers.add_seq_writer(FilterType.NONE, untrimmed)
-            elif options.untrimmed_output:
-                self.writers.add_seq_writer(FilterType.UNTRIMMED,
-                    options.untrimmed_output, options.untrimmed_paired_output)
-    
-    def summary(self):
-        seq_writers = self.writers.get_seq_writers()
-        written = sum(w.written for w in seq_writers)
-        written_bp = (
-            sum(w.read1_bp for w in seq_writers),
-            sum(w.read2_bp for w in seq_writers),
-        )
-        return (written, written_bp)
-        
-    def write(self, dest, read1, read2=None):
-        writer = None
-
-        if dest == FilterType.NONE and self.multiplexed and read1.match:
-            name = read1.match.adapter.name
-            writer = self.writers.get_mux_writer(name)
-        
-        if writer is None and self.writers.has_seq_writer(dest):
-            writer = self.writers.get_seq_writer(dest)
-        
-        if writer is not None:
-            writer.write(read1, read2)
-        else:
-            self.discarded += 1
-        
-        self._write_info(read1)
-        if read2:
-            self._write_info(read2)
-    
-    def _write_info(self, read):
-        match = read.match
-        
-        if self.writers.has_rest_writer and match:
-            self.writers.rest_writer.write(match)
-        
-        if self.writers.has_wildcard_writer and match:
-            print(match.wildcards(), read.name, file=self.writers.wildcard_writer)
-        
-        if self.writers.has_info_writer:
-            if match:
-                for m in read.matches:
-                    seq = m.read.sequence
-                    qualities = m.read.qualities
-                    if qualities is None:
-                        qualities = ''
-                    print(
-                        m.read.name,
-                        m.errors,
-                        m.rstart,
-                        m.rstop,
-                        seq[0:m.rstart],
-                        seq[m.rstart:m.rstop],
-                        seq[m.rstop:],
-                        m.adapter.name,
-                        qualities[0:m.rstart],
-                        qualities[m.rstart:m.rstop],
-                        qualities[m.rstop:],
-                        sep='\t', file=self.writers.info_writer
-                    )
-            else:
-                seq = read.sequence
-                qualities = read.qualities if read.qualities is not None else ''
-                print(read.name, -1, seq, qualities, sep='\t', file=self.writers.info_writer)
-    
-    def close(self):
-        self.writers.close()
 
 def modify_and_filter(record, paired, modifiers, filters):
     dest = FilterType.NONE
