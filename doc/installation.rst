@@ -20,7 +20,18 @@ to install a newer version. You can then run the program like this::
 If you want to avoid typing the full path, add the directory
 ``$HOME/.local/bin`` to your ``$PATH`` environment variable.
 
-If the above does not work, keep reading.
+
+Installation with conda
+-----------------------
+
+Alternatively, cutadapt is also available as a conda package from the
+`bioconda channel <https://bioconda.github.io/>`_. If you do not have conda,
+`install miniconda <http://conda.pydata.org/miniconda.html>`_ first.
+Then install cutadapt like this::
+
+    conda install -c bioconda cutadapt
+
+If neither `pip` nor `conda` installation works, keep reading.
 
 
 Dependencies
