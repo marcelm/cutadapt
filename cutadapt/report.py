@@ -20,7 +20,7 @@ def check_equal_merger(dest, src):
     return dest
 
 def nested_dict_merger(d_dest1, d_src1):
-    assert isinstance(src, dict)
+    assert isinstance(d_src1, dict)
     for k1, d_src2 in d_src1.items():
         if k1 in d_dest1:
             d_dest2 = d_dest1[k1]
@@ -31,6 +31,7 @@ def nested_dict_merger(d_dest1, d_src1):
                     d_dest2[k2] = v_src
         else:
             d_dest1[k1] = d_src2
+    return d_dest1
 
 MERGERS = dict(
     check_equal=check_equal_merger,
@@ -53,7 +54,7 @@ class MergingDict(OrderedDict):
                     continue
                 v_self = self[k]
                 if k in self.mergers:
-                    merger = MERGERS(self.mergers[k])
+                    merger = MERGERS[self.mergers[k]]
                     self[k] = merger(v_self, v_src)
                 # default behavior: lists have two integers, which are summed;
                 # dicts have integer values, which are summed; strings must be 
@@ -117,19 +118,20 @@ def collect_adapter_statistics(adapters):
         name = adapter.name
         total_front = sum(adapter.lengths_front.values())
         total_back = sum(adapter.lengths_back.values())
+        
+        stats[name] = MergingDict(
+            name=name,
+            total_front=total_front,
+            total_back=total_back,
+            total=total_front + total_back
+        )
+        
         where = adapter.where
         assert (where in (ANYWHERE, LINKED) or 
             (where in (BACK, SUFFIX) and total_front == 0) or 
             (where in (FRONT, PREFIX) and total_back == 0)
         )
-        
-        stats[name] = MergingDict(
-            name=name,
-            where=where,
-            total_front=total_front,
-            total_back=total_back,
-            total=total_front + total_back
-        )
+        stats[name].set_with_merger("where", where, "check_equal")
         
         def handle_nested_dict(key, value):
             d = {}
