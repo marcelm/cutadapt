@@ -3,9 +3,9 @@
 Classes for writing and filtering of processed reads.
 
 A Filter is a callable that has the read as its only argument. If it is called,
-it returns True if the read should be filtered (discarded), and False if not. A
-filter also has a code used to identify the filter that rejected a read. To be 
-used, a filter needs to be wrapped in one of the Wrapper classes. To determine 
+it returns True if the read should be filtered (discarded), and False if not. 
+
+To be used, a filter needs to be wrapped in one of the Wrapper classes. To determine 
 what happens to a read, a list of Wrappers with different filters is created and 
 each Wrapper is called in turn until one returns True. The main program will
 determine whether and where to write the read(s) based on whether it was rejected
@@ -16,6 +16,8 @@ from .xopen import xopen
 from . import seqio
 from enum import Enum
 
+# Constants used when returning from a Filter’s __call__ method to improve
+# readability (it is unintuitive that "return True" means "discard the read").
 DISCARD = True
 KEEP = False
 

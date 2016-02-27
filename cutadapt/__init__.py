@@ -4,7 +4,7 @@ import sys
 
 __version__ = '1.9.2.dev0'
 
-def check_importability(): # pragma: no cover
+def check_importability():  # pragma: no cover
 	try:
 		import cutadapt._align
 	except ImportError as e:

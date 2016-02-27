@@ -82,8 +82,9 @@ class Sequence(object):
 	def __ne__(self, other):
 		return not self.__eq__(other)
 
-# TODO: deep refactoring needed to move to a model where trimming operations just
-# modify the start and end positions
+# TODO: refactoring to move to a model where trimming operations just modify the 
+# start and end positions. Test if this is any faster than making a new Sequence
+# instance each time.
 # class Sequence(object):
 #	  """qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 #
