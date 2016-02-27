@@ -285,11 +285,7 @@ def generate_report(stats, outfile):
 		ANYWHERE: "variable 5'/3'",
 		LINKED: "linked",
 	}
-
-	# TODO: this should all be re-written to use a template
-	# engine (either simple string formatting or e.g. mako) 
-	# and generate a string result.
-
+	
 	def print_error_ranges(adapter_length, error_rate):
 		_print("No. of allowed errors:")
 		prev = 0
