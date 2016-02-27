@@ -88,14 +88,14 @@ class AdapterParser(object):
 		if cmdline_type not in types:
 			raise ValueError('cmdline_type cannot be {0!r}'.format(cmdline_type))
 		where = types[cmdline_type]
-		if where == FRONT and spec.startswith('^'):	 # -g ^ADAPTER
+		if where == FRONT and spec.startswith('^'):  # -g ^ADAPTER
 			sequence, where = spec[1:], PREFIX
 		elif where == BACK:
 			sequence1, middle, sequence2 = spec.partition('...')
 			if middle == '...':
 				if not sequence1:  # -a ...ADAPTER
 					sequence = sequence1[3:]
-				elif not sequence2:	 # -a ADAPTER...
+				elif not sequence2:  # -a ADAPTER...
 					sequence, where = spec[:-3], PREFIX
 				else:  # -a ADAPTER1...ADAPTER2
 					if self.colorspace:
@@ -276,7 +276,7 @@ class Adapter(object):
 		}
 		self.trimmed = trimmers[where]
 		if where == ANYWHERE:
-			self._front_flag = None	 # means: guess
+			self._front_flag = None  # means: guess
 		else:
 			self._front_flag = where not in (BACK, SUFFIX)
 		# statistics about length of removed sequences
