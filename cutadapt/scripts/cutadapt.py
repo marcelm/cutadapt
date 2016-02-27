@@ -129,60 +129,52 @@ def main(cmdlineargs=None, default_outfile="-"):
             quality_filename = args[1]
 
     reader = writers = None
+    
     try:
-        try:
-            # Open input file(s)
-            reader = seqio.open(input_filename, file2=input_paired_filename,
-                qualfile=quality_filename, colorspace=options.colorspace, 
-                fileformat=options.format, interleaved=options.interleaved)
-        except (seqio.UnknownFileType, IOError) as e:
-            parser.error(e)
-        
-        qualities = reader.delivers_qualities
-        has_qual_file = quality_filename is not None
-        min_affected = 2 if options.pair_filter == 'both' else 1
-        
-        writers = Writers(options, multiplexed, qualities, default_outfile)
-        modifiers, num_adapters = create_modifiers(options, paired, qualities, has_qual_file, parser)
-        filters = create_filters(options, paired, min_affected)
-        
-        logger = logging.getLogger()
-        logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
-        logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-        logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
-            num_adapters, 's' if num_adapters > 1 else '', options.error_rate * 100,
-            { False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
-        if paired == 'first' and (len(modifiers.mod2) > 0 or options.quality_cutoff):
-            import textwrap
-            logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
-                'modifications are applied only to the first '
-                'read since backwards compatibility mode is enabled. '
-                'To modify both reads, also use any of the -A/-B/-G/-U options. '
-                'Use a dummy adapter sequence when necessary: -A XXX')))
-        
-        threads = options.threads
-        if threads is None:
-            threads = min(cpu_count() - 1, 1)
-        
-        start_time = time.clock()
-        
-        if threads == 1:
-            # Run cutadapt normally
-            summary = run_cutadapt_serial(reader, writers, modifiers, filters)
+        # Open input file(s)
+        reader = seqio.open(input_filename, file2=input_paired_filename,
+            qualfile=quality_filename, colorspace=options.colorspace, 
+            fileformat=options.format, interleaved=options.interleaved)
+    except (seqio.UnknownFileType, IOError) as e:
+        parser.error(e)
     
-        else:
-            # Run multiprocessing version
-            summary = run_cutadapt_parallel(reader, writers, modifiers, filters,
-                options.threads, options.batch_size, options.preserve_order)
-        
-        report = print_report(paired, options, time.clock() - start_time, summary)
+    qualities = reader.delivers_qualities
+    has_qual_file = quality_filename is not None
+    min_affected = 2 if options.pair_filter == 'both' else 1
     
-    finally:
-        # close open files
-        if reader:
-            reader.close()
-        if writers:
-            writers.close()
+    writers = Writers(options, multiplexed, qualities, default_outfile)
+    modifiers, num_adapters = create_modifiers(options, paired, qualities, has_qual_file, parser)
+    filters = create_filters(options, paired, min_affected)
+    
+    logger = logging.getLogger()
+    logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
+    logger.info("Command line parameters: %s", " ".join(cmdlineargs))
+    logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
+        num_adapters, 's' if num_adapters > 1 else '', options.error_rate * 100,
+        { False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
+    if paired == 'first' and (len(modifiers.mod2) > 0 or options.quality_cutoff):
+        import textwrap
+        logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
+            'modifications are applied only to the first '
+            'read since backwards compatibility mode is enabled. '
+            'To modify both reads, also use any of the -A/-B/-G/-U options. '
+            'Use a dummy adapter sequence when necessary: -A XXX')))
+    
+    threads = options.threads
+    if threads is None:
+        threads = min(cpu_count() - 1, 1)
+    
+    start_time = time.clock()
+    
+    if threads == 1:
+        # Run cutadapt normally
+        summary = run_cutadapt_serial(reader, writers, modifiers, filters)
+    else:
+        # Run multiprocessing version
+        summary = run_cutadapt_parallel(reader, writers, modifiers, filters,
+            options.threads, options.batch_size, options.preserve_order)
+    
+    report = print_report(paired, options, time.clock() - start_time, summary)
 
 def get_option_parser():
     class CutadaptOptionParser(OptionParser):
@@ -633,10 +625,9 @@ class Modifiers(object):
                 self.mod2[mod_type] = create_modifier(mod_type, *args2, **kwargs)
     
     def add_modifier(self, mod_type, *args, _first_only=False, **kwargs):
-        mod = create_modifier(mod_type, *args, **kwargs)
-        self.mod1[mod_type] = mod
+        self.mod1[mod_type] = create_modifier(mod_type, *args, **kwargs)
         if self.paired == "both" and not _first_only:
-            self.mod2[mod_type] = mod
+            self.mod2[mod_type] = create_modifier(mod_type, *args, **kwargs)
     
     def get_modifier_pair(self, mod_type):
         return [self.mod1.get(mod_type, None), self.mod2.get(mod_type, None)]
@@ -1000,6 +991,9 @@ def run_cutadapt_serial(reader, writers, modifiers, filters):
         raise
     except (seqio.FormatError, EOFError) as e:
         sys.exit("cutadapt: error: {0}".format(e))
+    finally:
+        reader.close()
+        writers.close()
 
 def run_cutadapt_parallel(reader, writers, modifiers, filters, threads=None, 
                           batch_size=1000, preserve_order=False, max_wait=60):
@@ -1058,7 +1052,7 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads=None,
         # and get the summary
         writer_thread.join()
         summary = Summary(writer_summary_queue.get())
-
+        
         # wait for worker threads to complete and get
         # their summaries
         for worker in worker_threads:
@@ -1088,6 +1082,8 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads=None,
         sys.exit("cutadapt: error: {0}".format(e))
     
     finally:
+        reader.close()
+        
         # notify all threads that they should stop
         with control.get_lock():
             control.value = -1
@@ -1167,7 +1163,7 @@ class WorkerThread(Process):
             adapter_stats = summarize_adapters(self.modifiers)
             self.summary_queue.put((self.index, process_stats, adapter_stats))
     
-    def _modify_and_filter(record):
+    def _modify_and_filter(self, record):
         reads, bp = self.modifiers.modify(record)
         dest = self.filters.filter(*reads)
         return (reads, bp, dest)
@@ -1198,37 +1194,40 @@ class WriterThread(Process):
         self.seen_batches = set()
     
     def run(self):
-        self._init()
-        while self.control.value >= 0:
-            done = False
-            if 0 < self.control.value <= len(self.seen_batches):
-                done = True
-            else:
-                try:
-                    batch = self.queue.get(timeout=1)
-                except Empty:
-                    continue
-                
-                if batch is None:
+        try:
+            self._init()
+            while self.control.value >= 0:
+                done = False
+                if 0 < self.control.value <= len(self.seen_batches):
                     done = True
                 else:
-                    batch_num, records = batch
-                    self.seen_batches.add(batch_num)
-                    self.n += len(records)
-                    self._process_batch(batch_num, records)
+                    try:
+                        batch = self.queue.get(timeout=1)
+                    except Empty:
+                        continue
+                
+                    if batch is None:
+                        done = True
+                    else:
+                        batch_num, records = batch
+                        self.seen_batches.add(batch_num)
+                        self.n += len(records)
+                        self._process_batch(batch_num, records)
             
-            if done:
-                self._no_more_batches()
-                break
+                if done:
+                    self._no_more_batches()
+                    break
         
-        self.summary_queue.put(collect_writer_statistics(
-            self.n, self.total_bp1, self.total_bp2, self.writers))
+            self.summary_queue.put(collect_writer_statistics(
+                self.n, self.total_bp1, self.total_bp2, self.writers))
+        finally:
+            self.writers.close()
     
     def _init(self):
         pass
 
     def _process_batch(self, batch_num, records):
-        return self._write_batch(records)
+        self._write_batch(records)
         
     def _no_more_batches(self):
         pass

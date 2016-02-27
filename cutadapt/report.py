@@ -5,7 +5,7 @@ Routines for printing a report.
 from __future__ import print_function, division, absolute_import
 
 import sys
-from collections import namedtuple
+from collections import OrderedDict
 from contextlib import contextmanager
 import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE, LINKED
@@ -14,6 +14,68 @@ from .filters import *
 
 # TODO: Would be good to have a more generic way for filters
 # and modifiers to report summary information
+
+def check_equal_merger(dest, src):
+    assert dest == src
+    return dest
+
+def nested_dict_merger(d_dest1, d_src1):
+    assert isinstance(src, dict)
+    for k1, d_src2 in d_src1.items():
+        if k1 in d_dest1:
+            d_dest2 = d_dest1[k1]
+            for k2, v_src in d_src2.items():
+                if k2 in d_dest2:
+                    d_dest2[k2] += v_src
+                else:
+                    d_dest2[k2] = v_src
+        else:
+            d_dest1[k1] = d_src2
+
+MERGERS = dict(
+    check_equal=check_equal_merger,
+    nested_dict=nested_dict_merger
+)
+
+class MergingDict(OrderedDict):
+    def __init__(self, *args, **kwargs):
+        super(MergingDict, self).__init__(*args, **kwargs)
+        self.mergers = {}
+    
+    def set_with_merger(self, key, value, merger):
+        self[key] = value
+        self.mergers[key] = merger
+    
+    def merge(self, src):
+        for k, v_src in src.items():
+            if k in self and self[k] is not None:
+                if v_src is None:
+                    continue
+                v_self = self[k]
+                if k in self.mergers:
+                    merger = MERGERS(self.mergers[k])
+                    self[k] = merger(v_self, v_src)
+                # default behavior: lists have two integers, which are summed;
+                # dicts have integer values, which are summed; strings must be 
+                # identical; otherwise must be numeric and are summed
+                elif isinstance(v_self, dict):
+                    assert isinstance(v_src, dict)
+                    for kk,vv in v_src.items():
+                        if kk in v_self:
+                            v_self[kk] += vv
+                        else:
+                            v_self[kk] = vv
+                elif isinstance(v_self, list):
+                    assert isinstance(v_src, list)
+                    self[k] = [v_src[0]+v_self[0], v_src[1]+v_self[1]]
+                elif isinstance(v_self, str):
+                    assert v_self == v_src
+                else:
+                    self[k] = v_src + v_self
+            else:
+                self[k] = v_src
+                if isinstance(src, MergingDict) and k in src.mergers:
+                    self.mergers[k] = src.mergers[k]
 
 def collect_process_statistics(modifiers, filters):
     """
@@ -35,24 +97,22 @@ def collect_process_statistics(modifiers, filters):
     
     stats["with_adapters"] = [0, 0]
     stats["quality_trimmed_bp"] = [0, 0]
-    stats["did_quality_trimming"] = False
+    
     for i in (0, 1):
         if ModType.TRIM_QUAL in modifiers[i]:
             stats["quality_trimmed_bp"][i] = modifiers[i][ModType.TRIM_QUAL].trimmed_bases
-            stats["did_quality_trimming"] = True
-            
         if ModType.ADAPTER in modifiers[i]:
             stats["with_adapters"][i] += modifiers[i][ModType.ADAPTER].with_adapters
     
     stats["quality_trimmed"] = sum(stats["quality_trimmed_bp"])
-    
+
     return stats
 
 def collect_adapter_statistics(adapters):
     """
     TODO: push this method into Adapter?
     """
-    stats = {}
+    stats = OrderedDict()
     for adapter in adapters:
         name = adapter.name
         total_front = sum(adapter.lengths_front.values())
@@ -63,38 +123,49 @@ def collect_adapter_statistics(adapters):
             (where in (FRONT, PREFIX) and total_back == 0)
         )
         
-        stats[name] = dict(
+        stats[name] = MergingDict(
             name=name,
             where=where,
             total_front=total_front,
             total_back=total_back,
             total=total_front + total_back
         )
-            
+        
+        def handle_nested_dict(key, value):
+            d = {}
+            for k,v in value.items():
+                d[k] = dict(v)
+            stats[name].set_with_merger(key, d, "nested_dict")
+        
         if where == LINKED:
             stats[name]["front_sequence"] = adapter.front_adapter.sequence
             stats[name]["back_sequence"] = adapter.back_adapter.sequence
-            stats[name]["front_max_error_rate"] = adapter.front_adapter.max_error_rate
-            stats[name]["back_max_error_rate"] = adapter.back_adapter.max_error_rate
-            stats[name]["front_lengths_front"] = adapter.front_adapter.lengths_front
-            stats[name]["front_errors_front"] = adapter.front_adapter.errors_front
-            stats[name]["front_lengths_back"] = adapter.front_adapter.lengths_back
-            stats[name]["front_errors_back"] = adapter.front_adapter.errors_back
-            stats[name]["back_lengths_front"] = adapter.back_adapter.lengths_front
-            stats[name]["back_errors_front"] = adapter.back_adapter.errors_front
-            stats[name]["back_lengths_back"] = adapter.back_adapter.lengths_back
-            stats[name]["back_errors_back"] = adapter.back_adapter.errors_back
+            stats[name].set_with_merger("front_max_error_rate", 
+                adapter.front_adapter.max_error_rate, "check_equal")
+            stats[name].set_with_merger("back_max_error_rate",
+                adapter.back_adapter.max_error_rate, "check_equal")
+            stats[name]["front_lengths_front"] = dict(adapter.front_adapter.lengths_front)
+            stats[name]["front_lengths_back"] = dict(adapter.front_adapter.lengths_back)
+            stats[name]["back_lengths_front"] = dict(adapter.back_adapter.lengths_front)
+            stats[name]["back_lengths_back"] = dict(adapter.back_adapter.lengths_back)
+            # have to clone these nested dicts and set them
+            # up with a custom merge function
+            handle_nested_dict("front_errors_front", adapter.front_adapter.errors_front)
+            handle_nested_dict("front_errors_back", adapter.front_adapter.errors_back)
+            handle_nested_dict("back_errors_front", adapter.back_adapter.errors_front)
+            handle_nested_dict("back_errors_back", adapter.back_adapter.errors_back)
         else:
             stats[name]["sequence"] = adapter.sequence
-            stats[name]["max_error_rate"] = adapter.max_error_rate
+            stats[name].set_with_merger("max_error_rate", 
+                adapter.max_error_rate, "check_equal")
             if where in (ANYWHERE, FRONT, PREFIX):
-                stats[name]["lengths_front"] = adapter.lengths_front
-                stats[name]["errors_front"] = adapter.errors_front
+                stats[name]["lengths_front"] = dict(adapter.lengths_front)
+                handle_nested_dict("errors_front", adapter.errors_front)
             if where in (ANYWHERE, BACK, SUFFIX):
-                stats[name]["lengths_back"] = adapter.lengths_back
-                stats[name]["errors_back"] = adapter.errors_back
+                stats[name]["lengths_back"] = dict(adapter.lengths_back)
+                handle_nested_dict("errors_back", adapter.errors_back)
             if where in (BACK, SUFFIX):
-                stats[name]["adjacent_bases"] = adapter.adjacent_bases
+                stats[name]["adjacent_bases"] = dict(adapter.adjacent_bases)
     
     return stats
 
@@ -118,37 +189,25 @@ def collect_writer_statistics(N, total_bp1, total_bp2, writers):
     )
 
 class Summary(object):
-    def __init__(self, writer_stats, process_stats={}, adapter_stats=[{},{}]):
+    def __init__(self, writer_stats, process_stats=MergingDict(), 
+                 adapter_stats=[OrderedDict(),OrderedDict()]):
         self.writer_stats = writer_stats
         self.process_stats = process_stats
         self.adapter_stats = adapter_stats
     
     def add_process_stats(self, stats):
-        self._merge_stats(self.process_stats, stats)
+        self.process_stats.merge(stats)
     
     def add_adapter_stats(self, stats):
         """
         stats = [ {name : adapter_stats}, {name : adapter_stats} ]
         """
         for i in (0,1):
-            for name in set(self.adapter_stats[i].keys()) + set(stats[i].keys()):
+            for name in stats[i].keys():
                 if name in self.adapter_stats[i]:
-                    self._merge_stats(self.adapter_stats[i][name], stats[i][name])
+                    self.adapter_stats[i][name].merge(stats[i][name])
                 else:
                     self.adapter_stats[i][name] = stats[i][name]
-    
-    def _merge_stats(self, dest, src):
-        for k in set(dest.keys()) + set(src.keys()):
-            v1 = dest.get(k, None)
-            v2 = src.get(k, None)
-            if v1 is None:
-                dest[k] = v2
-            elif v2 is not None:
-                if isinstance(v1, list):
-                    assert isinstance(v2, list)
-                    dest[k] = [v1[0]+v2[0], v1[1]+v2[1]]
-                else:
-                    dest[k] = v1 + v2
     
     def finish(self):
         stats = self.writer_stats.copy()
@@ -161,6 +220,7 @@ class Summary(object):
         stats["with_adapters_fraction"] = [0, 0]
         stats["quality_trimmed_fraction"] = 0.0
         stats["total_written_bp_fraction"] = 0.0
+        stats["did_quality_trimming"] = stats["quality_trimmed"] > 0 
         
         N = stats["N"]
         if N > 0:
@@ -255,11 +315,16 @@ def generate_report(stats, outfile):
             # probability does not increase anymore
             estimated = n * 0.25 ** min(length, adapter_length)
             h.append( (length, d[length], estimated) )
-
+        
+        def errs_to_str(l, e):
+            if e in errors[l]:
+                return str(errors[l][e])
+            return "0"
+        
         _print("length", "count", "expect", "max.err", "error counts", sep="\t")
         for length, count, estimate in h:
             max_errors = max(errors[length].keys())
-            errs = ' '.join(str(errors[length][e]) for e in range(max_errors+1))
+            errs = ' '.join(errs_to_str(length, e) for e in range(max_errors+1))
             _print(length, count, "{0:.1F}".format(estimate), int(error_rate*min(length, adapter_length)), errs, sep="\t")
         _print()
 
@@ -382,7 +447,7 @@ def generate_report(stats, outfile):
                     adapter["max_error_rate"], adapter["errors_front"])
                 _print()
                 _print("Overview of removed sequences (3' or within)")
-                print_histogram(adapter["errors_back"], len(adapter["sequence"]), stats["N"],
+                print_histogram(adapter["lengths_back"], len(adapter["sequence"]), stats["N"],
                     adapter["max_error_rate"], adapter["errors_back"])
             elif adapter["where"] == LINKED:
                 _print()
