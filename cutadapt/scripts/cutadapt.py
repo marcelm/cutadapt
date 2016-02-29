@@ -996,13 +996,15 @@ def run_cutadapt_serial(reader, writers, modifiers, filters):
 		writers.close()
 
 def run_cutadapt_parallel(reader, writers, modifiers, filters, threads=None, 
-						  batch_size=1000, preserve_order=False, max_wait=60):
+						  batch_size=1000, preserve_order=False, max_wait=60,
+						  read_queue_scaling_factor=5):
 	# undocumented way to force program to run in parallel
 	# mode using only one worker thread
 	if threads <= 0:
 		threads = 1
 	
-	read_queue = Queue()
+	# Limit the size to prevent filling up memory
+	read_queue = Queue(threads * read_queue_scaling_factor) 
 	result_queue = Queue()
 	control = Value('l', 0)
 	
@@ -1035,6 +1037,7 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads=None,
 			batch_index += 1
 			if batch_index == batch_size:
 				num_batches += 1
+				# this blocks if the queue gets full
 				read_queue.put((num_batches, batch))
 				batch = empty_batch.copy()
 				batch_index = 0

@@ -355,6 +355,8 @@ def generate_report(stats, outfile):
 		_print()
 		return False
 	
+    #----------------
+    
 	"""Print report to standard output."""
 	if stats["N"] == 0:
 		_print("No reads processed! Either your input file is empty or you used the wrong -f/--format parameter.")
