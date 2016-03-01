@@ -991,6 +991,7 @@ def create_progress(options):
 	if options.no_progress:
 		return None
 
+	import ProgressBar
 	class MyCounter(progressbar.WidgetBase):
 		def __init__(self, magnitude="K"):
 			self.increment = increment
@@ -1008,14 +1009,14 @@ def create_progress(options):
 			return self._format(data["value"])
 			
 	if options.max_reads:
-		from progressbar import ProgressBar, Timer, AdaptiveETA, Bar, Percentage
-		return ProgressBar(max_value=options.max_reads, widgets=[
-			MyCounter(), "Reads (", Percentage(), ")", Timer(), "elapsed", Bar(), AdaptiveETA()
+		return progressbar.ProgressBar(max_value=options.max_reads, widgets=[
+			MyCounter(), "Reads (", progressbar.Percentage(), ")", progressbar.Timer(), 
+			"elapsed", progressbar.Bar(), progressbar.AdaptiveETA()
 		])
 	else:
-		from progressbar import Timer, AnimatedMarker
 		return ProgressBar(widgets=[
-			MyCounter(), "Reads", Timer(), "elapsed", AnimatedMarker()
+			progressbar.MyCounter(), "Reads", progressbar.Timer(), 
+			"elapsed", progressbar.AnimatedMarker()
 		])
 	
 def summarize_adapters(modifiers):
