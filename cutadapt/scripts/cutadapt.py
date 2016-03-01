@@ -988,7 +988,7 @@ class Writers(object):
 			if writer is not None:
 				writer.close()
 
-def create_progress(options):
+def create_progress(options, counter_magnitude="M"):
 	if options.no_progress:
 		return None
 	
@@ -996,7 +996,7 @@ def create_progress(options):
 	import progressbar.widgets
 	import math
 	class MyCounter(progressbar.widgets.WidgetBase):
-		def __init__(self, magnitude="K"):
+		def __init__(self, magnitude):
 			suffix = ""
 			if magnitude is None:
 				div = 1.0
@@ -1004,19 +1004,19 @@ def create_progress(options):
 				div = float(MAGNITUDE[magnitude][0])
 				suffix = magnitude
 			
-			self._format = lambda val: "{:.1} {}".format(val / div, suffix)
+			self._format = lambda val: "{:.1f} {}".format(val / div, suffix)
 		
 		def __call__(self, progress, data):
 			return self._format(data["value"])
 			
 	if options.max_reads:
-		return progressbar.ProgressBar(max_value=options.max_reads, widgets=[
-			MyCounter(), " Reads (", progressbar.Percentage(), ") ", progressbar.Timer(), 
-			" ", progressbar.Bar(), progressbar.AdaptiveETA()
+		return progressbar.ProgressBar(widgets=[
+			MyCounter(counter_magnitude), " Reads (", progressbar.Percentage(), ") ", 
+			progressbar.Timer(), " ", progressbar.Bar(), progressbar.AdaptiveETA()
 		])
 	else:
 		return progressbar.ProgressBar(widgets=[
-			progressbar.MyCounter(), " Reads", progressbar.Timer(), 
+			progressbar.MyCounter(counter_magnitude), " Reads", progressbar.Timer(), 
 			progressbar.AnimatedMarker()
 		])
 	
@@ -1034,7 +1034,7 @@ def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, pro
 	total_bp2 = 0
 	
 	try:
-		itr = progress(reader) if progress else reader
+		itr = progress(reader, max_reads) if progress else reader
 		for n, record in enumerate(itr, 1):
 			reads, bp = modifiers.modify(record)
 			total_bp1 += bp[0]
@@ -1102,13 +1102,13 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 		batch = empty_batch.copy()
 		num_batches = 0
 		batch_index = 0
-		itr = progress(reader) if progress else reader
+		itr = progress(reader, max_reads) if progress else reader
 		for i, record in enumerate(itr, 1):
 			batch[batch_index] = record
 			batch_index += 1
 			if max_reads is not None and i >= max_reads:
 				break
-			if batch_index == batch_size:
+			if batch_index >= batch_size:
 				num_batches += 1
 				# this blocks if the queue gets full
 				read_queue.put((num_batches, batch))
@@ -1272,7 +1272,7 @@ class WriterThread(Process):
 		try:
 			self._init()
 
-			while 0 <= self.control.value <= len(self.seen_batches):
+			while self.control.value == 0 or self.control.value >= len(self.seen_batches):
 				try:
 					batch_num, records = self.queue.get(timeout=1)
 					self.seen_batches.add(batch_num)
