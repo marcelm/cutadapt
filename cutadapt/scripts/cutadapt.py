@@ -994,6 +994,7 @@ def create_progress(options):
 	
 	import progressbar
 	import progressbar.widgets
+	import math
 	class MyCounter(progressbar.widgets.WidgetBase):
 		def __init__(self, magnitude="K"):
 			suffix = ""
