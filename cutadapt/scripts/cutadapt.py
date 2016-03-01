@@ -596,8 +596,8 @@ def validate_options(options, args, parser):
 		else:
 			raise Exception("Unsupported type {}".format(x))
 	
-	options.max_reads = int_or_str(args.max_reads)
-	options.batch_size = int_or_str(args.batch_size)
+	options.max_reads = int_or_str(options.max_reads)
+	options.batch_size = int_or_str(options.batch_size)
 	
 	return (paired, multiplexed)
 
