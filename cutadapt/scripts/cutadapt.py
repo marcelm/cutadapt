@@ -177,11 +177,12 @@ def main(cmdlineargs=None, default_outfile="-"):
 	if threads == 1:
 		# Run cutadapt normally
 		summary = run_cutadapt_serial(reader, writers, modifiers, filters,
-			options.max_reads)
+			options.max_reads, progress)
 	else:
 		# Run multiprocessing version
 		summary = run_cutadapt_parallel(reader, writers, modifiers, filters,
-			options.max_reads, options.threads, options.batch_size, options.preserve_order)
+			options.max_reads, progress, options.threads, options.batch_size, 
+			options.preserve_order)
 	
 	report = print_report(paired, options, time.clock() - start_time, summary)
 
