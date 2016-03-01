@@ -990,9 +990,10 @@ class Writers(object):
 def create_progress(options):
 	if options.no_progress:
 		return None
-
+	
 	import progressbar
-	class MyCounter(progressbar.WidgetBase):
+	import progressbar.widgets
+	class MyCounter(progressbar.widgets.WidgetBase):
 		def __init__(self, magnitude="K"):
 			self.increment = increment
 			
