@@ -168,11 +168,12 @@ def main(cmdlineargs=None, default_outfile="-"):
 	
 	if threads == 1:
 		# Run cutadapt normally
-		summary = run_cutadapt_serial(reader, writers, modifiers, filters)
+		summary = run_cutadapt_serial(reader, writers, modifiers, filters,
+			options.max_reads)
 	else:
 		# Run multiprocessing version
 		summary = run_cutadapt_parallel(reader, writers, modifiers, filters,
-			options.threads, options.batch_size, options.preserve_order)
+			options.max_reads, options.threads, options.batch_size, options.preserve_order)
 	
 	report = print_report(paired, options, time.clock() - start_time, summary)
 
@@ -189,6 +190,8 @@ def get_option_parser():
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
 			"from file name extension.")
+	parser.add_option("--max-reads", type=int, default=None,
+		help="Maximum number of reads/pairs to process")
 	
 	group = OptionGroup(parser, "Finding adapters:",
 		description="Parameters -a, -g, -b specify adapters to be removed from "
@@ -960,21 +963,21 @@ def summarize_adapters(modifiers):
 		summary[1] = collect_adapter_statistics(mods[1].adapters)
 	return summary
 
-def run_cutadapt_serial(reader, writers, modifiers, filters):
-	n = 0
+def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None):
 	total_bp1 = 0
 	total_bp2 = 0
 	
 	try:
-		for record in reader:
-			n += 1
-			
+		for n, record in enumerate(reader, 1):
 			reads, bp = modifiers.modify(record)
 			total_bp1 += bp[0]
 			total_bp2 += bp[1]
 			
 			dest = filters.filter(*reads)
 			writers.write(dest, *reads)
+			
+			if max_reads is not None and max_reads >= n:
+				break
 		
 		return Summary(
 			collect_writer_statistics(n, total_bp1, total_bp2, writers),
@@ -995,9 +998,9 @@ def run_cutadapt_serial(reader, writers, modifiers, filters):
 		reader.close()
 		writers.close()
 
-def run_cutadapt_parallel(reader, writers, modifiers, filters, threads=None, 
-						  batch_size=1000, preserve_order=False, max_wait=60,
-						  read_queue_scaling_factor=5):
+def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None, 
+						  threads=None,  batch_size=1000, preserve_order=False, 
+						  max_wait=60, read_queue_scaling_factor=5):
 	# undocumented way to force program to run in parallel
 	# mode using only one worker thread
 	if threads <= 0:
@@ -1032,9 +1035,11 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads=None,
 		batch = empty_batch.copy()
 		num_batches = 0
 		batch_index = 0
-		for record in reader:
+		for i, record in enumerate(reader, 1):
 			batch[batch_index] = record
 			batch_index += 1
+			if max_reads is not None and i >= max_reads:
+				break
 			if batch_index == batch_size:
 				num_batches += 1
 				# this blocks if the queue gets full
