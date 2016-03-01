@@ -92,9 +92,9 @@ import sys
 import time
 
 MAGNITUDE = dict(
-	G="000000000",
-	M="000000",
-	K="000"
+	G=(1E9, "000000000"),
+	M=(1E6, "000000"),
+	K=(1E3, "000")
 )
 
 def main(cmdlineargs=None, default_outfile="-"):
@@ -592,7 +592,7 @@ def validate_options(options, args, parser):
 		elif isinstance(x, str):
 			x = x.upper()
 			for a, mag in MAGNITUDE.items():
-				x = x.replace(a, mag)
+				x = x.replace(a, mag[1])
 			return int(x)
 		else:
 			raise Exception("Unsupported type {}".format(x))
@@ -1001,7 +1001,7 @@ def create_progress(options):
 			if magnitude is None:
 				div = 1
 			else:
-				div = MAGNITUDE[magnitude]
+				div = MAGNITUDE[magnitude][0]
 				suffix = magnitude
 			
 			self._format = lambda val: "{}{}".format(math.floor(val / div), suffix)
