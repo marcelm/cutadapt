@@ -999,12 +999,12 @@ def create_progress(options):
 		def __init__(self, magnitude="K"):
 			suffix = ""
 			if magnitude is None:
-				div = 1
+				div = 1.0
 			else:
-				div = MAGNITUDE[magnitude][0]
+				div = float(MAGNITUDE[magnitude][0])
 				suffix = magnitude
 			
-			self._format = lambda val: "{}{}".format(math.floor(val / div), suffix)
+			self._format = lambda val: "{:.1} {}".format(math.floor(val / div), suffix)
 		
 		def __call__(self, progress, data):
 			return self._format(data["value"])
@@ -1115,14 +1115,13 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 				batch = empty_batch.copy()
 				batch_index = 0
 		
-		if batch_index > 0 is not None:
+		if batch_index > 0:
 			num_batches += 1
 			read_queue.put((num_batches, batch[0:batch_index]))
 		
 		# Tell the writer thread the max number of
 		# batches to expect
-		with control.get_lock():
-			control.value = num_batches
+		control.value = num_batches
 		
 		# Wait for the writer thread to complete
 		# and get the summary
@@ -1272,30 +1271,20 @@ class WriterThread(Process):
 	def run(self):
 		try:
 			self._init()
-			while self.control.value >= 0:
-				done = False
-				if 0 < self.control.value <= len(self.seen_batches):
-					done = True
-				else:
-					try:
-						batch = self.queue.get(timeout=1)
-					except Empty:
-						continue
-				
-					if batch is None:
-						done = True
-					else:
-						batch_num, records = batch
-						self.seen_batches.add(batch_num)
-						self.n += len(records)
-						self._process_batch(batch_num, records)
+
+			while 0 <= self.control.value <= len(self.seen_batches):
+				try:
+					batch_num, records = self.queue.get(timeout=1)
+					self.seen_batches.add(batch_num)
+					self.n += len(records)
+					self._process_batch(batch_num, records)
+				except Empty:
+					pass
 			
-				if done:
-					self._no_more_batches()
-					break
-		
-			self.summary_queue.put(collect_writer_statistics(
-				self.n, self.total_bp1, self.total_bp2, self.writers))
+			if self.control.value > 0:
+				self._no_more_batches()
+				self.summary_queue.put(collect_writer_statistics(
+					self.n, self.total_bp1, self.total_bp2, self.writers))
 		finally:
 			self.writers.close()
 	
