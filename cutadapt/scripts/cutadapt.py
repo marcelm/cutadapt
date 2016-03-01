@@ -1004,7 +1004,7 @@ def create_progress(options):
 	if args.max_reads:
 		from progressbar import ProgressBar, Timer, AdaptiveETA, Bar, Percentage
 		return ProgressBar(max_value=args.max_reads, widgets=[
-			MyCounter(), "Reads (", Percentage ")", Timer(), "elapsed", Bar(), AdaptiveETA()
+			MyCounter(), "Reads (", Percentage(), ")", Timer(), "elapsed", Bar(), AdaptiveETA()
 		])
 	else:
 		from progressbar import Timer, AnimatedMarker
