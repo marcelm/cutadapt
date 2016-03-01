@@ -92,8 +92,8 @@ import sys
 import time
 
 MAGNITUDE = dict(
-	G="000000000"
-	M="000000"
+	G="000000000",
+	M="000000",
 	K="000"
 )
 
