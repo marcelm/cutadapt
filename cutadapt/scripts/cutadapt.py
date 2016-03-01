@@ -186,20 +186,10 @@ def main(cmdlineargs=None, default_outfile="-"):
 	report = print_report(paired, options, time.clock() - start_time, summary)
 
 def get_option_parser():
+	# TODO: upgrade to argparse
 	class CutadaptOptionParser(OptionParser):
 		def get_usage(self):
 			return self.usage.lstrip().replace('%version', __version__)
-	
-	def int_or_str(x):
-		if isinstance(x, int):
-			return x
-		elif isinstance(x, str):
-			x = x.upper()
-			for a, mag in MAGNITUDE.items():
-				x = x.replace(a, mag)
-			return int(x)
-		else:
-			raise Exception("Unsupported type {}".format(x))
 	
 	parser = CutadaptOptionParser(usage=__doc__, version=__version__)
 	
@@ -209,7 +199,7 @@ def get_option_parser():
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
 			"from file name extension.")
-	parser.add_option("--max-reads", type=int_or_str, default=None,
+	parser.add_option("--max-reads", default=None,
 		help="Maximum number of reads/pairs to process")
 	parser.add_option("--no-progress", action="store_true", default=False,
 		help="Don't show a progress bar")
@@ -413,7 +403,7 @@ def get_option_parser():
 	group = OptionGroup(parser, "Parallel options")
 	group.add_option("--threads", type=int, default=1, metavar="THREADS",
 		help="Number of threads to use for read trimming. Set to 0 to use max available threads.")
-	group.add_option("--batch-size", type=int_or_str, default=1000, metavar="SIZE",
+	group.add_option("--batch-size", default=1000, metavar="SIZE",
 		help="Number of records to process in each batch")
 	group.add_option("--preserve-order", action="store_true", default=False,
 		help="Preserve order of reads in input files")
@@ -592,6 +582,22 @@ def validate_options(options, args, parser):
 			import progressbar
 		except:
 			args.no_progress = True
+	
+	# TODO: once we switch to argparse, int_or_str can be passed
+	# as the argument type
+	def int_or_str(x):
+		if isinstance(x, int):
+			return x
+		elif isinstance(x, str):
+			x = x.upper()
+			for a, mag in MAGNITUDE.items():
+				x = x.replace(a, mag)
+			return int(x)
+		else:
+			raise Exception("Unsupported type {}".format(x))
+	
+	args.max_reads = int_or_str(args.max_reads)
+	args.batch_size = int_or_str(args.batch_size)
 	
 	return (paired, multiplexed)
 
