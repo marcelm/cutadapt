@@ -1004,7 +1004,7 @@ def create_progress(options):
 				div = float(MAGNITUDE[magnitude][0])
 				suffix = magnitude
 			
-			self._format = lambda val: "{:.1} {}".format(math.floor(val / div), suffix)
+			self._format = lambda val: "{:.1} {}".format(val / div, suffix)
 		
 		def __call__(self, progress, data):
 			return self._format(data["value"])
