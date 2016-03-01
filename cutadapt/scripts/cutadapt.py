@@ -91,6 +91,12 @@ import platform
 import sys
 import time
 
+MAGNITUDE = dict(
+	G="000000000"
+	M="000000"
+	K="000"
+)
+
 def main(cmdlineargs=None, default_outfile="-"):
 	"""
 	Main function that evaluates command-line parameters and iterates
@@ -164,6 +170,8 @@ def main(cmdlineargs=None, default_outfile="-"):
 	if threads is None:
 		threads = min(cpu_count() - 1, 1)
 	
+	progress = create_progress(options)
+	
 	start_time = time.clock()
 	
 	if threads == 1:
@@ -181,7 +189,18 @@ def get_option_parser():
 	class CutadaptOptionParser(OptionParser):
 		def get_usage(self):
 			return self.usage.lstrip().replace('%version', __version__)
-			
+	
+	def int_or_str(x):
+		if isinstance(x, int):
+			return x
+		elif isinstance(x, str):
+			x = x.upper()
+			for a, mag in MAGNITUDE.items():
+				x = x.replace(a, mag)
+			return int(x)
+		else:
+			raise Exception("Unsupported type {}".format(x))
+	
 	parser = CutadaptOptionParser(usage=__doc__, version=__version__)
 	
 	parser.add_option("--debug", action='store_true', default=False,
@@ -190,8 +209,10 @@ def get_option_parser():
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
 			"from file name extension.")
-	parser.add_option("--max-reads", type=int, default=None,
+	parser.add_option("--max-reads", type=int_or_str, default=None,
 		help="Maximum number of reads/pairs to process")
+	parser.add_option("--no-progress", action="store_true", default=False,
+		help="Don't show a progress bar")
 	
 	group = OptionGroup(parser, "Finding adapters:",
 		description="Parameters -a, -g, -b specify adapters to be removed from "
@@ -392,7 +413,7 @@ def get_option_parser():
 	group = OptionGroup(parser, "Parallel options")
 	group.add_option("--threads", type=int, default=1, metavar="THREADS",
 		help="Number of threads to use for read trimming. Set to 0 to use max available threads.")
-	group.add_option("--batch-size", type=int, default=1000, metavar="SIZE",
+	group.add_option("--batch-size", type=int_or_str, default=1000, metavar="SIZE",
 		help="Number of records to process in each batch")
 	group.add_option("--preserve-order", action="store_true", default=False,
 		help="Preserve order of reads in input files")
@@ -565,7 +586,13 @@ def validate_options(options, args, parser):
 		if options.match_read_wildcards:
 			parser.error('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
-
+	
+	if not args.no_progress:
+		try:
+			import progressbar
+		except:
+			args.no_progress = True
+	
 	return (paired, multiplexed)
 
 class Filters(object):
@@ -954,6 +981,37 @@ class Writers(object):
 			if writer is not None:
 				writer.close()
 
+def create_progress(options):
+	if args.no_progress:
+		return None
+
+	class MyCounter(progressbar.WidgetBase):
+		def __init__(self, magnitude="K"):
+			self.increment = increment
+			
+			suffix = ""
+			if magnitude is None:
+				div = 1
+			else:
+				div = MAGNITUDE[magnitude]
+				suffix = magnitude
+			
+			self._format = lambda val: "{}{}".format(math.floor(val / div), suffix)
+		
+		def __call__(self, progress, data):
+			return self._format(data["value"])
+			
+	if args.max_reads:
+		from progressbar import ProgressBar, Timer, AdaptiveETA, Bar, Percentage
+		return ProgressBar(max_value=args.max_reads, widgets=[
+			MyCounter(), "Reads (", Percentage ")", Timer(), "elapsed", Bar(), AdaptiveETA()
+		])
+	else:
+		from progressbar import Timer, AnimatedMarker
+		return ProgressBar(widgets=[
+			MyCounter(), "Reads", Timer(), "elapsed", AnimatedMarker()
+		])
+	
 def summarize_adapters(modifiers):
 	mods = modifiers.get_modifier_pair(ModType.ADAPTER)
 	summary = [{}, {}]
@@ -963,12 +1021,15 @@ def summarize_adapters(modifiers):
 		summary[1] = collect_adapter_statistics(mods[1].adapters)
 	return summary
 
-def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None):
+def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, progress=None):
 	total_bp1 = 0
 	total_bp2 = 0
 	
 	try:
-		for n, record in enumerate(reader, 1):
+		itr = reader
+		if progress:
+			itr = progress(reader)
+		for n, record in enumerate(itr, 1):
 			reads, bp = modifiers.modify(record)
 			total_bp1 += bp[0]
 			total_bp2 += bp[1]
@@ -998,9 +1059,9 @@ def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None):
 		reader.close()
 		writers.close()
 
-def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None, 
-						  threads=None,  batch_size=1000, preserve_order=False, 
-						  max_wait=60, read_queue_scaling_factor=5):
+def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
+						  progress=None, threads=None,  batch_size=1000, 
+						  preserve_order=False, max_wait=60, read_queue_scaling_factor=5):
 	# undocumented way to force program to run in parallel
 	# mode using only one worker thread
 	if threads <= 0:
@@ -1035,7 +1096,10 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 		batch = empty_batch.copy()
 		num_batches = 0
 		batch_index = 0
-		for i, record in enumerate(reader, 1):
+		itr = reader
+		if progress:
+			itr = progress(reader)
+		for i, record in enumerate(itr, 1):
 			batch[batch_index] = record
 			batch_index += 1
 			if max_reads is not None and i >= max_reads:
