@@ -1011,13 +1011,13 @@ def create_progress(options):
 			
 	if options.max_reads:
 		return progressbar.ProgressBar(max_value=options.max_reads, widgets=[
-			MyCounter(), "Reads (", progressbar.Percentage(), ")", progressbar.Timer(), 
-			"elapsed", progressbar.Bar(), progressbar.AdaptiveETA()
+			MyCounter(), " Reads (", progressbar.Percentage(), ") ", progressbar.Timer(), 
+			" ", progressbar.Bar(), progressbar.AdaptiveETA()
 		])
 	else:
 		return progressbar.ProgressBar(widgets=[
-			progressbar.MyCounter(), "Reads", progressbar.Timer(), 
-			"elapsed", progressbar.AnimatedMarker()
+			progressbar.MyCounter(), " Reads", progressbar.Timer(), 
+			progressbar.AnimatedMarker()
 		])
 	
 def summarize_adapters(modifiers):
