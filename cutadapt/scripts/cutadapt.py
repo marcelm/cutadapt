@@ -991,7 +991,7 @@ def create_progress(options):
 	if options.no_progress:
 		return None
 
-	import ProgressBar
+	import progressbar
 	class MyCounter(progressbar.WidgetBase):
 		def __init__(self, magnitude="K"):
 			self.increment = increment
