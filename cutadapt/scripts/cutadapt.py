@@ -1014,7 +1014,7 @@ def create_progress(options):
 			"elapsed", progressbar.Bar(), progressbar.AdaptiveETA()
 		])
 	else:
-		return ProgressBar(widgets=[
+		return progressbar.ProgressBar(widgets=[
 			progressbar.MyCounter(), "Reads", progressbar.Timer(), 
 			"elapsed", progressbar.AnimatedMarker()
 		])
@@ -1033,9 +1033,7 @@ def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, pro
 	total_bp2 = 0
 	
 	try:
-		itr = reader
-		if progress:
-			itr = progress(reader)
+		itr = progress(reader) if progress else reader
 		for n, record in enumerate(itr, 1):
 			reads, bp = modifiers.modify(record)
 			total_bp1 += bp[0]
@@ -1044,7 +1042,7 @@ def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, pro
 			dest = filters.filter(*reads)
 			writers.write(dest, *reads)
 			
-			if max_reads is not None and max_reads >= n:
+			if max_reads is not None and n >= max_reads:
 				break
 		
 		return Summary(
@@ -1103,9 +1101,7 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 		batch = empty_batch.copy()
 		num_batches = 0
 		batch_index = 0
-		itr = reader
-		if progress:
-			itr = progress(reader)
+		itr = progress(reader) if progress else reader
 		for i, record in enumerate(itr, 1):
 			batch[batch_index] = record
 			batch_index += 1
