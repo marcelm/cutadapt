@@ -581,7 +581,7 @@ def validate_options(options, args, parser):
 		try:
 			import progressbar
 		except:
-			args.no_progress = True
+			options.no_progress = True
 	
 	# TODO: once we switch to argparse, int_or_str can be passed
 	# as the argument type
@@ -988,7 +988,7 @@ class Writers(object):
 				writer.close()
 
 def create_progress(options):
-	if args.no_progress:
+	if options.no_progress:
 		return None
 
 	class MyCounter(progressbar.WidgetBase):
@@ -1007,9 +1007,9 @@ def create_progress(options):
 		def __call__(self, progress, data):
 			return self._format(data["value"])
 			
-	if args.max_reads:
+	if options.max_reads:
 		from progressbar import ProgressBar, Timer, AdaptiveETA, Bar, Percentage
-		return ProgressBar(max_value=args.max_reads, widgets=[
+		return ProgressBar(max_value=options.max_reads, widgets=[
 			MyCounter(), "Reads (", Percentage(), ")", Timer(), "elapsed", Bar(), AdaptiveETA()
 		])
 	else:
