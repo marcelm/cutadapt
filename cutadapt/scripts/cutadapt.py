@@ -577,7 +577,7 @@ def validate_options(options, args, parser):
 			parser.error('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
 	
-	if not args.no_progress:
+	if not options.no_progress:
 		try:
 			import progressbar
 		except:
@@ -596,8 +596,8 @@ def validate_options(options, args, parser):
 		else:
 			raise Exception("Unsupported type {}".format(x))
 	
-	args.max_reads = int_or_str(args.max_reads)
-	args.batch_size = int_or_str(args.batch_size)
+	options.max_reads = int_or_str(args.max_reads)
+	options.batch_size = int_or_str(args.batch_size)
 	
 	return (paired, multiplexed)
 
