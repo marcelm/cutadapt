@@ -1133,13 +1133,13 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 			if batch_index >= batch_size:
 				num_batches += 1
 				# this blocks if the queue gets full
-				read_queue.put((num_batches, batch))
+				read_queue.put((num_batches, batch), block=True)
 				batch = empty_batch.copy()
 				batch_index = 0
 		
 		if batch_index > 0:
 			num_batches += 1
-			read_queue.put((num_batches, batch[0:batch_index]))
+			read_queue.put((num_batches, batch[0:batch_index]), block=True)
 		
 		# Tell the writer thread the max number of
 		# batches to expect
@@ -1249,7 +1249,7 @@ class WorkerThread(Process):
 	def run(self):
 		while self.control.value == 0:
 			try:
-				batch_num, records = self.input_queue.get(timeout=self.timeout)
+				batch_num, records = self.input_queue.get(block=True, timeout=self.timeout)
 				result = [self._modify_and_filter(record) for record in records]
 				self.output_queue.put((batch_num, result))
 			except Empty:
