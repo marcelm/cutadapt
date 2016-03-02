@@ -182,7 +182,7 @@ def main(cmdlineargs=None, default_outfile="-"):
 		# Run multiprocessing version
 		summary = run_cutadapt_parallel(reader, writers, modifiers, filters,
 			options.max_reads, progress, options.threads, options.batch_size, 
-			options.preserve_order)
+			options.thread_timeout, options.preserve_order)
 	
 	report = print_report(paired, options, time.clock() - start_time, summary)
 
@@ -408,6 +408,8 @@ def get_option_parser():
 		help="Number of records to process in each batch.")
 	group.add_option("--preserve-order", action="store_true", default=False,
 		help="Preserve order of reads in input files.")
+    group.add_option("--thread-timeout", default=60, metavar="SECONDS",
+        help="Number of seconds threads should wait before exiting if task queue is empty.")
 	parser.add_option_group(group)
 	
 	group = OptionGroup(parser, "Method-specific options")
