@@ -1036,7 +1036,7 @@ def create_progress(options, counter_magnitude="M"):
 		])
 	else:
 		return progressbar.ProgressBar(widgets=[
-			progressbar.MyCounter(counter_magnitude), " Reads", progressbar.Timer(), 
+			MyCounter(counter_magnitude), " Reads", progressbar.Timer(), 
 			progressbar.AnimatedMarker()
 		])
 	
