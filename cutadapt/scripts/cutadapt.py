@@ -1249,13 +1249,18 @@ class WorkerThread(Process):
 		self.timeout = timeout
 	
 	def run(self):
+		waiting = None
 		while self.control.value == 0:
 			try:
-				batch_num, records = self.input_queue.get(block=True, timeout=self.timeout)
+				batch_num, records = self.input_queue.get(block=True, timeout=1)
+				waiting = None
 				result = [self._modify_and_filter(record) for record in records]
 				self.output_queue.put((batch_num, result))
 			except Empty:
-				break
+				if not waiting:
+					waiting = time.time()
+				elif time.time() - waiting >= self.timeout:
+					break
 		
 		if self.control.value == 0:
 			# TODO: log error
@@ -1299,15 +1304,20 @@ class WriterThread(Process):
 	def run(self):
 		try:
 			self._init()
-
+			
+			waiting = None
 			while self.control.value == 0 or self.control.value > len(self.seen_batches):
 				try:
-					batch_num, records = self.queue.get(timeout=self.timeout)
+					batch_num, records = self.queue.get(block=True, timeout=1)
+					waiting = None
 					self.seen_batches.add(batch_num)
 					self.n += len(records)
 					self._process_batch(batch_num, records)
 				except Empty:
-					break
+					if not waiting:
+						waiting = time.time()
+					elif time.time() - waiting >= self.timeout:
+						break
 			
 			if self.control.value == 0:
 				# TODO: log error
