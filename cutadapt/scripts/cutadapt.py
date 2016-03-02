@@ -63,6 +63,8 @@ See http://cutadapt.readthedocs.org/ for full documentation.
 
 # TODO: support reading from a pair of files but writing to interleaved file (including stdout)
 # TODO: finish adding defaults from TrimGalore
+# TODO: implement an autodetect option for adapters similar to TrimGalore? - read first
+# 1M reads, search for common adapters, and pick the one that appears most frequently.
 
 from __future__ import print_function, division, absolute_import
 
@@ -117,10 +119,8 @@ def main(cmdlineargs=None, default_outfile="-"):
 	if not logging.root.handlers:
 		setup_logging(stdout=bool(options.output), quiet=options.quiet)
 	
-	if options.rrbs:
-		set_rrbs_defaults(options)
-	elif options.wgbs:
-		set_wgbs_defaults(options)
+	if options.bisulfite:
+		set_bisulfite_defaults(options)
 	elif options.mirna:
 		set_mirna_defaults(options)
 	
@@ -232,7 +232,7 @@ def get_option_parser():
 			"as with -a. This option is mostly for rescuing failed library "
 			"preparations - do not use if you know which end your adapter was "
 			"ligated to!")
-	group.add_option("-e", "--error-rate", type=float, default=0.1,
+	group.add_option("-e", "--error-rate", type=float, default=None,
 		help="Maximum allowed error rate (no. of errors divided by the length "
 			"of the matching region). Default: %default")
 	group.add_option("--no-indels", action='store_false', dest='indels', default=True,
@@ -296,7 +296,7 @@ def get_option_parser():
 			"discarding too many randomly matching reads!")
 	group.add_option("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
 		help="Discard reads that do not contain the adapter.")
-	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
+	group.add_option("-m", "--minimum-length", type=int, default=None, metavar="LENGTH",
 		help="Discard trimmed reads that are shorter than LENGTH. Reads that "
 			"are too short even before adapter removal are also discarded. In "
 			"colorspace, an initial primer is not counted. Default: 0")
@@ -405,20 +405,18 @@ def get_option_parser():
 	group.add_option("--threads", type=int, default=1, metavar="THREADS",
 		help="Number of threads to use for read trimming. Set to 0 to use max available threads.")
 	group.add_option("--batch-size", default=1000, metavar="SIZE",
-		help="Number of records to process in each batch")
+		help="Number of records to process in each batch.")
 	group.add_option("--preserve-order", action="store_true", default=False,
-		help="Preserve order of reads in input files")
+		help="Preserve order of reads in input files.")
 	parser.add_option_group(group)
 	
 	group = OptionGroup(parser, "Method-specific options")
-	group.add_option("--rrbs", action="store_true", default=False,
-		help="Set default option values for RRBS data")
-	group.add_option("--wgbs", action="store_true", default=False,
-		help="Set default option values for WGBS data")
+	group.add_option("--bisulfite", action="store_true", default=False,
+		help="Set default option values for bisulfite-treated data.")
 	group.add_option("--non-directional", action="store_true", default=False,
-		help="Bisulfite sequencing libraries are non-directional")
+		help="Bisulfite sequencing libraries are non-directional.")
 	group.add_option("--mirna", action="store_true", default=False,
-		help="Set default option values for miRNA data")
+		help="Set default option values for miRNA data.")
 	parser.add_option_group(group)
 	
 	return parser
@@ -435,16 +433,18 @@ def setup_logging(stdout=False, quiet=False):
 	logging.getLogger().setLevel(logging.INFO)
 	logging.getLogger().addHandler(stream_handler)
 
-def set_rrbs_defaults(options):
-	pass
-
-def set_wgbs_defaults(options):
-	pass
+def set_bisulfite_defaults(options):
+	if options.quality_cutoff is None:
+		options.quality_cutoff = str((options.quality_base - 33) + 20)
 
 def set_mirna_defaults(options):
-	if options.minimum_length == 0 or options.minimum_length > 16:
+	if options.adapter is None and options.front is None and options.anywhere is None:
+		options.adapter = ['TGGAATTCTCGG'] # illumina small RNA adapter
+	if options.quality_cutoff is None:
+		options.quality_cutoff = "20"
+	if options.minimum_length is None:
 		options.minimum_length = 16
-	if options.error_rate < 0.12:
+	if options.error_rate is None:
 		options.error_rate = 0.12
 
 def validate_options(options, args, parser):
@@ -545,19 +545,28 @@ def validate_options(options, args, parser):
 		options.double_encode = True
 		options.trim_primer = True
 		options.suffix = "/1"
+	
 	if options.strip_f3 or options.maq:
 		options.strip_suffix.append('_F3')
+	
 	if options.zero_cap is None:
 		options.zero_cap = options.colorspace
+	
 	if options.trim_primer and not options.colorspace:
 		parser.error("Trimming the primer makes only sense in colorspace.")
+	
 	if options.double_encode and not options.colorspace:
 		parser.error("Double-encoding makes only sense in colorspace.")
+	
 	if options.anywhere and options.colorspace:
 		parser.error("Using --anywhere with colorspace reads is currently not supported (if you "
 			"think this may be useful, contact the author).")
-	if not (0 <= options.error_rate <= 1.):
+	
+	if options.error_rate is None:
+		options.error_rate = 0.1
+	elif not (0 <= options.error_rate <= 1.):
 		parser.error("The maximum error rate must be between 0 and 1.")
+	
 	if options.overlap < 1:
 		parser.error("The overlap must be at least 1.")
 
@@ -628,7 +637,7 @@ class Filters(object):
 def create_filters(options, paired, min_affected):
 	filters = Filters(FilterFactory(paired, min_affected))
 	
-	if options.minimum_length > 0:
+	if options.minimum_length is not None and options.minimum_length > 0:
 		filters.add_filter(FilterType.TOO_SHORT, options.minimum_length)
 	
 	if options.maximum_length < sys.maxsize:
@@ -716,7 +725,7 @@ def create_modifiers(options, paired, qualities, has_qual_file, parser):
 	if not adapters1 and not adapters2 and not options.quality_cutoff and \
 			options.nextseq_trim is None and \
 			options.cut == [] and options.cut2 == [] and \
-			options.minimum_length == 0 and \
+			(options.minimum_length is None or options.minimum_length <= 0) and \
 			options.maximum_length == sys.maxsize and \
 			not has_qual_file and \
 			options.max_n == -1 and not options.trim_n:
@@ -743,9 +752,16 @@ def create_modifiers(options, paired, qualities, has_qual_file, parser):
 		modifiers.add_modifier_pair(ModType.ADAPTER, (adapters1, adapters2), 
 			times=options.times, action=options.action)
 	
-	if options.rrbs or options.wgbs:
-		# trim two additional bases from adapter-trimmed sequences
-		modifiers.add_modifier(ModType.CLIP_ADAPTER_TRIMMED, (-2,))
+	if options.bisulfite:
+		# For non-directional RRBS/WGBS libraries (which implies that they were digested
+		# using MspI), sequences starting with either 'CAA' or 'CGA' will have 2 bp 
+		# trimmed off either end to remove potential methylation-biased bases from the 
+		# end-repair reaction. 
+		# For all RRBS/WGBS libraries, sequences that are adapter trimmed and are either
+		# directional or do not start with CAA/CGA, 2 bp are are removed from the 3'
+		# end to remove potential methylation-biased bases from the end-repair reaction.
+		# TODO: log messge?
+		modifiers.add_modifier(ModType.BISULFITE, non_directional=options.non_directional)
 	
 	if options.trim_n:
 		modifiers.add_modifier(ModType.TRIM_END_N)
@@ -816,7 +832,9 @@ class Writers(object):
 		self._rest_writer = None
 		self.discarded = 0
 		
-		if options.minimum_length > 0 and options.too_short_output:
+		if (options.minimum_length is not None 
+				and options.minimum_length > 0 
+				and options.too_short_output):
 			self.add_seq_writer(FilterType.TOO_SHORT,
 				options.too_short_output, options.too_short_paired_output)
 	
@@ -1066,12 +1084,16 @@ def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, pro
 		writers.close()
 
 def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
-						  progress=None, threads=None,  batch_size=1000, 
+						  progress=None, threads=None,  batch_size=1000, timeout=None,
 						  preserve_order=False, max_wait=60, read_queue_scaling_factor=5):
 	# undocumented way to force program to run in parallel
 	# mode using only one worker thread
 	if threads <= 0:
 		threads = 1
+	
+	if timeout is None:
+		# set timeout based on batch size
+		timeout = max(60, int(batch_size * 0.05))
 	
 	# Limit the size to prevent filling up memory
 	read_queue = Queue(threads * read_queue_scaling_factor) 
@@ -1081,19 +1103,19 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 	worker_threads = set()
 	worker_summary_queue = Queue()
 	for i in range(threads):
-		worker = WorkerThread(i, modifiers, filters, 
-			read_queue, result_queue, worker_summary_queue, control)
+		worker = WorkerThread(i, modifiers, filters, read_queue, 
+			result_queue, worker_summary_queue, control, timeout)
 		worker_threads.add(worker)
 		worker.start()
 	
 	# shared array to hold n, total_bp1, total_bp2
 	writer_summary_queue = Queue()
 	if preserve_order:
-		writer_thread = OrderPreservingWriterThread(
-			writers, result_queue, writer_summary_queue, control)
+		writer_thread = OrderPreservingWriterThread(writers, 
+			result_queue, writer_summary_queue, control, timeout)
 	else:
-		writer_thread = WriterThread(
-			writers, result_queue, writer_summary_queue, control)
+		writer_thread = WriterThread(writers, 
+			result_queue, writer_summary_queue, control, timeout)
 	writer_thread.start()
 	
 	try:
@@ -1212,8 +1234,8 @@ class WorkerThread(Process):
 	control: shared value with value 0 unless the thread
 	should die (< 0) or there are no more batches coming (> 0).
 	"""
-	def __init__(self, index, modifiers, filters, 
-				 input_queue, output_queue, summary_queue, control):
+	def __init__(self, index, modifiers, filters, input_queue, output_queue, 
+				summary_queue, control, timeout=60):
 		super(WorkerThread, self).__init__()
 		self.index = index
 		self.modifiers = modifiers
@@ -1222,18 +1244,21 @@ class WorkerThread(Process):
 		self.output_queue = output_queue
 		self.summary_queue = summary_queue
 		self.control = control
+		self.timeout = timeout
 	
 	def run(self):
-		while self.control.value >= 0:
+		while self.control.value == 0:
 			try:
-				batch_num, records = self.input_queue.get(timeout=1)
+				batch_num, records = self.input_queue.get(timeout=self.timeout)
 				result = [self._modify_and_filter(record) for record in records]
 				self.output_queue.put((batch_num, result))
 			except Empty:
-				if self.control.value > 0:
-					break
+				break
 		
-		if self.control.value > 0:
+		if self.control.value == 0:
+			# TODO: log error
+			print("Warning: worker thread exiting early due to no batches available")
+		elif self.control.value > 0:
 			process_stats = collect_process_statistics(self.modifiers, self.filters)
 			adapter_stats = summarize_adapters(self.modifiers)
 			self.summary_queue.put((self.index, process_stats, adapter_stats))
@@ -1257,7 +1282,7 @@ class WriterThread(Process):
 	summary: a shared array to hold n (number of records processed),
 	total_bp1 and total_bp2 (total read1 and read2 bp written).
 	"""
-	def __init__(self, writers, input_queue, summary_queue, control):
+	def __init__(self, writers, input_queue, summary_queue, control, timeout=60):
 		super(WriterThread, self).__init__()
 		self.writers = writers
 		self.queue = input_queue
@@ -1267,6 +1292,7 @@ class WriterThread(Process):
 		self.total_bp1 = 0
 		self.total_bp2 = 0
 		self.seen_batches = set()
+		self.timeout = timeout
 	
 	def run(self):
 		try:
@@ -1274,14 +1300,17 @@ class WriterThread(Process):
 
 			while self.control.value == 0 or self.control.value > len(self.seen_batches):
 				try:
-					batch_num, records = self.queue.get(timeout=1)
+					batch_num, records = self.queue.get(timeout=self.timeout)
 					self.seen_batches.add(batch_num)
 					self.n += len(records)
 					self._process_batch(batch_num, records)
 				except Empty:
-					pass
+					break
 			
-			if self.control.value > 0:
+			if self.control.value == 0:
+				# TODO: log error
+				print("Warning: writer thread exiting early due to no results available")
+			elif self.control.value > 0:
 				self._no_more_batches()
 				self.summary_queue.put(collect_writer_statistics(
 					self.n, self.total_bp1, self.total_bp2, self.writers))

@@ -19,6 +19,13 @@ SUFFIX = align.START_WITHIN_SEQ2
 ANYWHERE = align.SEMIGLOBAL
 LINKED = 'linked'
 
+DEFAULT_ADAPTERS = dict(
+	nextera='CTGTCTCTTATA',
+	illumina='AGATCGGAAGAGC'
+)
+
+def get_sequence_for_spec(spec):
+	return DEFAULT_ADAPTERS.get(spec.lower(), spec)
 
 def parse_braces(sequence):
 	"""
@@ -83,7 +90,7 @@ class AdapterParser(object):
 		"""
 		if name is None:
 			name, spec = self._extract_name(spec)
-		sequence = spec
+		sequence = get_sequence_for_spec(spec)
 		types = dict(back=BACK, front=FRONT, anywhere=ANYWHERE)
 		if cmdline_type not in types:
 			raise ValueError('cmdline_type cannot be {0!r}'.format(cmdline_type))

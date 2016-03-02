@@ -261,6 +261,37 @@ class NEndTrimmer(object):
 		end_cut = end_cut.start() if end_cut else len(read)
 		return read[start_cut:end_cut]
 
+class BisulfiteTrimmer(object):
+	"""
+	For non-directional RRBS/WGBS libraries (which implies that they were digested
+	using MspI), sequences starting with either 'CAA' or 'CGA' will have 2 bp 
+	trimmed off either end to remove potential methylation-biased bases from the 
+	end-repair reaction. 
+	For all RRBS/WGBS libraries, sequences that are adapter trimmed and are either
+	directional or do not start with CAA/CGA, 2 bp are are removed from the 3'
+	end to remove potential methylation-biased bases from the end-repair reaction.
+	"""
+	_regex = re.compile("^C[AG]A")
+	
+	
+	def __init__(self, trim_5p=2, trim_3p=2, non_directional=False):
+		self.non_directional = non_directional
+		self.trim_5p = trim_5p
+		self.trim_3p = trim_3p
+		self._3pTrimmer = UnconditionalCutter(-1 * trim_3p)
+		self._bothTrimmer = UnconditionalCutter((trim_5p, -1 * trim_3p))
+	
+	def __call__(self, read):
+		trimmer = None
+		if (self.non_directional 
+				and len(read) >= (self.trim_5p + self.trim_3p) 
+				and self.regex.match(read.sequence)):
+			trimmer = self._bothTrimmer
+		elif read.match and len(read) >= self.trim_3p:
+			trimmer = self._3pTrimmer
+		
+		return trimmer(read) if trimmer else read
+
 def create_modifier(mod_type, *args, **kwargs):
 	return mod_type.value(*args, **kwargs)
 
@@ -278,3 +309,4 @@ class ModType(Enum):
 	CS_DOUBLE_ENCODE		= DoubleEncoder
 	CS_TRIM_PRIMER			= PrimerTrimmer
 	TRIM_END_N				= NEndTrimmer
+	BISULFITE				= BisulfiteTrimmer
