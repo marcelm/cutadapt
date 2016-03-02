@@ -4,6 +4,12 @@
 .. image:: https://img.shields.io/pypi/v/cutadapt.svg?branch=master
     :target: https://pypi.python.org/pypi/cutadapt
 
+=================
+cutadapt-parallel
+=================
+
+This is a working implementation of a multi-threaded version of Cutadapt. It is based on a fork of Cutadapt 1.9.2_dev. Most of the changes here will be integrated into the main Cutadapt program, however some options/functionality may change in the process.
+
 ========
 cutadapt
 ========
