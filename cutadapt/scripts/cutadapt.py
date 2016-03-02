@@ -598,7 +598,7 @@ def validate_options(options, args, parser):
 	# TODO: once we switch to argparse, int_or_str can be passed
 	# as the argument type
 	def int_or_str(x):
-		if isinstance(x, int):
+		if x is None or isinstance(x, int):
 			return x
 		elif isinstance(x, str):
 			x = x.upper()
