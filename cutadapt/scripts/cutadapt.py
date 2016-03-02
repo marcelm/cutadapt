@@ -1272,7 +1272,7 @@ class WriterThread(Process):
 		try:
 			self._init()
 
-			while self.control.value == 0 or self.control.value >= len(self.seen_batches):
+			while self.control.value == 0 or self.control.value > len(self.seen_batches):
 				try:
 					batch_num, records = self.queue.get(timeout=1)
 					self.seen_batches.add(batch_num)
