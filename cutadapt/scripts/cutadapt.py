@@ -408,8 +408,8 @@ def get_option_parser():
 		help="Number of records to process in each batch.")
 	group.add_option("--preserve-order", action="store_true", default=False,
 		help="Preserve order of reads in input files.")
-    group.add_option("--thread-timeout", default=60, metavar="SECONDS",
-        help="Number of seconds threads should wait before exiting if task queue is empty.")
+	group.add_option("--thread-timeout", default=60, metavar="SECONDS",
+		help="Number of seconds threads should wait before exiting if task queue is empty.")
 	parser.add_option_group(group)
 	
 	group = OptionGroup(parser, "Method-specific options")
@@ -1086,7 +1086,7 @@ def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, pro
 		writers.close()
 
 def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
-						  progress=None, threads=None,  batch_size=1000, timeout=None,
+						  progress=None, threads=None,	batch_size=1000, timeout=None,
 						  preserve_order=False, max_wait=60, read_queue_scaling_factor=5):
 	# undocumented way to force program to run in parallel
 	# mode using only one worker thread
