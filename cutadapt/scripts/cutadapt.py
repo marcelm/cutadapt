@@ -94,6 +94,7 @@ import sys
 import time
 
 import yappi
+#from memory_profiler import profile
 
 MAGNITUDE = dict(
 	G=(1E9, "000000000"),
@@ -101,6 +102,8 @@ MAGNITUDE = dict(
 	K=(1E3, "000")
 )
 
+#fp=open('memory_profiler.log','w+')
+#@profile(stream=fp)
 def main(cmdlineargs=None, default_outfile="-"):
 	"""
 	Main function that evaluates command-line parameters and iterates
@@ -323,7 +326,7 @@ def get_option_parser():
 	group = OptionGroup(parser, "Output")
 	group.add_option("--quiet", default=False, action='store_true',
 		help="Print only error messages.")
-	group.add_option("-o", "--output", metavar="FILE",
+	group.add_option("-o", "--output", default="-", metavar="FILE",
 		help="Write trimmed reads to FILE. FASTQ or FASTA format is chosen "
 			"depending on input. The summary report is sent to standard output. "
 			"Use '{name}' in FILE to demultiplex reads into multiple "
@@ -598,7 +601,7 @@ def validate_options(options, args, parser):
 			parser.error('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
 	
-	if options.quiet:
+	if options.quiet or options.output == "-":
 		options.no_progress = True
 	elif not options.no_progress:
 		try:
@@ -1393,17 +1396,3 @@ class OrderPreservingWriterThread(WriterThread):
 
 if __name__ == '__main__':
 	main()
-
-def memory_profile(outfile):
-	with open(outfile, "w") as o:
-		objs = gc.get_objects()
-		for o in objs:
-			print("Class\tSize (k)\tValue")
-			size = sys.getsizeof(o, None)
-			size = str(round(size / 1000.0, 1)) if size else "Unknown"
-			s = str(obj)
-			print("{}\t{}\t{}".format(
-				obj.__class__,
-				size,
-				s if len(s) < 100 else s[0:100]
-			), file=o)
