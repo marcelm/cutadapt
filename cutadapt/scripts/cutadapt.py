@@ -85,7 +85,7 @@ from cutadapt.compat import next
 from collections import OrderedDict
 from heapq import nsmallest
 import logging
-from multiprocessing import Process, Queue, Value, cpu_count
+from multiprocessing import Process, JoinableQueue, Value, cpu_count
 from queue import Empty, Full
 from optparse import OptionParser, OptionGroup
 import os
@@ -1113,11 +1113,11 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 		timeout = max(60, int(batch_size * 0.05))
 	
 	# Limit queue sizes to prevent filling up memory
-	read_queue = Queue(threads * read_queue_thread_scale) 
-	result_queue = Queue(threads * result_queue_thread_scale)
+	read_queue = JoinableQueue(threads * read_queue_thread_scale) 
+	result_queue = JoinableQueue(threads * result_queue_thread_scale)
 	# Queue for threads to send summary information back to main process
-	worker_summary_queue = Queue()
-	writer_summary_queue = Queue()
+	worker_summary_queue = JoinableQueue()
+	writer_summary_queue = JoinableQueue()
 	# Shared variable for telling threads to stop
 	control = Value('l', 0)
 	
@@ -1159,27 +1159,40 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 			num_batches += 1
 			read_queue.put((num_batches, batch[0:batch_index]), block=True)
 		
-		# Tell the writer thread the max number of
-		# batches to expect
+		# Tell the writer thread the max number of batches to expect
 		control.value = num_batches
 		
-		# Wait for the writer thread to complete
-		# and get the summary
+		# Done writing to the input queue
+		read_queue.close()
+		read_queue.join()
+		
+		# Wait for the writer summary
+		writer_summary = writer_summary_queue.get(block=True)
+		if writer_summary is None:
+			raise Excpetion("Writer thread died unexpectedly")
+		summary = Summary(writer_summary)
+		writer_summary_queue.task_done()
+		writer_summary_queue.close()
+		
+		# Wait for the writer thread to end
 		writer_thread.join()
-		summary = Summary(writer_summary_queue.get())
 		
-		# wait for worker threads to complete and get
-		# their summaries
-		for worker in worker_threads:
-			worker.join()
-		
-		# add summary information from worker threads
+		# Wait for summary information from worker threads
 		seen_summaries = set()
 		while len(seen_summaries) < threads:
-			thread_index, process_stats, adapter_stats = worker_summary_queue.get()
-			seen_summaries.add(thread_index)
-			summary.add_process_stats(process_stats)
-			summary.add_adapter_stats(adapter_stats)
+			summary = worker_summary_queue.get(block=True)
+			if summary is None:
+				raise Exception("Worker thread died unexpectedly")
+			seen_summaries.add(summary[0])
+			summary.add_process_stats(summary[1])
+			summary.add_adapter_stats(summary[2])
+			worker_summary_queue.task_done()
+		assert worker_summary_queue.empty()
+		worker_summary_queue.close()
+		
+		# wait for worker threads to complete and get
+		for worker in worker_threads:
+			worker.join()
 		
 		return summary.finish()
 	
@@ -1267,22 +1280,23 @@ class WorkerThread(Process):
 	def run(self):
 		def process_next_batch():
 			waiting = None
-			while self.control.value == 0:
+			while self.control.value >= 0:
 				try:
 					batch_num, records = self.input_queue.get(block=True, timeout=1)
 					result = [self._modify_and_filter(record) for record in records]
+					self.input_queue.task_done()
 					return (batch_num, result)
 				except Empty:
-					if not waiting:
+					if self.control.value == 0 and not waiting:
 						waiting = time.time()
-					elif time.time() - waiting >= self.timeout:
+					elif (self.control.value > 0) or (time.time() - waiting >= self.timeout):
 						break
 			return None
 		
 		def send_result(result):
 			if result is not None:
 				waiting = None
-				while self.control.value == 0:
+				while self.control.value >= 0:
 					try:
 						self.output_queue.put(result, block=True, timeout=1)
 						return True
@@ -1297,14 +1311,20 @@ class WorkerThread(Process):
 		while send_result(process_next_batch()):
 			processed_batches += 1
 		
+		self.output_queue.close()
+		self.output_queue.join()
+		
 		if self.control.value == 0:
 			# TODO: log error
 			print("Warning: worker thread {} exiting early "
 				"due to no batches available".format(self.index))
+			self.summary_queue.put(None)
 		elif self.control.value > 0:
 			process_stats = collect_process_statistics(self.modifiers, self.filters)
 			adapter_stats = summarize_adapters(self.modifiers)
 			self.summary_queue.put((self.index, process_stats, adapter_stats))
+		
+		self.summary_queue.close()
 	
 	def _modify_and_filter(self, record):
 		reads, bp = self.modifiers.modify(record)
@@ -1349,6 +1369,7 @@ class WriterThread(Process):
 					self.seen_batches.add(batch_num)
 					self.n += len(records)
 					self._process_batch(batch_num, records)
+					self.queue.task_done()
 				except Empty:
 					if not waiting:
 						waiting = time.time()
@@ -1358,12 +1379,16 @@ class WriterThread(Process):
 			if self.control.value == 0:
 				# TODO: log error
 				print("Warning: writer thread exiting early due to no results available")
+				self.summary_queue.put(None)
 			elif self.control.value > 0:
 				self._no_more_batches()
 				self.summary_queue.put(collect_writer_statistics(
 					self.n, self.total_bp1, self.total_bp2, self.writers))
 		finally:
 			self.writers.close()
+		
+		self.summary_queue.close()
+		self.summary_queue.join()
 	
 	def _init(self):
 		pass
