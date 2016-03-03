@@ -838,7 +838,7 @@ class PairedEndWriter(SingleEndWriter):
 		self.read2_bp += len(read2)
 
 class Writers(object):
-	def __init__(self, options, multiplexed, qualities, default_outfile, buffer_size):
+	def __init__(self, options, multiplexed, qualities, default_outfile):
 		self.multiplexed = multiplexed
 		self.output = options.output
 		self.seqio_open_args = dict(
