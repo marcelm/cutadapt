@@ -1189,12 +1189,12 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 		# Wait for summary information from worker threads
 		seen_summaries = set()
 		while len(seen_summaries) < threads:
-			summary = worker_summary_queue.get(block=True)
-			if summary is None:
+			worker_summary = worker_summary_queue.get(block=True)
+			if worker_summary is None:
 				raise Exception("Worker thread died unexpectedly")
-			seen_summaries.add(summary[0])
-			summary.add_process_stats(summary[1])
-			summary.add_adapter_stats(summary[2])
+			seen_summaries.add(worker_summary[0])
+			summary.add_process_stats(worker_summary[1])
+			summary.add_adapter_stats(worker_summary[2])
 			worker_summary_queue.task_done()
 		assert worker_summary_queue.empty()
 		worker_summary_queue.close()
