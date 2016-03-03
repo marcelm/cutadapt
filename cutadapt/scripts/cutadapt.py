@@ -86,7 +86,7 @@ from collections import OrderedDict
 from heapq import nsmallest
 import logging
 from multiprocessing import Process, Queue, Value, cpu_count
-from queue import Empty
+from queue import Empty, Full
 from optparse import OptionParser, OptionGroup
 import os
 import platform
@@ -1265,20 +1265,37 @@ class WorkerThread(Process):
 		self.timeout = timeout
 	
 	def run(self):
-		waiting = None
-		processed = 0
-		while self.control.value == 0:
-			try:
-				batch_num, records = self.input_queue.get(block=True, timeout=1)
+		def process_next_batch():
+			waiting = None
+			while self.control.value == 0:
+				try:
+					batch_num, records = self.input_queue.get(block=True, timeout=1)
+					result = [self._modify_and_filter(record) for record in records]
+					return (batch_num, result)
+				except Empty:
+					if not waiting:
+						waiting = time.time()
+					elif time.time() - waiting >= self.timeout:
+						break
+			return None
+		
+		def send_result(result):
+			if result is not None:
 				waiting = None
-				result = [self._modify_and_filter(record) for record in records]
-				processed += 1
-				self.output_queue.put((batch_num, result))
-			except Empty:
-				if not waiting:
-					waiting = time.time()
-				elif time.time() - waiting >= self.timeout:
-					break
+				while self.control.value == 0:
+					try:
+						self.output_queue.put(result, block=True, timeout=1)
+						return True
+					except Full:
+						if not waiting:
+							waiting = time.time()
+						elif time.time() - waiting >= self.timeout:
+							break
+			return False
+		
+		processed_batches = 0
+		while send_result(process_next_batch()):
+			processed_batches += 1
 		
 		if self.control.value == 0:
 			# TODO: log error
