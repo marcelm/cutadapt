@@ -93,6 +93,8 @@ import platform
 import sys
 import time
 
+import yappi
+
 MAGNITUDE = dict(
 	G=(1E9, "000000000"),
 	M=(1E6, "000000"),
@@ -107,6 +109,8 @@ def main(cmdlineargs=None, default_outfile="-"):
 	default_outfile is the file to which trimmed reads are sent if the ``-o``
 	parameter is not used.
 	"""
+	yappi.start()
+	
 	parser = get_option_parser()
 	
 	if cmdlineargs is None:
@@ -183,9 +187,14 @@ def main(cmdlineargs=None, default_outfile="-"):
 		summary = run_cutadapt_parallel(reader, writers, modifiers, filters,
 			options.max_reads, progress, options.threads, options.batch_size, 
 			options.thread_timeout, options.preserve_order)
-	
+	memory_profile("MainThread.end.profile.txt")
 	report = print_report(paired, options, time.clock() - start_time, summary)
-
+	
+	yappi.stop()
+	with open("yappi.out", "w") as o:
+		print(str(yappi.get_func_stats()), file=o)
+		print(str(yappi.get_thread_stats()), file=o)
+	
 def get_option_parser():
 	# TODO: upgrade to argparse
 	class CutadaptOptionParser(OptionParser):
@@ -589,7 +598,9 @@ def validate_options(options, args, parser):
 			parser.error('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
 	
-	if not options.no_progress:
+	if options.quiet:
+		options.no_progress = True
+	elif not options.no_progress:
 		try:
 			import progressbar
 		except:
@@ -1134,6 +1145,8 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 				break
 			if batch_index >= batch_size:
 				num_batches += 1
+				if num_batches == 1:
+					memory_profile("MainThread.running.profile.txt")
 				# this blocks if the queue gets full
 				read_queue.put((num_batches, batch), block=True)
 				batch = empty_batch.copy()
@@ -1250,11 +1263,15 @@ class WorkerThread(Process):
 	
 	def run(self):
 		waiting = None
+		processed = 0
 		while self.control.value == 0:
 			try:
 				batch_num, records = self.input_queue.get(block=True, timeout=1)
 				waiting = None
 				result = [self._modify_and_filter(record) for record in records]
+				processed += 1
+				if processed == 1:
+					memory_profile("WorkerThread{}.running.profile.txt".format(self.index))
 				self.output_queue.put((batch_num, result))
 			except Empty:
 				if not waiting:
@@ -1264,8 +1281,10 @@ class WorkerThread(Process):
 		
 		if self.control.value == 0:
 			# TODO: log error
-			print("Warning: worker thread exiting early due to no batches available")
+			print("Warning: worker thread {} exiting early "
+				"due to no batches available".format(self.index))
 		elif self.control.value > 0:
+			memory_profile("WorkerThread{}.end.profile.txt".format(self.index))
 			process_stats = collect_process_statistics(self.modifiers, self.filters)
 			adapter_stats = summarize_adapters(self.modifiers)
 			self.summary_queue.put((self.index, process_stats, adapter_stats))
@@ -1324,6 +1343,7 @@ class WriterThread(Process):
 				print("Warning: writer thread exiting early due to no results available")
 			elif self.control.value > 0:
 				self._no_more_batches()
+				memory_profile("WriterThread.profile.txt")
 				self.summary_queue.put(collect_writer_statistics(
 					self.n, self.total_bp1, self.total_bp2, self.writers))
 		finally:
@@ -1373,3 +1393,17 @@ class OrderPreservingWriterThread(WriterThread):
 
 if __name__ == '__main__':
 	main()
+
+def memory_profile(outfile):
+	with open(outfile, "w") as o:
+		objs = gc.get_objects()
+		for o in objs:
+			print("Class\tSize (k)\tValue")
+			size = sys.getsizeof(o, None)
+			size = str(round(size / 1000.0, 1)) if size else "Unknown"
+			s = str(obj)
+			print("{}\t{}\t{}".format(
+				obj.__class__,
+				size,
+				s if len(s) < 100 else s[0:100]
+			), file=o)
