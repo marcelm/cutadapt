@@ -326,7 +326,7 @@ def get_option_parser():
 	group = OptionGroup(parser, "Output")
 	group.add_option("--quiet", default=False, action='store_true',
 		help="Print only error messages.")
-	group.add_option("-o", "--output", default="-", metavar="FILE",
+	group.add_option("-o", "--output", metavar="FILE",
 		help="Write trimmed reads to FILE. FASTQ or FASTA format is chosen "
 			"depending on input. The summary report is sent to standard output. "
 			"Use '{name}' in FILE to demultiplex reads into multiple "
@@ -352,6 +352,9 @@ def get_option_parser():
 			"output to same file as trimmed reads")
 	group.add_option("--report-file", default=None, metavar="FILE",
 		help="Write report to file rather than stdout/stderr.")
+	group.add_option("--file-buffer-size", type=int, default=1024*64, metavar="SIZE",
+		help="Buffer size to use for file I/O; a larger buffer can potentially improve "
+			"speed by reducing the number of I/O operations.")
 	parser.add_option_group(group)
 	
 	group = OptionGroup(parser, "Colorspace options")
@@ -601,13 +604,16 @@ def validate_options(options, args, parser):
 			parser.error('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
 	
-	if options.quiet or options.output == "-":
+	if options.quiet or options.output is None or options.output == "-":
 		options.no_progress = True
 	elif not options.no_progress:
 		try:
 			import progressbar
 		except:
 			options.no_progress = True
+	
+	if options.file_buffer_size < io.DEFAULT_BUFFER_SIZE:
+		parser.error("File buffer size must be at least {}".format(io.DEFAULT_BUFFER_SIZE))
 	
 	# TODO: once we switch to argparse, int_or_str can be passed
 	# as the argument type
@@ -831,7 +837,7 @@ class PairedEndWriter(SingleEndWriter):
 		self.read2_bp += len(read2)
 
 class Writers(object):
-	def __init__(self, options, multiplexed, qualities, default_outfile, buffer_size=1024*64):
+	def __init__(self, options, multiplexed, qualities, default_outfile, buffer_size):
 		self.multiplexed = multiplexed
 		self.output = options.output
 		self.seqio_open_args = dict(
@@ -848,7 +854,7 @@ class Writers(object):
 		self.writers = {}
 		self._rest_writer = None
 		self.discarded = 0
-		self.buffer_size = buffer_size
+		self.buffer_size = options.file_buffer_size
 		
 		if (options.minimum_length is not None 
 				and options.minimum_length > 0 
@@ -894,6 +900,7 @@ class Writers(object):
 		return self.writers[paths]
 	
 	def get_mux_writer(self, name):
+		assert self.multiplexed
 		path = self.output.format(name=name)
 		if path not in self.writers:
 			self.writers[path] = self._create_seq_writer(path)
