@@ -176,7 +176,7 @@ class SequenceReader(object):
 	"""Read possibly compressed files containing sequences"""
 	_close_on_exit = False
 
-	def __init__(self, file, buffer_size=buffer_size):
+	def __init__(self, file, buffer_size=io.DEFAULT_BUFFER_SIZE):
 		"""
 		file is a path or a file-like object. In both cases, the file may
 		be compressed (.gz, .bz2, .xz).
