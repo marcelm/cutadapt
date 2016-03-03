@@ -84,12 +84,13 @@ from cutadapt.compat import next
 
 from collections import OrderedDict
 from heapq import nsmallest
+import io
 import logging
 from multiprocessing import Process, JoinableQueue, Value, cpu_count
-from queue import Empty, Full
 from optparse import OptionParser, OptionGroup
 import os
 import platform
+from queue import Empty, Full
 import sys
 import time
 
