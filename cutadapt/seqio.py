@@ -9,7 +9,7 @@ TODO
 """
 from __future__ import print_function, division, absolute_import
 import sys
-import os
+import io
 from os.path import splitext
 from .xopen import xopen
 from .compat import zip, basestring
