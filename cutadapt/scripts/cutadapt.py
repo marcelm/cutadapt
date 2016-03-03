@@ -94,7 +94,6 @@ import sys
 import time
 
 import yappi
-#from memory_profiler import profile
 
 MAGNITUDE = dict(
 	G=(1E9, "000000000"),
@@ -102,6 +101,7 @@ MAGNITUDE = dict(
 	K=(1E3, "000")
 )
 
+#from memory_profiler import profile
 #fp=open('memory_profiler.log','w+')
 #@profile(stream=fp)
 def main(cmdlineargs=None, default_outfile="-"):
@@ -1101,7 +1101,8 @@ def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, pro
 
 def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 						  progress=None, threads=None,	batch_size=1000, timeout=None,
-						  preserve_order=False, max_wait=60, read_queue_scaling_factor=5):
+						  preserve_order=False, max_wait=60, read_queue_thread_scale=5,
+						  result_queue_thread_scale=10):
 	# undocumented way to force program to run in parallel
 	# mode using only one worker thread
 	if threads <= 0:
@@ -1111,21 +1112,22 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 		# set timeout based on batch size
 		timeout = max(60, int(batch_size * 0.05))
 	
-	# Limit the size to prevent filling up memory
-	read_queue = Queue(threads * read_queue_scaling_factor) 
-	result_queue = Queue()
+	# Limit queue sizes to prevent filling up memory
+	read_queue = Queue(threads * read_queue_thread_scale) 
+	result_queue = Queue(threads * result_queue_thread_scale)
+	# Queue for threads to send summary information back to main process
+	worker_summary_queue = Queue()
+	writer_summary_queue = Queue()
+	# Shared variable for telling threads to stop
 	control = Value('l', 0)
 	
 	worker_threads = set()
-	worker_summary_queue = Queue()
 	for i in range(threads):
 		worker = WorkerThread(i, modifiers, filters, read_queue, 
 			result_queue, worker_summary_queue, control, timeout)
 		worker_threads.add(worker)
 		worker.start()
 	
-	# shared array to hold n, total_bp1, total_bp2
-	writer_summary_queue = Queue()
 	if preserve_order:
 		writer_thread = OrderPreservingWriterThread(writers, 
 			result_queue, writer_summary_queue, control, timeout)
