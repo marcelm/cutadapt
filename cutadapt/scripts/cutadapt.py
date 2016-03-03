@@ -845,7 +845,7 @@ class Writers(object):
 			qualities=qualities,
 			colorspace=options.colorspace, 
 			interleaved=options.interleaved,
-			buffer_size=options.buffer_size
+			buffer_size=options.file_buffer_size
 		)
 		self.seqfile_paths = {}
 		self.force_create = {}
