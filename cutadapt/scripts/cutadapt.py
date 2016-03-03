@@ -831,13 +831,14 @@ class PairedEndWriter(SingleEndWriter):
 		self.read2_bp += len(read2)
 
 class Writers(object):
-	def __init__(self, options, multiplexed, qualities, default_outfile):
+	def __init__(self, options, multiplexed, qualities, default_outfile, buffer_size=1024*64):
 		self.multiplexed = multiplexed
 		self.output = options.output
-		self.open_args = dict(
+		self.seqio_open_args = dict(
 			qualities=qualities,
 			colorspace=options.colorspace, 
-			interleaved=options.interleaved
+			interleaved=options.interleaved,
+			buffer_size=buffer_size
 		)
 		self.seqfile_paths = {}
 		self.force_create = {}
@@ -847,6 +848,7 @@ class Writers(object):
 		self.writers = {}
 		self._rest_writer = None
 		self.discarded = 0
+		self.buffer_size = buffer_size
 		
 		if (options.minimum_length is not None 
 				and options.minimum_length > 0 
@@ -898,7 +900,7 @@ class Writers(object):
 		return self.writers[path]
 		
 	def _create_seq_writer(self, file1, file2=None):
-		seqfile = seqio.open(file1, file2, mode='w', **self.open_args)
+		seqfile = seqio.open(file1, file2, mode='w', **self.seqio_open_args)
 		if file1 in self.force_create:
 			self.force_create[file1] = True
 		if file2 is not None and file2 in self.force_create:
@@ -1008,7 +1010,7 @@ class Writers(object):
 	def _get_file_writer(self, path):
 		assert path is not None
 		if path not in self.writers:
-			writer = xopen(path, 'w')
+			writer = xopen(path, 'w', buffer_size=self.buffer_size)
 			self.writers[path] = writer
 		return self.writers[path]
 	
