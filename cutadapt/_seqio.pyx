@@ -3,7 +3,7 @@
 from __future__ import print_function, division, absolute_import
 from .xopen import xopen
 from .seqio import _shorten, FormatError, SequenceReader
-
+import io
 
 cdef class Sequence(object):
 	"""
@@ -76,12 +76,12 @@ class FastqReader(SequenceReader):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
-	def __init__(self, file, sequence_class=Sequence):
+	def __init__(self, file, sequence_class=Sequence, buffer_size=io.DEFAULT_BUFFER_SIZE):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
 		"""
-		super(FastqReader, self).__init__(file)
+		super(FastqReader, self).__init__(file, buffer_size=buffer_size)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
