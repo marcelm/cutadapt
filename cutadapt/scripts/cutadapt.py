@@ -727,7 +727,7 @@ class BatchIterator(object):
 		batch_index = 1
 		max_size = self.size
 		if self.max_reads:
-			max_size = min(batch_size, self.max_reads - read_index)
+			max_size = min(max_size, self.max_reads - read_index)
 		
 		while batch_index < max_size:
 			try:
