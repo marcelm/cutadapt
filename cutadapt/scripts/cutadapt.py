@@ -186,7 +186,7 @@ def main(cmdlineargs=None, default_outfile="-"):
 		# Run multiprocessing version
 		summary = run_cutadapt_parallel(reader, writers, modifiers, filters,
 			options.threads, options.max_reads, progress, options.batch_size, 
-			options.thread_timeout, options.preserve_order, options_read_queue_size,
+			options.thread_timeout, options.preserve_order, options.read_queue_size,
 			options.result_queue_size)
 
 	report = print_report(paired, options, time.clock() - start_time, summary)
