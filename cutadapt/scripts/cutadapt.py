@@ -612,13 +612,15 @@ def validate_options(options, args, parser):
 		if options.file_buffer_size < io.DEFAULT_BUFFER_SIZE:
 			parser.error("File buffer size must be at least {}".format(io.DEFAULT_BUFFER_SIZE))
 		
+		default_queue_size = options.threads * 10
+		
 		if options.read_queue_size is None:
-			options.read_queue_size = options.threads * 5
+			options.read_queue_size = default_queue_size
 		elif options.read_queue_size > 0:
 			assert options.read_queue_size >= options.threads
 	
 		if options.result_queue_size is None:
-			options.result_queue_size = options.threads * 10
+			options.result_queue_size = default_queue_size
 		elif options.result_queue_size > 0:
 			assert options.result_queue_size > options.threads
 	
@@ -660,13 +662,13 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 				value = self.iterable.next()
 				if value:
 					self.ctr += value[0]
-					if self.ctr % self.interval <= self.batch_size:
+					if self.ctr % self.interval < self.batch_size:
 						print("Read {} records".format(self.ctr))
 				return value
 			
 			next = __next__
 			def __iter__(self): return self
-			def __close__(self): self.iterable.close()
+			def close(self): self.iterable.close()
 		
 		reader = ProgressMessageReader(reader, batch_size)
 		
