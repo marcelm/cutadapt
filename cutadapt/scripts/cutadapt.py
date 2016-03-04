@@ -725,7 +725,7 @@ class BatchIterator(object):
 		batch_size = None
 		for batch_index in range(self.size):
 			try:
-				read_index, record = self.reader.next()
+				read_index, record = next(self.reader)
 			except StopIteration:
 				batch_size = batch_index
 				self.done = True
