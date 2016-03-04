@@ -174,23 +174,20 @@ def main(cmdlineargs=None, default_outfile="-"):
 			'To modify both reads, also use any of the -A/-B/-G/-U options. '
 			'Use a dummy adapter sequence when necessary: -A XXX')))
 	
-	threads = options.threads
-	if threads is None:
-		threads = min(cpu_count() - 1, 1)
-	
 	progress = create_progress(options)
 	
 	start_time = time.clock()
 	
-	if threads == 1:
+	if options.threads is None:
 		# Run cutadapt normally
 		summary = run_cutadapt_serial(reader, writers, modifiers, filters,
 			options.max_reads, progress)
 	else:
 		# Run multiprocessing version
 		summary = run_cutadapt_parallel(reader, writers, modifiers, filters,
-			options.max_reads, progress, options.threads, options.batch_size, 
-			options.thread_timeout, options.preserve_order)
+			options.threads, options.max_reads, progress, options.batch_size, 
+			options.thread_timeout, options.preserve_order, options_read_queue_size,
+			options.result_queue_size)
 
 	report = print_report(paired, options, time.clock() - start_time, summary)
 	
@@ -418,7 +415,7 @@ def get_option_parser():
 	parser.add_option_group(group)
 	
 	group = OptionGroup(parser, "Parallel options")
-	group.add_option("--threads", type=int, default=1, metavar="THREADS",
+	group.add_option("--threads", type=int, default=None, metavar="THREADS",
 		help="Number of threads to use for read trimming. Set to 0 to use max available threads.")
 	group.add_option("--batch-size", default=1000, metavar="SIZE",
 		help="Number of records to process in each batch.")
@@ -426,6 +423,10 @@ def get_option_parser():
 		help="Preserve order of reads in input files.")
 	group.add_option("--thread-timeout", default=60, metavar="SECONDS",
 		help="Number of seconds threads should wait before exiting if task queue is empty.")
+	group.add_option("--read-queue-size", default=None, metavar="SIZE",
+		help="Size of queue for batches of reads to be processed.")
+	group.add_option("--result-queue-size", default=None, metavar="SIZE",
+		help="Size of queue for batches of results to be written.")
 	parser.add_option_group(group)
 	
 	group = OptionGroup(parser, "Method-specific options")
@@ -466,7 +467,7 @@ def set_mirna_defaults(options):
 		options.error_rate = 0.12
 
 def validate_options(options, args, parser):
-	if options.debug and options.threads is not None and options.threads > 0:
+	if options.debug and options.threads is not None:
 		parser.error("Cannot use debug mode with multiple threads")
 		
 	if len(args) == 0:
@@ -613,9 +614,6 @@ def validate_options(options, args, parser):
 		except:
 			options.no_progress = True
 	
-	if options.file_buffer_size < io.DEFAULT_BUFFER_SIZE:
-		parser.error("File buffer size must be at least {}".format(io.DEFAULT_BUFFER_SIZE))
-	
 	# TODO: once we switch to argparse, int_or_str can be passed
 	# as the argument type
 	def int_or_str(x):
@@ -630,7 +628,29 @@ def validate_options(options, args, parser):
 			raise Exception("Unsupported type {}".format(x))
 	
 	options.max_reads = int_or_str(options.max_reads)
-	options.batch_size = int_or_str(options.batch_size)
+	
+	if options.threads is not None:
+		if options.threads <= 0:
+			options.threads = max(cpu_count() - 2, 1)
+	
+		options.batch_size = int_or_str(options.batch_size)
+		
+		if options.thread_timeout is None:
+			# set timeout based on batch size
+			options.thread_timeout = max(60, int(options.batch_size * 0.05))
+		
+		if options.file_buffer_size < io.DEFAULT_BUFFER_SIZE:
+			parser.error("File buffer size must be at least {}".format(io.DEFAULT_BUFFER_SIZE))
+		
+		if options.read_queue_size is None:
+			options.read_queue_size = options.threads * 10
+		elif options.read_queue_size > 0:
+			assert options.read_queue_size >= options.threads
+	
+		if options.result_queue_size is None:
+			options.result_queue_size = options.threads * 5
+		elif options.result_queue_size > 0:
+			assert options.result_queue_size > options.threads
 	
 	return (paired, multiplexed)
 
@@ -1109,22 +1129,20 @@ def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, pro
 		reader.close()
 		writers.close()
 
-def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
-						  progress=None, threads=None,	batch_size=1000, timeout=None,
-						  preserve_order=False, max_wait=60, read_queue_thread_scale=5,
-						  result_queue_thread_scale=10):
-	# undocumented way to force program to run in parallel
-	# mode using only one worker thread
-	if threads <= 0:
-		threads = 1
+def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, max_reads=None,
+						  progress=None, batch_size=1000, timeout=0, preserve_order=False, 
+						  read_queue_size=0, result_queue_size=0):
 	
-	if timeout is None:
-		# set timeout based on batch size
-		timeout = max(60, int(batch_size * 0.05))
+	# TODO: should probably log the run_cutadapt_parallel arguments
+	# TODO: would it help to use watermarking queues - i.e. queues that block
+	# at some max level X and don't unblock until some min level Y?
+	
+	# timeout <= 0 means block forever
+	if timeout <= 0: timeout = None
 	
 	# Limit queue sizes to prevent filling up memory
-	read_queue = JoinableQueue(threads * read_queue_thread_scale) 
-	result_queue = JoinableQueue(threads * result_queue_thread_scale)
+	read_queue = JoinableQueue(read_queue_size) 
+	result_queue = JoinableQueue(result_queue_size)
 	# Queue for threads to send summary information back to main process
 	worker_summary_queue = JoinableQueue()
 	writer_summary_queue = JoinableQueue()
@@ -1232,7 +1250,7 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, max_reads=None,
 		def kill(t):
 			if t.is_alive():
 				# first try to be nice by waiting
-				t.join(max_wait)
+				t.join(timeout)
 			if t.is_alive():
 				# if it takes too long, use harsher measures
 				t.terminate()
