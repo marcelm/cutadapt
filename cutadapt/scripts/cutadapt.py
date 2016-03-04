@@ -417,15 +417,15 @@ def get_option_parser():
 	group = OptionGroup(parser, "Parallel options")
 	group.add_option("--threads", type=int, default=None, metavar="THREADS",
 		help="Number of threads to use for read trimming. Set to 0 to use max available threads.")
-	group.add_option("--batch-size", default=1000, metavar="SIZE",
+	group.add_option("--batch-size", type=int, default=10000, metavar="SIZE",
 		help="Number of records to process in each batch.")
 	group.add_option("--preserve-order", action="store_true", default=False,
 		help="Preserve order of reads in input files.")
-	group.add_option("--thread-timeout", default=60, metavar="SECONDS",
+	group.add_option("--thread-timeout", type=int, default=60, metavar="SECONDS",
 		help="Number of seconds threads should wait before exiting if task queue is empty.")
-	group.add_option("--read-queue-size", default=None, metavar="SIZE",
+	group.add_option("--read-queue-size", type=int, default=None, metavar="SIZE",
 		help="Size of queue for batches of reads to be processed.")
-	group.add_option("--result-queue-size", default=None, metavar="SIZE",
+	group.add_option("--result-queue-size", type=int, default=None, metavar="SIZE",
 		help="Size of queue for batches of results to be written.")
 	parser.add_option_group(group)
 	
@@ -1255,7 +1255,7 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, max_read
 		def kill(t):
 			if t.is_alive():
 				# first try to be nice by waiting
-				t.join(timeout)
+				t.join(60)
 			if t.is_alive():
 				# if it takes too long, use harsher measures
 				t.terminate()
