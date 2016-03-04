@@ -626,7 +626,7 @@ def validate_options(options, args, parser):
 	
 	return (paired, multiplexed)
 
-def create_progress(options, parser, counter_magnitude="M"):
+def create_reader(options, parser, counter_magnitude="M"):
 	input_filename = args[0]
 	input_paired_filename = None
 	quality_filename = None
