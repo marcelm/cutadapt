@@ -691,7 +691,7 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 				progressbar.Timer(), " ", progressbar.Bar(), progressbar.AdaptiveETA()
 			], options.max_reads)
 		else:
-			reader = BatchProgressBar([
+			reader = BatchProgressBar(reader, [
 				MagCounter(counter_magnitude), " Reads", progressbar.Timer(), 
 				progressbar.AnimatedMarker()
 			])
