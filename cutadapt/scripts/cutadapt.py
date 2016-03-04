@@ -417,7 +417,7 @@ def get_option_parser():
 	group = OptionGroup(parser, "Parallel options")
 	group.add_option("--threads", type=int, default=None, metavar="THREADS",
 		help="Number of threads to use for read trimming. Set to 0 to use max available threads.")
-	group.add_option("--batch-size", type=int, default=5000, metavar="SIZE",
+	group.add_option("--batch-size", type=int, default=1000, metavar="SIZE",
 		help="Number of records to process in each batch.")
 	group.add_option("--preserve-order", action="store_true", default=False,
 		help="Preserve order of reads in input files.")
@@ -1321,8 +1321,8 @@ class WorkerThread(Process):
 					self.input_queue.task_done()
 					return (batch_num, result)
 				except Empty:
-					if self.debug:
-						print("Worker {} waiting for batch".format(self.index))
+					# TODO: log
+					#print("Worker {} waiting for batch".format(self.index))
 					if self.control.value == 0 and not waiting:
 						waiting = time.time()
 					elif (self.control.value > 0) or (time.time() - waiting >= self.timeout):
@@ -1408,8 +1408,8 @@ class WriterThread(Process):
 					self._process_batch(batch_num, records)
 					self.queue.task_done()
 				except Empty:
-					if self.debug:
-						print("Writer waiting for results")
+					# TODO: log
+					#print("Writer waiting for results")
 					if not waiting:
 						waiting = time.time()
 					elif time.time() - waiting >= self.timeout:

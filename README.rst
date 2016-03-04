@@ -10,9 +10,13 @@ cutadapt-parallel
 
 This is a working implementation of a multi-threaded version of Cutadapt. It is based on a fork of Cutadapt 1.9.2_dev. Most of the changes here will be integrated into the main Cutadapt program, however some options/functionality may change in the process.
 
-Performance Optimization: There is a main thread that reads from the input file(s) and posts batches of reads to a queue. There are one or more worker threads that take batches from the queue, process them, and post the results on a result queue. Finally, there is a worker thread 
+Architecture: There is a main thread that reads from the input file(s) and posts batches of reads to a queue. There are one or more worker threads that take batches from the queue, process them, and post the results on a result queue. Finally, there is a worker thread that reads batches of results and writes them to a file.
 
+Optimization: The key to maximizing cutadapt-parallel performance is to keep all threads working as much as possible. This can be controlled through four parameters:
 
+* Threads: the number of *worker* threads to use. There will additionally be a main thread and writer thread. So if your system only has one or two cores, you may be better off running in single-threaded mode, which has less overhead.
+* Batch size: the number of reads in each batch. If it takes longer for the reader to read a batch than it does for a worker to process that batch, the workers will end up blocking waiting for additional batches to process. We set the default batch size to 1000, however we recommend tuning this parameter to your own system. You can efficiently do this by limiting the number of reads run by the program ('--max-reads 1M', for example), turning on debug-level logging, and altering the batch size larger and larger until you start to see "Worker waiting for batch" messages. For example, we found that on our test system (actually a node in a computing cluster), with 8 threads, the optimal batch size was 2500.
+* Read and result queue sizes: this is a trade-off between memory usage and probability of threads blocking (i.e., the larger the queue size, the greater the memory usage but lesser the chance of reader or worker threads blocking). We set this by default to 10 x number of threads, which seems to work well.
 
 ========
 cutadapt
