@@ -665,11 +665,16 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 					value = next(self._iterable)
 					if self.start_time is None:
 						self.start()
+					if self.value + value[0] > self.max_value:
+						print("{} {}".format(self.value, value[0]))
 					self.update(self.value + value[0])
 					return value
 				except StopIteration:
 					self.finish()
 					raise
+			
+			def close(self):
+				self._iterable.close()
 		
 		class MagCounter(progressbar.widgets.WidgetBase):
 			def __init__(self, magnitude):
@@ -709,10 +714,10 @@ class BatchIterator(object):
 	def __iter__(self):
 		return self
 	
-	def __next__(self):
-		return self.next()
+	# py2x alias
+	next = __next__
 	
-	def next(self):
+	def __next__(self):
 		if self.done:
 			raise StopIteration()
 		
