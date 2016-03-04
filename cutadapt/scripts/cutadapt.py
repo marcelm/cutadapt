@@ -665,8 +665,6 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 					value = next(self._iterable)
 					if self.start_time is None:
 						self.start()
-					if self.value + value[0] > self.max_value:
-						print("{} {}".format(self.value, value[0]))
 					self.update(self.value + value[0])
 					return value
 				except StopIteration:
@@ -704,12 +702,13 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 	return (reader, qualities, quality_filename is not None)
 
 class BatchIterator(object):
+	_empty_batch = [None] * size
+	
 	def __init__(self, reader, size, max_reads=None):
 		self.reader = enumerate(reader, 1)
 		self.size = size
 		self.max_reads = max_reads
 		self.done = False
-		self._empty_batch = [None] * size
 	
 	def __iter__(self):
 		return self
@@ -718,34 +717,35 @@ class BatchIterator(object):
 		if self.done:
 			raise StopIteration()
 		
-		# TODO: is there a way to push this functionality down into 
-		# the reader to faciliate reading larger chunks at a time
-		# to minimize I/O operations? Is that just controlled by
-		# the file buffer size?
+		try:
+			read_index, record = next(self.reader)
+		except StopIteration:
+			self.done = True
+			raise
 		
 		batch = self._empty_batch.copy()
-		batch_size = None
-		for batch_index in range(self.size):
+		batch[0] = record
+		batch_index = 1
+		max_size = self.size
+		if self.max_reads:
+			max_size = min(batch_size, self.max_reads - read_index)
+		
+		while batch_index < max_size:
 			try:
 				read_index, record = next(self.reader)
+				batch[batch_index] = record
+				batch_index += 1
 			except StopIteration:
-				batch_size = batch_index
-				self.done = True
-				break
-			
-			batch[batch_index] = record
-			
-			if self.max_reads and read_index > self.max_reads:
-				batch_size = batch_index + 1
 				self.done = True
 				break
 		
-		if batch_size is None:
-			return (self.size, batch)
-		elif batch_size == 0:
-			raise StopIteration()
+		if self.max_reads and read_index >= self.max_reads:
+			self.done = True
+		
+		if batch_index == self.size:
+			return (batch_index, batch)
 		else:
-			return (batch_size, batch[0:batch_size])
+			return (batch_index, batch[0:batch_index])
 	
 	# py2x alias
 	next = __next__
