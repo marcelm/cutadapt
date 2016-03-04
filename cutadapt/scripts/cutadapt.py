@@ -668,6 +668,8 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 			def __iter__(self): return self
 			def __close__(self): self.iterable.close()
 		
+		reader = ProgressMessageReader(reader, batch_size)
+		
 	elif options.progress == "bar":
 		import progressbar
 		import progressbar.widgets
