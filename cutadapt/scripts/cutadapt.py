@@ -417,7 +417,7 @@ def get_option_parser():
 	group = OptionGroup(parser, "Parallel options")
 	group.add_option("--threads", type=int, default=None, metavar="THREADS",
 		help="Number of threads to use for read trimming. Set to 0 to use max available threads.")
-	group.add_option("--batch-size", type=int, default=10000, metavar="SIZE",
+	group.add_option("--batch-size", type=int, default=5000, metavar="SIZE",
 		help="Number of records to process in each batch.")
 	group.add_option("--preserve-order", action="store_true", default=False,
 		help="Preserve order of reads in input files.")
@@ -1136,7 +1136,7 @@ def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, pro
 
 def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, max_reads=None,
 						  progress=None, batch_size=1000, timeout=0, preserve_order=False, 
-						  read_queue_size=0, result_queue_size=0):
+						  read_queue_size=0, result_queue_size=0, debug=False):
 	
 	# TODO: should probably log the run_cutadapt_parallel arguments
 	# TODO: would it help to use watermarking queues - i.e. queues that block
@@ -1157,16 +1157,19 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, max_read
 	worker_threads = set()
 	for i in range(threads):
 		worker = WorkerThread(i, modifiers, filters, read_queue, 
-			result_queue, worker_summary_queue, control, timeout)
+			result_queue, worker_summary_queue, control, timeout),
+			debug
 		worker_threads.add(worker)
 		worker.start()
 	
 	if preserve_order:
 		writer_thread = OrderPreservingWriterThread(writers, 
-			result_queue, writer_summary_queue, control, timeout)
+			result_queue, writer_summary_queue, control, timeout,
+			debug)
 	else:
 		writer_thread = WriterThread(writers, 
-			result_queue, writer_summary_queue, control, timeout)
+			result_queue, writer_summary_queue, control, timeout,
+			debug)
 	writer_thread.start()
 	
 	try:
@@ -1296,7 +1299,7 @@ class WorkerThread(Process):
 	should die (< 0) or there are no more batches coming (> 0).
 	"""
 	def __init__(self, index, modifiers, filters, input_queue, output_queue, 
-				summary_queue, control, timeout=60):
+				summary_queue, control, timeout=60, debug=False):
 		super(WorkerThread, self).__init__()
 		self.index = index
 		self.modifiers = modifiers
@@ -1306,6 +1309,7 @@ class WorkerThread(Process):
 		self.summary_queue = summary_queue
 		self.control = control
 		self.timeout = timeout
+		self.debug = debug
 	
 	def run(self):
 		def process_next_batch():
@@ -1317,7 +1321,8 @@ class WorkerThread(Process):
 					self.input_queue.task_done()
 					return (batch_num, result)
 				except Empty:
-					print("Worker {} waiting for batch".format(self.index))
+					if self.debug:
+						print("Worker {} waiting for batch".format(self.index))
 					if self.control.value == 0 and not waiting:
 						waiting = time.time()
 					elif (self.control.value > 0) or (time.time() - waiting >= self.timeout):
@@ -1376,7 +1381,7 @@ class WriterThread(Process):
 	summary: a shared array to hold n (number of records processed),
 	total_bp1 and total_bp2 (total read1 and read2 bp written).
 	"""
-	def __init__(self, writers, input_queue, summary_queue, control, timeout=60):
+	def __init__(self, writers, input_queue, summary_queue, control, timeout=60, debug=False):
 		super(WriterThread, self).__init__()
 		self.writers = writers
 		self.queue = input_queue
@@ -1387,6 +1392,7 @@ class WriterThread(Process):
 		self.total_bp2 = 0
 		self.seen_batches = set()
 		self.timeout = timeout
+		self.debug = debug
 	
 	def run(self):
 		try:
@@ -1402,7 +1408,8 @@ class WriterThread(Process):
 					self._process_batch(batch_num, records)
 					self.queue.task_done()
 				except Empty:
-					print("Writer waiting for results")
+					if self.debug:
+						print("Writer waiting for results")
 					if not waiting:
 						waiting = time.time()
 					elif time.time() - waiting >= self.timeout:

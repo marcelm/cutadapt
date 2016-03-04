@@ -10,6 +10,10 @@ cutadapt-parallel
 
 This is a working implementation of a multi-threaded version of Cutadapt. It is based on a fork of Cutadapt 1.9.2_dev. Most of the changes here will be integrated into the main Cutadapt program, however some options/functionality may change in the process.
 
+Performance Optimization: There is a main thread that reads from the input file(s) and posts batches of reads to a queue. There are one or more worker threads that take batches from the queue, process them, and post the results on a result queue. Finally, there is a worker thread 
+
+
+
 ========
 cutadapt
 ========
