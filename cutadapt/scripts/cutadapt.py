@@ -386,7 +386,7 @@ def get_option_parser():
 	group = OptionGroup(parser, "Parallel options")
 	group.add_option("--threads", type=int, default=None, metavar="THREADS",
 		help="Number of threads to use for read trimming. Set to 0 to use max available threads.")
-	group.add_option("--batch-size", type=int, default=1000, metavar="SIZE",
+	group.add_option("--batch-size", type=int, default=5000, metavar="SIZE",
 		help="Number of records to process in each batch.")
 	group.add_option("--preserve-order", action="store_true", default=False,
 		help="Preserve order of reads in input files.")
@@ -655,10 +655,11 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 		import progressbar.widgets
 		import math
 
-		class BatchProgressBar(progressbar.ProgressBar):
+		class BatchProgressReader(progressbar.ProgressBar):
 			def __init__(self, iterable, widgets, max_value=None):
 				super(BatchProgressBar, self).__init__(widgets=widgets, max_value=max_value)
 				self._iterable = iterable
+				self.done = False
 			
 			def __next__(self):
 				try:
@@ -672,7 +673,9 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 					raise
 			
 			def close(self):
-				self.finish()
+				if not self.done:
+					self.finish()
+					self.done = True
 				if not self._iterable.done:
 					self._iterable.close()
 		
@@ -691,12 +694,12 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 				return self._format(data["value"])
 			
 		if options.max_reads:
-			reader = BatchProgressBar(reader, [
+			reader = BatchProgressReader(reader, [
 				MagCounter(counter_magnitude), " Reads (", progressbar.Percentage(), ") ", 
 				progressbar.Timer(), " ", progressbar.Bar(), progressbar.AdaptiveETA()
 			], options.max_reads)
 		else:
-			reader = BatchProgressBar(reader, [
+			reader = BatchProgressReader(reader, [
 				MagCounter(counter_magnitude), " Reads", progressbar.Timer(), 
 				progressbar.AnimatedMarker()
 			])
