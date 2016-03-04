@@ -668,12 +668,13 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 					self.update(self.value + value[0])
 					return value
 				except StopIteration:
-					self.finish()
+					self.close()
 					raise
 			
 			def close(self):
 				self.finish()
-				self._iterable.close()
+				if not self._iterable.done:
+					self._iterable.close()
 		
 		class MagCounter(progressbar.widgets.WidgetBase):
 			def __init__(self, magnitude):
@@ -729,7 +730,7 @@ class BatchIterator(object):
 		batch_index = 1
 		max_size = self.size
 		if self.max_reads:
-			max_size = min(max_size, self.max_reads - read_index)
+			max_size = min(max_size, self.max_reads - read_index + 1)
 		
 		while batch_index < max_size:
 			try:
@@ -741,7 +742,7 @@ class BatchIterator(object):
 				break
 		
 		if self.max_reads and read_index >= self.max_reads:
-			self.done = True
+			self.close()
 		
 		if batch_index == self.size:
 			return (batch_index, batch)
@@ -1235,8 +1236,9 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, timeout=
 		for batch in enumerate(reader, 1):
 			read_queue.put(batch, block=True)
 		
-		# Tell the writer thread the max number of batches to expect
-		control.value = num_batches
+		# Tell the writer thread the max number of batches to expect,
+		# or shut down if no batches were queued
+		control.value = batch[0] if batch else -1
 		
 		# Done writing to the input queue
 		read_queue.close()
