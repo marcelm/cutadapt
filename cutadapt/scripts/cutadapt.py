@@ -128,7 +128,7 @@ def main(cmdlineargs=None, default_outfile="-"):
 		setup_logging(stdout=bool(options.output), quiet=options.quiet)
 	
 	paired, multiplexed = validate_options(options, args, parser)
-	reader, qualities, has_qual_file = create_reader(options, parser)
+	reader, qualities, has_qual_file = create_reader(args, options, parser)
 	writers = Writers(options, multiplexed, qualities, default_outfile)
 	modifiers, num_adapters = create_modifiers(options, paired, qualities, has_qual_file, parser)
 	min_affected = 2 if options.pair_filter == 'both' else 1
@@ -626,15 +626,15 @@ def validate_options(options, args, parser):
 	
 	return (paired, multiplexed)
 
-def create_reader(options, parser, counter_magnitude="M"):
-	input_filename = args[0]
+def create_reader(input_files, options, parser, counter_magnitude="M"):
+	input_filename = input_files[0]
 	input_paired_filename = None
 	quality_filename = None
-	if len(args) > 1:
+	if len(input_files) > 1:
 		if paired:
-			input_paired_filename = args[1]
+			input_paired_filename = input_files[1]
 		else:
-			quality_filename = args[1]
+			quality_filename = input_files[1]
 	
 	try:
 		reader = seqio.open(input_filename, file2=input_paired_filename,
