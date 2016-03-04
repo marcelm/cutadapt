@@ -672,13 +672,13 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 					raise
 		
 		class MagCounter(progressbar.widgets.WidgetBase):
-			def __init__(self):
+			def __init__(self, magnitude):
 				suffix = ""
-				if counter_magnitude is None:
+				if magnitude is None:
 					div = 1.0
 				else:
-					div = float(MAGNITUDE[counter_magnitude][0])
-					suffix = counter_magnitude
+					div = float(MAGNITUDE[magnitude][0])
+					suffix = magnitude
 			
 				self._format = lambda val: "{:.1f} {}".format(val / div, suffix)
 		
