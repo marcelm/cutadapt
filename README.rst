@@ -20,6 +20,8 @@ Optimization: The key to maximizing cutadapt-parallel performance is to keep all
 * Batch size: the number of reads in each batch. If it takes longer for the reader to read a batch than it does for a worker to process that batch, the workers will end up blocking waiting for additional batches to process. We set the default batch size to 1000, however we recommend tuning this parameter to your own system. You can efficiently do this by limiting the number of reads run by the program ('--max-reads 1M', for example), turning on debug-level logging, and altering the batch size larger and larger until you start to see "Worker waiting for batch" messages. For example, we found that on our test system (actually a node in a computing cluster), with 8 threads, the optimal batch size was 5000.
 * Read and result queue sizes: this is a trade-off between memory usage and probability of threads blocking (i.e., the larger the queue size, the greater the memory usage but lesser the chance of reader or worker threads blocking). We set this by default to 10 x number of threads, which seems to work well.
 
+Note: A progress bar can be shown using the --progress option. This is off by default, because the progress bar involves some overhead (roughly 1 us/read penalty). In single-threaded mode, the ETA will be roughly accurate; however, in threaded mode, the progress bar will reach completion with some time remaining. This is because the progress bar tracks the number of reads loaded from the input file, but after reading is complete there will still be some tasks on the queue. Thus, the ETA remaining on the progress bar is roughly reflective of the time the program will take to complete after progress reaches 100%.
+
 ========
 cutadapt
 ========

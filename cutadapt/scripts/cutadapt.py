@@ -181,8 +181,8 @@ def get_option_parser():
 			"from file name extension.")
 	parser.add_option("--max-reads", default=None,
 		help="Maximum number of reads/pairs to process")
-	parser.add_option("--no-progress", action="store_true", default=False,
-		help="Don't show a progress bar")
+	parser.add_option("--progress", default=None,
+		help="Show progress; bar = show progress bar; msg = show a status message")
 	
 	group = OptionGroup(parser, "Finding adapters:",
 		description="Parameters -a, -g, -b specify adapters to be removed from "
@@ -574,12 +574,12 @@ def validate_options(options, args, parser):
 		options.match_adapter_wildcards = False
 	
 	if options.quiet or options.output is None or options.output == "-":
-		options.no_progress = True
-	elif not options.no_progress:
+		options.progress = None
+	elif options.progress == "bar":
 		try:
 			import progressbar
 		except:
-			options.no_progress = True
+			parser.error("The python-progressbar library is required for --progress=bar")
 	
 	# TODO: once we switch to argparse, int_or_str can be passed
 	# as the argument type
@@ -647,15 +647,35 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 	batch_size = options.batch_size or 1000
 	reader = BatchIterator(reader, batch_size, options.max_reads)
 	
-	# Wrap iterator in progress bar, unless requested not to
-	if not options.no_progress:
+	# Wrap iterator in progress bar
+	if options.progress == "msg":
+		class ProgressMessageReader(object):
+			def __init__(self, iterable, batch_size, interval=1000000):
+				self.iterable = iterable
+				self.batch_size = batch_size
+				self.interval = interval
+				self.ctr = 0
+			
+			def __next__(self):
+				value = self.iterable.next()
+				if value:
+					self.ctr += value[0]
+					if self.ctr % self.interval <= self.batch_size:
+						print("Read {} records".format(self.ctr))
+				return value
+			
+			next = __next__
+			def __iter__(self): return self
+			def __close__(self): self.iterable.close()
+		
+	elif options.progress == "bar":
 		import progressbar
 		import progressbar.widgets
 		import math
 
-		class BatchProgressReader(progressbar.ProgressBar):
+		class ProgressBarReader(progressbar.ProgressBar):
 			def __init__(self, iterable, widgets, max_value=None):
-				super(BatchProgressReader, self).__init__(widgets=widgets, max_value=max_value)
+				super(ProgressBarReader, self).__init__(widgets=widgets, max_value=max_value)
 				self._iterable = iterable
 				self.done = False
 			
@@ -692,12 +712,12 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 				return self._format(data["value"])
 			
 		if options.max_reads:
-			reader = BatchProgressReader(reader, [
+			reader = ProgressBarReader(reader, [
 				MagCounter(counter_magnitude), " Reads (", progressbar.Percentage(), ") ", 
 				progressbar.Timer(), " ", progressbar.Bar(), progressbar.AdaptiveETA()
 			], options.max_reads)
 		else:
-			reader = BatchProgressReader(reader, [
+			reader = ProgressBarReader(reader, [
 				MagCounter(counter_magnitude), " Reads", progressbar.Timer(), 
 				progressbar.AnimatedMarker()
 			])
