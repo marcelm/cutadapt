@@ -655,7 +655,7 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 
 		class BatchProgressReader(progressbar.ProgressBar):
 			def __init__(self, iterable, widgets, max_value=None):
-				super(BatchProgressBar, self).__init__(widgets=widgets, max_value=max_value)
+				super(BatchProgressReader, self).__init__(widgets=widgets, max_value=max_value)
 				self._iterable = iterable
 				self.done = False
 			
