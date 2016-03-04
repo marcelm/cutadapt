@@ -672,6 +672,7 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 					raise
 			
 			def close(self):
+				self.finish()
 				self._iterable.close()
 		
 		class MagCounter(progressbar.widgets.WidgetBase):
@@ -703,7 +704,8 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 
 class BatchIterator(object):
 	def __init__(self, reader, size, max_reads=None):
-		self.reader = enumerate(reader, 1)
+		self.reader = reader
+		self.iterable = enumerate(reader, 1)
 		self.size = size
 		self.max_reads = max_reads
 		self.done = False
@@ -717,9 +719,9 @@ class BatchIterator(object):
 			raise StopIteration()
 		
 		try:
-			read_index, record = next(self.reader)
+			read_index, record = next(self.iterable)
 		except StopIteration:
-			self.done = True
+			self.close()
 			raise
 		
 		batch = self._empty_batch.copy()
@@ -731,11 +733,11 @@ class BatchIterator(object):
 		
 		while batch_index < max_size:
 			try:
-				read_index, record = next(self.reader)
+				read_index, record = next(self.iterable)
 				batch[batch_index] = record
 				batch_index += 1
 			except StopIteration:
-				self.done = True
+				self.close()
 				break
 		
 		if self.max_reads and read_index >= self.max_reads:
@@ -748,6 +750,10 @@ class BatchIterator(object):
 	
 	# py2x alias
 	next = __next__
+	
+	def close(self):
+		self.done = True
+		self.reader.close()
 
 class Filters(object):
 	def __init__(self, filter_factory):
