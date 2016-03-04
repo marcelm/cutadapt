@@ -702,13 +702,12 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 	return (reader, qualities, quality_filename is not None)
 
 class BatchIterator(object):
-	_empty_batch = [None] * size
-	
 	def __init__(self, reader, size, max_reads=None):
 		self.reader = enumerate(reader, 1)
 		self.size = size
 		self.max_reads = max_reads
 		self.done = False
+		self._empty_batch = [None] * size
 	
 	def __iter__(self):
 		return self
