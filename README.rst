@@ -12,6 +12,8 @@ This is a working implementation of a multi-threaded version of Cutadapt. It is 
 
 Architecture: There is a main thread that reads from the input file(s) and posts batches of reads to a queue. There are one or more worker threads that take batches from the queue, process them, and post the results on a result queue. Finally, there is a worker thread that reads batches of results and writes them to a file.
 
+Performance: As a general rule, we see linear speed increases compared to single threaded mode with more than one worker thread (e.g. --threads=2 gives a 2x performance boost versus single-threaded mode, --threads=8 gives 8-10x boost, etc).
+
 Optimization: The key to maximizing cutadapt-parallel performance is to keep all threads working as much as possible. This can be controlled through four parameters:
 
 * Threads: the number of *worker* threads to use. There will additionally be a main thread and writer thread. So if your system only has one or two cores, you may be better off running in single-threaded mode, which has less overhead.

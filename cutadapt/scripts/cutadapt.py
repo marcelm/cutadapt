@@ -94,8 +94,6 @@ from queue import Empty, Full
 import sys
 import time
 
-import yappi
-
 MAGNITUDE = dict(
 	G=(1E9, "000000000"),
 	M=(1E6, "000000"),
@@ -113,7 +111,9 @@ def main(cmdlineargs=None, default_outfile="-"):
 	default_outfile is the file to which trimmed reads are sent if the ``-o``
 	parameter is not used.
 	"""
-	yappi.start()
+	# For CPU profiling
+	#import yappi
+	#yappi.start()
 	
 	parser = get_option_parser()
 	
@@ -127,37 +127,11 @@ def main(cmdlineargs=None, default_outfile="-"):
 	if not logging.root.handlers:
 		setup_logging(stdout=bool(options.output), quiet=options.quiet)
 	
-	if options.bisulfite:
-		set_bisulfite_defaults(options)
-	elif options.mirna:
-		set_mirna_defaults(options)
-	
 	paired, multiplexed = validate_options(options, args, parser)
-	input_filename = args[0]
-	input_paired_filename = None
-	quality_filename = None
-	if len(args) > 1:
-		if paired:
-			input_paired_filename = args[1]
-		else:
-			quality_filename = args[1]
-	
-	reader = writers = None
-	
-	try:
-		# Open input file(s)
-		reader = seqio.open(input_filename, file2=input_paired_filename,
-			qualfile=quality_filename, colorspace=options.colorspace, 
-			fileformat=options.format, interleaved=options.interleaved)
-	except (seqio.UnknownFileType, IOError) as e:
-		parser.error(e)
-	
-	qualities = reader.delivers_qualities
-	has_qual_file = quality_filename is not None
-	min_affected = 2 if options.pair_filter == 'both' else 1
-	
+	reader, qualities, has_qual_file = create_reader(options, parser)
 	writers = Writers(options, multiplexed, qualities, default_outfile)
 	modifiers, num_adapters = create_modifiers(options, paired, qualities, has_qual_file, parser)
+	min_affected = 2 if options.pair_filter == 'both' else 1
 	filters = create_filters(options, paired, min_affected)
 	
 	logger = logging.getLogger()
@@ -174,27 +148,22 @@ def main(cmdlineargs=None, default_outfile="-"):
 			'To modify both reads, also use any of the -A/-B/-G/-U options. '
 			'Use a dummy adapter sequence when necessary: -A XXX')))
 	
-	progress = create_progress(options)
-	
 	start_time = time.clock()
 	
 	if options.threads is None:
 		# Run cutadapt normally
-		summary = run_cutadapt_serial(reader, writers, modifiers, filters,
-			options.max_reads, progress)
+		summary = run_cutadapt_serial(reader, writers, modifiers, filters)
 	else:
 		# Run multiprocessing version
 		summary = run_cutadapt_parallel(reader, writers, modifiers, filters,
-			options.threads, options.max_reads, progress, options.batch_size, 
-			options.thread_timeout, options.preserve_order, options.read_queue_size,
-			options.result_queue_size)
+			options.threads, options.thread_timeout, options.preserve_order, 
+			options.read_queue_size, options.result_queue_size)
 
 	report = print_report(paired, options, time.clock() - start_time, summary)
 	
-	yappi.stop()
-	with open("yappi.out", "w") as o:
-		print(str(yappi.get_func_stats()), file=o)
-		print(str(yappi.get_thread_stats()), file=o)
+	#yappi.stop()
+	#yappi.get_func_stats().print_all()
+	#yappi.get_thread_stats().print_all()
 	
 def get_option_parser():
 	# TODO: upgrade to argparse
@@ -452,21 +421,19 @@ def setup_logging(stdout=False, quiet=False):
 	logging.getLogger().setLevel(logging.INFO)
 	logging.getLogger().addHandler(stream_handler)
 
-def set_bisulfite_defaults(options):
-	if options.quality_cutoff is None:
-		options.quality_cutoff = str((options.quality_base - 33) + 20)
-
-def set_mirna_defaults(options):
-	if options.adapter is None and options.front is None and options.anywhere is None:
-		options.adapter = ['TGGAATTCTCGG'] # illumina small RNA adapter
-	if options.quality_cutoff is None:
-		options.quality_cutoff = "20"
-	if options.minimum_length is None:
-		options.minimum_length = 16
-	if options.error_rate is None:
-		options.error_rate = 0.12
-
 def validate_options(options, args, parser):
+	if options.mirna:
+		if options.adapter is None and options.front is None and options.anywhere is None:
+			options.adapter = ['TGGAATTCTCGG'] # illumina small RNA adapter
+		if options.quality_cutoff is None:
+			options.quality_cutoff = "20"
+		if options.minimum_length is None:
+			options.minimum_length = 16
+		if options.error_rate is None:
+			options.error_rate = 0.12
+	elif options.bisulfite and options.quality_cutoff is None:
+		options.quality_cutoff = str((options.quality_base - 33) + 20)
+	
 	if options.debug and options.threads is not None:
 		parser.error("Cannot use debug mode with multiple threads")
 		
@@ -658,6 +625,122 @@ def validate_options(options, args, parser):
 			assert options.result_queue_size > options.threads
 	
 	return (paired, multiplexed)
+
+def create_progress(options, parser, counter_magnitude="M"):
+	input_filename = args[0]
+	input_paired_filename = None
+	quality_filename = None
+	if len(args) > 1:
+		if paired:
+			input_paired_filename = args[1]
+		else:
+			quality_filename = args[1]
+	
+	try:
+		reader = seqio.open(input_filename, file2=input_paired_filename,
+			qualfile=quality_filename, colorspace=options.colorspace, 
+			fileformat=options.format, interleaved=options.interleaved)
+	except (seqio.UnknownFileType, IOError) as e:
+		parser.error(e)
+	
+	qualities = reader.delivers_qualities
+	
+	# Wrap reader in batch iterator
+	batch_size = options.batch_size or 1000
+	reader = BatchIterator(reader, batch_size, options.max_reads)
+	
+	# Wrap iterator in progress bar, unless requested not to
+	if not options.no_progress:
+		import progressbar
+		import progressbar.widgets
+		import math
+
+		class BatchProgressBar(progressbar.ProgressBar):
+			def __init__(self, iterable, widgets, max_value=None):
+				super(BatchProgressBar, self).__init__(widgets=widgets, max_value=max_value)
+				self._iterable = iterable
+			
+			def __next__(self):
+				try:
+					value = next(self._iterable)
+					if self.start_time is None:
+						self.start()
+					self.update(self.value + value[0])
+					return value
+				except StopIteration:
+					self.finish()
+					raise
+		
+		class MagCounter(progressbar.widgets.WidgetBase):
+			def __init__(self):
+				suffix = ""
+				if counter_magnitude is None:
+					div = 1.0
+				else:
+					div = float(MAGNITUDE[counter_magnitude][0])
+					suffix = counter_magnitude
+			
+				self._format = lambda val: "{:.1f} {}".format(val / div, suffix)
+		
+			def __call__(self, progress, data):
+				return self._format(data["value"])
+			
+		if options.max_reads:
+			reader = BatchProgressBar(reader, [
+				MagCounter(counter_magnitude), " Reads (", progressbar.Percentage(), ") ", 
+				progressbar.Timer(), " ", progressbar.Bar(), progressbar.AdaptiveETA()
+			], options.max_reads)
+		else:
+			reader = BatchProgressBar([
+				MagCounter(counter_magnitude), " Reads", progressbar.Timer(), 
+				progressbar.AnimatedMarker()
+			])
+	
+	return (reader, qualities, quality_filename is not None)
+
+class BatchIterator(object):
+	def __init__(self, reader, size, max_reads=None):
+		self.reader = enumerate(reader, 1)
+		self.size = size
+		self.max_reads = max_reads
+		self.done = False
+		self._empty_batch = [None] * size
+	
+	def __iter__(self):
+		return self
+
+	def next(self):
+		if self.done:
+			raise StopIteration()
+		
+		# TODO: is there a way to push this functionality down into 
+		# the reader to faciliate reading larger chunks at a time
+		# to minimize I/O operations? Is that just controlled by
+		# the file buffer size?
+		
+		batch = self._empty_batch.copy()
+		batch_size = None
+		for batch_index in range(self.size):
+			try:
+				read_index, record = self.reader.next()
+			except StopIteration:
+				batch_size = batch_index
+				self.done = True
+				break
+			
+			batch[batch_index] = record
+			
+			if self.max_reads and read_index > self.max_reads:
+				batch_size = batch_index + 1
+				self.done = True
+				break
+		
+		if batch_size is None:
+			return (self.size, batch)
+		elif batch_size == 0:
+			raise StopIteration()
+		else:
+			return (batch_size, batch[0:batch_size])
 
 class Filters(object):
 	def __init__(self, filter_factory):
@@ -1057,38 +1140,6 @@ class Writers(object):
 			if writer is not None:
 				writer.close()
 
-def create_progress(options, counter_magnitude="M"):
-	if options.no_progress:
-		return None
-	
-	import progressbar
-	import progressbar.widgets
-	import math
-	class MyCounter(progressbar.widgets.WidgetBase):
-		def __init__(self, magnitude):
-			suffix = ""
-			if magnitude is None:
-				div = 1.0
-			else:
-				div = float(MAGNITUDE[magnitude][0])
-				suffix = magnitude
-			
-			self._format = lambda val: "{:.1f} {}".format(val / div, suffix)
-		
-		def __call__(self, progress, data):
-			return self._format(data["value"])
-			
-	if options.max_reads:
-		return progressbar.ProgressBar(widgets=[
-			MyCounter(counter_magnitude), " Reads (", progressbar.Percentage(), ") ", 
-			progressbar.Timer(), " ", progressbar.Bar(), progressbar.AdaptiveETA()
-		])
-	else:
-		return progressbar.ProgressBar(widgets=[
-			MyCounter(counter_magnitude), " Reads", progressbar.Timer(), 
-			progressbar.AnimatedMarker()
-		])
-	
 def summarize_adapters(modifiers):
 	mods = modifiers.get_modifier_pair(ModType.ADAPTER)
 	summary = [{}, {}]
@@ -1098,22 +1149,20 @@ def summarize_adapters(modifiers):
 		summary[1] = collect_adapter_statistics(mods[1].adapters)
 	return summary
 
-def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, progress=None):
+def run_cutadapt_serial(reader, writers, modifiers, filters):
 	total_bp1 = 0
 	total_bp2 = 0
 	
 	try:
-		itr = progress(reader, max_reads) if progress else reader
-		for n, record in enumerate(itr, 1):
-			reads, bp = modifiers.modify(record)
-			total_bp1 += bp[0]
-			total_bp2 += bp[1]
-			
-			dest = filters.filter(*reads)
-			writers.write(dest, *reads)
-			
-			if max_reads is not None and n >= max_reads:
-				break
+		n = 0
+		for batch_size, batch in reader:
+			n += batch_size
+			for record in batch:
+				reads, bp = modifiers.modify(record)
+				total_bp1 += bp[0]
+				total_bp2 += bp[1]
+				dest = filters.filter(*reads)
+				writers.write(dest, *reads)
 		
 		return Summary(
 			collect_writer_statistics(n, total_bp1, total_bp2, writers),
@@ -1134,9 +1183,8 @@ def run_cutadapt_serial(reader, writers, modifiers, filters, max_reads=None, pro
 		reader.close()
 		writers.close()
 
-def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, max_reads=None,
-						  progress=None, batch_size=1000, timeout=0, preserve_order=False, 
-						  read_queue_size=0, result_queue_size=0, debug=False):
+def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, timeout=0, 
+						  preserve_order=False, read_queue_size=0, result_queue_size=0):
 	
 	# TODO: should probably log the run_cutadapt_parallel arguments
 	# TODO: would it help to use watermarking queues - i.e. queues that block
@@ -1174,25 +1222,8 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, max_read
 	
 	try:
 		# Main loop - add batches of records to the queue
-		empty_batch = [None] * batch_size
-		batch = empty_batch.copy()
-		num_batches = 0
-		batch_index = 0
-		itr = progress(reader, max_reads) if progress else reader
-		for i, record in enumerate(itr, 1):
-			batch[batch_index] = record
-			batch_index += 1
-			if max_reads is not None and i >= max_reads:
-				break
-			if batch_index >= batch_size:
-				num_batches += 1
-				read_queue.put((num_batches, batch), block=True)
-				batch = empty_batch.copy()
-				batch_index = 0
-		
-		if batch_index > 0:
-			num_batches += 1
-			read_queue.put((num_batches, batch[0:batch_index]), block=True)
+		for batch in enumerate(reader, 1):
+			read_queue.put(batch, block=True)
 		
 		# Tell the writer thread the max number of batches to expect
 		control.value = num_batches
@@ -1309,15 +1340,17 @@ class WorkerThread(Process):
 		self.summary_queue = summary_queue
 		self.control = control
 		self.timeout = timeout
-		self.debug = debug
+		self.processed_reads = 0
+		self.processed_batches = 0
 	
 	def run(self):
 		def process_next_batch():
 			waiting = None
 			while self.control.value >= 0:
 				try:
-					batch_num, records = self.input_queue.get(block=True, timeout=1)
+					batch_num, (batch_size, records) = self.input_queue.get(block=True, timeout=1)
 					result = [self._modify_and_filter(record) for record in records]
+					self.processed_reads += batch_size
 					self.input_queue.task_done()
 					return (batch_num, result)
 				except Empty:
@@ -1343,9 +1376,8 @@ class WorkerThread(Process):
 							break
 			return False
 		
-		processed_batches = 0
 		while send_result(process_next_batch()):
-			processed_batches += 1
+			self.processed_batches += 1
 		
 		self.output_queue.close()
 		self.output_queue.join()
