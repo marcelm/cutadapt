@@ -631,7 +631,10 @@ def validate_options(options, args, parser):
 	
 	if options.threads is not None:
 		if options.threads <= 0:
-			options.threads = max(cpu_count() - 2, 1)
+			options.threads = cpu_count() - 2
+			if options.threads <= 0:
+				# TODO: warn user
+				options.threads = 1
 	
 		options.batch_size = int_or_str(options.batch_size)
 		
@@ -642,13 +645,15 @@ def validate_options(options, args, parser):
 		if options.file_buffer_size < io.DEFAULT_BUFFER_SIZE:
 			parser.error("File buffer size must be at least {}".format(io.DEFAULT_BUFFER_SIZE))
 		
+		default_queue_size = options.threads * 10
+		
 		if options.read_queue_size is None:
-			options.read_queue_size = options.threads * 10
+			options.read_queue_size = default_queue_size
 		elif options.read_queue_size > 0:
 			assert options.read_queue_size >= options.threads
 	
 		if options.result_queue_size is None:
-			options.result_queue_size = options.threads * 5
+			options.result_queue_size = default_queue_size
 		elif options.result_queue_size > 0:
 			assert options.result_queue_size > options.threads
 	
