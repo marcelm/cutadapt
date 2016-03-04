@@ -714,9 +714,6 @@ class BatchIterator(object):
 	def __iter__(self):
 		return self
 	
-	# py2x alias
-	next = __next__
-	
 	def __next__(self):
 		if self.done:
 			raise StopIteration()
@@ -749,6 +746,9 @@ class BatchIterator(object):
 			raise StopIteration()
 		else:
 			return (batch_size, batch[0:batch_size])
+	
+	# py2x alias
+	next = __next__
 
 class Filters(object):
 	def __init__(self, filter_factory):
