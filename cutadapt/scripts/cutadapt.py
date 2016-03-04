@@ -1205,19 +1205,16 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, timeout=
 	worker_threads = set()
 	for i in range(threads):
 		worker = WorkerThread(i, modifiers, filters, read_queue, 
-			result_queue, worker_summary_queue, control, timeout),
-			debug
+			result_queue, worker_summary_queue, control, timeout)
 		worker_threads.add(worker)
 		worker.start()
 	
 	if preserve_order:
 		writer_thread = OrderPreservingWriterThread(writers, 
-			result_queue, writer_summary_queue, control, timeout,
-			debug)
+			result_queue, writer_summary_queue, control, timeout)
 	else:
 		writer_thread = WriterThread(writers, 
-			result_queue, writer_summary_queue, control, timeout,
-			debug)
+			result_queue, writer_summary_queue, control, timeout)
 	writer_thread.start()
 	
 	try:
@@ -1330,7 +1327,7 @@ class WorkerThread(Process):
 	should die (< 0) or there are no more batches coming (> 0).
 	"""
 	def __init__(self, index, modifiers, filters, input_queue, output_queue, 
-				summary_queue, control, timeout=60, debug=False):
+				summary_queue, control, timeout=60):
 		super(WorkerThread, self).__init__()
 		self.index = index
 		self.modifiers = modifiers
@@ -1413,7 +1410,7 @@ class WriterThread(Process):
 	summary: a shared array to hold n (number of records processed),
 	total_bp1 and total_bp2 (total read1 and read2 bp written).
 	"""
-	def __init__(self, writers, input_queue, summary_queue, control, timeout=60, debug=False):
+	def __init__(self, writers, input_queue, summary_queue, control, timeout=60):
 		super(WriterThread, self).__init__()
 		self.writers = writers
 		self.queue = input_queue
@@ -1424,7 +1421,6 @@ class WriterThread(Process):
 		self.total_bp2 = 0
 		self.seen_batches = set()
 		self.timeout = timeout
-		self.debug = debug
 	
 	def run(self):
 		try:
