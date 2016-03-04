@@ -1183,7 +1183,6 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, max_read
 				break
 			if batch_index >= batch_size:
 				num_batches += 1
-				# this blocks if the queue gets full
 				read_queue.put((num_batches, batch), block=True)
 				batch = empty_batch.copy()
 				batch_index = 0
@@ -1250,8 +1249,6 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, max_read
 			control.value = -1
 		
 		# Wait for all threads to finish
-		print("Waiting for threads to die...")
-		
 		def kill(t):
 			if t.is_alive():
 				# first try to be nice by waiting
@@ -1320,6 +1317,7 @@ class WorkerThread(Process):
 					self.input_queue.task_done()
 					return (batch_num, result)
 				except Empty:
+					print("Worker {} waiting for batch".format(self.index))
 					if self.control.value == 0 and not waiting:
 						waiting = time.time()
 					elif (self.control.value > 0) or (time.time() - waiting >= self.timeout):
@@ -1404,6 +1402,7 @@ class WriterThread(Process):
 					self._process_batch(batch_num, records)
 					self.queue.task_done()
 				except Empty:
+					print("Writer waiting for results")
 					if not waiting:
 						waiting = time.time()
 					elif time.time() - waiting >= self.timeout:
