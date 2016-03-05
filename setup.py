@@ -98,7 +98,7 @@ extensions = [
 extensions = cythonize_if_necessary(extensions)
 
 setup(
-	name = 'cutadapt',
+	name = 'cutadapt-parallel',
 	version = __version__,
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@scilifelab.se',
@@ -107,7 +107,7 @@ setup(
 	license = 'MIT',
 	ext_modules = extensions,
 	packages = ['cutadapt', 'cutadapt.scripts'],
-	scripts = ['bin/cutadapt'],
+	scripts = ['bin/cutadapt-parallel'],
 	classifiers = [
 		"Development Status :: 5 - Production/Stable",
 		"Environment :: Console",

@@ -17,7 +17,6 @@ def run_paired(params, in1, in2, expected1, expected2):
 			assert files_equal(cutpath(expected1), p1)
 			assert files_equal(cutpath(expected2), p2)
 
-
 def run_interleaved(params, inpath, expected):
 	if type(params) is str:
 		params = params.split()
