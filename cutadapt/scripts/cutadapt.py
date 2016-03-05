@@ -651,80 +651,9 @@ def create_reader(input_files, options, parser, counter_magnitude="M"):
 	
 	# Wrap iterator in progress bar
 	if options.progress == "msg":
-		class ProgressMessageReader(object):
-			def __init__(self, iterable, batch_size, interval=1000000):
-				self.iterable = iterable
-				self.batch_size = batch_size
-				self.interval = interval
-				self.ctr = 0
-			
-			def __next__(self):
-				value = self.iterable.next()
-				if value:
-					self.ctr += value[0]
-					if self.ctr % self.interval < self.batch_size:
-						print("Read {} records".format(self.ctr))
-				return value
-			
-			next = __next__
-			def __iter__(self): return self
-			def close(self): self.iterable.close()
-		
 		reader = ProgressMessageReader(reader, batch_size)
-		
 	elif options.progress == "bar":
-		import progressbar
-		import progressbar.widgets
-		import math
-
-		class ProgressBarReader(progressbar.ProgressBar):
-			def __init__(self, iterable, widgets, max_value=None):
-				super(ProgressBarReader, self).__init__(widgets=widgets, max_value=max_value)
-				self._iterable = iterable
-				self.done = False
-			
-			def __next__(self):
-				try:
-					value = next(self._iterable)
-					if self.start_time is None:
-						self.start()
-					self.update(self.value + value[0])
-					return value
-				except StopIteration:
-					self.close()
-					raise
-			
-			def close(self):
-				if not self.done:
-					self.finish()
-					self.done = True
-				if not self._iterable.done:
-					self._iterable.close()
-		
-		class MagCounter(progressbar.widgets.WidgetBase):
-			def __init__(self, magnitude):
-				suffix = ""
-				if magnitude is None:
-					div = 1.0
-				else:
-					div = float(MAGNITUDE[magnitude][0])
-					suffix = magnitude
-			
-				self._format = lambda val: "{:.1f} {}".format(val / div, suffix)
-		
-			def __call__(self, progress, data):
-				return self._format(data["value"])
-			
-		if options.max_reads:
-			reader = ProgressBarReader(reader, [
-				MagCounter(counter_magnitude), " Reads (", progressbar.Percentage(), ") ", 
-				progressbar.Timer(), " ", progressbar.Bar(), progressbar.AdaptiveETA()
-			], options.max_reads)
-		else:
-			reader = ProgressBarReader(reader, [
-				MagCounter(counter_magnitude), " Reads", progressbar.Timer(), 
-				progressbar.AnimatedMarker()
-			])
+		reader = create_progress_bar(reader, options.max_reads, counter_magnitude)
 	
 	return (reader, qualities, quality_filename is not None)
 
@@ -780,6 +709,81 @@ class BatchIterator(object):
 	def close(self):
 		self.done = True
 		self.reader.close()
+
+class ProgressMessageReader(object):
+	def __init__(self, iterable, batch_size, interval=1000000):
+		self.iterable = iterable
+		self.batch_size = batch_size
+		self.interval = interval
+		self.ctr = 0
+	
+	def __next__(self):
+		value = self.iterable.next()
+		if value:
+			self.ctr += value[0]
+			if self.ctr % self.interval < self.batch_size:
+				print("Read {} records".format(self.ctr))
+		return value
+	
+	next = __next__
+	def __iter__(self): return self
+	def close(self): self.iterable.close()
+		
+def create_progress_reader(reader, max_reads=None, counter_magnitude="M"):
+	import progressbar
+	import progressbar.widgets
+	import math
+
+	class ProgressBarReader(progressbar.ProgressBar):
+		def __init__(self, iterable, widgets, max_value=None):
+			super(ProgressBarReader, self).__init__(widgets=widgets, max_value=max_value)
+			self._iterable = iterable
+			self.done = False
+		
+		def __next__(self):
+			try:
+				value = next(self._iterable)
+				if self.start_time is None:
+					self.start()
+				self.update(self.value + value[0])
+				return value
+			except StopIteration:
+				self.close()
+				raise
+		
+		def close(self):
+			if not self.done:
+				self.finish()
+				self.done = True
+			if not self._iterable.done:
+				self._iterable.close()
+	
+	class MagCounter(progressbar.widgets.WidgetBase):
+		def __init__(self, magnitude):
+			suffix = ""
+			if magnitude is None:
+				div = 1.0
+			else:
+				div = float(MAGNITUDE[magnitude][0])
+				suffix = magnitude
+		
+			self._format = lambda val: "{:.1f} {}".format(val / div, suffix)
+	
+		def __call__(self, progress, data):
+			return self._format(data["value"])
+		
+	if max_reads:
+		reader = ProgressBarReader(reader, [
+			MagCounter(counter_magnitude), " Reads (", progressbar.Percentage(), ") ", 
+			progressbar.Timer(), " ", progressbar.Bar(), progressbar.AdaptiveETA()
+		], max_reads)
+	else:
+		reader = ProgressBarReader(reader, [
+			MagCounter(counter_magnitude), " Reads", progressbar.Timer(), 
+			progressbar.AnimatedMarker()
+		])
+	
+	return reader
 
 class Filters(object):
 	def __init__(self, filter_factory):
@@ -1189,11 +1193,11 @@ def summarize_adapters(modifiers):
 	return summary
 
 def run_cutadapt_serial(reader, writers, modifiers, filters):
-	total_bp1 = 0
-	total_bp2 = 0
-	
 	try:
 		n = 0
+		total_bp1 = 0
+		total_bp2 = 0
+		
 		for batch_size, batch in reader:
 			n += batch_size
 			for record in batch:
@@ -1224,10 +1228,6 @@ def run_cutadapt_serial(reader, writers, modifiers, filters):
 
 def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, timeout=0, 
 						  preserve_order=False, read_queue_size=0, result_queue_size=0):
-	
-	# TODO: should probably log the run_cutadapt_parallel arguments
-	# TODO: would it help to use watermarking queues - i.e. queues that block
-	# at some max level X and don't unblock until some min level Y?
 	
 	# timeout <= 0 means block forever
 	if timeout <= 0: timeout = None
@@ -1293,7 +1293,7 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, timeout=
 		assert worker_summary_queue.empty()
 		worker_summary_queue.close()
 		
-		# wait for worker threads to complete and get
+		# wait for worker threads to complete
 		for worker in worker_threads:
 			worker.join()
 		
@@ -1331,31 +1331,6 @@ def run_cutadapt_parallel(reader, writers, modifiers, filters, threads, timeout=
 		kill(writer_thread)
 		for worker in worker_threads:
 			kill(worker)
-
-class PendingQueue(object):
-	def _init(self):
-		self.queue = {}
-		self.min = None
-
-	def push(self, priority, value):
-		self.queue[priority] = value
-		if self.min is None or priority < self.min:
-			self.min = priority
-
-	def pop(self):
-		size = len(self.queue)
-		if size == 0:
-			raise Exception("PendingQueue is empty")
-		value = self.queue.pop(self.min)
-		if size == 1:
-			self.min = None
-		else:
-			self.min = min(self.queue.keys())
-		return value
-
-	@property
-	def empty(self):
-		return len(self.queue) == 0
 
 class WorkerThread(Process):
 	"""
@@ -1518,6 +1493,7 @@ class OrderPreservingWriterThread(WriterThread):
 	guaranteed to preserve the original order of records.
 	"""
 	def _init(self):
+		# TODO: use a maximum PendingQueue size?
 		self.pending = PendingQueue()
 		self.cur_batch = 1
 	
@@ -1531,13 +1507,41 @@ class OrderPreservingWriterThread(WriterThread):
 	
 	def _no_more_batches(self):
 		self._consume_pending()
-		if not self.pending.empty:
-			raise Exception("Did not receive all batches")
+		assert self.pending.empty
 	
 	def _consume_pending(self):
-		while (not self.pending.empty) and (self.cur_batch == pending.min):
+		while (not self.pending.empty) and (self.cur_batch == pending.min_priority):
 			self.write_batch(pending.pop())
 			self.cur_batch += 1
+
+class PendingQueue(object):
+	def _init(self, max_size=None):
+		self.queue = {}
+		self.max_size = max_size
+		self.min_priority = None
+
+	def push(self, priority, value):
+		assert not self.full
+		self.queue[priority] = value
+		if self.min_priority is None or priority < self.min_priority:
+			self.min_priority = priority
+
+	def pop(self):
+		assert not self.empty
+		value = self.queue.pop(self.min_priority)
+		if self.empty:
+			self.min_priority = None
+		else:
+			self.min_priority = min(self.queue.keys())
+		return value
+	
+	@property
+	def full(self):
+		return self.max_size and len(self.queue) >= self.max_size
+	
+	@property
+	def empty(self):
+		return len(self.queue) == 0
 
 if __name__ == '__main__':
 	main()
