@@ -774,7 +774,7 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None,
 			# Skip comment lines (needed for csfasta)
 			continue
 		if line.startswith('>'):
-			return fasta_handler(FileWithPrependedLine(file, line, buffer_size=buffer_size))
+			return fasta_handler(FileWithPrependedLine(file, line), buffer_size=buffer_size)
 		if line.startswith('@'):
-			return fastq_handler(FileWithPrependedLine(file, line, buffer_size=buffer_size))
+			return fastq_handler(FileWithPrependedLine(file, line), buffer_size=buffer_size)
 	raise UnknownFileType("File is neither FASTQ nor FASTA.")

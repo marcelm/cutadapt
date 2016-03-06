@@ -154,10 +154,12 @@ def xopen(filename, mode='r', buffer_size=io.DEFAULT_BUFFER_SIZE):
 		if lzma is None:
 			raise ImportError("Cannot open xz files: The lzma module is not available "
 				"(use Python 3.3 or newer)")
-		if 'r' in mode:
-			return buffered_reader(lzma.open(filename, mode), buffer_size)
-		else:
-			return buffered_writer(lzma.open(filename, mode), buffer_size)
+		return lzma.open(filename, mode)
+		# TODO: add buffering for xz files
+		#if 'r' in mode:
+		#	return buffered_reader(lzma.open(filename, mode), buffer_size)
+		#else:
+		#	return buffered_writer(lzma.open(filename, mode), buffer_size)
 	elif filename.endswith('.gz'):
 		if PY3:
 			if 't' in mode:
