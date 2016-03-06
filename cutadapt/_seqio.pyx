@@ -3,7 +3,7 @@
 from __future__ import print_function, division, absolute_import
 from .xopen import xopen
 from .seqio import _shorten, FormatError, SequenceReader
-
+import io
 
 cdef class Sequence(object):
 	"""
@@ -20,20 +20,23 @@ cdef class Sequence(object):
 		public str qualities
 		public str name2
 		public object match
+		public object match_info
 
-	def __init__(self, str name, str sequence, str qualities=None, str name2='',
-			match=None):
+	def __init__(self, str name, str sequence, str qualities=None, str name2='', match=None,
+				 match_info=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
 		self.name2 = name2
 		self.match = match
+		self.match_info = match_info
 		if qualities is not None and len(qualities) != len(sequence):
 			rname = _shorten(name)
-			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length of read ({2}) do not match".format(
-				rname, len(qualities), len(sequence)))
-
+			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length "
+				"of read ({2}) do not match".format(
+					rname, len(qualities), len(sequence)))
+	
 	def __getitem__(self, key):
 		"""slicing"""
 		return self.__class__(
@@ -41,7 +44,8 @@ cdef class Sequence(object):
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
 			self.name2,
-			self.match)
+			self.match,
+			self.match_info)
 
 	def __repr__(self):
 		qstr = ''
@@ -72,12 +76,12 @@ class FastqReader(SequenceReader):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
-	def __init__(self, file, sequence_class=Sequence):
+	def __init__(self, file, sequence_class=Sequence, buffer_size=io.DEFAULT_BUFFER_SIZE):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
 		"""
-		super(FastqReader, self).__init__(file)
+		super(FastqReader, self).__init__(file, buffer_size=buffer_size)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
