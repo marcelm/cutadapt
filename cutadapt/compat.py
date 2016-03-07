@@ -6,6 +6,7 @@ from __future__ import print_function, division, absolute_import
 import sys
 PY3 = sys.version > '3'
 
+
 if PY3:
 	maketrans = str.maketrans
 	basestring = str
@@ -24,6 +25,7 @@ if PY3:
 		else:
 			return s
 	from io import StringIO
+
 else:
 	def bytes_to_str(s):
 		return s
