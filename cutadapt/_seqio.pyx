@@ -31,9 +31,10 @@ cdef class Sequence(object):
 		self.match = match
 		if qualities is not None and len(qualities) != len(sequence):
 			rname = _shorten(name)
-			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length of read ({2}) do not match".format(
-				rname, len(qualities), len(sequence)))
-
+			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length "
+				"of read ({2}) do not match".format(
+					rname, len(qualities), len(sequence)))
+	
 	def __getitem__(self, key):
 		"""slicing"""
 		return self.__class__(

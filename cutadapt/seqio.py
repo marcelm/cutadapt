@@ -44,8 +44,8 @@ class Sequence(object):
 		if qualities is not None:
 			if len(qualities) != len(sequence):
 				rname = _shorten(name)
-				raise FormatError("In read named {0!r}: Length of quality sequence ({1}) and length of read ({2}) do not match".format(
-					rname, len(qualities), len(sequence)))
+				raise FormatError("In read named {0!r}: Length of quality sequence ({1}) and "
+					"length of read ({2}) do not match".format(rname, len(qualities), len(sequence)))
 
 	def __getitem__(self, key):
 		"""slicing"""
@@ -60,7 +60,8 @@ class Sequence(object):
 		qstr = ''
 		if self.qualities is not None:
 			qstr = ', qualities={0!r}'.format(_shorten(self.qualities))
-		return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
+		return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(
+			_shorten(self.name), _shorten(self.sequence), qstr)
 
 	def __len__(self):
 		return len(self.sequence)
@@ -133,7 +134,8 @@ class ColorspaceSequence(Sequence):
 		qstr = ''
 		if self.qualities is not None:
 			qstr = ', qualities={0!r}'.format(_shorten(self.qualities))
-		return '<ColorspaceSequence(name={0!r}, primer={1!r}, sequence={2!r}{3})>'.format(_shorten(self.name), self.primer, _shorten(self.sequence), qstr)
+		return '<ColorspaceSequence(name={0!r}, primer={1!r}, sequence={2!r}{3})>'.format(
+			_shorten(self.name), self.primer, _shorten(self.sequence), qstr)
 
 	def __getitem__(self, key):
 		return self.__class__(
@@ -253,14 +255,16 @@ class FastqReader(SequenceReader):
 		for i, line in enumerate(self._file):
 			if i % 4 == 0:
 				if not line.startswith('@'):
-					raise FormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
+					raise FormatError("Line {0} in FASTQ file is expected to start with '@', "
+						"but found {1!r}".format(i+1, line[:10]))
 				name = line.strip()[1:]
 			elif i % 4 == 1:
 				sequence = line.strip()
 			elif i % 4 == 2:
 				line = line.strip()
 				if not line.startswith('+'):
-					raise FormatError("Line {0} in FASTQ file is expected to start with '+', but found {1!r}".format(i+1, line[:10]))
+					raise FormatError("Line {0} in FASTQ file is expected to start with '+', "
+						"but found {1!r}".format(i+1, line[:10]))
 				if len(line) > 1:
 					if line[1:] != name:
 						raise FormatError(
@@ -323,11 +327,13 @@ class FastaQualReader(object):
 			conv[str(i)] = chr(i + 33)
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
 			if fastaread.name != qualread.name:
-				raise FormatError("The read names in the FASTA and QUAL file do not match ({0!r} != {1!r})".format(fastaread.name, qualread.name))
+				raise FormatError("The read names in the FASTA and QUAL file "
+					"do not match ({0!r} != {1!r})".format(fastaread.name, qualread.name))
 			try:
 				qualities = ''.join([conv[value] for value in qualread.sequence.split()])
 			except KeyError as e:
-				raise FormatError("Within read named {0!r}: Found invalid quality value {1}".format(fastaread.name, e))
+				raise FormatError("Within read named {0!r}: Found invalid quality "
+					"value {1}".format(fastaread.name, e))
 			assert fastaread.name == qualread.name
 			yield self.sequence_class(fastaread.name, fastaread.sequence, qualities)
 
@@ -386,14 +392,16 @@ class PairedSequenceReader(object):
 				# End of file 1. Make sure that file 2 is also at end.
 				try:
 					next(it2)
-					raise FormatError("Reads are improperly paired. There are more reads in file 2 than in file 1.")
+					raise FormatError("Reads are improperly paired. There are more reads in "
+						"file 2 than in file 1.")
 				except StopIteration:
 					pass
 				break
 			try:
 				r2 = next(it2)
 			except StopIteration:
-				raise FormatError("Reads are improperly paired. There are more reads in file 1 than in file 2.")
+				raise FormatError("Reads are improperly paired. There are more reads in "
+					"file 1 than in file 2.")
 			if not sequence_names_match(r1, r2):
 				raise FormatError("Reads are improperly paired. Read name '{0}' "
 					"in file 1 does not match '{1}' in file 2.".format(r1.name, r2.name))

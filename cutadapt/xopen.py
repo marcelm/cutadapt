@@ -85,7 +85,8 @@ class GzipReader:
 		"""
 		retcode = self.process.poll()
 		if retcode is not None and retcode != 0:
-			raise EOFError("gzip process returned non-zero exit code {0}. Is the input file truncated or corrupt?".format(retcode))
+			raise EOFError("gzip process returned non-zero exit code {0}. Is the "
+				"input file truncated or corrupt?".format(retcode))
 
 	def read(self, *args):
 		data = self.process.stdout.read(*args)
@@ -151,7 +152,8 @@ def xopen(filename, mode='r'):
 			return bz2.BZ2File(filename, mode)
 	elif filename.endswith('.xz'):
 		if lzma is None:
-			raise ImportError("Cannot open xz files: The lzma module is not available (use Python 3.3 or newer)")
+			raise ImportError("Cannot open xz files: The lzma module is not available "
+				"(use Python 3.3 or newer)")
 		return lzma.open(filename, mode)
 	elif filename.endswith('.gz'):
 		if PY3:
