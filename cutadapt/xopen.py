@@ -22,16 +22,16 @@ except ImportError:
 	lzma = None
 
 if sys.version_info < (2, 7):
-	buffered_reader = lambda x: x
-	buffered_writer = lambda x: x
+	buffered_reader = lambda fileobj, buffer_size: fileobj
+	buffered_writer = lambda fileobj, buffer_size: fileobj
 else:
-	buffered_reader = io.BufferedReader
-	buffered_writer = io.BufferedWriter
+	buffered_reader = lambda fileobj, buffer_size: io.BufferedReader(fileobj, buffer_size)
+	buffered_writer = lambda fileobj, buffer_size: io.BufferedWriter(fileobj, buffer_size)
 
 
 class GzipWriter:
-	def __init__(self, path, mode='w'):
-		self.outfile = open(path, mode)
+	def __init__(self, path, mode='w', buffer_size=io.DEFAULT_BUFFER_SIZE):
+		self.outfile = open(path, mode, buffering=buffer_size)
 		self.devnull = open(os.devnull, 'w')
 		try:
 			# Setting close_fds to True is necessary due to
@@ -102,7 +102,7 @@ class GzipReader:
 		self.close()
 
 
-def xopen(filename, mode='r'):
+def xopen(filename, mode='r', buffer_size=io.DEFAULT_BUFFER_SIZE):
 	"""
 	Replacement for the "open" function that can also open files that have
 	been compressed with gzip, bzip2 or xz. If the filename is '-', standard
@@ -145,9 +145,9 @@ def xopen(filename, mode='r'):
 			raise ImportError("Cannot open bz2 files: The bz2 module is not available")
 		if PY3:
 			if 't' in mode:
-				return io.TextIOWrapper(bz2.BZ2File(filename, mode[0]))
+				return io.TextIOWrapper(bz2.BZ2File(filename, mode[0], buffering=buffer_size))
 			else:
-				return bz2.BZ2File(filename, mode)
+				return bz2.BZ2File(filename, mode, buffering=buffer_size)
 		else:
 			return bz2.BZ2File(filename, mode)
 	elif filename.endswith('.xz'):
@@ -155,6 +155,11 @@ def xopen(filename, mode='r'):
 			raise ImportError("Cannot open xz files: The lzma module is not available "
 				"(use Python 3.3 or newer)")
 		return lzma.open(filename, mode)
+		# TODO: add buffering for xz files
+		#if 'r' in mode:
+		#	return buffered_reader(lzma.open(filename, mode), buffer_size)
+		#else:
+		#	return buffered_writer(lzma.open(filename, mode), buffer_size)
 	elif filename.endswith('.gz'):
 		if PY3:
 			if 't' in mode:
@@ -162,9 +167,9 @@ def xopen(filename, mode='r'):
 				return io.TextIOWrapper(gzip.open(filename, mode[0]))
 			else:
 				if 'r' in mode:
-					return io.BufferedReader(gzip.open(filename, mode))
+					return io.BufferedReader(gzip.open(filename, mode), buffer_size)
 				else:
-					return io.BufferedWriter(gzip.open(filename, mode))
+					return io.BufferedWriter(gzip.open(filename, mode), buffer_size)
 		else:
 			# rb/rt are equivalent in Py2
 			if 'r' in mode:
@@ -172,11 +177,11 @@ def xopen(filename, mode='r'):
 					return GzipReader(filename)
 				except IOError:
 					# gzip not installed
-					return buffered_reader(gzip.open(filename, mode))
+					return buffered_reader(gzip.open(filename, mode), buffer_size)
 			else:
 				try:
-					return GzipWriter(filename, mode)
+					return GzipWriter(filename, mode, buffer_size)
 				except IOError:
-					return buffered_writer(gzip.open(filename, mode))
+					return buffered_writer(gzip.open(filename, mode), buffer_size)
 	else:
-		return open(filename, mode)
+		return open(filename, mode, buffering=buffer_size)
