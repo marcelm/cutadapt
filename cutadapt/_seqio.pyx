@@ -1,9 +1,6 @@
 # kate: syntax Python;
 # cython: profile=False
 from __future__ import print_function, division, absolute_import
-
-import io
-
 from .xopen import xopen
 from .seqio import _shorten, FormatError, SequenceReader
 
@@ -54,7 +51,8 @@ cdef class Sequence(object):
 		qstr = ''
 		if self.qualities is not None:
 			qstr = ', qualities={0!r}'.format(_shorten(self.qualities))
-		return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
+		return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(
+			_shorten(self.name), _shorten(self.sequence), qstr)
 
 	def __len__(self):
 		return len(self.sequence)
@@ -79,12 +77,12 @@ class FastqReader(SequenceReader):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
-	def __init__(self, file, sequence_class=Sequence, buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, file, sequence_class=Sequence):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
 		"""
-		super(FastqReader, self).__init__(file, buffer_size=buffer_size)
+		super(FastqReader, self).__init__(file)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
@@ -100,7 +98,8 @@ class FastqReader(SequenceReader):
 		it = iter(self._file)
 		line = next(it)
 		if not (line and line[0] == '@'):
-			raise FormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
+			raise FormatError("Line {0} in FASTQ file is expected to start with '@', ",
+				"but found {1!r}".format(i+1, line[:10]))
 		strip = -2 if line.endswith('\r\n') else -1
 		name = line[1:strip]
 
@@ -108,7 +107,8 @@ class FastqReader(SequenceReader):
 		for line in it:
 			if i == 0:
 				if not (line and line[0] == '@'):
-					raise FormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
+					raise FormatError("Line {0} in FASTQ file is expected to start with '@', "
+						"but found {1!r}".format(i+1, line[:10]))
 				name = line[1:strip]
 			elif i == 1:
 				sequence = line[:strip]
@@ -118,7 +118,8 @@ class FastqReader(SequenceReader):
 				else:
 					line = line[:strip]
 					if not (line and line[0] == '+'):
-						raise FormatError("Line {0} in FASTQ file is expected to start with '+', but found {1!r}".format(i+1, line[:10]))
+						raise FormatError("Line {0} in FASTQ file is expected to start with '+', "
+							"but found {1!r}".format(i+1, line[:10]))
 					if len(line) > 1:
 						if not line[1:] == name:
 							raise FormatError(

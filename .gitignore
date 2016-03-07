@@ -14,3 +14,5 @@ cutadapt/*.so
 doc/_build
 *.pyo
 .idea/
+tests/testtmp/*
+*.fastq
