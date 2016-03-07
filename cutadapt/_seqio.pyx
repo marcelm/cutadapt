@@ -4,6 +4,7 @@ from __future__ import print_function, division, absolute_import
 from .xopen import xopen
 from .seqio import _shorten, FormatError, SequenceReader
 
+
 cdef class Sequence(object):
 	"""
 	A record in a FASTQ file. Also used for FASTA (then the qualities attribute
