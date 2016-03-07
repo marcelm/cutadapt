@@ -50,13 +50,6 @@ class Sequence(object):
 				raise FormatError("In read named {0!r}: Length of quality sequence ({1}) and "
 					"length of read ({2}) do not match".format(rname, len(qualities), len(sequence)))
 	
-	@property
-	def clipped(self):
-		trimmed_len = self.original_length
-		if self.match:
-			trimmed_len -= self.match.length
-		return trimmed_length > len(self)
-	
 	def __getitem__(self, key):
 		"""slicing"""
 		return self.__class__(
