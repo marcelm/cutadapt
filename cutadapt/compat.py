@@ -5,7 +5,6 @@ Minimal Py2/Py3 compatibility library.
 from __future__ import print_function, division, absolute_import
 import sys
 PY3 = sys.version > '3'
-PY27 = sys.version_info >= (2, 7)
 
 if PY3:
 	maketrans = str.maketrans
@@ -25,7 +24,6 @@ if PY3:
 		else:
 			return s
 	from io import StringIO
-	
 else:
 	def bytes_to_str(s):
 		return s
