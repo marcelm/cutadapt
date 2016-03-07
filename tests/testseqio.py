@@ -9,7 +9,8 @@ from nose.tools import raises
 from tempfile import mkdtemp
 from cutadapt.seqio import (Sequence, ColorspaceSequence, FormatError,
 	FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
-	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq)
+	FastaWriter, FastqWriter, InterleavedSequenceWriter)
+from cutadapt.seqio import open as openseq
 from cutadapt.compat import StringIO
 
 
