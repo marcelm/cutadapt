@@ -9,7 +9,7 @@ import sys
 import io
 import os
 from subprocess import Popen, PIPE
-from .compat import PY3, basestring
+from .compat import PY3, PY27, fopen, basestring
 
 try:
 	import bz2
@@ -21,17 +21,19 @@ try:
 except ImportError:
 	lzma = None
 
-if sys.version_info < (2, 7):
-	buffered_reader = lambda x: x
-	buffered_writer = lambda x: x
-else:
+# See note in compat.py - I think this should
+# change to PY26
+if PY27:
 	buffered_reader = io.BufferedReader
 	buffered_writer = io.BufferedWriter
+else:
+	buffered_reader = lambda x: x
+	buffered_writer = lambda x: x
 	
 class GzipWriter:
 	def __init__(self, path, mode='w'):
-		self.outfile = open(path, mode)
-		self.devnull = open(os.devnull, 'w')
+		self.outfile = fopen(path, mode)
+		self.devnull = fopen(os.devnull, 'w')
 		try:
 			# Setting close_fds to True is necessary due to
 			# http://bugs.python.org/issue12786
@@ -183,4 +185,4 @@ def xopen(filename, mode='r'):
 				except IOError:
 					return buffered_writer(gzip.open(filename, mode))
 	else:
-		return open(filename, mode)
+		return fopen(filename, mode)
