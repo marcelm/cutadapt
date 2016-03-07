@@ -23,15 +23,17 @@ cdef class Sequence(object):
 		public str qualities
 		public str name2
 		public object match
+		public object match_info
 
-	def __init__(self, str name, str sequence, str qualities=None, str name2='',
-			match=None):
+	def __init__(self, str name, str sequence, str qualities=None, str name2='', match=None,
+				 match_info=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
 		self.name2 = name2
 		self.match = match
+		self.match_info = match_info
 		if qualities is not None and len(qualities) != len(sequence):
 			rname = _shorten(name)
 			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length "
@@ -45,7 +47,8 @@ cdef class Sequence(object):
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
 			self.name2,
-			self.match)
+			self.match,
+			self.match_info)
 
 	def __repr__(self):
 		qstr = ''
