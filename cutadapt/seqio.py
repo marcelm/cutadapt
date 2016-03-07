@@ -465,24 +465,45 @@ class InterleavedSequenceReader(object):
 	def __exit__(self, *args):
 		self.close()
 
+class FileWriter(object):
+	def __init__(self, file, buffer_size=io.DEFAULT_BUFFER_SIZE):
+		if isinstance(file, str):
+			self._file = xopen(file, 'w', buffer_size=buffer_size)
+			self._close_on_exit = True
+		else:
+			self._file = file
+			self._close_on_exit = False
+	
+	def close(self):
+		if self._close_on_exit:
+			self._file.close()
+	
+	def __enter__(self):
+		if self._file.closed:
+			raise ValueError("I/O operation on closed file")
+		return self
 
-class FastaWriter(object):
+	def __exit__(self, *args):
+		self.close()
+
+class SingleRecordWriter(object):
+	"""Public interface to single-record files"""
+	def write(self, record):
+		raise NotImplementedError()
+
+class FastaWriter(FileWriter, SingleRecordWriter):
 	"""
 	Write FASTA-formatted sequences to a file.
 	"""
-	_close_on_exit = False
 
 	def __init__(self, file, line_length=None, buffer_size=io.DEFAULT_BUFFER_SIZE):
 		"""
 		If line_length is not None, the lines will
 		be wrapped after line_length characters.
 		"""
+		FileWriter.__init__(self, file, buffer_size=buffer_size)
 		self.line_length = line_length if line_length != 0 else None
-		if isinstance(file, str):
-			file = xopen(file, 'w')
-			self._close_on_exit = True
-		self._file = file
-
+	
 	def write(self, name_or_seq, sequence=None):
 		"""Write an entry to the the FASTA file.
 
@@ -501,6 +522,7 @@ class FastaWriter(object):
 			sequence = name_or_seq.sequence
 		else:
 			name = name_or_seq
+		
 		if self.line_length is not None:
 			print('>{0}'.format(name), file=self._file)
 			for i in range(0, len(sequence), self.line_length):
@@ -510,27 +532,13 @@ class FastaWriter(object):
 		else:
 			print('>{0}'.format(name), sequence, file=self._file, sep='\n')
 
-	def close(self):
-		if self._close_on_exit:
-			self._file.close()
-
-	def __enter__(self):
-		if self._file.closed:
-			raise ValueError("I/O operation on closed file")
-		return self
-
-	def __exit__(self, *args):
-		self.close()
-
-
 class ColorspaceFastaWriter(FastaWriter):
 	def write(self, record):
 		name = record.name
 		sequence = record.primer + record.sequence
 		super(ColorspaceFastaWriter, self).write(name, sequence)
 
-
-class FastqWriter(object):
+class FastqWriter(FileWriter, SingleRecordWriter):
 	"""
 	Write sequences with qualities in FASTQ format.
 
@@ -540,14 +548,6 @@ class FastqWriter(object):
 	+
 	QUALITIS
 	"""
-	_close_on_exit = False
-
-	def __init__(self, file):
-		if isinstance(file, str):
-			file = xopen(file, "w")
-			self._close_on_exit = True
-		self._file = file
-
 	def write(self, record):
 		"""
 		Write a Sequence record to the the FASTQ file.
@@ -562,19 +562,6 @@ class FastqWriter(object):
 		print("@{0:s}\n{1:s}\n+\n{2:s}".format(
 			name, sequence, qualities), file=self._file)
 
-	def close(self):
-		if self._close_on_exit:
-			self._file.close()
-
-	def __enter__(self):
-		if self._file.closed:
-			raise ValueError("I/O operation on closed file")
-		return self
-
-	def __exit__(self, *args):
-		self.close()
-
-
 class ColorspaceFastqWriter(FastqWriter):
 	def write(self, record):
 		name = record.name
@@ -582,11 +569,27 @@ class ColorspaceFastqWriter(FastqWriter):
 		qualities = record.qualities
 		super(ColorspaceFastqWriter, self).writeseq(name, sequence, qualities)
 
+class PairRecordWriter(object):
+	"""Public interface to paired-record files"""
+	def write(self, read1, read2):
+		raise NotImplementedError()
+	def close(self):
+		raise NotImplementedError()
+	
+	def __enter__(self):
+		# TODO do not allow this twice
+		return self
 
-class PairedSequenceWriter(object):
-	def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None):
-		self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
-		self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
+	def __exit__(self, *args):
+		self.close()
+
+class PairedSequenceWriter(PairRecordWriter):
+	def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None,
+				 buffer_size=io.DEFAULT_BUFFER_SIZE):
+		self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w',
+			qualities=qualities, buffer_size=buffer_size)
+		self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w',
+			qualities=qualities, buffer_size=buffer_size)
 
 	def write(self, read1, read2):
 		self._writer1.write(read1)
@@ -596,15 +599,7 @@ class PairedSequenceWriter(object):
 		self._writer1.close()
 		self._writer2.close()
 
-	def __enter__(self):
-		# TODO do not allow this twice
-		return self
-
-	def __exit__(self, *args):
-		self.close()
-
-
-class InterleavedSequenceWriter(object):
+class InterleavedSequenceWriter(PairRecordWriter):
 	"""
 	Write paired-end reads to an interleaved FASTA or FASTQ file
 	"""
@@ -619,13 +614,6 @@ class InterleavedSequenceWriter(object):
 
 	def close(self):
 		self._writer.close()
-
-	def __enter__(self):
-		return self
-
-	def __exit__(self, *args):
-		self.close()
-
 
 class UnknownFileType(Exception):
 	"""
