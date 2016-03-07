@@ -25,18 +25,8 @@ if PY3:
 		else:
 			return s
 	from io import StringIO
-	import io
-	fopen = io.open
 	
 else:
-	if PY27:
-		# In python 2.7 (and probably 2.6?), io.read is substantially more efficient 
-		# than the read method on the default file object.
-		import io
-		fopen = io.open
-	else:
-		fopen = open
-		
 	def bytes_to_str(s):
 		return s
 
