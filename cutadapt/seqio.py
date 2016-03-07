@@ -9,7 +9,6 @@ TODO
 """
 from __future__ import print_function, division, absolute_import
 import sys
-import io
 from os.path import splitext
 from .xopen import xopen
 from .compat import zip, basestring
@@ -83,13 +82,13 @@ class SequenceReader(object):
 	"""Read possibly compressed files containing sequences"""
 	_close_on_exit = False
 
-	def __init__(self, file, buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, file):
 		"""
 		file is a path or a file-like object. In both cases, the file may
 		be compressed (.gz, .bz2, .xz).
 		"""
 		if isinstance(file, basestring):
-			file = xopen(file, buffer_size=buffer_size)
+			file = xopen(file)
 			self._close_on_exit = True
 		self._file = file
 
@@ -191,15 +190,14 @@ class FastaReader(SequenceReader):
 	"""
 	Reader for FASTA files.
 	"""
-	def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence, 
-				 buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence):
 		"""
 		file is a path or a file-like object. In both cases, the file may
 		be compressed (.gz, .bz2, .xz).
 
 		keep_linebreaks -- whether to keep newline characters in the sequence
 		"""
-		super(FastaReader, self).__init__(file, buffer_size=buffer_size)
+		super(FastaReader, self).__init__(file)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = False
 		self._delimiter = '\n' if keep_linebreaks else ''
@@ -233,9 +231,9 @@ class FastaReader(SequenceReader):
 
 
 class ColorspaceFastaReader(FastaReader):
-	def __init__(self, file, keep_linebreaks=False, buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, file, keep_linebreaks=False):
 		super(ColorspaceFastaReader, self).__init__(file, keep_linebreaks, 
-			sequence_class=ColorspaceSequence, buffer_size=buffer_size)
+			sequence_class=ColorspaceSequence)
 
 
 class FastqReader(SequenceReader):
@@ -243,14 +241,14 @@ class FastqReader(SequenceReader):
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
 	# TODO sequence_class could be a class attribute
-	def __init__(self, file, sequence_class=Sequence, buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, file, sequence_class=Sequence): 
 		"""
 		file is a path or a file-like object. compressed files are supported.
 
 		The sequence_class should be a class such as Sequence or
 		ColorspaceSequence.
 		"""
-		super(FastqReader, self).__init__(file, buffer_size=buffer_size)
+		super(FastqReader, self).__init__(file)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
@@ -298,15 +296,13 @@ except ImportError:
 
 
 class ColorspaceFastqReader(FastqReader):
-	def __init__(self, file, buffer_size=io.DEFAULT_BUFFER_SIZE):
-		super(ColorspaceFastqReader, self).__init__(file, sequence_class=ColorspaceSequence,
-			buffer_size=buffer_size)
+	def __init__(self, file):
+		super(ColorspaceFastqReader, self).__init__(file, sequence_class=ColorspaceSequence)
 
 
 class SRAColorspaceFastqReader(FastqReader):
-	def __init__(self, file, buffer_size=io.DEFAULT_BUFFER_SIZE):
-		super(SRAColorspaceFastqReader, self).__init__(file, sequence_class=sra_colorspace_sequence,
-			buffer_size=buffer_size)
+	def __init__(self, file):
+		super(SRAColorspaceFastqReader, self).__init__(file, sequence_class=sra_colorspace_sequence)
 
 
 class FastaQualReader(object):
@@ -315,8 +311,7 @@ class FastaQualReader(object):
 	"""
 	delivers_qualities = True
 
-	def __init__(self, fastafile, qualfile, sequence_class=Sequence,
-				 buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, fastafile, qualfile, sequence_class=Sequence):
 		"""
 		fastafile and qualfile are filenames or file-like objects.
 		If a filename is used, then .gz files are recognized.
@@ -324,8 +319,8 @@ class FastaQualReader(object):
 		The objects returned when iteritng over this file are instances of the
 		given sequence_class.
 		"""
-		self.fastareader = FastaReader(fastafile, buffer_size=buffer_size)
-		self.qualreader = FastaReader(qualfile, keep_linebreaks=True, buffer_size=buffer_size)
+		self.fastareader = FastaReader(fastafile)
+		self.qualreader = FastaReader(qualfile, keep_linebreaks=True)
 		self.sequence_class = sequence_class
 
 	def __iter__(self):
@@ -360,9 +355,9 @@ class FastaQualReader(object):
 
 
 class ColorspaceFastaQualReader(FastaQualReader):
-	def __init__(self, fastafile, qualfile, buffer_size=io.DEFAULT_BUFFER_SIZE):
-		super(ColorspaceFastaQualReader, self).__init__(fastafile, qualfile,
-			sequence_class=ColorspaceSequence, buffer_size=buffer_size)
+	def __init__(self, fastafile, qualfile):
+		super(ColorspaceFastaQualReader, self).__init__(fastafile, qualfile, 
+			sequence_class=ColorspaceSequence)
 
 def sequence_names_match(r1, r2):
 	"""
@@ -385,9 +380,9 @@ class PairedSequenceReader(object):
 	Wraps two SequenceReader instances, making sure that reads are properly
 	paired.
 	"""
-	def __init__(self, file1, file2, colorspace=False, fileformat=None, buffer_size=io.DEFAULT_BUFFER_SIZE):
-		self.reader1 = open(file1, colorspace=colorspace, fileformat=fileformat, buffer_size=buffer_size)
-		self.reader2 = open(file2, colorspace=colorspace, fileformat=fileformat, buffer_size=buffer_size)
+	def __init__(self, file1, file2, colorspace=False, fileformat=None):
+		self.reader1 = open(file1, colorspace=colorspace, fileformat=fileformat)
+		self.reader2 = open(file2, colorspace=colorspace, fileformat=fileformat)
 		self.delivers_qualities = self.reader1.delivers_qualities
 
 	def __iter__(self):
@@ -432,8 +427,8 @@ class InterleavedSequenceReader(object):
 	"""
 	Read paired-end reads from an interleaved FASTQ file.
 	"""
-	def __init__(self, file, colorspace=False, fileformat=None, buffer_size=io.DEFAULT_BUFFER_SIZE):
-		self.reader = open(file, colorspace=colorspace, fileformat=fileformat, buffer_size=buffer_size)
+	def __init__(self, file, colorspace=False, fileformat=None):
+		self.reader = open(file, colorspace=colorspace, fileformat=fileformat)
 		self.delivers_qualities = self.reader.delivers_qualities
 
 	def __iter__(self):
@@ -459,9 +454,9 @@ class InterleavedSequenceReader(object):
 		self.close()
 
 class FileWriter(object):
-	def __init__(self, file, buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, file):
 		if isinstance(file, str):
-			self._file = xopen(file, 'w', buffer_size=buffer_size)
+			self._file = xopen(file, 'w')
 			self._close_on_exit = True
 		else:
 			self._file = file
@@ -489,12 +484,12 @@ class FastaWriter(FileWriter, SingleRecordWriter):
 	Write FASTA-formatted sequences to a file.
 	"""
 
-	def __init__(self, file, line_length=None, buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, file, line_length=None):
 		"""
 		If line_length is not None, the lines will
 		be wrapped after line_length characters.
 		"""
-		FileWriter.__init__(self, file, buffer_size=buffer_size)
+		FileWriter.__init__(self, file)
 		self.line_length = line_length if line_length != 0 else None
 	
 	def write(self, name_or_seq, sequence=None):
@@ -577,12 +572,11 @@ class PairRecordWriter(object):
 		self.close()
 
 class PairedSequenceWriter(PairRecordWriter):
-	def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None,
-				 buffer_size=io.DEFAULT_BUFFER_SIZE):
-		self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w',
-			qualities=qualities, buffer_size=buffer_size)
-		self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w',
-			qualities=qualities, buffer_size=buffer_size)
+	def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None):
+		self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w', 
+			qualities=qualities)
+		self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w', 
+			qualities=qualities)
 
 	def write(self, read1, read2):
 		self._writer1.write(read1)
@@ -596,10 +590,9 @@ class InterleavedSequenceWriter(PairRecordWriter):
 	"""
 	Write paired-end reads to an interleaved FASTA or FASTQ file
 	"""
-	def __init__(self, file, colorspace=False, fileformat='fastq', qualities=None,
-				 buffer_size=io.DEFAULT_BUFFER_SIZE):
-		self._writer = open(file, colorspace=colorspace, fileformat=fileformat, mode='w',
-			qualities=qualities, buffer_size=buffer_size)
+	def __init__(self, file, colorspace=False, fileformat='fastq', qualities=None):
+		self._writer = open(file, colorspace=colorspace, fileformat=fileformat, mode='w', 
+			qualities=qualities)
 
 	def write(self, read1, read2):
 		self._writer.write(read1)
@@ -615,7 +608,7 @@ class UnknownFileType(Exception):
 
 
 def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
-		 interleaved=False, mode='r', qualities=None, buffer_size=io.DEFAULT_BUFFER_SIZE):
+		 interleaved=False, mode='r', qualities=None):
 	"""
 	Open sequence files in FASTA or FASTQ format for reading or writing. This is
 	a factory that returns an instance of one of the ...Reader or ...Writer
@@ -648,10 +641,6 @@ def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 		* When False (no qualities available), an exception is raised when the
 		  auto-detected output format is FASTQ.
 	
-	buffer_size -- File buffer size to use when opening files. Uses the system
-		value by default (io.DEFAULT_BUFFER_SIZE). Using a larger buffer can
-		potentially improve performance by reducing the number of I/O operations,
-		at the expense of greater memory usage.
 	"""
 	if mode not in ('r', 'w'):
 		raise ValueError("Mode must be 'r' or 'w'")
@@ -661,36 +650,31 @@ def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 		raise ValueError("Setting both file2 and qualfile is not supported")
 	if file2 is not None:
 		if mode == 'r':
-			return PairedSequenceReader(file1, file2, colorspace, fileformat,
-				buffer_size=buffer_size)
+			return PairedSequenceReader(file1, file2, colorspace, fileformat)
 		else:
-			return PairedSequenceWriter(file1, file2, colorspace, fileformat, qualities,
-				buffer_size=buffer_size)
+			return PairedSequenceWriter(file1, file2, colorspace, fileformat, qualities)
 
 	if interleaved:
 		if mode == 'r':
-			return InterleavedSequenceReader(file1, colorspace, fileformat,
-				buffer_size=buffer_size)
+			return InterleavedSequenceReader(file1, colorspace, fileformat)
 		else:
-			return InterleavedSequenceWriter(file1, colorspace, fileformat, qualities,
-				buffer_size=buffer_size)
+			return InterleavedSequenceWriter(file1, colorspace, fileformat, qualities)
 
 	if qualfile is not None:
 		if mode == 'w':
 			raise NotImplementedError('Writing to csfasta/qual not supported')
 		if colorspace:
 			# read from .(CS)FASTA/.QUAL
-			return ColorspaceFastaQualReader(file1, qualfile, buffer_size=buffer_size)
+			return ColorspaceFastaQualReader(file1, qualfile)
 		else:
-			return FastaQualReader(file1, qualfile, buffer_size=buffer_size)
+			return FastaQualReader(file1, qualfile)
 
 	# All the multi-file things have been dealt with, delegate rest to the
 	# single-file function.
 	return _seqopen1(file1, colorspace=colorspace, fileformat=fileformat,
-		mode=mode, qualities=qualities, buffer_size=buffer_size)
+		mode=mode, qualities=qualities)
 
-def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None,
-			  buffer_size=io.DEFAULT_BUFFER_SIZE):
+def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None):
 	"""
 	Open a single sequence file. See description above.
 	"""
@@ -706,13 +690,13 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None,
 	if fileformat:  # Explict file format given
 		fileformat = fileformat.lower()
 		if fileformat == 'fasta':
-			return fasta_handler(file, buffer_size=buffer_size)
+			return fasta_handler(file)
 		elif fileformat == 'fastq':
-			return fastq_handler(file, buffer_size=buffer_size)
+			return fastq_handler(file)
 		elif fileformat == 'sra-fastq' and colorspace:
 			if mode == 'w':
 				raise NotImplementedError('Writing to sra-fastq not supported')
-			return SRAColorspaceFastqReader(file, buffer_size=buffer_size)
+			return SRAColorspaceFastqReader(file)
 		else:
 			raise UnknownFileType("File format {0!r} is unknown (expected "
 				"'sra-fastq' (only for colorspace), 'fasta' or 'fastq').".format(fileformat))
@@ -750,15 +734,15 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None,
 			raise ValueError("Output format cannot be FASTQ since no quality "
 				"values are available.")
 		if format == 'fastq':
-			return fastq_handler(file, buffer_size=buffer_size)
+			return fastq_handler(file)
 		else:
-			return fasta_handler(file, buffer_size=buffer_size)
+			return fasta_handler(file)
 
 	if mode == 'w':
 		if qualities is True:
-			return fastq_handler(file, buffer_size=buffer_size)
+			return fastq_handler(file)
 		elif qualities is False:
-			return fasta_handler(file, buffer_size=buffer_size)
+			return fasta_handler(file)
 		raise UnknownFileType('Cannot determine whether to write in FASTA or '
 			'FASTQ format')
 	# No name available. Try to autodetect type by reading from the file.
@@ -767,7 +751,7 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None,
 			# Skip comment lines (needed for csfasta)
 			continue
 		if line.startswith('>'):
-			return fasta_handler(FileWithPrependedLine(file, line), buffer_size=buffer_size)
+			return fasta_handler(FileWithPrependedLine(file, line))
 		if line.startswith('@'):
-			return fastq_handler(FileWithPrependedLine(file, line), buffer_size=buffer_size)
+			return fastq_handler(FileWithPrependedLine(file, line))
 	raise UnknownFileType("File is neither FASTQ nor FASTA.")
