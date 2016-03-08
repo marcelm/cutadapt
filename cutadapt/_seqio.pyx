@@ -1,9 +1,6 @@
 # kate: syntax Python;
 # cython: profile=False
 from __future__ import print_function, division, absolute_import
-
-import io
-
 from .xopen import xopen
 from .seqio import _shorten, FormatError, SequenceReader
 
@@ -79,12 +76,12 @@ class FastqReader(SequenceReader):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
-	def __init__(self, file, sequence_class=Sequence, buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, file, sequence_class=Sequence):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
 		"""
-		super(FastqReader, self).__init__(file, buffer_size=buffer_size)
+		super(FastqReader, self).__init__(file)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
