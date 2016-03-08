@@ -453,9 +453,9 @@ class InterleavedSequenceReader(object):
 		self.close()
 
 class FileWriter(object):
-	def __init__(self, file, buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, file):
 		if isinstance(file, str):
-			self._file = xopen(file, 'w', buffer_size=buffer_size)
+			self._file = xopen(file, 'w')
 			self._close_on_exit = True
 		else:
 			self._file = file
@@ -488,7 +488,7 @@ class FastaWriter(FileWriter, SingleRecordWriter):
 		If line_length is not None, the lines will
 		be wrapped after line_length characters.
 		"""
-		FileWriter.__init__(self, file, buffer_size=buffer_size)
+		FileWriter.__init__(self, file)
 		self.line_length = line_length if line_length != 0 else None
 	
 	def write(self, name_or_seq, sequence=None):
@@ -571,12 +571,11 @@ class PairRecordWriter(object):
 		self.close()
 
 class PairedSequenceWriter(PairRecordWriter):
-	def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None,
-				 buffer_size=io.DEFAULT_BUFFER_SIZE):
+	def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None):
 		self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w',
-			qualities=qualities, buffer_size=buffer_size)
+			qualities=qualities)
 		self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w',
-			qualities=qualities, buffer_size=buffer_size)
+			qualities=qualities)
 
 	def write(self, read1, read2):
 		self._writer1.write(read1)
