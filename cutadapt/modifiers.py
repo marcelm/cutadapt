@@ -32,6 +32,7 @@ class AdapterCutter(object):
 		self.rest_writer = rest_writer
 		self.action = action
 		self.with_adapters = 0
+		self.keep_match_info = self.info_file is not None
 
 	def _best_match(self, read):
 		"""
@@ -50,7 +51,7 @@ class AdapterCutter(object):
 				best = match
 		return best
 
-	def _write_info(self, read, matches):
+	def _write_info(self, read):
 		"""
 		Write to the info, wildcard and rest files.
 		# TODO
@@ -65,26 +66,9 @@ class AdapterCutter(object):
 			print(match.wildcards(), read.name, file=self.wildcard_file)
 
 		if self.info_file:
-			if match:
-				for m in matches:
-					seq = m.read.sequence
-					qualities = m.read.qualities
-					if qualities is None:
-						qualities = ''
-					print(
-						m.read.name,
-						m.errors,
-						m.rstart,
-						m.rstop,
-						seq[0:m.rstart],
-						seq[m.rstart:m.rstop],
-						seq[m.rstop:],
-						m.adapter.name,
-						qualities[0:m.rstart],
-						qualities[m.rstart:m.rstop],
-						qualities[m.rstop:],
-						sep='\t', file=self.info_file
-					)
+			if read.match_info:
+				for m in read.match_info:
+					print(*m, sep='\t', file=self.info_file)
 			else:
 				seq = read.sequence
 				qualities = read.qualities if read.qualities is not None else ''
@@ -114,13 +98,13 @@ class AdapterCutter(object):
 				break
 			matches.append(match)
 			trimmed_read = match.adapter.trimmed(match)
-
-		trimmed_read.match = matches[-1] if matches else None
-		self._write_info(trimmed_read, matches)
-
+		
 		if not matches:
+			trimmed_read.match = None
+			trimmed_read.match_info = None
+			self._write_info(trimmed_read)
 			return trimmed_read
-
+		
 		if __debug__:
 			assert len(trimmed_read) < len(read), "Trimmed read isn't shorter than original"
 
@@ -145,8 +129,12 @@ class AdapterCutter(object):
 			assert len(trimmed_read.sequence) == len(read)
 		elif self.action is None:
 			trimmed_read = read
-			trimmed_read.match = matches[-1]
-
+		
+		trimmed_read.match = matches[-1]
+		if self.keep_match_info:
+			trimmed_read.match_info = [match.get_info_record() for match in matches]
+		self._write_info(trimmed_read)
+		
 		self.with_adapters += 1
 		return trimmed_read
 
