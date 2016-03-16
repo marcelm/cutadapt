@@ -34,3 +34,10 @@ def test_quality_trimmer():
 
 	qt = QualityTrimmer(10, 0, 33)
 	assert qt(read) == Sequence('read1', 'GTTTACGTA', '456789###')
+
+
+def test_mod_type():
+	assert ModType.ADAPTER == "ADAPTER"
+	assert ModType[ModType.CUT] == UnconditionalCutter
+	uc = ModType.create_modifier(ModType.CUT, length=2)
+	assert uc.__class__ == UnconditionalCutter

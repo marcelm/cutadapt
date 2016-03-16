@@ -273,3 +273,36 @@ class NEndTrimmer(object):
 		start_cut = start_cut.end() if start_cut else 0
 		end_cut = end_cut.start() if end_cut else len(read)
 		return read[start_cut:end_cut]
+
+
+class _ModType(dict):
+	"""
+	Enumeration of modifier types.
+	
+	This is an enum-like class that is compatible with python 2x. 
+	This class is only meant to be instantiated once, below (this 
+	would be an anonymous class, if python allowed such a thing).
+	"""
+	def __init__(self):
+		super(_ModType, self).__init__(
+			ADAPTER					= AdapterCutter,
+			CUT						= UnconditionalCutter,
+			LENGTH_TAG				= LengthTagModifier,
+			REMOVE_SUFFIX			= SuffixRemover,
+			ADD_PREFIX_SUFFIX		= PrefixSuffixAdder,
+			ZERO_CAP				= ZeroCapper,
+			TRIM_QUAL				= QualityTrimmer,
+			TRIM_NEXTSEQ_QUAL		= NextseqQualityTrimmer,
+			CS_DOUBLE_ENCODE		= DoubleEncoder,
+			CS_TRIM_PRIMER			= PrimerTrimmer,
+			TRIM_END_N				= NEndTrimmer
+		)
+	
+	def create_modifier(self, mod_type, *args, **kwargs):
+		return self[mod_type](*args, **kwargs)
+	
+	def __getattr__(self, name):
+		assert name in self
+		return name
+
+ModType = _ModType()
