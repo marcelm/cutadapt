@@ -9,6 +9,7 @@ from __future__ import print_function, division, absolute_import
 import re
 from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
 from cutadapt.compat import maketrans
+from collections import OrderedDict
 
 class AdapterCutter(object):
 	"""
@@ -273,6 +274,30 @@ class NEndTrimmer(object):
 		start_cut = start_cut.end() if start_cut else 0
 		end_cut = end_cut.start() if end_cut else len(read)
 		return read[start_cut:end_cut]
+
+
+class Modifiers(object):
+	def __init__(self, paired):
+		self.mod1 = OrderedDict()
+		self.mod2 = OrderedDict()
+		self.paired = paired
+	
+	def add_modifier(self, mod_type, read=1, **kwargs):
+		mod = ModType.create_modifier(mod_type, **kwargs)
+		if read & 1 > 0:
+			self.mod1[mod_type] = mod
+		if read & 2 > 0:
+			self.mod2[mod_type] = mod
+	
+	def modify(self, read1, read2=None):
+		for mod in self.mod1.values():
+			read1 = mod(read1)
+		if read2:
+			for mod in self.mod2.values():
+				read2 = mod(read2)
+			return (read1, read2)
+		else:
+			return read1
 
 
 class _ModType(dict):
