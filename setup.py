@@ -8,8 +8,12 @@ Cython is run when
 """
 import sys
 import os.path
-from distutils.core import setup, Extension
-from distutils.version import LooseVersion
+
+try:
+	from setuptools import Extension, LooseVersion, setup
+except ImportError:
+	from distutils.core import setup, Extension
+	from distutils.version import LooseVersion
 
 from cutadapt import __version__
 
