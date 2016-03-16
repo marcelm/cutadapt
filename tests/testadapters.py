@@ -95,3 +95,31 @@ def test_linked_adapter():
 	trimmed = linked_adapter.trimmed(match)
 	assert trimmed.name == 'seq'
 	assert trimmed.sequence == 'CCCCC'
+
+
+def test_info_record():
+	adapter = Adapter(
+		sequence='GAACTCCAGTCACNNNNN',
+		where=BACK,
+		max_error_rate=0.12,
+		min_overlap=5,
+		read_wildcards=False,
+		adapter_wildcards=True,
+		name="Foo")
+	read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
+	am = Match(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, front=None, 
+		adapter=adapter, read=read)
+	print(am.get_info_record())
+	assert am.get_info_record() == (
+		"abc",
+		2,
+		5,
+		21,
+		'CCCCA',
+		'GAACTACAGTCCCGGC',
+		'',
+		'Foo',
+		'', 
+		'', 
+		''
+	)

@@ -218,7 +218,30 @@ class Match(object):
 			return self.read.sequence[:self.rstart]
 		else:
 			return self.read.sequence[self.rstop:]
-
+	
+	def get_info_record(self):
+		seq = self.read.sequence
+		qualities = self.read.qualities
+		info = (
+			self.read.name,
+			self.errors,
+			self.rstart,
+			self.rstop,
+			seq[0:self.rstart],
+			seq[self.rstart:self.rstop],
+			seq[self.rstop:],
+			self.adapter.name
+		)
+		if qualities:
+			info += (
+				qualities[0:self.rstart],
+				qualities[self.rstart:self.rstop],
+				qualities[self.rstop:]
+			)
+		else:
+			info += ('','','')
+		
+		return info
 
 def _generate_adapter_name(_start=[1]):
 	name = str(_start[0])
