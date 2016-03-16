@@ -9,7 +9,11 @@ from __future__ import print_function, division, absolute_import
 import re
 from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
 from cutadapt.compat import maketrans
-
+import sys
+if sys.version_info < (2, 7):
+	from ordereddict import OrderedDict
+else:
+	from collections import OrderedDict
 
 class AdapterCutter(object):
 	"""
@@ -146,14 +150,15 @@ class UnconditionalCutter(object):
 	If the length is positive, the bases are removed from the beginning of the read.
 	If the length is negative, the bases are removed from the end of the read.
 	"""
-	def __init__(self, length):
-		self.length = length
+	def __init__(self, lengths):
+		self.beg_length = sum(l for l in lengths if l > 0)
+		self.end_length = sum(l for l in lengths if l < 0)
 
 	def __call__(self, read):
-		if self.length > 0:
-			return read[self.length:]
-		elif self.length < 0:
-			return read[:self.length]
+		if self.end_length < 0:
+			return read[self.beg_length:self.end_length]
+		else:
+			return read[self.beg_length:]
 
 
 class LengthTagModifier(object):
@@ -175,13 +180,16 @@ class SuffixRemover(object):
 	"""
 	Remove a given suffix from read names.
 	"""
-	def __init__(self, suffix):
-		self.suffix = suffix
+	def __init__(self, suffixes):
+		self.suffixes = suffixes
 
 	def __call__(self, read):
+		name = read.name
+		for s in self.suffixes:
+			if name.endswith(s):
+				name = name[:-len(s)]
 		read = read[:]
-		if read.name.endswith(self.suffix):
-			read.name = read.name[:-len(self.suffix)]
+		read.name = name
 		return read
 
 
@@ -227,12 +235,12 @@ class ZeroCapper(object):
 		read.qualities = read.qualities.translate(self.zero_cap_trans)
 		return read
 
-
-def PrimerTrimmer(read):
-	"""Trim primer base from colorspace reads"""
-	read = read[1:]
-	read.primer = ''
-	return read
+class PrimerTrimmer(object):
+	def __call__(self, read):
+		"""Trim primer base from colorspace reads"""
+		read = read[1:]
+		read.primer = ''
+		return read
 
 
 class NextseqQualityTrimmer(object):
@@ -273,3 +281,59 @@ class NEndTrimmer(object):
 		start_cut = start_cut.end() if start_cut else 0
 		end_cut = end_cut.start() if end_cut else len(read)
 		return read[start_cut:end_cut]
+
+
+class Modifiers(object):
+	def __init__(self):
+		self.mod1 = OrderedDict()
+		self.mod2 = OrderedDict()
+	
+	def add_modifier(self, mod_type, read=1, **kwargs):
+		mod = ModType.create_modifier(mod_type, **kwargs)
+		if read & 1 > 0:
+			self.mod1[mod_type] = mod
+		if read & 2 > 0:
+			self.mod2[mod_type] = mod
+	
+	def modify(self, read1, read2=None):
+		for mod in self.mod1.values():
+			read1 = mod(read1)
+		if read2:
+			for mod in self.mod2.values():
+				read2 = mod(read2)
+			return (read1, read2)
+		else:
+			return read1
+
+
+class _ModType(dict):
+	"""
+	Enumeration of modifier types.
+	
+	This is an enum-like class that is compatible with python 2x. 
+	This class is only meant to be instantiated once, below (this 
+	would be an anonymous class, if python allowed such a thing).
+	"""
+	def __init__(self):
+		super(_ModType, self).__init__(
+			ADAPTER					= AdapterCutter,
+			CUT						= UnconditionalCutter,
+			LENGTH_TAG				= LengthTagModifier,
+			REMOVE_SUFFIX			= SuffixRemover,
+			ADD_PREFIX_SUFFIX		= PrefixSuffixAdder,
+			ZERO_CAP				= ZeroCapper,
+			TRIM_QUAL				= QualityTrimmer,
+			TRIM_NEXTSEQ_QUAL		= NextseqQualityTrimmer,
+			CS_DOUBLE_ENCODE		= DoubleEncoder,
+			CS_TRIM_PRIMER			= PrimerTrimmer,
+			TRIM_END_N				= NEndTrimmer
+		)
+	
+	def create_modifier(self, mod_type, *args, **kwargs):
+		return self[mod_type](*args, **kwargs)
+	
+	def __getattr__(self, name):
+		assert name in self
+		return name
+
+ModType = _ModType()
