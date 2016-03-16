@@ -562,7 +562,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error("The maximum error rate must be between 0 and 1.")
 	if options.overlap < 1:
 		parser.error("The overlap must be at least 1.")
-
+	
+	rest_writer = None
 	if options.rest_file is not None:
 		options.rest_file = xopen(options.rest_file, 'w')
 		rest_writer = RestFileWriter(options.rest_file)
@@ -578,6 +579,57 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			parser.error('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
 
+	adapters, adapters2, modifiers, modifiers2, modifiers_both = create_modifiers(options, parser, 
+		paired, cutoffs, reader.delivers_qualities, quality_filename, rest_writer)
+
+	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
+	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
+	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
+		len(adapters) + len(adapters2), 's' if len(adapters) + len(adapters2) != 1 else '',
+		options.error_rate * 100,
+		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
+
+	if paired == 'first' and (modifiers_both or cutoffs):
+		logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
+			'modifications are applied only to the first '
+			'read since backwards compatibility mode is enabled. '
+			'To modify both reads, also use any of the -A/-B/-G/-U options. '
+			'Use a dummy adapter sequence when necessary: -A XXX')))
+
+	start_time = time.clock()
+	try:
+		if paired:
+			stats = process_paired_reads(reader, modifiers, modifiers2, filters)
+		else:
+			stats = process_single_reads(reader, modifiers, filters)
+	except KeyboardInterrupt as e:
+		print("Interrupted", file=sys.stderr)
+		sys.exit(130)
+	except IOError as e:
+		if e.errno == errno.EPIPE:
+			sys.exit(1)
+		raise
+	except (seqio.FormatError, EOFError) as e:
+		sys.exit("cutadapt: error: {0}".format(e))
+
+	# close open files
+	for f in [writer, untrimmed_writer,
+			options.rest_file, options.wildcard_file,
+			options.info_file, too_short_writer, too_long_writer,
+			options.info_file, demultiplexer]:
+		if f is not None and f is not sys.stdin and f is not sys.stdout:
+			f.close()
+
+	elapsed_time = time.clock() - start_time
+	if not options.quiet:
+		stats.collect((adapters, adapters2), elapsed_time,
+			modifiers, modifiers2, filters)
+		# send statistics to stderr if result was sent to stdout
+		stat_file = sys.stderr if options.output is None else None
+		with redirect_standard_output(stat_file):
+			print_report(stats, (adapters, adapters2))
+
+def create_modifiers(options, parser, paired, cutoffs, delivers_qualities, quality_filename, rest_writer):
 	adapter_parser = AdapterParser(
 		colorspace=options.colorspace,
 		max_error_rate=options.error_rate,
@@ -644,7 +696,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		modifiers_both.append(PrefixSuffixAdder(options.prefix, options.suffix))
 	if options.double_encode:
 		modifiers_both.append(DoubleEncoder())
-	if options.zero_cap and reader.delivers_qualities:
+	if options.zero_cap and delivers_qualities:
 		modifiers_both.append(ZeroCapper(quality_base=options.quality_base))
 	if options.trim_primer:
 		modifiers_both.append(PrimerTrimmer)
@@ -673,54 +725,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		else:
 			adapter_cutter2 = None
 		modifiers2.extend(modifiers_both)
-
-	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
-	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
-		len(adapters) + len(adapters2), 's' if len(adapters) + len(adapters2) != 1 else '',
-		options.error_rate * 100,
-		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
-
-	if paired == 'first' and (modifiers_both or cutoffs):
-		logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
-			'modifications are applied only to the first '
-			'read since backwards compatibility mode is enabled. '
-			'To modify both reads, also use any of the -A/-B/-G/-U options. '
-			'Use a dummy adapter sequence when necessary: -A XXX')))
-
-	start_time = time.clock()
-	try:
-		if paired:
-			stats = process_paired_reads(reader, modifiers, modifiers2, filters)
-		else:
-			stats = process_single_reads(reader, modifiers, filters)
-	except KeyboardInterrupt as e:
-		print("Interrupted", file=sys.stderr)
-		sys.exit(130)
-	except IOError as e:
-		if e.errno == errno.EPIPE:
-			sys.exit(1)
-		raise
-	except (seqio.FormatError, EOFError) as e:
-		sys.exit("cutadapt: error: {0}".format(e))
-
-	# close open files
-	for f in [writer, untrimmed_writer,
-			options.rest_file, options.wildcard_file,
-			options.info_file, too_short_writer, too_long_writer,
-			options.info_file, demultiplexer]:
-		if f is not None and f is not sys.stdin and f is not sys.stdout:
-			f.close()
-
-	elapsed_time = time.clock() - start_time
-	if not options.quiet:
-		stats.collect((adapters, adapters2), elapsed_time,
-			modifiers, modifiers2, filters)
-		# send statistics to stderr if result was sent to stdout
-		stat_file = sys.stderr if options.output is None else None
-		with redirect_standard_output(stat_file):
-			print_report(stats, (adapters, adapters2))
-
+	
+	return (adapters, adapters2, modifiers, modifiers2, modifiers_both)
 
 if __name__ == '__main__':
 	main()
