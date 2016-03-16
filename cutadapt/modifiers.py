@@ -277,10 +277,9 @@ class NEndTrimmer(object):
 
 
 class Modifiers(object):
-	def __init__(self, paired):
+	def __init__(self):
 		self.mod1 = OrderedDict()
 		self.mod2 = OrderedDict()
-		self.paired = paired
 	
 	def add_modifier(self, mod_type, read=1, **kwargs):
 		mod = ModType.create_modifier(mod_type, **kwargs)
