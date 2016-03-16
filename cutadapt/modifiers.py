@@ -146,14 +146,15 @@ class UnconditionalCutter(object):
 	If the length is positive, the bases are removed from the beginning of the read.
 	If the length is negative, the bases are removed from the end of the read.
 	"""
-	def __init__(self, length):
-		self.length = length
+	def __init__(self, lengths):
+		self.beg_length = sum(l for l in lengths if l > 0)
+		self.end_length = sum(l for l in lengths if l < 0)
 
 	def __call__(self, read):
-		if self.length > 0:
-			return read[self.length:]
-		elif self.length < 0:
-			return read[:self.length]
+		if self.end_length < 0:
+			return read[self.beg_length:self.end_length]
+		else:
+			return read[self.beg_length:]
 
 
 class LengthTagModifier(object):
@@ -175,13 +176,16 @@ class SuffixRemover(object):
 	"""
 	Remove a given suffix from read names.
 	"""
-	def __init__(self, suffix):
-		self.suffix = suffix
+	def __init__(self, suffixes):
+		self.suffixes = suffixes
 
 	def __call__(self, read):
+		name = read.name
+		for s in self.suffixes:
+			if name.endswith(s):
+				name = name[:-len(s)]
 		read = read[:]
-		if read.name.endswith(self.suffix):
-			read.name = read.name[:-len(self.suffix)]
+		read.name = name
 		return read
 
 
@@ -227,13 +231,12 @@ class ZeroCapper(object):
 		read.qualities = read.qualities.translate(self.zero_cap_trans)
 		return read
 
-class primer_trimmer(object):
+class PrimerTrimmer(object):
 	def __call__(self, read):
 		"""Trim primer base from colorspace reads"""
 		read = read[1:]
 		read.primer = ''
 		return read
-PrimerTrimmer=primer_trimmer()
 
 
 class NextseqQualityTrimmer(object):
@@ -318,7 +321,7 @@ class _ModType(dict):
 			TRIM_QUAL				= QualityTrimmer,
 			TRIM_NEXTSEQ_QUAL		= NextseqQualityTrimmer,
 			CS_DOUBLE_ENCODE		= DoubleEncoder,
-			CS_TRIM_PRIMER			= primer_trimmer,
+			CS_TRIM_PRIMER			= PrimerTrimmer,
 			TRIM_END_N				= NEndTrimmer
 		)
 	
