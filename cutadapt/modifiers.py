@@ -9,7 +9,10 @@ from __future__ import print_function, division, absolute_import
 import re
 from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
 from cutadapt.compat import maketrans
-from collections import OrderedDict
+if sys.version_info < (2, 7):
+	from ordereddict import OrderedDict
+else:
+	from collections import OrderedDict
 
 class AdapterCutter(object):
 	"""

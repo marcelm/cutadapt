@@ -97,6 +97,8 @@ extensions = [
 ]
 extensions = cythonize_if_necessary(extensions)
 
+install_requires = ["ordereddict"] if sys.version_info < (2, 7) else []
+
 setup(
 	name = 'cutadapt',
 	version = __version__,
@@ -119,5 +121,6 @@ setup(
 		"Programming Language :: Python :: 2.7",
 		"Programming Language :: Python :: 3",
 		"Topic :: Scientific/Engineering :: Bio-Informatics"
-	]
+	],
+	install_requires=install_requires
 )
