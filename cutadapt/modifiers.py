@@ -10,7 +10,6 @@ import re
 from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
 from cutadapt.compat import maketrans
 
-
 class AdapterCutter(object):
 	"""
 	Repeatedly find one of multiple adapters in reads.
@@ -227,12 +226,13 @@ class ZeroCapper(object):
 		read.qualities = read.qualities.translate(self.zero_cap_trans)
 		return read
 
-
-def PrimerTrimmer(read):
-	"""Trim primer base from colorspace reads"""
-	read = read[1:]
-	read.primer = ''
-	return read
+class primer_trimmer(object):
+	def __call__(self, read):
+		"""Trim primer base from colorspace reads"""
+		read = read[1:]
+		read.primer = ''
+		return read
+PrimerTrimmer=primer_trimmer()
 
 
 class NextseqQualityTrimmer(object):
@@ -294,7 +294,7 @@ class _ModType(dict):
 			TRIM_QUAL				= QualityTrimmer,
 			TRIM_NEXTSEQ_QUAL		= NextseqQualityTrimmer,
 			CS_DOUBLE_ENCODE		= DoubleEncoder,
-			CS_TRIM_PRIMER			= PrimerTrimmer,
+			CS_TRIM_PRIMER			= primer_trimmer,
 			TRIM_END_N				= NEndTrimmer
 		)
 	
