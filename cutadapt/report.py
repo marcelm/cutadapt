@@ -9,7 +9,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE, LINKED
-from .modifiers import QualityTrimmer, AdapterCutter
+from .modifiers import ModType
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
 	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, NContentFilter)
 
@@ -31,7 +31,7 @@ class Statistics:
 			self.total_bp2 = total_bp2
 			self.total_bp += total_bp2
 
-	def collect(self, adapters_pair, time, modifiers, modifiers2, writers):
+	def collect(self, adapters_pair, time, modifiers, writers):
 		self.time = max(time, 0.01)
 		self.too_short = None
 		self.too_long = None
@@ -57,13 +57,13 @@ class Statistics:
 		self.with_adapters = [0, 0]
 		self.quality_trimmed_bp = [0, 0]
 		self.did_quality_trimming = False
-		for i, modifiers_list in [(0, modifiers), (1, modifiers2)]:
-			for modifier in modifiers_list:
-				if isinstance(modifier, QualityTrimmer):
-					self.quality_trimmed_bp[i] = modifier.trimmed_bases
-					self.did_quality_trimming = True
-				elif isinstance(modifier, AdapterCutter):
-					self.with_adapters[i] += modifier.with_adapters
+		for i, mod_dict in [(0, modifiers.mod1), (1, modifiers.mod2)]:
+			if ModType.TRIM_QUAL in mod_dict:
+				modifier = mod_dict[ModType.TRIM_QUAL]
+				self.quality_trimmed_bp[i] = modifier.trimmed_bases
+				self.did_quality_trimming = True
+			if ModType.ADAPTER in mod_dict:
+				self.with_adapters[i] += mod_dict[ModType.ADAPTER].with_adapters
 		self.with_adapters_fraction = [ (v / self.n if self.n > 0 else 0) for v in self.with_adapters ]
 		self.quality_trimmed = sum(self.quality_trimmed_bp)
 		self.quality_trimmed_fraction = self.quality_trimmed / self.total_bp if self.total_bp > 0 else 0.0
