@@ -2,7 +2,7 @@
 from __future__ import print_function, division, absolute_import
 
 from cutadapt.seqio import Sequence
-from cutadapt.modifiers import UnconditionalCutter, NEndTrimmer, QualityTrimmer
+from cutadapt.modifiers import ModType, UnconditionalCutter, NEndTrimmer, QualityTrimmer
 
 def test_unconditional_cutter():
 	uc = UnconditionalCutter(length=5)
