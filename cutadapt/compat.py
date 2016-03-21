@@ -5,6 +5,7 @@ Minimal Py2/Py3 compatibility library.
 from __future__ import print_function, division, absolute_import
 import sys
 PY3 = sys.version > '3'
+PY26 = sys.version_info < (2, 7)
 
 
 if PY3:
@@ -43,3 +44,8 @@ else:
 	basestring = basestring
 	from itertools import izip as zip
 	from StringIO import StringIO
+
+if PY26:
+	from ordereddict import OrderedDict
+else:
+	from collections import OrderedDict

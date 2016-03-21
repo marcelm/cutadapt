@@ -8,7 +8,8 @@ need to be stored, and as a class with a __call__ method if there are parameters
 from __future__ import print_function, division, absolute_import
 import re
 from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
-from cutadapt.compat import maketrans
+from cutadapt.compat import maketrans, OrderedDict
+import sys
 
 
 class AdapterCutter(object):
@@ -146,14 +147,15 @@ class UnconditionalCutter(object):
 	If the length is positive, the bases are removed from the beginning of the read.
 	If the length is negative, the bases are removed from the end of the read.
 	"""
-	def __init__(self, length):
-		self.length = length
+	def __init__(self, lengths):
+		self.begin_length = sum(l for l in lengths if l > 0)
+		self.end_length = sum(l for l in lengths if l < 0)
 
 	def __call__(self, read):
-		if self.length > 0:
-			return read[self.length:]
-		elif self.length < 0:
-			return read[:self.length]
+		if self.end_length < 0:
+			return read[self.begin_length:self.end_length]
+		else:
+			return read[self.begin_length:]
 
 
 class LengthTagModifier(object):
@@ -173,15 +175,21 @@ class LengthTagModifier(object):
 
 class SuffixRemover(object):
 	"""
-	Remove a given suffix from read names.
+	Remove suffixes from read names. Suffixes are looked for
+	and removed in order.
+	
+	suffixes -- list of suffixes to remove.
 	"""
-	def __init__(self, suffix):
-		self.suffix = suffix
+	def __init__(self, suffixes):
+		self.suffixes = dict((s, -len(s)) for s in suffixes)
 
 	def __call__(self, read):
+		name = read.name
+		for suffix, length in self.suffixes.items():
+			if name.endswith(suffix):
+				name = name[:length]
 		read = read[:]
-		if read.name.endswith(self.suffix):
-			read.name = read.name[:-len(self.suffix)]
+		read.name = name
 		return read
 
 
@@ -227,12 +235,12 @@ class ZeroCapper(object):
 		read.qualities = read.qualities.translate(self.zero_cap_trans)
 		return read
 
-
-def PrimerTrimmer(read):
-	"""Trim primer base from colorspace reads"""
-	read = read[1:]
-	read.primer = ''
-	return read
+class PrimerTrimmer(object):
+	def __call__(self, read):
+		"""Trim primer base from colorspace reads"""
+		read = read[1:]
+		read.primer = ''
+		return read
 
 
 class NextseqQualityTrimmer(object):
@@ -273,3 +281,43 @@ class NEndTrimmer(object):
 		start_cut = start_cut.end() if start_cut else 0
 		end_cut = end_cut.start() if end_cut else len(read)
 		return read[start_cut:end_cut]
+
+
+class Modifiers(object):
+	"""
+	Creates and manages modifiers. Modifiers are kept in
+	the same order as they were added.
+	"""
+	def __init__(self):
+		self.modifiers1 = OrderedDict()
+		self.modifiers2 = OrderedDict()
+	
+	def add_modifier(self, modifier_class, read=1, **kwargs):
+		"""
+		Create a modifier of the given class with the given
+		keyword arguments.
+		
+		read -- which read to modifiy; 1 = read1, 2 = read2
+		1|2 = 3 = both read1 and read2.
+		"""
+		modifier = modifier_class(**kwargs)
+		if read & 1 > 0:
+			self.modifiers1[modifier_class] = modifier
+		if read & 2 > 0:
+			self.modifiers2[modifier_class] = modifier
+	
+	def modify(self, read1, read2=None):
+		"""
+		Apply modifiers to a read or read pair.
+		
+		returns -- modified read1, if read 2 is None,
+		otherwise tuple of (read1, read2)
+		"""
+		for modifier in self.modifiers1.values():
+			read1 = modifier(read1)
+		if read2:
+			for modifier in self.modifiers2.values():
+				read2 = modifier(read2)
+			return (read1, read2)
+		else:
+			return read1
