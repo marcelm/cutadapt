@@ -73,7 +73,7 @@ import textwrap
 from cutadapt import seqio, __version__
 from cutadapt.xopen import xopen
 from cutadapt.adapters import AdapterParser
-from cutadapt.modifiers import Modifiers, ModType
+from cutadapt import modifiers
 from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedirector,
 	LegacyPairedRedirector, TooShortReadFilter, TooLongReadFilter,
 	Demultiplexer, NContentFilter, DiscardUntrimmedFilter, DiscardTrimmedFilter)
@@ -573,7 +573,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			parser.error('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
 
-	adapters, adapters2, modifiers = create_modifiers(options, parser, 
+	adapters, adapters2, mods = create_modifiers(options, parser, 
 		paired, cutoffs, reader.delivers_qualities, quality_filename, rest_writer)
 
 	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
@@ -583,7 +583,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		options.error_rate * 100,
 		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
 
-	if paired == 'first' and (len(modifiers.mod2) or cutoffs):
+	if paired == 'first' and (len(mods.modifiers2) or cutoffs):
 		logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
 			'modifications are applied only to the first '
 			'read since backwards compatibility mode is enabled. '
@@ -593,9 +593,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	start_time = time.clock()
 	try:
 		if paired:
-			stats = process_paired_reads(reader, modifiers, filters)
+			stats = process_paired_reads(reader, mods, filters)
 		else:
-			stats = process_single_reads(reader, modifiers, filters)
+			stats = process_single_reads(reader, mods, filters)
 	except KeyboardInterrupt as e:
 		print("Interrupted", file=sys.stderr)
 		sys.exit(130)
@@ -616,7 +616,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	elapsed_time = time.clock() - start_time
 	if not options.quiet:
-		stats.collect((adapters, adapters2), elapsed_time, modifiers, filters)
+		stats.collect((adapters, adapters2), elapsed_time, mods, filters)
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
 		with redirect_standard_output(stat_file):
@@ -655,7 +655,7 @@ def create_modifiers(options, parser, paired, cutoffs, delivers_qualities, quali
 		for adapter in adapters + adapters2:
 			adapter.enable_debug()
 	
-	modifiers = Modifiers()
+	mods = modifiers.Modifiers()
 	
 	# Create the single-end processing pipeline (a list of "modifiers")
 	if options.cut:
@@ -663,18 +663,18 @@ def create_modifiers(options, parser, paired, cutoffs, delivers_qualities, quali
 			parser.error("You cannot remove bases from more than two ends.")
 		if len(options.cut) == 2 and options.cut[0] * options.cut[1] > 0:
 			parser.error("You cannot remove bases from the same end twice.")
-		modifiers.add_modifier(ModType.CUT, lengths=options.cut)
+		mods.add_modifier(modifiers.UnconditionalCutter, lengths=options.cut)
 
 	if options.nextseq_trim is not None:
-		modifiers.add_modifier(ModType.TRIM_NEXTSEQ_QUAL, cutoff=options.nextseq_trim, 
+		mods.add_modifier(modifiers.NextseqQualityTrimmer, cutoff=options.nextseq_trim, 
 			base=options.quality_base)
 
 	if cutoffs:
-		modifiers.add_modifier(ModType.TRIM_QUAL, cutoff_front=cutoffs[0], 
+		mods.add_modifier(modifiers.QualityTrimmer, cutoff_front=cutoffs[0], 
 			cutoff_back=cutoffs[1], base=options.quality_base)
 	
 	if adapters:
-		modifiers.add_modifier(ModType.ADAPTER, adapters=adapters,
+		mods.add_modifier(modifiers.AdapterCutter, adapters=adapters,
 			times=options.times, wildcard_file=options.wildcard_file, 
 			info_file=options.info_file, rest_writer=rest_writer, 
 			action=options.action)
@@ -691,43 +691,43 @@ def create_modifiers(options, parser, paired, cutoffs, delivers_qualities, quali
 				parser.error("You cannot remove bases from more than two ends.")
 			if len(options.cut2) == 2 and options.cut2[0] * options.cut2[1] > 0:
 				parser.error("You cannot remove bases from the same end twice.")
-			modifiers.add_modifier(ModType.CUT, read=2, lengths=options.cut2)
+			mods.add_modifier(modifiers.UnconditionalCutter, read=2, lengths=options.cut2)
 		
 		if cutoffs:
-			modifiers.add_modifier(ModType.TRIM_QUAL, read=2, cutoff_front=cutoffs[0], 
+			mods.add_modifier(modifiers.QualityTrimmer, read=2, cutoff_front=cutoffs[0], 
 				cutoff_back=cutoffs[1], base=options.quality_base)
 		
 		if adapters2:
-			modifiers.add_modifier(ModType.ADAPTER, read=2, adapters=adapters2,
+			mods.add_modifier(modifiers.AdapterCutter, read=2, adapters=adapters2,
 				times=options.times, wildcard_file=None, 
 				info_file=None, rest_writer=None, action=options.action)
 	
 	# Modifiers that apply to both reads of paired-end reads unless in legacy mode
 	if options.trim_n:
-		modifiers.add_modifier(ModType.TRIM_END_N, read=both)
+		mods.add_modifier(modifiers.NEndTrimmer, read=both)
 	
 	if options.length_tag:
-		modifiers.add_modifier(ModType.LENGTH_TAG, read=both, length_tag=options.length_tag)
+		mods.add_modifier(modifiers.LengthTagModifier, read=both, length_tag=options.length_tag)
 	
 	if options.strip_f3:
 		options.strip_suffix.append('_F3')
 	if options.strip_suffix:
-		modifiers.add_modifier(ModType.REMOVE_SUFFIX, read=both, suffixes=options.strip_suffix)
+		mods.add_modifier(modifiers.SuffixRemover, read=both, suffixes=options.strip_suffix)
 	
 	if options.prefix or options.suffix:
-		modifiers.add_modifier(ModType.ADD_PREFIX_SUFFIX, read=both, prefix=options.prefix, 
+		mods.add_modifier(modifiers.PrefixSuffixAdder, read=both, prefix=options.prefix, 
 			suffix=options.suffix)
 	
 	if options.double_encode:
-		modifiers.add_modifier(ModType.CS_DOUBLE_ENCODE, read=both)
+		mods.add_modifier(modifiers.DoubleEncoder, read=both)
 	
 	if options.zero_cap and delivers_qualities:
-		modifiers.add_modifier(ModType.ZERO_CAP, read=both, quality_base=options.quality_base)
+		mods.add_modifier(modifiers.ZeroCapper, read=both, quality_base=options.quality_base)
 	
 	if options.trim_primer:
-		modifiers.add_modifier(ModType.CS_TRIM_PRIMER, read=both)
+		mods.add_modifier(modifiers.PrimerTrimmer, read=both)
 	
-	return (adapters, adapters2, modifiers)
+	return (adapters, adapters2, mods)
 
 if __name__ == '__main__':
 	main()

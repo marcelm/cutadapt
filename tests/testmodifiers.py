@@ -2,7 +2,7 @@
 from __future__ import print_function, division, absolute_import
 
 from cutadapt.seqio import Sequence
-from cutadapt.modifiers import ModType, Modifiers, UnconditionalCutter, NEndTrimmer, QualityTrimmer
+from cutadapt.modifiers import Modifiers, UnconditionalCutter, NEndTrimmer, QualityTrimmer
 
 def test_unconditional_cutter():
 	uc = UnconditionalCutter(lengths=[5])
@@ -36,20 +36,13 @@ def test_quality_trimmer():
 	assert qt(read) == Sequence('read1', 'GTTTACGTA', '456789###')
 
 
-def test_mod_type():
-	assert ModType.ADAPTER == "ADAPTER"
-	assert ModType[ModType.CUT] == UnconditionalCutter
-	uc = ModType.create_modifier(ModType.CUT, lengths=[2])
-	assert uc.__class__ == UnconditionalCutter
-
-
 def test_Modifiers_single():
 	m = Modifiers()
-	m.add_modifier(ModType.CUT, lengths=[5])
-	assert len(m.mod1) == 1
-	assert list(m.mod1.keys())[0] == ModType.CUT
-	assert list(m.mod1.values())[0].__class__ == UnconditionalCutter
-	assert len(m.mod2) == 0
+	m.add_modifier(UnconditionalCutter, lengths=[5])
+	assert len(m.modifiers1) == 1
+	assert list(m.modifiers1.keys())[0] == UnconditionalCutter
+	assert list(m.modifiers1.values())[0].__class__ == UnconditionalCutter
+	assert len(m.modifiers2) == 0
 	
 	# test single-end
 	read = Sequence('read1', 'ACGTTTACGTA', '##456789###')
@@ -65,11 +58,11 @@ def test_Modifiers_single():
 
 def test_Modifiers_paired_both():
 	m = Modifiers()
-	m.add_modifier(ModType.CUT, read=1|2, lengths=[5])
-	assert len(m.mod1) == 1
-	assert len(m.mod2) == 1
-	assert list(m.mod1.keys())[0] == list(m.mod2.keys())[0] == ModType.CUT
-	assert list(m.mod1.values())[0].__class__ == list(m.mod2.values())[0].__class__  == UnconditionalCutter
+	m.add_modifier(UnconditionalCutter, read=1|2, lengths=[5])
+	assert len(m.modifiers1) == 1
+	assert len(m.modifiers2) == 1
+	assert list(m.modifiers1.keys())[0] == list(m.modifiers2.keys())[0] == UnconditionalCutter
+	assert list(m.modifiers1.values())[0].__class__ == list(m.modifiers2.values())[0].__class__  == UnconditionalCutter
 	read = Sequence('read1', 'ACGTTTACGTA', '##456789###')
 	read2 = Sequence('read1', 'ACGTTTACGTA', '##456789###')
 	mod_read, mod_read2 = m.modify(read, read2)

@@ -8,12 +8,9 @@ need to be stored, and as a class with a __call__ method if there are parameters
 from __future__ import print_function, division, absolute_import
 import re
 from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
-from cutadapt.compat import maketrans
+from cutadapt.compat import maketrans, OrderedDict
 import sys
-if sys.version_info < (2, 7):
-	from ordereddict import OrderedDict
-else:
-	from collections import OrderedDict
+
 
 class AdapterCutter(object):
 	"""
@@ -284,56 +281,40 @@ class NEndTrimmer(object):
 
 
 class Modifiers(object):
+	"""
+	Creates and manages modifiers. Modifiers are kept in
+	the same order as they were added.
+	"""
 	def __init__(self):
-		self.mod1 = OrderedDict()
-		self.mod2 = OrderedDict()
+		self.modifiers1 = OrderedDict()
+		self.modifiers2 = OrderedDict()
 	
-	def add_modifier(self, mod_type, read=1, **kwargs):
-		mod = ModType.create_modifier(mod_type, **kwargs)
+	def add_modifier(self, modifier_class, read=1, **kwargs):
+		"""
+		Create a modifier of the given class with the given
+		keyword arguments.
+		
+		read -- which read to modifiy; 1 = read1, 2 = read2
+		1|2 = 3 = both read1 and read2.
+		"""
+		modifier = modifier_class(**kwargs)
 		if read & 1 > 0:
-			self.mod1[mod_type] = mod
+			self.modifiers1[modifier_class] = modifier
 		if read & 2 > 0:
-			self.mod2[mod_type] = mod
+			self.modifiers2[modifier_class] = modifier
 	
 	def modify(self, read1, read2=None):
-		for mod in self.mod1.values():
-			read1 = mod(read1)
+		"""
+		Apply modifiers to a read or read pair.
+		
+		returns -- modified read1, if read 2 is None,
+		otherwise tuple of (read1, read2)
+		"""
+		for modifier in self.modifiers1.values():
+			read1 = modifier(read1)
 		if read2:
-			for mod in self.mod2.values():
-				read2 = mod(read2)
+			for modifier in self.modifiers2.values():
+				read2 = modifier(read2)
 			return (read1, read2)
 		else:
 			return read1
-
-
-class _ModType(dict):
-	"""
-	Enumeration of modifier types.
-	
-	This is an enum-like class that is compatible with python 2x. 
-	This class is only meant to be instantiated once, below (this 
-	would be an anonymous class, if python allowed such a thing).
-	"""
-	def __init__(self):
-		super(_ModType, self).__init__(
-			ADAPTER					= AdapterCutter,
-			CUT						= UnconditionalCutter,
-			LENGTH_TAG				= LengthTagModifier,
-			REMOVE_SUFFIX			= SuffixRemover,
-			ADD_PREFIX_SUFFIX		= PrefixSuffixAdder,
-			ZERO_CAP				= ZeroCapper,
-			TRIM_QUAL				= QualityTrimmer,
-			TRIM_NEXTSEQ_QUAL		= NextseqQualityTrimmer,
-			CS_DOUBLE_ENCODE		= DoubleEncoder,
-			CS_TRIM_PRIMER			= PrimerTrimmer,
-			TRIM_END_N				= NEndTrimmer
-		)
-	
-	def create_modifier(self, mod_type, *args, **kwargs):
-		return self[mod_type](*args, **kwargs)
-	
-	def __getattr__(self, name):
-		assert name in self
-		return name
-
-ModType = _ModType()
