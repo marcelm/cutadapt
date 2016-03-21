@@ -175,16 +175,19 @@ class LengthTagModifier(object):
 
 class SuffixRemover(object):
 	"""
-	Remove a given suffix from read names.
+	Remove suffixes from read names. Suffixes are looked for
+	and removed in order.
+	
+	suffixes -- list of suffixes to remove.
 	"""
 	def __init__(self, suffixes):
-		self.suffixes = suffixes
+		self.suffixes = dict((s, -len(s)) for s in suffixes)
 
 	def __call__(self, read):
 		name = read.name
-		for s in self.suffixes:
-			if name.endswith(s):
-				name = name[:-len(s)]
+		for suffix, length in self.suffixes.iteritems():
+			if name.endswith(suffix):
+				name = name[:length]
 		read = read[:]
 		read.name = name
 		return read
