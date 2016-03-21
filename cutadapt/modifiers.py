@@ -185,7 +185,7 @@ class SuffixRemover(object):
 
 	def __call__(self, read):
 		name = read.name
-		for suffix, length in self.suffixes.iteritems():
+		for suffix, length in self.suffixes.items():
 			if name.endswith(suffix):
 				name = name[:length]
 		read = read[:]
