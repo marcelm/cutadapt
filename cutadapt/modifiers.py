@@ -148,14 +148,14 @@ class UnconditionalCutter(object):
 	If the length is negative, the bases are removed from the end of the read.
 	"""
 	def __init__(self, lengths):
-		self.beg_length = sum(l for l in lengths if l > 0)
+		self.begin_length = sum(l for l in lengths if l > 0)
 		self.end_length = sum(l for l in lengths if l < 0)
 
 	def __call__(self, read):
 		if self.end_length < 0:
-			return read[self.beg_length:self.end_length]
+			return read[self.begin_length:self.end_length]
 		else:
-			return read[self.beg_length:]
+			return read[self.begin_length:]
 
 
 class LengthTagModifier(object):
