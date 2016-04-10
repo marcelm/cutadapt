@@ -5,12 +5,12 @@ from cutadapt.seqio import Sequence
 from cutadapt.modifiers import UnconditionalCutter, NEndTrimmer, QualityTrimmer
 
 def test_unconditional_cutter():
-	uc = UnconditionalCutter(length=5)
+	uc = UnconditionalCutter(5)
 	s = 'abcdefg'
-	assert UnconditionalCutter(length=2)(s) == 'cdefg'
-	assert UnconditionalCutter(length=-2)(s) == 'abcde'
-	assert UnconditionalCutter(length=100)(s) == ''
-	assert UnconditionalCutter(length=-100)(s) == ''
+	assert UnconditionalCutter(2)(s) == 'cdefg'
+	assert UnconditionalCutter(-2)(s) == 'abcde'
+	assert UnconditionalCutter(100)(s) == ''
+	assert UnconditionalCutter(-100)(s) == ''
 
 
 def test_nend_trimmer():
