@@ -49,8 +49,8 @@ def test_paired_end():
 			assert summary[1][0] == 30
 			assert summary[1][1] == 30
 
-def test_multiplexed():
-	w = writers.Writers(multiplexed=True, name_pattern=os.path.join(temporary_directory(), "foo.{name}.fa"))
+def test_paired_end():
+	w = writers.Writers(name_pattern=os.path.join(temporary_directory(), "foo.{name}.fa"))
 	with temporary_path("foo.alpha.fa") as path1:
 		with temporary_path("foo.beta.fa") as path2:
 			assert isinstance(w.get_multiplex_writer("alpha"), writers.SingleEndWriter)
