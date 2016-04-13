@@ -52,14 +52,14 @@ class PairedEndWriter(SingleEndWriter):
 class Writers(object):
 	"""
 	Manage output files. Each output file (single-end) or pair of files
-	(paired-end) is associated with a filter type. Multiplexing is also
+	(paired-end) is associated with a filter type. Demultiplexing is also
 	supported, in which case a filter type of `None` indicates that the
 	name of the output file to be used is determined by replacing '{name}'
 	in `name_pattern` with the adapter name. Files are opened lazily so 
 	that a `Writers` object can be constructed in the main thread and 
 	then be safely passed to a separate writer thread.
 	"""
-	def __init__(self, multiplexed=False, name_pattern=None, **seqio_open_args):
+	def __init__(self, name_pattern=None, **seqio_open_args):
 		"""
 		Create a Writers object.
 		
@@ -71,17 +71,18 @@ class Writers(object):
 		  unless `multiplexed` = True
 		seqio_open_args -- arguments to pass to seqio.open
 		"""
-		if multiplexed:
-			assert '{name}' in name_pattern
-		else:
-			output = None
-		self.multiplexed = multiplexed
+		if name_pattern is not None and '{name}' not in name_pattern:
+			raise ValueError("Name pattern must contain {name}")
 		self.name_pattern = name_pattern
 		self.seqio_open_args = seqio_open_args
 		self._writers = {}
 		self._seqfile_paths = {}
 		self._force_create = {}
 		self.discarded = 0
+	
+	@property
+	def multiplexed(self):
+		return self.name_pattern is not None
 	
 	def add_writer(self, filter_type, file1, file2=None, force_create=False):
 		"""
