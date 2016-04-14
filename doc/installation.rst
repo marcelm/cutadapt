@@ -66,8 +66,8 @@ appropriate package is called ``python-dev`` in Ubuntu (or ``python3-dev``
 for Python 3).
 
 
-System-wide installation
-------------------------
+System-wide installation (root required)
+----------------------------------------
 
 If you have root access, then you can install cutadapt system-wide by running::
 
@@ -96,3 +96,33 @@ If you get any errors, first try to explicitly request a specific Python
 version by running cutadapt like this::
 
     python2.7 bin/cutadapt --help
+
+
+Shared installation (on a cluster)
+----------------------------------
+
+If you have a larger installation and want to provide cutadapt as a module
+that can be loaded and unloaded (with the Lmod system, for example), we
+recommend that you create a virtual environment and 'pip install' cutadapt into
+it. These instructions work on our SLURM cluster that uses the Lmod system::
+
+    BASE=/software/cutadapt-1.9.1
+    virtualenv $BASE/venv
+    $BASE/venv/bin/pip install --install-option="--install-scripts=$BASE/bin" cutadapt==1.9.1
+
+The ``install-option`` part is important. It ensures that a second, separate
+``bin/`` directory is created (``/software/cutadapt-1.9.1/bin/``) that *only*
+contains the ``cutadapt`` script and nothing else. To make cutadapt available to
+the users, that directory (``$BASE/bin``) needs to be added to the ``$PATH``.
+
+Make sure you *do not* add the ``bin/`` directory within the ``venv`` directory
+to the ``$PATH``! Otherwise, a user trying to run ``python`` who also has the
+cutadapt module loaded would get the python from the virtual environment,
+which leads to confusing error messages.
+
+A simple module file for the Lmod system matching the above example could look
+like this::
+
+    conflict("cutadapt")
+    whatis("adapter trimming tool")
+    prepend_path("PATH", "/software/cutadapt-1.9.1/bin")
