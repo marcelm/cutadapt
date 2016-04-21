@@ -7,12 +7,9 @@ include doc/*.rst
 include doc/conf.py
 include doc/Makefile
 include cutadapt/*.pyx
-include cutadapt/_align.so
 include cutadapt/_align.c
-include cutadapt/_qualtrim.so
 include cutadapt/_qualtrim.c
 include cutadapt/_seqio.c
-include cutadapt/_seqio.so
 include bin/_preamble.py
 include tests/test*.py
 include tests/utils.py
