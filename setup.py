@@ -11,13 +11,19 @@ import os.path
 from distutils.core import setup, Extension
 from distutils.version import LooseVersion
 
-from cutadapt import __version__
-
 MIN_CYTHON_VERSION = '0.24'
 
 if sys.version_info < (2, 6):
 	sys.stdout.write("At least Python 2.6 is required.\n")
 	sys.exit(1)
+
+
+# set __version__
+with open(os.path.join(os.path.dirname(__file__), 'cutadapt', '__init__.py')) as f:
+	for line in f:
+		if line.startswith('__version__'):
+			exec(line)
+			break
 
 
 def out_of_date(extensions):
