@@ -8,8 +8,11 @@ Cython is run when
 """
 import sys
 import os.path
+
 from distutils.core import setup, Extension
 from distutils.version import LooseVersion
+from distutils.command.sdist import sdist as _sdist
+from distutils.command.build_ext import build_ext as _build_ext
 
 MIN_CYTHON_VERSION = '0.24'
 
@@ -68,17 +71,10 @@ def no_cythonize(extensions, **_ignore):
 				sfile = path + ext
 			sources.append(sfile)
 		extension.sources[:] = sources
-	return extensions
 
 
-def cythonize_if_necessary(extensions):
-	if '--cython' in sys.argv:
-		sys.argv.remove('--cython')
-	elif out_of_date(extensions):
-		sys.stdout.write('At least one C source file is missing or out of date.\n')
-	else:
-		return no_cythonize(extensions)
-
+def check_cython_version():
+	"""Exit if Cython was not found or is too old"""
 	try:
 		from Cython import __version__ as cyversion
 	except ImportError:
@@ -92,16 +88,37 @@ def cythonize_if_necessary(extensions):
 			"', but at least version " + str(MIN_CYTHON_VERSION) + " is required.\n")
 		sys.exit(1)
 
-	from Cython.Build import cythonize
-	return cythonize(extensions)
-
 
 extensions = [
 	Extension('cutadapt._align', sources=['cutadapt/_align.pyx']),
 	Extension('cutadapt._qualtrim', sources=['cutadapt/_qualtrim.pyx']),
 	Extension('cutadapt._seqio', sources=['cutadapt/_seqio.pyx']),
 ]
-extensions = cythonize_if_necessary(extensions)
+
+
+class build_ext(_build_ext):
+	def run(self):
+		# If we encounter a PKG-INFO file, then this is likely a .tar.gz/.zip
+		# file retrieved from PyPI that already includes the pre-cythonized
+		# extension modules, and then we do not need to run cythonize().
+		if os.path.exists('PKG-INFO'):
+			no_cythonize(extensions)
+		else:
+			# Otherwise, this is a 'developer copy' of the code, and then the
+			# only sensible thing is to require Cython to be installed.
+			check_cython_version()
+			from Cython.Build import cythonize
+			self.extensions = cythonize(self.extensions)
+		_build_ext.run(self)
+
+
+class sdist(_sdist):
+	def run(self):
+		# Make sure the compiled Cython files in the distribution are up-to-date
+		from Cython.Build import cythonize
+		cythonize(extensions)
+		_sdist.run(self)
+
 
 setup(
 	name = 'cutadapt',
@@ -111,6 +128,7 @@ setup(
 	url = 'https://cutadapt.readthedocs.org/',
 	description = 'trim adapters from high-throughput sequencing reads',
 	license = 'MIT',
+	cmdclass = {'sdist': sdist, 'build_ext': build_ext},
 	ext_modules = extensions,
 	packages = ['cutadapt', 'cutadapt.scripts'],
 	scripts = ['bin/cutadapt'],
