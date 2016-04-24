@@ -728,6 +728,18 @@ and::
 
     @my_read/2 another comment
 
+This is an example for *improperly paired* read names::
+
+    @my_read/1;1
+
+and::
+
+    @my_read/2;1
+
+Since the ``/1`` and ``/2`` are ignored only if the occur at the end of the read
+name, and since the ``;1`` is considered to be part of the read name, these
+reads will not be considered to be propely paired.
+
 As soon as you start to use one of the filtering options that discard reads, it
 is mandatory you process both files at the same time to make sure that the
 output files are kept synchronized: If a read is removed from one of the files,
