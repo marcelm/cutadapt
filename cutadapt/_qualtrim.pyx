@@ -1,4 +1,5 @@
 # kate: syntax Python;
+# cython: profile=False, emit_code_comments=False
 """
 Quality trimming.
 """

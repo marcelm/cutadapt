@@ -13,7 +13,7 @@ from distutils.version import LooseVersion
 
 from cutadapt import __version__
 
-MIN_CYTHON_VERSION = '0.17'
+MIN_CYTHON_VERSION = '0.24'
 
 if sys.version_info < (2, 6):
 	sys.stdout.write("At least Python 2.6 is required.\n")
