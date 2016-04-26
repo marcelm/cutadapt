@@ -126,3 +126,5 @@ like this::
     conflict("cutadapt")
     whatis("adapter trimming tool")
     prepend_path("PATH", "/software/cutadapt-1.9.1/bin")
+
+Please note that there is no need to “activate” the virtual environment!
