@@ -89,6 +89,10 @@ class CutadaptOptionParser(OptionParser):
 		return self.usage.lstrip().replace('%version', __version__)
 
 
+class CommandlineError(Exception):
+	pass
+
+
 class RestFileWriter(object):
 	def __init__(self, file):
 		self.file = file
@@ -99,16 +103,51 @@ class RestFileWriter(object):
 			print(rest, match.read.name, file=self.file)
 
 
-class SingleEndPipeline:
+class Pipeline(object):
 	"""
 	Processing pipeline that loops over reads and applies modifiers and filters
 	"""
-	def __init__(self, reader, modifiers, filters):
+	def __init__(self, adapters, adapters2):
+		self._close_files = []
+		self.adapters = adapters
+		self.adapters2 = adapters2
+		self.n_adapters = len(adapters) + len(adapters2)
+
+	def register_file_to_close(self, file):
+		if file is not None and file is not sys.stdin and file is not sys.stdout:
+			self._close_files.append(file)
+
+	def close_files(self):
+		for f in self._close_files:
+			f.close()
+
+	def process_reads(self):
+		raise NotImplementedError()
+
+	def run(self):
+		start_time = time.clock()
+		stats = self.process_reads()
+		self.close_files()
+		elapsed_time = time.clock() - start_time
+		# TODO
+		m = self.modifiers if hasattr(self, 'modifiers') else self.modifiers1
+		m2 = getattr(self, 'modifiers2', [])
+		stats.collect((self.adapters, self.adapters2), elapsed_time,
+			m, m2, self.filters)
+		return stats
+
+
+class SingleEndPipeline(Pipeline):
+	"""
+	Processing pipeline for single-end reads
+	"""
+	def __init__(self, adapters, adapters2, reader, modifiers, filters):
+		super(SingleEndPipeline, self).__init__(adapters, adapters2)
 		self.reader = reader
 		self.modifiers = modifiers
 		self.filters = filters
 
-	def run(self):
+	def process_reads(self):
 		"""Run the pipeline. Return a Statistics object"""
 		n = 0  # no. of processed reads
 		total_bp = 0
@@ -123,17 +162,18 @@ class SingleEndPipeline:
 		return Statistics(n=n, total_bp1=total_bp, total_bp2=None)
 
 
-class PairedEndPipeline:
+class PairedEndPipeline(Pipeline):
 	"""
 	Processing pipeline for paired-end reads.
 	"""
-	def __init__(self, paired_reader, modifiers1, modifiers2, filters):
+	def __init__(self, adapters, adapters2, paired_reader, modifiers1, modifiers2, filters):
+		super(PairedEndPipeline, self).__init__(adapters, adapters2)
 		self.paired_reader = paired_reader
 		self.modifiers1 = modifiers1
 		self.modifiers2 = modifiers2
 		self.filters = filters
 
-	def run(self):
+	def process_reads(self):
 		n = 0  # no. of processed reads
 		total1_bp = 0
 		total2_bp = 0
@@ -375,30 +415,17 @@ def get_option_parser():
 	return parser
 
 
-def main(cmdlineargs=None, default_outfile=sys.stdout):
+def pipeline_from_parsed_args(options, args, default_outfile):
 	"""
-	Main function that evaluates command-line parameters and iterates
-	over all reads.
-
-	default_outfile is the file to which trimmed reads are sent if the ``-o``
-	parameter is not used.
+	Setup a processing pipeline from parsed command-line options.
 	"""
-	parser = get_option_parser()
-	if cmdlineargs is None:
-		cmdlineargs = sys.argv[1:]
-	options, args = parser.parse_args(args=cmdlineargs)
-	# Setup logging only if there are not already any handlers (can happen when
-	# this function is being called externally such as from unit tests)
-	if not logging.root.handlers:
-		setup_logging(stdout=bool(options.output), quiet=options.quiet)
-
 	if len(args) == 0:
-		parser.error("At least one parameter needed: name of a FASTA or FASTQ file.")
+		raise CommandlineError("At least one parameter needed: name of a FASTA or FASTQ file.")
 	elif len(args) > 2:
-		parser.error("Too many parameters.")
+		raise CommandlineError("Too many parameters.")
 	input_filename = args[0]
 	if input_filename.endswith('.qual'):
-		parser.error("If a .qual file is given, it must be the second argument.")
+		raise CommandlineError("If a .qual file is given, it must be the second argument.")
 
 	# Find out which 'mode' we need to use.
 	# Default: single-read trimming (neither -p nor -A/-G/-B/-U/--interleaved given)
@@ -416,11 +443,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		paired = 'both'
 
 	if paired and len(args) == 1 and not options.interleaved:
-		parser.error("When paired-end trimming is enabled via -A/-G/-B/-U/"
+		raise CommandlineError("When paired-end trimming is enabled via -A/-G/-B/-U/"
 			"--interleaved or -p, two input files are required.")
 	if not paired:
 		if options.untrimmed_paired_output:
-			parser.error("Option --untrimmed-paired-output can only be used when "
+			raise CommandlineError("Option --untrimmed-paired-output can only be used when "
 				"trimming paired-end reads (with option -p).")
 
 	interleaved_input = False
@@ -429,7 +456,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		interleaved_input = len(args) == 1
 		interleaved_output = not options.paired_output
 		if not interleaved_input and not interleaved_output:
-			parser.error("When --interleaved is used, you cannot provide both two input files and two output files")
+			raise CommandlineError("When --interleaved is used, you cannot provide both two input files and two output files")
 
 	# Assign input_paired_filename and quality_filename
 	input_paired_filename = None
@@ -439,28 +466,28 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			input_paired_filename = args[1]
 		if not interleaved_output:
 			if not options.paired_output:
-				parser.error("When paired-end trimming is enabled via -A/-G/-B/-U, "
+				raise CommandlineError("When paired-end trimming is enabled via -A/-G/-B/-U, "
 					"a second output file needs to be specified via -p (--paired-output).")
 			if not options.output:
-				parser.error("When you use -p or --paired-output, you must also "
+				raise CommandlineError("When you use -p or --paired-output, you must also "
 					"use the -o option.")
 
 		if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
-			parser.error("When trimming paired-end reads, you must use either none "
+			raise CommandlineError("When trimming paired-end reads, you must use either none "
 				"or both of the --untrimmed-output/--untrimmed-paired-output options.")
 		if options.too_short_output and not options.too_short_paired_output:
-			parser.error("When using --too-short-output with paired-end "
+			raise CommandlineError("When using --too-short-output with paired-end "
 				"reads, you also need to use --too-short-paired-output")
 		if options.too_long_output and not options.too_long_paired_output:
-			parser.error("When using --too-long-output with paired-end "
+			raise CommandlineError("When using --too-long-output with paired-end "
 				"reads, you also need to use --too-long-paired-output")
 	elif len(args) == 2:
 		quality_filename = args[1]
 		if options.format is not None:
-			parser.error("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
+			raise CommandlineError("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
-		parser.error("The input file format must be either 'fasta', 'fastq' or "
+		raise CommandlineError("The input file format must be either 'fasta', 'fastq' or "
 			"'sra-fastq' (not '{0}').".format(options.format))
 
 	# Open input file(s)
@@ -469,7 +496,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 				qualfile=quality_filename, colorspace=options.colorspace,
 				fileformat=options.format, interleaved=interleaved_input)
 	except (seqio.UnknownFileType, IOError) as e:
-		parser.error(e)
+		raise CommandlineError(e)
 
 	if options.quality_cutoff is not None:
 		cutoffs = options.quality_cutoff.split(',')
@@ -477,14 +504,14 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			try:
 				cutoffs = [0, int(cutoffs[0])]
 			except ValueError as e:
-				parser.error("Quality cutoff value not recognized: {0}".format(e))
+				raise CommandlineError("Quality cutoff value not recognized: {0}".format(e))
 		elif len(cutoffs) == 2:
 			try:
 				cutoffs = [int(cutoffs[0]), int(cutoffs[1])]
 			except ValueError as e:
-				parser.error("Quality cutoff value not recognized: {0}".format(e))
+				raise CommandlineError("Quality cutoff value not recognized: {0}".format(e))
 		else:
-			parser.error("Expected one value or two values separated by comma for the quality cutoff")
+			raise CommandlineError("Expected one value or two values separated by comma for the quality cutoff")
 	else:
 		cutoffs = None
 
@@ -518,16 +545,16 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		filters.append(filter_wrapper(None, NContentFilter(options.max_n)))
 
 	if int(options.discard_trimmed) + int(options.discard_untrimmed) + int(options.untrimmed_output is not None) > 1:
-		parser.error("Only one of the --discard-trimmed, --discard-untrimmed "
+		raise CommandlineError("Only one of the --discard-trimmed, --discard-untrimmed "
 			"and --untrimmed-output options can be used at the same time.")
 	demultiplexer = None
 	untrimmed_writer = None
 	writer = None
 	if options.output is not None and '{name}' in options.output:
 		if options.discard_trimmed:
-			parser.error("Do not use --discard-trimmed when demultiplexing.")
+			raise CommandlineError("Do not use --discard-trimmed when demultiplexing.")
 		if paired:
-			parser.error("Demultiplexing not supported for paired-end files, yet.")
+			raise CommandlineError("Demultiplexing not supported for paired-end files, yet.")
 		untrimmed = options.output.replace('{name}', 'unknown')
 		if options.untrimmed_output:
 			untrimmed = options.untrimmed_output
@@ -569,15 +596,15 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if options.zero_cap is None:
 		options.zero_cap = options.colorspace
 	if options.trim_primer and not options.colorspace:
-		parser.error("Trimming the primer makes only sense in colorspace.")
+		raise CommandlineError("Trimming the primer makes only sense in colorspace.")
 	if options.double_encode and not options.colorspace:
-		parser.error("Double-encoding makes only sense in colorspace.")
+		raise CommandlineError("Double-encoding makes only sense in colorspace.")
 	if options.anywhere and options.colorspace:
-		parser.error("Using --anywhere with colorspace reads is currently not supported (if you think this may be useful, contact the author).")
+		raise CommandlineError("Using --anywhere with colorspace reads is currently not supported (if you think this may be useful, contact the author).")
 	if not (0 <= options.error_rate <= 1.):
-		parser.error("The maximum error rate must be between 0 and 1.")
+		raise CommandlineError("The maximum error rate must be between 0 and 1.")
 	if options.overlap < 1:
-		parser.error("The overlap must be at least 1.")
+		raise CommandlineError("The overlap must be at least 1.")
 
 	if options.rest_file is not None:
 		options.rest_file = xopen(options.rest_file, 'w')
@@ -591,7 +618,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	if options.colorspace:
 		if options.match_read_wildcards:
-			parser.error('IUPAC wildcards not supported in colorspace')
+			raise CommandlineError('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
 
 	adapter_parser = AdapterParser(
@@ -607,10 +634,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		adapters2 = adapter_parser.parse_multi(options.adapters2, options.anywhere2, options.front2)
 	except IOError as e:
 		if e.errno == errno.ENOENT:
-			parser.error(e)
+			raise CommandlineError(e)
 		raise
 	except ValueError as e:
-		parser.error(e)
+		raise CommandlineError(e)
 	if options.debug:
 		for adapter in adapters + adapters2:
 			adapter.enable_debug()
@@ -619,9 +646,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	modifiers = []
 	if options.cut:
 		if len(options.cut) > 2:
-			parser.error("You cannot remove bases from more than two ends.")
+			raise CommandlineError("You cannot remove bases from more than two ends.")
 		if len(options.cut) == 2 and options.cut[0] * options.cut[1] > 0:
-			parser.error("You cannot remove bases from the same end twice.")
+			raise CommandlineError("You cannot remove bases from the same end twice.")
 		for cut in options.cut:
 			if cut != 0:
 				modifiers.append(UnconditionalCutter(cut))
@@ -666,9 +693,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if paired == 'both':
 		if options.cut2:
 			if len(options.cut2) > 2:
-				parser.error("You cannot remove bases from more than two ends.")
+				raise CommandlineError("You cannot remove bases from more than two ends.")
 			if len(options.cut2) == 2 and options.cut2[0] * options.cut2[1] > 0:
-				parser.error("You cannot remove bases from the same end twice.")
+				raise CommandlineError("You cannot remove bases from the same end twice.")
 			for cut in options.cut2:
 				if cut != 0:
 					modifiers2.append(UnconditionalCutter(cut))
@@ -684,25 +711,58 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		modifiers2.extend(modifiers_both)
 
 	if paired:
-		pipeline = PairedEndPipeline(reader, modifiers, modifiers2, filters)
+		pipeline = PairedEndPipeline(adapters, adapters2, reader, modifiers, modifiers2, filters)
 	else:
-		pipeline = SingleEndPipeline(reader, modifiers, filters)
+		pipeline = SingleEndPipeline(adapters, adapters2, reader, modifiers, filters)
+
+	# TODO the following should be done some other way
+	pipeline.paired = paired
+	pipeline.error_rate = options.error_rate
+	pipeline.should_print_warning = paired == 'first' and (modifiers_both or cutoffs)
+	for f in [writer, untrimmed_writer,
+			options.rest_file, options.wildcard_file,
+			options.info_file, too_short_writer, too_long_writer,
+			options.info_file, demultiplexer]:
+		pipeline.register_file_to_close(f)
+	return pipeline
+
+
+def main(cmdlineargs=None, default_outfile=sys.stdout):
+	"""
+	Main function that evaluates command-line parameters and iterates
+	over all reads.
+
+	default_outfile is the file to which trimmed reads are sent if the ``-o``
+	parameter is not used.
+	"""
+	parser = get_option_parser()
+	if cmdlineargs is None:
+		cmdlineargs = sys.argv[1:]
+	options, args = parser.parse_args(args=cmdlineargs)
+	# Setup logging only if there are not already any handlers (can happen when
+	# this function is being called externally such as from unit tests)
+	if not logging.root.handlers:
+		setup_logging(stdout=bool(options.output), quiet=options.quiet)
+
+	try:
+		pipeline = pipeline_from_parsed_args(options, args, default_outfile)
+	except CommandlineError as e:
+		parser.error(e)
 
 	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
 	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
-		len(adapters) + len(adapters2), 's' if len(adapters) + len(adapters2) != 1 else '',
-		options.error_rate * 100,
-		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[paired])
+		pipeline.n_adapters, 's' if pipeline.n_adapters != 1 else '',
+		pipeline.error_rate * 100,
+		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[pipeline.paired])
 
-	if paired == 'first' and (modifiers_both or cutoffs):
+	if pipeline.should_print_warning:
 		logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
 			'modifications are applied only to the first '
 			'read since backwards compatibility mode is enabled. '
 			'To modify both reads, also use any of the -A/-B/-G/-U options. '
 			'Use a dummy adapter sequence when necessary: -A XXX')))
 
-	start_time = time.clock()
 	try:
 		stats = pipeline.run()
 	except KeyboardInterrupt as e:
@@ -715,22 +775,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	except (seqio.FormatError, EOFError) as e:
 		sys.exit("cutadapt: error: {0}".format(e))
 
-	# close open files
-	for f in [writer, untrimmed_writer,
-			options.rest_file, options.wildcard_file,
-			options.info_file, too_short_writer, too_long_writer,
-			options.info_file, demultiplexer]:
-		if f is not None and f is not sys.stdin and f is not sys.stdout:
-			f.close()
-
-	elapsed_time = time.clock() - start_time
 	if not options.quiet:
-		stats.collect((adapters, adapters2), elapsed_time,
-			modifiers, modifiers2, filters)
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
 		with redirect_standard_output(stat_file):
-			print_report(stats, (adapters, adapters2))
+			print_report(stats, (pipeline.adapters, pipeline.adapters2))
 
 
 if __name__ == '__main__':
