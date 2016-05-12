@@ -99,50 +99,57 @@ class RestFileWriter(object):
 			print(rest, match.read.name, file=self.file)
 
 
-def process_single_reads(reader, modifiers, filters):
+class SingleEndPipeline:
 	"""
-	Loop over reads, find adapters, trim reads, apply modifiers and
-	output modified reads.
-
-	Return a Statistics object.
+	Processing pipeline that loops over reads and applies modifiers and filters
 	"""
-	n = 0  # no. of processed reads
-	total_bp = 0
-	for read in reader:
-		n += 1
-		total_bp += len(read.sequence)
-		for modifier in modifiers:
-			read = modifier(read)
-		for filter in filters:
-			if filter(read):
-				break
+	def __init__(self, reader, modifiers, filters):
+		self.reader = reader
+		self.modifiers = modifiers
+		self.filters = filters
 
-	return Statistics(n=n, total_bp1=total_bp, total_bp2=None)
+	def run(self):
+		"""Run the pipeline. Return a Statistics object"""
+		n = 0  # no. of processed reads
+		total_bp = 0
+		for read in self.reader:
+			n += 1
+			total_bp += len(read.sequence)
+			for modifier in self.modifiers:
+				read = modifier(read)
+			for filter in self.filters:
+				if filter(read):
+					break
+		return Statistics(n=n, total_bp1=total_bp, total_bp2=None)
 
 
-def process_paired_reads(paired_reader, modifiers1, modifiers2, filters):
+class PairedEndPipeline:
 	"""
-	Loop over reads, find adapters, trim reads, apply modifiers and
-	output modified reads.
-
-	Return a Statistics object.
+	Processing pipeline for paired-end reads.
 	"""
-	n = 0  # no. of processed reads
-	total1_bp = 0
-	total2_bp = 0
-	for read1, read2 in paired_reader:
-		n += 1
-		total1_bp += len(read1.sequence)
-		total2_bp += len(read2.sequence)
-		for modifier in modifiers1:
-			read1 = modifier(read1)
-		for modifier in modifiers2:
-			read2 = modifier(read2)
-		for filter in filters:
-			# Stop writing as soon as one of the filters was successful.
-			if filter(read1, read2):
-				break
-	return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
+	def __init__(self, paired_reader, modifiers1, modifiers2, filters):
+		self.paired_reader = paired_reader
+		self.modifiers1 = modifiers1
+		self.modifiers2 = modifiers2
+		self.filters = filters
+
+	def run(self):
+		n = 0  # no. of processed reads
+		total1_bp = 0
+		total2_bp = 0
+		for read1, read2 in self.paired_reader:
+			n += 1
+			total1_bp += len(read1.sequence)
+			total2_bp += len(read2.sequence)
+			for modifier in self.modifiers1:
+				read1 = modifier(read1)
+			for modifier in self.modifiers2:
+				read2 = modifier(read2)
+			for filter in self.filters:
+				# Stop writing as soon as one of the filters was successful.
+				if filter(read1, read2):
+					break
+		return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
 
 
 def setup_logging(stdout=False, quiet=False):
@@ -680,6 +687,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			adapter_cutter2 = None
 		modifiers2.extend(modifiers_both)
 
+	if paired:
+		pipeline = PairedEndPipeline(reader, modifiers, modifiers2, filters)
+	else:
+		pipeline = SingleEndPipeline(reader, modifiers, filters)
+
 	logger.info("This is cutadapt %s with Python %s", __version__, platform.python_version())
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
 	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
@@ -696,10 +708,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	start_time = time.clock()
 	try:
-		if paired:
-			stats = process_paired_reads(reader, modifiers, modifiers2, filters)
-		else:
-			stats = process_single_reads(reader, modifiers, filters)
+		stats = pipeline.run()
 	except KeyboardInterrupt as e:
 		print("Interrupted", file=sys.stderr)
 		sys.exit(130)
