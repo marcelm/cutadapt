@@ -70,7 +70,7 @@ class AdapterParser(object):
 		self.constructor_args = kwargs
 		self.adapter_class = ColorspaceAdapter if colorspace else Adapter
 
-	def parse(self, spec, name=None, cmdline_type='back'):
+	def _parse_no_file(self, spec, name=None, cmdline_type='back'):
 		"""
 		Parse an adapter specification not using ``file:`` notation and return
 		an object of an appropriate Adapter class. The notation for anchored
@@ -112,10 +112,10 @@ class AdapterParser(object):
 
 		return self.adapter_class(sequence, where, name=name, **self.constructor_args)
 
-	def parse_with_file(self, spec, cmdline_type='back'):
+	def parse(self, spec, cmdline_type='back'):
 		"""
 		Parse an adapter specification and yield appropriate Adapter classes.
-		This works like the parse() function above, but also supports the
+		This works like the _parse_no_file() function above, but also supports the
 		``file:`` notation for reading adapters from an external FASTA
 		file. Since a file can contain multiple adapters, this
 		function is a generator.
@@ -125,10 +125,10 @@ class AdapterParser(object):
 			with FastaReader(spec[5:]) as fasta:
 				for record in fasta:
 					name = record.name.split(None, 1)[0]
-					yield self.parse(record.sequence, name, cmdline_type)
+					yield self._parse_no_file(record.sequence, name, cmdline_type)
 		else:
 			name, spec = self._extract_name(spec)
-			yield self.parse(spec, name, cmdline_type)
+			yield self._parse_no_file(spec, name, cmdline_type)
 
 	def _extract_name(self, spec):
 		"""
@@ -154,7 +154,7 @@ class AdapterParser(object):
 		adapters = []
 		for specs, cmdline_type in (back, 'back'), (anywhere, 'anywhere'), (front, 'front'):
 			for spec in specs:
-				adapters.extend(self.parse_with_file(spec, cmdline_type))
+				adapters.extend(self.parse(spec, cmdline_type))
 		return adapters
 
 
