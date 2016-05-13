@@ -116,6 +116,7 @@ class sdist(_sdist):
 	def run(self):
 		# Make sure the compiled Cython files in the distribution are up-to-date
 		from Cython.Build import cythonize
+		check_cython_version()
 		cythonize(extensions)
 		_sdist.run(self)
 
