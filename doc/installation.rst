@@ -39,12 +39,12 @@ Dependencies
 
 Cutadapt requires this software to be installed:
 
-* One of Python 2.6, 2.7, 3.3 or 3.4. Python 2.7 is a bit faster than the other
-  versions.
+* One of Python 2.6, 2.7, 3.3, 3.4 or 3.5. Python 2.7 is a bit faster than the
+  other versions.
 * A C compiler.
 
 Under Ubuntu, you may need to install the packages ``build-essential`` and
-``python-dev``.
+``python-dev`` (or ``python3-dev``).
 
 
 Installation
@@ -80,22 +80,16 @@ If you want to upgrade from an older version, use this command instead::
     sudo pip install --upgrade cutadapt
 
 
-Use without installation
-------------------------
+Uninstalling
+------------
 
-Build the C extension module (you can try to skip this step -- a
-compiled version of the module for Linux x86\_64 is already included)::
+Type  ::
 
-    python setup.py build_ext -i
+    pip uninstall cutadapt
 
-Then simply run the script from where it is, similar to this::
-
-    bin/cutadapt --help
-
-If you get any errors, first try to explicitly request a specific Python
-version by running cutadapt like this::
-
-    python2.7 bin/cutadapt --help
+and confirm with ``y`` to remove the package. Under some circumstances, multiple
+versions may be installed at the same time. Repeat the above command until you
+get an error message in order to make sure that all versions are removed.
 
 
 Shared installation (on a cluster)
@@ -104,7 +98,8 @@ Shared installation (on a cluster)
 If you have a larger installation and want to provide cutadapt as a module
 that can be loaded and unloaded (with the Lmod system, for example), we
 recommend that you create a virtual environment and 'pip install' cutadapt into
-it. These instructions work on our SLURM cluster that uses the Lmod system::
+it. These instructions work on our SLURM cluster that uses the Lmod system
+(replace ``1.9.1`` with the actual version you want to use)::
 
     BASE=/software/cutadapt-1.9.1
     virtualenv $BASE/venv
@@ -127,4 +122,6 @@ like this::
     whatis("adapter trimming tool")
     prepend_path("PATH", "/software/cutadapt-1.9.1/bin")
 
-Please note that there is no need to “activate” the virtual environment!
+Please note that there is no need to “activate” the virtual environment:
+Activation merely adds the ``bin/`` directory to the ``$PATH``, so the
+``prepend_path`` directive is equivalent to activating the virtual environment.

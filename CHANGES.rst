@@ -16,6 +16,9 @@ in development
 * Even when trimming FASTQ files, output can now be FASTA (quality values are
   simply dropped). Use the ``-o``/``-p`` options with a file name that ends in
   ``.fasta`` or ``.fa`` to enable this.
+* Cutadapt does not bundle pre-compiled C extension modules (``.so`` files)
+  anymore. This affects only users that run cutadapt directly from an unpacked
+  tarball. Install through ``pip`` or ``conda`` instead.
 * Fix issue #167: Option ``--quiet`` was not entirely quiet.
 
 v1.9.1
