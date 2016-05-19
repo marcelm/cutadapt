@@ -2,8 +2,8 @@
 Changes
 =======
 
-in development
---------------
+v1.10
+-----
 
 * Added a new “linked adapter” type, which can be used to search for a 5' and a
   3' adapter at the same time. Use ``-a ADAPTER1...ADAPTER2` to search
@@ -21,6 +21,8 @@ in development
   tarball. Install through ``pip`` or ``conda`` instead.
 * Fix issue #167: Option ``--quiet`` was not entirely quiet.
 * Fix issue #199: Be less strict when checking for properly-paired reads.
+* This is the last version of cutadapt to support Python 2.6. Future versions
+  will require at least Python 2.7.
 
 v1.9.1
 ------
