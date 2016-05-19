@@ -359,15 +359,16 @@ class ColorspaceFastaQualReader(FastaQualReader):
 
 def sequence_names_match(r1, r2):
 	"""
-	Check whether the sequences r1 and r2 have identical names (ignoring /1 and
-	/2 suffixes).
+	Check whether the sequences r1 and r2 have identical names, ignoring a
+	suffix of '1' or '2'. Some old paired-end reads have names that end in '/1'
+	and '/2'. Also, the fastq-dump tool (used for converting SRA files to FASTQ)
+	appends a .1 and .2 to paired-end reads if option -I is used.
 	"""
 	name1 = r1.name.split(None, 1)[0]
 	name2 = r2.name.split(None, 1)[0]
-	if name1[-2:-1] == '/':
-		name1 = name1[:-2]
-	if name2[-2:-1] == '/':
-		name2 = name2[:-2]
+	if name1[-1:] in '12' and name2[-1:] in '12':
+		name1 = name1[:-1]
+		name2 = name2[:-1]
 	return name1 == name2
 
 

@@ -20,6 +20,7 @@ in development
   anymore. This affects only users that run cutadapt directly from an unpacked
   tarball. Install through ``pip`` or ``conda`` instead.
 * Fix issue #167: Option ``--quiet`` was not entirely quiet.
+* Fix issue #199: Be less strict when checking for properly-paired reads.
 
 v1.9.1
 ------

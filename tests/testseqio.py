@@ -9,7 +9,8 @@ from nose.tools import raises
 from tempfile import mkdtemp
 from cutadapt.seqio import (Sequence, ColorspaceSequence, FormatError,
 	FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
-	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq)
+	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq,
+	sequence_names_match)
 from cutadapt.compat import StringIO
 
 
@@ -334,3 +335,18 @@ class TestInterleavedWriter:
 			for read1, read2 in reads:
 				writer.write(read1, read2)
 		assert sio.getvalue() == '@A/1 comment\nTTA\n+\n##H\n@A/2 comment\nGCT\n+\nHH#\n@B/1\nCC\n+\nHH\n@B/2\nTG\n+\n#H\n'
+
+
+class TestPairedSequenceReader:
+	def test_sequence_names_match(self):
+		def match(name1, name2):
+			seq1 = Sequence(name1, 'ACGT')
+			seq2 = Sequence(name2, 'AACC')
+			return sequence_names_match(seq1, seq2)
+
+		assert match('abc', 'abc')
+		assert match('abc/1', 'abc/2')
+		assert match('abc.1', 'abc.2')
+		assert match('abc1', 'abc2')
+		assert not match('abc', 'xyz')
+
