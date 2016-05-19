@@ -6,7 +6,7 @@ v1.10
 -----
 
 * Added a new “linked adapter” type, which can be used to search for a 5' and a
-  3' adapter at the same time. Use ``-a ADAPTER1...ADAPTER2` to search
+  3' adapter at the same time. Use ``-a ADAPTER1...ADAPTER2`` to search
   for a linked adapter. ADAPTER1 is interpreted as an anchored 5' adapter, which
   is searched for first. Only if ADAPTER1 is found will ADAPTER2 be searched
   for, which is a regular 3' adapter.
