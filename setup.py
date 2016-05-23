@@ -1,10 +1,5 @@
 """
 Build cutadapt.
-
-Cython is run when
-* no pre-generated C sources are found,
-* or the pre-generated C sources are out of date,
-* or when --cython is given on the command line.
 """
 import sys
 import os.path
