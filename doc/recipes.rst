@@ -9,12 +9,15 @@ cutadapt can be made to behave in the desired way.
 .. note:: This section is still being written.
 
 
-Forcing matches to be at the end of the read
---------------------------------------------
+Avoiding internal adapter matches
+---------------------------------
 
-Use ``-a TACGGCATXXX``. The ``X`` is always counted as a mismatch and will force
-the adapter match to be at the end. This is not the same as an anchored 3'
-adapter since partial matches are still allowed.
+To force matches to be at the end of the read and thus avoiding internal
+adapter matches, append a few ``X`` characters to the adapter sequence, like
+this: ``-a TACGGCATXXX``. The ``X`` is counted as a mismatch and will force the
+match to be at the end. Just make sure that there are more ``X`` characters than
+the length of the adapter times the error rate. This is not the same as an
+anchored 3' adapter since partial matches are still allowed.
 
 
 Removing more than one adapter
