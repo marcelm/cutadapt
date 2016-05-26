@@ -23,25 +23,28 @@ anchored 3' adapter since partial matches are still allowed.
 Removing more than one adapter
 ------------------------------
 
-If you want to remove more than one adapter, let's say a 5' adapter and a 3'
-adapter, you have two options.
+If you want to remove a 5' and 3' adapter at the same time, :ref:`use the
+support for linked adapters <linked-adapters>`.
 
-First, you can specify both adapters and also ``--times=2`` (or the short
+If your situation is different, for example, when you have many 5' adapters
+but only one 3' adapter, then you have two options.
+
+First, you can specify the adapters and also ``--times=2`` (or the short
 version ``-n 2``). For example::
 
-	cutadapt -g ^TTAAGGCC -a TACGGACT -n 2 -o output.fastq input.fastq
+	cutadapt -g ^TTAAGGCC -g ^AAGCTTA -a TACGGACT -n 2 -o output.fastq input.fastq
 
 This instructs cutadapt to run two rounds of adapter finding and removal. That
 means that, after the first round and only when an adapter was actually found,
-another round is performed. In both rounds, all given adapters (two in this
-case) are searched and removed. The problem is that it could happen that one
-adapter is found twice (so the 3' adapter, for example, could be removed twice).
+another round is performed. In both rounds, all given adapters are searched and
+removed. The problem is that it could happen that one adapter is found twice (so
+the 3' adapter, for example, could be removed twice).
 
 The second option is to not use the ``-n`` option, but to run cutadapt twice,
 first removing one adapter and then the other. It is easiest if you use a pipe
 as in this example::
 
-	cutadapt -g ^TTAAGGCC input.fastq | cutadapt -a TACGGACT - > output.fastq
+	cutadapt -g ^TTAAGGCC -g ^AAGCTTA input.fastq | cutadapt -a TACGGACT - > output.fastq
 
 
 Trimming poly-A tails
