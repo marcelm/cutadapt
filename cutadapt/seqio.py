@@ -34,12 +34,12 @@ def _shorten(s, n=100):
 class Sequence(object):
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
-	def __init__(self, name, sequence, qualities=None, name2='', match=None, match_info=None):
+	def __init__(self, name, sequence, qualities=None, second_header=False, match=None, match_info=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
-		self.name2 = name2
+		self.second_header = second_header
 		self.match = match
 		self.match_info = match_info
 		self.original_length = len(sequence)
@@ -55,7 +55,7 @@ class Sequence(object):
 			self.name,
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
-			self.name2,
+			self.second_header,
 			self.match,
 			self.match_info)
 
@@ -113,7 +113,7 @@ except ImportError:
 
 
 class ColorspaceSequence(Sequence):
-	def __init__(self, name, sequence, qualities, primer=None, name2='', match=None, match_info=None):
+	def __init__(self, name, sequence, qualities, primer=None, second_header=False, match=None, match_info=None):
 		# In colorspace, the first character is the last nucleotide of the primer base
 		# and the second character encodes the transition from the primer base to the
 		# first real base of the read.
@@ -127,7 +127,7 @@ class ColorspaceSequence(Sequence):
 			raise FormatError("In read named {0!r}: length of colorspace quality "
 				"sequence ({1}) and length of read ({2}) do not match (primer "
 				"is: {3!r})".format(rname, len(qualities), len(sequence), self.primer))
-		super(ColorspaceSequence, self).__init__(name, sequence, qualities, name2, match, match_info)
+		super(ColorspaceSequence, self).__init__(name, sequence, qualities, second_header, match, match_info)
 		if not self.primer in ('A', 'C', 'G', 'T'):
 			raise FormatError("Primer base is {0!r} in read {1!r}, but it "
 				"should be one of A, C, G, T.".format(
@@ -146,14 +146,14 @@ class ColorspaceSequence(Sequence):
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
 			self.primer,
-			self.name2,
+			self.second_header,
 			self.match,
 			self.match_info)
 
 
-def sra_colorspace_sequence(name, sequence, qualities, name2):
+def sra_colorspace_sequence(name, sequence, qualities, second_header):
 	"""Factory for an SRA colorspace sequence (which has one quality value too many)"""
-	return ColorspaceSequence(name, sequence, qualities[1:], name2=name2)
+	return ColorspaceSequence(name, sequence, qualities[1:], second_header=second_header)
 
 
 class FileWithPrependedLine(object):
@@ -277,12 +277,12 @@ class FastqReader(SequenceReader):
 							"The second sequence description must be either empty "
 							"or equal to the first description.".format(
 								i+1, name, line[1:].rstrip()))
-					name2 = name
+					second_header = True
 				else:
-					name2 = ''
+					second_header = False
 			elif i % 4 == 3:
 				qualities = line.rstrip('\n\r')
-				yield self.sequence_class(name, sequence, qualities, name2=name2)
+				yield self.sequence_class(name, sequence, qualities, second_header=second_header)
 		if i % 4 != 3:
 			raise FormatError("FASTQ file ended prematurely")
 
@@ -520,11 +520,13 @@ class FastaWriter(FileWriter, SingleRecordWriter):
 		else:
 			print('>{0}'.format(name), sequence, file=self._file, sep='\n')
 
+
 class ColorspaceFastaWriter(FastaWriter):
 	def write(self, record):
 		name = record.name
 		sequence = record.primer + record.sequence
 		super(ColorspaceFastaWriter, self).write(name, sequence)
+
 
 class FastqWriter(FileWriter, SingleRecordWriter):
 	"""
@@ -542,13 +544,15 @@ class FastqWriter(FileWriter, SingleRecordWriter):
 
 		The record must have attributes .name, .sequence and .qualities.
 		"""
+		name2 = record.name if record.second_header else ''
 		s = ('@' + record.name + '\n' + record.sequence + '\n+' +
-				record.name2 + '\n' + record.qualities + '\n')
+				name2 + '\n' + record.qualities + '\n')
 		self._file.write(s)
 
 	def writeseq(self, name, sequence, qualities):
 		print("@{0:s}\n{1:s}\n+\n{2:s}".format(
 			name, sequence, qualities), file=self._file)
+
 
 class ColorspaceFastqWriter(FastqWriter):
 	def write(self, record):
@@ -556,6 +560,7 @@ class ColorspaceFastqWriter(FastqWriter):
 		sequence = record.primer + record.sequence
 		qualities = record.qualities
 		super(ColorspaceFastqWriter, self).writeseq(name, sequence, qualities)
+
 
 class PairRecordWriter(object):
 	"""Public interface to paired-record files"""
@@ -570,6 +575,7 @@ class PairRecordWriter(object):
 
 	def __exit__(self, *args):
 		self.close()
+
 
 class PairedSequenceWriter(PairRecordWriter):
 	def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None):
@@ -586,6 +592,7 @@ class PairedSequenceWriter(PairRecordWriter):
 		self._writer1.close()
 		self._writer2.close()
 
+
 class InterleavedSequenceWriter(PairRecordWriter):
 	"""
 	Write paired-end reads to an interleaved FASTA or FASTQ file
@@ -599,6 +606,7 @@ class InterleavedSequenceWriter(PairRecordWriter):
 
 	def close(self):
 		self._writer.close()
+
 
 class UnknownFileType(Exception):
 	"""

@@ -18,17 +18,17 @@ cdef class Sequence(object):
 		public str name
 		public str sequence
 		public str qualities
-		public str name2
+		public bint second_header
 		public object match
 		public object match_info
 
-	def __init__(self, str name, str sequence, str qualities=None, str name2='', match=None,
+	def __init__(self, str name, str sequence, str qualities=None, bint second_header=False, match=None,
 				 match_info=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
-		self.name2 = name2
+		self.second_header = second_header
 		self.match = match
 		self.match_info = match_info
 		if qualities is not None and len(qualities) != len(sequence):
@@ -43,7 +43,7 @@ cdef class Sequence(object):
 			self.name,
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
-			self.name2,
+			self.second_header,
 			self.match,
 			self.match_info)
 
@@ -69,7 +69,7 @@ cdef class Sequence(object):
 			raise NotImplementedError()
 
 	def __reduce__(self):
-		return (Sequence, (self.name, self.sequence, self.qualities, self.name2))
+		return (Sequence, (self.name, self.sequence, self.qualities, self.second_header))
 
 
 class FastqReader(SequenceReader):
@@ -124,15 +124,15 @@ class FastqReader(SequenceReader):
 								"The second sequence description must be either empty "
 								"or equal to the first description.".format(i+1,
 									name, line[1:]))
-						name2 = name
+						second_header = True
 					else:
-						name2 = ''
+						second_header = False
 			elif i == 3:
 				if len(line) == len(sequence) - strip:
 					qualities = line[:strip]
 				else:
 					qualities = line.rstrip('\r\n')
-				yield sequence_class(name, sequence, qualities, name2=name2)
+				yield sequence_class(name, sequence, qualities, second_header=second_header)
 			i = (i + 1) % 4
 		if i != 0:
 			raise FormatError("FASTQ file ended prematurely")

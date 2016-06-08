@@ -381,3 +381,8 @@ def test_linked():
 
 def test_fasta():
 	run('-a TTAGACATATCTCCGTCG', 'small.fasta', 'small.fastq')
+
+
+def test_issue_202():
+	"""Ensure --length-tag= also modifies the second header line"""
+	run('-a GGCTTC --length-tag=length=', 'SRR2040271_1.fastq', 'SRR2040271_1.fastq')
