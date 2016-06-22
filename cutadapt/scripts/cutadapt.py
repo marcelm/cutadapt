@@ -225,32 +225,32 @@ def get_option_parser():
 			"If LENGTH is positive, remove bases from the beginning. "
 			"If LENGTH is negative, remove bases from the end. "
 			"Can be used twice if LENGTHs have different signs.")
+	group.add_option("--nextseq-trim", type=int, default=None, metavar="3'CUTOFF",
+		help="NextSeq-specific quality trimming (each read). Trims also dark "
+			"cycles appearing as high-quality G bases (EXPERIMENTAL).")
 	group.add_option("-q", "--quality-cutoff", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
 		help="Trim low-quality bases from 5' and/or 3' ends of each read before "
 			"adapter removal. Applied to both reads if data is paired. If one "
 			"value is given, only the 3' end is trimmed. If two "
 			"comma-separated cutoffs are given, the 5' end is trimmed with "
 			"the first cutoff, the 3' end with the second.")
-	group.add_option("--nextseq-trim", type=int, default=None, metavar="3'CUTOFF",
-		help="NextSeq-specific quality trimming (each read). Trims also dark "
-			"cycles appearing as high-quality G bases (EXPERIMENTAL).")
 	group.add_option("--quality-base", type=int, default=33,
 		help="Assume that quality values in FASTQ are encoded as ascii(quality "
 			"+ QUALITY_BASE). This needs to be set to 64 for some old Illumina "
 			"FASTQ files. Default: %default")
 	group.add_option("--trim-n", action='store_true', default=False,
 		help="Trim N's on ends of reads.")
-	group.add_option("-x", "--prefix", default='',
-		help="Add this prefix to read names. Use {name} to insert the name of the matching adapter.")
-	group.add_option("-y", "--suffix", default='',
-		help="Add this suffix to read names; can also include {name}")
-	group.add_option("--strip-suffix", action='append', default=[],
-		help="Remove this suffix from read names if present. Can be given multiple times.")
 	group.add_option("--length-tag", metavar="TAG",
 		help="Search for TAG followed by a decimal number in the description "
 			"field of the read. Replace the decimal number with the correct "
 			"length of the trimmed read. For example, use --length-tag 'length=' "
 			"to correct fields like 'length=123'.")
+	group.add_option("--strip-suffix", action='append', default=[],
+		help="Remove this suffix from read names if present. Can be given multiple times.")
+	group.add_option("-x", "--prefix", default='',
+		help="Add this prefix to read names. Use {name} to insert the name of the matching adapter.")
+	group.add_option("-y", "--suffix", default='',
+		help="Add this suffix to read names; can also include {name}")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Filtering of processed reads")
