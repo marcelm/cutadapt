@@ -2,6 +2,12 @@
 Changes
 =======
 
+development version
+-------------------
+
+* Fix issue #202: First and second FASTQ header could get out of sync
+
+
 v1.10
 -----
 
