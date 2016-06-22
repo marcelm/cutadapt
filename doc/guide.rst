@@ -115,7 +115,9 @@ way:
    :ref:`quality trimming <quality-trimming>`, read name modifications etc.
 2. :ref:`Filtering options <filtering>` are applied, such as removal of too
    short or untrimmed reads. Some of the filters also allow to redirect a read
-   to a separate output file.
+   to a separate output file.  The filters are applied in the order in which
+   they are listed in the help shown by ``cutadapt --help`` under the
+   “Filtering of processed reads” heading.
 3. If the read has passed all the filters, it is written to the output file.
 
 

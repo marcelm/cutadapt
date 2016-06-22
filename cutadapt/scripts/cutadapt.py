@@ -254,11 +254,6 @@ def get_option_parser():
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Filtering of processed reads")
-	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
-		help="Discard reads that contain an adapter. Also use -O to avoid "
-			"discarding too many randomly matching reads!")
-	group.add_option("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
-		help="Discard reads that do not contain the adapter.")
 	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
 		help="Discard trimmed reads that are shorter than LENGTH. Reads that "
 			"are too short even before adapter removal are also discarded. In "
@@ -272,6 +267,11 @@ def get_option_parser():
 		help="Discard reads with too many N bases. If COUNT is an integer, it "
 			"is treated as the absolute number of N bases. If it is between 0 "
 			"and 1, it is treated as the proportion of N's allowed in a read.")
+	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
+		help="Discard reads that contain an adapter. Also use -O to avoid "
+			"discarding too many randomly matching reads!")
+	group.add_option("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
+		help="Discard reads that do not contain the adapter.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Output")
