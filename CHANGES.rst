@@ -2,17 +2,17 @@
 Changes
 =======
 
-development version
--------------------
+v1.11 (2016-08-16)
+------------------
 
+* The ``--interleaved`` option no longer requires that both input and output
+  is interleaved. It is now possible to have two-file input and interleaved
+  output, and to have interleaved input and two-file output.
 * Fix issue #202: First and second FASTQ header could get out of sync when
   options modifying the read name were used.
-* The ``--interleaved`` option no longer requires that both input and output
-  is interleaved. It is now possible to have two-file input and
-  interleaved output, and to have interleaved input and two-file output.
 
-v1.10
------
+v1.10 (2016-05-19)
+------------------
 
 * Added a new “linked adapter” type, which can be used to search for a 5' and a
   3' adapter at the same time. Use ``-a ADAPTER1...ADAPTER2`` to search
