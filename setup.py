@@ -116,7 +116,7 @@ setup(
 	version = versioneer.get_version(),
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@scilifelab.se',
-	url = 'https://cutadapt.readthedocs.org/',
+	url = 'https://cutadapt.readthedocs.io/',
 	description = 'trim adapters from high-throughput sequencing reads',
 	license = 'MIT',
 	cmdclass = cmdclass,
