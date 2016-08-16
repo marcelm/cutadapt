@@ -111,6 +111,9 @@ class sdist(cmdclass.get('sdist', _sdist)):
 		_sdist.run(self)
 
 
+cmdclass['build_ext'] = build_ext
+cmdclass['sdist'] = sdist
+
 setup(
 	name = 'cutadapt',
 	version = versioneer.get_version(),
