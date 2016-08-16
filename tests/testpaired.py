@@ -109,7 +109,7 @@ def test_first_too_short():
 		with open(trunc1, 'w') as f:
 			f.writelines(lines)
 		with redirect_stderr():
-			cutadapt.main('-a XX --paired-output out.fastq'.split() + [trunc1, datapath('paired.2.fastq')])
+			cutadapt.main('-a XX -o /dev/null --paired-output out.fastq'.split() + [trunc1, datapath('paired.2.fastq')])
 
 
 @raises(SystemExit)
@@ -122,7 +122,7 @@ def test_second_too_short():
 		with open(trunc2, 'w') as f:
 			f.writelines(lines)
 		with redirect_stderr():
-			cutadapt.main('-a XX --paired-output out.fastq'.split() + [datapath('paired.1.fastq'), trunc2])
+			cutadapt.main('-a XX -o /dev/null --paired-output out.fastq'.split() + [datapath('paired.1.fastq'), trunc2])
 
 
 @raises(SystemExit)
@@ -136,6 +136,18 @@ def test_unmatched_read_names():
 			f.writelines(lines)
 		with redirect_stderr():
 			cutadapt.main('-a XX -o out1.fastq --paired-output out2.fastq'.split() + [swapped, datapath('paired.2.fastq')])
+
+
+@raises(SystemExit)
+def test_p_without_o():
+	"""Option -p given but -o missing"""
+	cutadapt.main('-a XX -p /dev/null'.split() + [datapath('paired.1.fastq'), datapath('paired.2.fastq')])
+
+
+@raises(SystemExit)
+def test_paired_but_only_one_input_file():
+	"""Option -p given but only one input file"""
+	cutadapt.main('-a XX -o /dev/null -p /dev/null'.split() + [datapath('paired.1.fastq')])
 
 
 def test_legacy_minlength():
