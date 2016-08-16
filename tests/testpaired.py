@@ -18,26 +18,29 @@ def run_paired(params, in1, in2, expected1, expected2):
 			assert files_equal(cutpath(expected2), p2)
 
 
-def run_interleaved(params, inpath, expected):
+def run_interleaved(params, inpath1, inpath2=None, expected1=None, expected2=None):
+	"""
+	Interleaved input or output (or both)
+	"""
+	assert not (inpath1 and inpath2 and expected1 and expected2)
+	assert not (expected2 and not expected1)
+	assert not (inpath2 and not inpath1)
 	if type(params) is str:
 		params = params.split()
-	with temporary_path(expected) as tmp:
-		params += ['--interleaved', '-o', tmp, datapath(inpath)]
-		assert cutadapt.main(params) is None
-		assert files_equal(cutpath(expected), tmp)
-
-
-def run_interleaved2(params, inpath, expected1, expected2):
-	assert False  # unused function
-	if type(params) is str:
-		params = params.split()
-	with temporary_path('tmp1-' + expected1) as p1:
-		with temporary_path('tmp2-' + expected2) as p2:
-			params += ['--interleaved', '-o', p1, '-p', p2]
-		params += [datapath(inpath)]
-		assert cutadapt.main(params) is None
-		assert files_equal(cutpath(expected), p1)
-		assert files_equal(cutpath(expected), p2)
+	params += ['--interleaved']
+	with temporary_path('tmp1-' + expected1) as tmp1:
+		params += ['-o', tmp1]
+		paths = [datapath(inpath1)]
+		if inpath2:
+			paths += [datapath(inpath2)]
+		if expected2:
+			with temporary_path('tmp2-' + expected2) as tmp2:
+				params += ['-p', tmp2]
+				assert cutadapt.main(params + paths) is None
+				assert files_equal(cutpath(expected2), tmp2)
+		else:
+			assert cutadapt.main(params + paths) is None
+		assert files_equal(cutpath(expected1), tmp1)
 
 
 def test_paired_separate():
@@ -219,29 +222,38 @@ def test_discard_trimmed():
 	)
 
 
-def test_interleaved():
-	'''single-pass interleaved paired-end with -q and -m'''
+def test_interleaved_in_and_out():
+	'''Single-pass interleaved paired-end with -q and -m'''
 	run_interleaved('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
-		inpath='interleaved.fastq', expected='interleaved.fastq'
+		inpath1='interleaved.fastq', expected1='interleaved.fastq'
+	)
+
+
+def test_interleaved_in():
+	'''Interleaved input, two files output'''
+	run_interleaved('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
+		inpath1='interleaved.fastq',
+		expected1='pairedq.1.fastq', expected2='pairedq.2.fastq'
+	)
+
+
+def test_interleaved_out():
+	'''Two files input, interleaved output'''
+	run_interleaved('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
+		inpath1='paired.1.fastq', inpath2='paired.2.fastq',
+		expected1='interleaved.fastq'
 	)
 
 
 @raises(SystemExit)
-def test_interleaved_no_paired_output():
+def test_interleaved_neither_nor():
+	"""Option --interleaved used, but pairs of files given for input and output"""
 	with temporary_path("temp-paired.1.fastq") as p1:
 		with temporary_path("temp-paired.2.fastq") as p2:
 			params = '-a XX --interleaved'.split()
 			with redirect_stderr():
 				params += [ '-o', p1, '-p1', p2, 'paired.1.fastq', 'paired.2.fastq']
 				cutadapt.main(params)
-
-"""
-def test_interleaved_input_paired_output():
-	'''single-pass interleaved paired-end with -q and -m, paired output'''
-	run_interleaved2('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
-		inpath='interleaved.fastq', expected1='pairedq1.fastq', expected2='pairedq2.fastq'
-	)
-"""
 
 
 def test_pair_filter():

@@ -399,44 +399,51 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		paired = 'first'
 	# Any of these options switch off legacy mode
 	if (options.adapters2 or options.front2 or options.anywhere2 or
-		options.cut2 or options.interleaved or options.pair_filter or
-		options.too_short_paired_output or options.too_long_paired_output):
+			options.cut2 or options.interleaved or options.pair_filter or
+			options.too_short_paired_output or options.too_long_paired_output):
 		# Full paired-end trimming when both -p and -A/-G/-B/-U given
 		# Read modifications (such as quality trimming) are applied also to second read.
 		paired = 'both'
 
 	if paired and len(args) == 1 and not options.interleaved:
-		parser.error("When paired-end trimming is enabled via -A/-G/-B/-U or -p, "
-			"two input files are required.")
-	if options.interleaved and len(args) != 1:
-		parser.error("When reading interleaved files, only one input file may "
-			"be given.")
+		parser.error("When paired-end trimming is enabled via -A/-G/-B/-U/"
+			"--interleaved or -p, two input files are required.")
 	if not paired:
 		if options.untrimmed_paired_output:
 			parser.error("Option --untrimmed-paired-output can only be used when "
 				"trimming paired-end reads (with option -p).")
 
+	interleaved_input = False
+	interleaved_output = False
+	if options.interleaved:
+		interleaved_input = len(args) == 1
+		interleaved_output = not options.paired_output
+		if not interleaved_input and not interleaved_output:
+			parser.error("When --interleaved is used, you cannot provide both two input files and two output files")
+
 	# Assign input_paired_filename and quality_filename
 	input_paired_filename = None
 	quality_filename = None
 	if paired:
-		if not options.interleaved:
+		if not interleaved_input:
 			input_paired_filename = args[1]
+		if not interleaved_output:
 			if not options.paired_output:
 				parser.error("When paired-end trimming is enabled via -A/-G/-B/-U, "
 					"a second output file needs to be specified via -p (--paired-output).")
 			if not options.output:
 				parser.error("When you use -p or --paired-output, you must also "
 					"use the -o option.")
-			if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
-				parser.error("When trimming paired-end reads, you must use either none "
-					"or both of the --untrimmed-output/--untrimmed-paired-output options.")
-			if options.too_short_output and not options.too_short_paired_output:
-				parser.error("When using --too-short-output with paired-end "
-					"reads, you also need to use --too-short-paired-output")
-			if options.too_long_output and not options.too_long_paired_output:
-				parser.error("When using --too-long-output with paired-end "
-					"reads, you also need to use --too-long-paired-output")
+
+		if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
+			parser.error("When trimming paired-end reads, you must use either none "
+				"or both of the --untrimmed-output/--untrimmed-paired-output options.")
+		if options.too_short_output and not options.too_short_paired_output:
+			parser.error("When using --too-short-output with paired-end "
+				"reads, you also need to use --too-short-paired-output")
+		if options.too_long_output and not options.too_long_paired_output:
+			parser.error("When using --too-long-output with paired-end "
+				"reads, you also need to use --too-long-paired-output")
 	elif len(args) == 2:
 		quality_filename = args[1]
 		if options.format is not None:
@@ -450,7 +457,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	try:
 		reader = seqio.open(input_filename, file2=input_paired_filename,
 				qualfile=quality_filename, colorspace=options.colorspace,
-				fileformat=options.format, interleaved=options.interleaved)
+				fileformat=options.format, interleaved=interleaved_input)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
 
@@ -472,8 +479,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		cutoffs = None
 
 	open_writer = functools.partial(seqio.open, mode='w',
-		qualities=reader.delivers_qualities, colorspace=options.colorspace,
-		interleaved=options.interleaved)
+		qualities=reader.delivers_qualities, colorspace=options.colorspace)
 
 	if options.pair_filter is None:
 		options.pair_filter = 'any'
@@ -536,9 +542,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		# Finally, figure out where the reads that passed all the previous
 		# filters should go.
 		if options.output is not None:
-			writer = open_writer(options.output, options.paired_output)
+			writer = open_writer(options.output, options.paired_output, interleaved=interleaved_output)
 		else:
-			writer = open_writer(default_outfile)
+			writer = open_writer(default_outfile, interleaved=interleaved_output)
 		if not paired:
 			filters.append(NoFilter(writer))
 		else:

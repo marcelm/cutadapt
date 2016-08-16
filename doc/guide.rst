@@ -833,9 +833,18 @@ option to the command-line. For example::
 
     cutadapt --interleaved -q 20 -a ACGT -A TGCA -o trimmed.fastq reads.fastq
 
-The output FASTQ file will also be written interleaved. Cutadapt will detect if
-the input file is not properly interleaved by checking whether read names match
-and whether the file contains an even number of entries.
+To read from an interleaved file, but write regular two-file output, provide the
+second output file as usual with the ``-p`` option::
+
+    cutadapt --interleaved -q 20 -a ACGT -A TGCA -o trimmed.1.fastq -p trimmed.2.fastq reads.fastq
+
+Reading two-file input and writing interleaved is also possible by providing
+a second input file::
+
+    cutadapt --interleaved -q 20 -a ACGT -A TGCA -o trimmed.1.fastq reads.1.fastq reads.2.fastq
+
+Cutadapt will detect if an input file is not properly interleaved by checking
+whether read names match and whether the file contains an even number of entries.
 
 When ``--interleaved`` is used, legacy mode is disabled (that is,
 read-modification options such as ``-q`` always apply to both reads).

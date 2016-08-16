@@ -5,8 +5,11 @@ Changes
 development version
 -------------------
 
-* Fix issue #202: First and second FASTQ header could get out of sync
-
+* Fix issue #202: First and second FASTQ header could get out of sync when
+  options modifying the read name were used.
+* The ``--interleaved`` option no longer requires that both input and output
+  is interleaved. It is now possible to have two-file input and
+  interleaved output, and to have interleaved input and two-file output.
 
 v1.10
 -----
