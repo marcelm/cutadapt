@@ -84,9 +84,11 @@ extensions = [
 ]
 
 cmdclass = versioneer.get_cmdclass()
+versioneer_build_ext = cmdclass.get('build_ext', _build_ext)
+versioneer_sdist = cmdclass.get('sdist', _sdist)
 
 
-class build_ext(cmdclass.get('build_ext', _build_ext)):
+class build_ext(versioneer_build_ext):
 	def run(self):
 		# If we encounter a PKG-INFO file, then this is likely a .tar.gz/.zip
 		# file retrieved from PyPI that already includes the pre-cythonized
@@ -99,16 +101,16 @@ class build_ext(cmdclass.get('build_ext', _build_ext)):
 			check_cython_version()
 			from Cython.Build import cythonize
 			self.extensions = cythonize(self.extensions)
-		_build_ext.run(self)
+		versioneer_build_ext.run(self)
 
 
-class sdist(cmdclass.get('sdist', _sdist)):
+class sdist(versioneer_sdist):
 	def run(self):
 		# Make sure the compiled Cython files in the distribution are up-to-date
 		from Cython.Build import cythonize
 		check_cython_version()
 		cythonize(extensions)
-		_sdist.run(self)
+		versioneer_sdist.run(self)
 
 
 cmdclass['build_ext'] = build_ext
