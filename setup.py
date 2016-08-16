@@ -130,7 +130,6 @@ setup(
 		"License :: OSI Approved :: MIT License",
 		"Natural Language :: English",
 		"Programming Language :: Cython",
-		"Programming Language :: Python :: 2.6",
 		"Programming Language :: Python :: 2.7",
 		"Programming Language :: Python :: 3",
 		"Topic :: Scientific/Engineering :: Bio-Informatics"
