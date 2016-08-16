@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.abspath(os.pardir))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
+	'sphinx.ext.autodoc',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -53,10 +53,16 @@ copyright = u'2010-2016, Marcel Martin'
 # built documents.
 
 from cutadapt import __version__
-
-#
 # The short X.Y version.
 version = __version__
+
+# Read The Docs modifies the conf.py script and we therefore get
+# version numbers like 0.7+0.g27d0d31.dirty from versioneer.
+if version.endswith('.dirty') and os.environ.get('READTHEDOCS') == 'True':
+	version, _, rest = version.partition('+')
+	if not rest.startswith('0.'):
+		version = version + '+' + rest[:-6]
+
 # The full version, including alpha/beta/rc tags.
 release = __version__
 

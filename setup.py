@@ -8,20 +8,13 @@ from setuptools import setup, Extension
 from distutils.version import LooseVersion
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_ext import build_ext as _build_ext
+import versioneer
 
 MIN_CYTHON_VERSION = '0.24'
 
 if sys.version_info < (2, 6):
 	sys.stdout.write("At least Python 2.6 is required.\n")
 	sys.exit(1)
-
-
-# set __version__
-with open(os.path.join(os.path.dirname(__file__), 'cutadapt', '__init__.py')) as f:
-	for line in f:
-		if line.startswith('__version__'):
-			exec(line)
-			break
 
 
 def out_of_date(extensions):
@@ -90,8 +83,10 @@ extensions = [
 	Extension('cutadapt._seqio', sources=['cutadapt/_seqio.pyx']),
 ]
 
+cmdclass = versioneer.get_cmdclass()
 
-class build_ext(_build_ext):
+
+class build_ext(cmdclass.get('build_ext', _build_ext)):
 	def run(self):
 		# If we encounter a PKG-INFO file, then this is likely a .tar.gz/.zip
 		# file retrieved from PyPI that already includes the pre-cythonized
@@ -107,7 +102,7 @@ class build_ext(_build_ext):
 		_build_ext.run(self)
 
 
-class sdist(_sdist):
+class sdist(cmdclass.get('sdist', _sdist)):
 	def run(self):
 		# Make sure the compiled Cython files in the distribution are up-to-date
 		from Cython.Build import cythonize
@@ -118,13 +113,13 @@ class sdist(_sdist):
 
 setup(
 	name = 'cutadapt',
-	version = __version__,
+	version = versioneer.get_version(),
 	author = 'Marcel Martin',
 	author_email = 'marcel.martin@scilifelab.se',
 	url = 'https://cutadapt.readthedocs.org/',
 	description = 'trim adapters from high-throughput sequencing reads',
 	license = 'MIT',
-	cmdclass = {'sdist': sdist, 'build_ext': build_ext},
+	cmdclass = cmdclass,
 	ext_modules = extensions,
 	packages = ['cutadapt', 'cutadapt.scripts'],
 	scripts = ['bin/cutadapt'],

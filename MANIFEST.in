@@ -15,3 +15,5 @@ include tests/test*.py
 include tests/utils.py
 graft tests/data
 graft tests/cut
+include versioneer.py
+include cutadapt/_version.py
