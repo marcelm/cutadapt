@@ -33,16 +33,16 @@ v1.10
 * This is the last version of cutadapt to support Python 2.6. Future versions
   will require at least Python 2.7.
 
-v1.9.1
-------
+v1.9.1 (2015-12-02)
+-------------------
 
 * Added ``--pair-filter`` option, which :ref:`modifies how filtering criteria
   apply to paired-end reads <filtering-paired>`
 * Add ``--too-short-paired-output`` and ``--too-long-paired-output`` options.
 * Fix incorrect number of trimmed bases reported if ``--times`` option was used.
 
-v1.9
-----
+v1.9 (2015-10-29)
+-----------------
 
 * Indels in the alignment can now be disabled for all adapter types (use
   ``--no-indels``).
@@ -62,22 +62,25 @@ v1.9
 * Thanks to Wolfgang Gerlach, there is now a Dockerfile.
 * The new ``--debug`` switch makes cutadapt print out the alignment matrix.
 
-v1.8.3
-------
+v1.8.3 (2015-07-29)
+-------------------
 
 * Fix issue #95: Untrimmed reads were not listed in the info file.
 * Fix issue #138: pip install cutadapt did not work with new setuptools versions.
 * Fix issue #137: Avoid a hang when writing to two or more gzip-compressed
   output files in Python 2.6.
 
-v1.8.1
-------
+v1.8.2 (2015-07-24)
+-------------------
+
+v1.8.1 (2015-04-09)
+-------------------
 
 * Fix #110: Counts for 'too short' and 'too long' reads were swapped in statistics.
 * Fix #115: Make ``--trim-n`` work also on second read for paired-end data.
 
-v1.8
-----
+v1.8 (2015-03-14)
+-----------------
 
 * Support single-pass paired-end trimming with the new ``-A``/``-G``/``-B``/``-U``
   parameters. These work just like their -a/-g/-b/-u counterparts, but they
@@ -109,8 +112,9 @@ v1.8
 * Started to use the GitHub issue tracker instead of Google Code. All old issues
   have been moved.
 
-v1.7
-----
+v1.7 (2014-11-25)
+-----------------
+
 * IUPAC characters are now supported. For example, use ``-a YACGT`` for an
   adapter that matches both ``CACGT`` and ``TACGT`` with zero errors. Disable
   with ``-N``. By default, IUPAC characters in the read are not interpreted in
@@ -130,8 +134,9 @@ v1.7
   trimming adapters.
 * Fix bug: Adapters read from a FASTA file can now be anchored.
 
-v1.6
-----
+v1.6 (2014-10-07)
+-----------------
+
 * Fix bug: Ensure ``--format=...`` can be used even with paired-end input.
 * Fix bug: Sometimes output files would be incomplete because they were not
   closed correctly.
@@ -151,8 +156,9 @@ v1.6
 * Galaxy support files are now in `a separate
   repository <https://bitbucket.org/lance_parsons/cutadapt_galaxy_wrapper>`_.
 
-v1.5
-----
+v1.5 (2014-08-05)
+-----------------
+
 * Adapter sequences can now be read from a FASTA file. For example, write
   ``-a file:adapters.fasta`` to read 3' adapters from ``adapters.fasta``. This works
   also for ``-b`` and ``-g``.
@@ -171,8 +177,9 @@ v1.5
 * To properly handle paired-end reads, an option --untrimmed-paired-output was
   added.
 
-v1.4
-----
+v1.4 (2014-03-13)
+-----------------
+
 * This release of cutadapt reduces the overhead of reading and writing files.
   On my test data set, a typical run of cutadapt (with a single adapter) takes
   40% less time due to the following two changes.
@@ -191,8 +198,9 @@ v1.4
 * Added one column to the info file that contains the name of the found adapter.
 * Add an explanation about colorspace ambiguity to the README
 
-v1.3
-----
+v1.3 (2013-11-08)
+-----------------
+
 * Preliminary paired-end support with the ``--paired-output`` option (contributed by
   James Casbon). See the README section on how to use it.
 * Improved statistics.
@@ -204,8 +212,9 @@ v1.3
 * Slightly speed up alignment of 5' adapters.
 * Support bzip2-compressed files.
 
-v1.2
-----
+v1.2 (2012-11-30)
+-----------------
+
 * At least 25% faster processing of .csfasta/.qual files due to faster parser.
 * Between 10% and 30% faster writing of gzip-compressed output files.
 * Support 5' adapters in colorspace, even when no primer trimming is requested.
@@ -215,8 +224,9 @@ v1.2
   Previously, not the longest possible poly-A tail would be trimmed.
 * James Casbon contributed the ``--discard-untrimmed`` option.
 
-v1.1
-----
+v1.1 (2012-06-18)
+-----------------
+
 * Allow to "anchor" 5' adapters (``-g``), forcing them to be a prefix of the read.
   To use this, add the special character ``^`` to the beginning of the adapter sequence.
 * Add the "-N" option, which allows 'N' characters within adapters to match literally.
@@ -233,8 +243,9 @@ v1.1
 * allow to deal with colorspace FASTQ files from the SRA that contain a fake
   additional quality in the beginning (use ``--format sra-fastq``)
 
-v1.0
-----
+v1.0 (2011-11-04)
+-----------------
+
 * ASCII-encoded quality values were assumed to be encoded as ascii(quality+33).
   With the new parameter ``--quality-base``, this can be changed to ascii(quality+64),
   as used in some versions of the Illumina pipeline. (Fixes issue 7.)
@@ -250,8 +261,9 @@ v1.0
   should also match without counting as error, this needs to be explicitly
   requested via ``--match-read-wildcards``.
 
-v0.9.5
-------
+v0.9.5 (2011-07-20)
+-------------------
+
 * Fix issue 20: Make the report go to standard output when ``-o``/``--output`` is
   specified.
 * Recognize `.fq` as an extension for FASTQ files
@@ -272,8 +284,9 @@ v0.9.5
   found". The new alignment algorithm checks the error rate while aligning and only
   reports alignments that do not have too many errors.
 
-v0.9.4
-------
+v0.9.4 (2011-05-20)
+-------------------
+
 * now compatible with Python 3
 * Add the ``--zero-cap`` option, which changes negative quality values to zero.
   This is a workaround to avoid segmentation faults in BWA. The option is now
@@ -284,8 +297,9 @@ v0.9.4
   parameter. This mostly fixes issue 12.
 * Don't break when input file is empty.
 
-v0.9.2
-------
+v0.9.2 (2011-03-16)
+-------------------
+
 * Install a single ``cutadapt`` Python package instead of multiple Python
   modules. This avoids cluttering the global namespace and should lead to less
   problems with other Python modules. Thanks to Steve Lianoglou for
@@ -298,8 +312,9 @@ v0.9.2
 * allow to input FASTA/FASTQ on standard input (also FASTA/FASTQ is
   autodetected)
 
-v0.9
-----
+v0.9 (2011-01-10)
+-----------------
+
 * add ``--too-short-output`` and ``--untrimmed-output``, based on patch by Paul Ryvkin (thanks!)
 * add ``--maximum-length`` parameter: discard reads longer than a specified length
 * group options by category in ``--help`` output
@@ -310,8 +325,9 @@ v0.9
 * some refactoring
 * the filename ``-`` is now interpreted as standard in or standard output
 
-v0.8
-----
+v0.8 (2010-12-08)
+-----------------
+
 * Change default behavior of searching for an adapter: The adapter is now assumed to
   be an adapter that has been ligated to the 3' end. This should be the correct behavior
   for at least the SOLiD small RNA protocol (SREK) and also for the Illumina protocol.
@@ -326,8 +342,9 @@ v0.8
   from 36.5 to 37.6%.
 * Speed improvements (20% less runtime on my test data set).
 
-v0.7
-----
+v0.7 (2010-12-03)
+-----------------
+
 * Useful exit codes
 * Better error reporting when malformed files are encountered
 * Add ``--minimum-length`` parameter for discarding reads that are shorter than
@@ -337,28 +354,34 @@ v0.7
 * pure Python fallback for alignment function for when the C module cannot
   be used.
 
-v0.6
-----
+v0.6 (2010-11-18)
+-----------------
+
 * Support gzipped input and output.
 * Print timing information in statistics.
 
-v0.5
-----
+v0.5 (2010-11-17)
+-----------------
+
 * add ``--discard`` option which makes cutadapt discard reads in which an adapter occurs
 
-v0.4
-----
+v0.4 (2010-11-17)
+-----------------
+
 * (more) correctly deal with multiple adapters: If a long adapter matches with lots of
   errors, then this could lead to a a shorter adapter matching with few errors getting ignored.
 
-v0.3
-----
+v0.3 (2010-09-27)
+-----------------
+
 * fix huge memory usage (entire input file was unintentionally read into memory)
 
-v0.2
-----
+v0.2 (2010-09-14)
+-----------------
+
 * allow FASTQ input
 
-v0.1
-----
+v0.1 (2010-09-14)
+-----------------
+
 * initial release
