@@ -154,8 +154,8 @@ and depending on the adapter type:
 |
 
 By default, all adapters :ref:`are searched error-tolerantly <error-tolerance>`.
-Adapter sequences :ref:`may also contain the "N" wildcard
-character <wildcards>`.
+Adapter sequences :ref:`may also contain any IUPAC wildcard
+character <wildcards>` (such as ``N``).
 
 In addition, it is possible to :ref:`remove a fixed number of
 bases <cut-bases>` from the beginning or end of each read, and to :ref:`remove
@@ -307,6 +307,12 @@ This is a combination of a 5' and a 3' adapter. Use ``-a ADAPTER1...ADAPTER2``
 to search for a linked adapter. ADAPTER1 is interpreted as an anchored 5'
 adapter, which is searched for first. Only if ADAPTER1 is found will then
 ADAPTER2 be searched for,  which is a regular 3' adapter.
+
+For example, when the 5' adapter is *FIRST* and the 3' adapter is *SECOND*, then
+the read could look like this::
+
+    FIRSTMYSEQUENCESECOND
+
 
 This feature is experimental and will probably break when used in combination
 with some other options, such as ``--info-file``, ``--mask-adapter``.
@@ -487,8 +493,8 @@ Wildcards do not work in colorspace.
 Repeated bases in the adapter sequence
 --------------------------------------
 
-If you have many repeated bases in the adapter sequence, such as many ``N``s or
-many ``A``s, you do not have to spell them out. For example, instead of writing
+If you have many repeated bases in the adapter sequence, such as many ``N`` s or
+many ``A`` s, you do not have to spell them out. For example, instead of writing
 ten ``A`` in a row (``AAAAAAAAAA``), write ``A{10}`` instead. The number within
 the curly braces specifies how often the character that preceeds it will be
 repeated. This works also for IUPAC wildcard characters, as in ``N{5}``.
@@ -1029,14 +1035,21 @@ once. So your sequence could look like this::
 
     ADAPTERADAPTERADAPTERMYSEQUENCE
 
-To be on the safe side, you assume that there are at most 5 copies of the
+To be on the safe side, you assume that there are at most five copies of the
 adapter sequence. This command can be used to trim the reads correctly::
 
-    cutadapt -g ^ADAPTER -n 5 -o output.fastq input.fastq
+    cutadapt -g ^ADAPTER -n 5 -o output.fastq.gz input.fastq.gz
 
-This feature can also be used to search for *5'/3' linked adapters*. For example,
-when the 5' adapter is *FIRST* and the 3' adapter is *SECOND*, then the read
-could look like this::
+To search for a combination of a 5' and a 3' adapter, have a look
+at the :ref:`support for "linked adapters" <linked-adapters>` instead, which
+works better for that particular case because it is allows you to require that
+the 3' adapter is trimmed only when the 5' adapter also occurs, and it cannot
+happen that the same adapter is trimmed twice.
+
+Before cutadapt supported linked adapters, the ``--times`` option was the
+recommended way to search for 5'/3' linked adapters. For completeness, we
+describe how it was done. For example, when the 5' adapter is *FIRST* and the
+3' adapter is *SECOND*, then the read could look like this::
 
     FIRSTMYSEQUENCESECOND
 
@@ -1044,12 +1057,6 @@ That is, the sequence of interest is framed by the 5' and the 3' adapter. The
 following command can be used to trim such a read::
 
     cutadapt -g ^FIRST -a SECOND -n 2 ...
-
-Support for linked adapters is currently incomplete. For example, it is not
-possible to specify that SECOND should only be trimmed when FIRST also occurs.
-`See also this feature
-request <https://code.google.com/p/cutadapt/issues/detail?id=34>`_, and
-comment on it if you would like to see this implemented.
 
 
 .. _truseq:
