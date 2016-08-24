@@ -951,6 +951,10 @@ If your adapter sequences are all similar and differ only by a variable barcode
 sequence, you should use a single adapter sequence instead that
 :ref:`contains wildcard characters <wildcards>`.
 
+If you want to search for a combination of a 5' and a 3' adapter, you may want
+to provide them as a single so-called :ref:`"linked adapter" <linked-adapters>`
+instead.
+
 
 .. _named-adapters:
 
