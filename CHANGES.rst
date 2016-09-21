@@ -2,6 +2,12 @@
 Changes
 =======
 
+development version
+-------------------
+
+* The ``xopen`` module for opening compressed files was moved to a `separate
+  package on PyPI <https://pypi.python.org/pypi/xopen>`_.
+
 v1.11 (2016-08-16)
 ------------------
 

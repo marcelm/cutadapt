@@ -127,6 +127,7 @@ setup(
 	cmdclass = cmdclass,
 	ext_modules = extensions,
 	packages = ['cutadapt', 'cutadapt.scripts'],
+	install_requires = ['xopen>=0.1.0'],
 	scripts = ['bin/cutadapt'],
 	classifiers = [
 		"Development Status :: 5 - Production/Stable",

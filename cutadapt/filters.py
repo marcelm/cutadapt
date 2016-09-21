@@ -15,7 +15,7 @@ The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded).
 """
 from __future__ import print_function, division, absolute_import
-from .xopen import xopen
+from xopen import xopen
 from . import seqio
 
 # Constants used when returning from a Filter’s __call__ method to improve

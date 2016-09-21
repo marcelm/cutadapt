@@ -1,7 +1,7 @@
 # kate: syntax Python;
 # cython: profile=False, emit_code_comments=False
 from __future__ import print_function, division, absolute_import
-from .xopen import xopen
+from xopen import xopen
 from .seqio import _shorten, FormatError, SequenceReader
 
 

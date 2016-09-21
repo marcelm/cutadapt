@@ -8,9 +8,11 @@ TODO
   before the first space)
 """
 from __future__ import print_function, division, absolute_import
+
 import sys
 from os.path import splitext
-from .xopen import xopen
+from xopen import xopen
+
 from .compat import zip, basestring
 
 __author__ = "Marcel Martin"

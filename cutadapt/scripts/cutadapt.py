@@ -69,9 +69,9 @@ import functools
 import logging
 import platform
 import textwrap
+from xopen import xopen
 
 from cutadapt import seqio, __version__
-from cutadapt.xopen import xopen
 from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
