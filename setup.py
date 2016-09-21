@@ -128,7 +128,7 @@ setup(
 	ext_modules = extensions,
 	packages = ['cutadapt', 'cutadapt.scripts'],
 	install_requires = ['xopen>=0.1.0'],
-	scripts = ['bin/cutadapt'],
+	entry_points = {'console_scripts': ['cutadapt = cutadapt.scripts.cutadapt:main']},
 	classifiers = [
 		"Development Status :: 5 - Production/Stable",
 		"Environment :: Console",
