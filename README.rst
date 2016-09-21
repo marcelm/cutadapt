@@ -33,7 +33,7 @@ If you use cutadapt, please cite
 Links
 -----
 
-* `Documentation <https://cutadapt.readthedocs.org/>`_
+* `Documentation <https://cutadapt.readthedocs.io/>`_
 * `Source code <https://github.com/marcelm/cutadapt/>`_
 * `Report an issue <https://github.com/marcelm/cutadapt/issues>`_
 * `Project page on PyPI (Python package index) <https://pypi.python.org/pypi/cutadapt/>`_

@@ -116,6 +116,9 @@ class sdist(versioneer_sdist):
 cmdclass['build_ext'] = build_ext
 cmdclass['sdist'] = sdist
 
+with open('README.rst') as f:
+	long_description = f.read()
+
 setup(
 	name = 'cutadapt',
 	version = versioneer.get_version(),
@@ -123,6 +126,7 @@ setup(
 	author_email = 'marcel.martin@scilifelab.se',
 	url = 'https://cutadapt.readthedocs.io/',
 	description = 'trim adapters from high-throughput sequencing reads',
+	long_description = long_description,
 	license = 'MIT',
 	cmdclass = cmdclass,
 	ext_modules = extensions,
