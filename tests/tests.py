@@ -386,3 +386,7 @@ def test_fasta():
 def test_issue_202():
 	"""Ensure --length-tag= also modifies the second header line"""
 	run('-a GGCTTC --length-tag=length=', 'SRR2040271_1.fastq', 'SRR2040271_1.fastq')
+
+
+def test_length():
+	run('--length 5', 'shortened.fastq', 'small.fastq')

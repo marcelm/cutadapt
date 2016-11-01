@@ -75,7 +75,7 @@ from cutadapt import seqio, __version__
 from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
-	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer)
+	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer, Shortener)
 from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedirector,
 	LegacyPairedRedirector, TooShortReadFilter, TooLongReadFilter,
 	Demultiplexer, NContentFilter, DiscardUntrimmedFilter, DiscardTrimmedFilter)
@@ -245,6 +245,9 @@ def get_option_parser():
 		help="Assume that quality values in FASTQ are encoded as ascii(quality "
 			"+ QUALITY_BASE). This needs to be set to 64 for some old Illumina "
 			"FASTQ files. Default: %default")
+	group.add_option("--length", "-l", type=int, default=None, metavar="LENGTH",
+			help="Shorten reads to LENGTH. This and the following modifications"
+			"are applied after adapter trimming.")
 	group.add_option("--trim-n", action='store_true', default=False,
 		help="Trim N's on ends of reads.")
 	group.add_option("--length-tag", metavar="TAG",
@@ -618,8 +621,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			options.minimum_length == 0 and \
 			options.maximum_length == sys.maxsize and \
 			quality_filename is None and \
-			options.max_n == -1 and not options.trim_n:
-		parser.error("You need to provide at least one adapter sequence.")
+			options.max_n == -1 and not options.trim_n and \
+			options.length is None:
+		parser.error("You need to provide at least one read-modifying or filtering option.")
 
 	# Create the single-end processing pipeline (a list of "modifiers")
 	modifiers = []
@@ -645,6 +649,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	# Modifiers that apply to both reads of paired-end reads unless in legacy mode
 	modifiers_both = []
+	if options.length is not None:
+		modifiers_both.append(Shortener(options.length))
 	if options.trim_n:
 		modifiers_both.append(NEndTrimmer())
 	if options.length_tag:

@@ -7,6 +7,8 @@ development version
 
 * The ``xopen`` module for opening compressed files was moved to a `separate
   package on PyPI <https://pypi.python.org/pypi/xopen>`_.
+* Add read modification option ``--length`` (short: ``--l``), which will
+  shorten each read to the given length.
 
 v1.11 (2016-08-16)
 ------------------

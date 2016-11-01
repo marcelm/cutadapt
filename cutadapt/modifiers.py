@@ -260,6 +260,15 @@ class QualityTrimmer(object):
 		return read[start:stop]
 
 
+class Shortener(object):
+	"""Uncoditionally shorten a read to the given length"""
+	def __init__(self, length):
+		self.length = length
+
+	def __call__(self, read):
+		return read[:self.length]
+
+
 class NEndTrimmer(object):
 	"""Trims Ns from the 3' and 5' end of reads"""
 	def __init__(self):

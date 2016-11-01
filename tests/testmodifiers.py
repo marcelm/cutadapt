@@ -2,7 +2,8 @@
 from __future__ import print_function, division, absolute_import
 
 from cutadapt.seqio import Sequence
-from cutadapt.modifiers import UnconditionalCutter, NEndTrimmer, QualityTrimmer
+from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
+	Shortener)
 
 def test_unconditional_cutter():
 	uc = UnconditionalCutter(length=5)
@@ -34,3 +35,19 @@ def test_quality_trimmer():
 
 	qt = QualityTrimmer(10, 0, 33)
 	assert qt(read) == Sequence('read1', 'GTTTACGTA', '456789###')
+
+
+def test_shortener():
+	read = Sequence('read1', 'ACGTTTACGTA', '##456789###')
+
+	shortener = Shortener(0)
+	assert shortener(read) == Sequence('read1', '', '')
+
+	shortener = Shortener(1)
+	assert shortener(read) == Sequence('read1', 'A', '#')
+
+	shortener = Shortener(5)
+	assert shortener(read) == Sequence('read1', 'ACGTT', '##456')
+
+	shortener = Shortener(100)
+	assert shortener(read) == read

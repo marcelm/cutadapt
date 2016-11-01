@@ -116,7 +116,7 @@ way:
    order in which they are applied is the order in which they are listed in the
    help shown by ``cutadapt --help`` under the “Additional read modifications”
    heading. Adapter trimming itself does not appear in that list and is
-   done after quality trimming and before ``N``-end trimming (``--trim-N``).
+   done after quality trimming and before length trimming (``--length``/``-l``).
 
 2. :ref:`Filtering options <filtering>` are applied, such as removal of too
    short or untrimmed reads. Some of the filters also allow to redirect a read
