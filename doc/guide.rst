@@ -5,14 +5,13 @@ User guide
 Basic usage
 ===========
 
-If you just want to trim a 3' adapter, the basic command-line for cutadapt is::
+To trim a 3' adapter, the basic command-line for cutadapt is::
 
     cutadapt -a AACCGGTT -o output.fastq input.fastq
 
-The sequence of the adapter is given with the ``-a`` option. Of course, you
-need to replace ``AACCGGTT`` with your actual adapter sequence. Reads are read
-from the input file ``input.fastq`` and written to the output file
-``output.fastq``.
+The sequence of the adapter is given with the ``-a`` option. You need to replace
+``AACCGGTT`` with your actual adapter sequence. Reads are read from the input
+file ``input.fastq`` and written to the output file ``output.fastq``.
 
 Cutadapt searches for the adapter in all reads and removes it when it finds it.
 All reads that were present in the input file will also be present in the output
@@ -20,27 +19,24 @@ file, some of them trimmed, some of them not. Even reads that were trimmed
 entirely (because the adapter was found in the very beginning) are output. All
 of this can be changed with command-line options, explained further down.
 
-A report is printed after cutadapt has finished processing the reads.
-
 
 Input and output file formats
 -----------------------------
 
 Input files for cutadapt need to be in one the these formats:
 
-* FASTA (file name extensions: ``.fasta``, ``.fa``, ``.fna``, ``.csfasta``, ``.csfa``)
+* FASTA (file name extensions: ``.fasta``, ``.fa``, ``.fna``)
 * FASTQ (extensions: ``.fastq``, ``.fq``)
-* A pair of a FASTA file and a ``.(cs)qual`` file
+* Any of the above, but compressed as ``.gz`` (even ``.bz2`` and ``.xz`` are supported).
 
-The latter format is (or was) used for colorspace data from the SOLiD
-instruments.
+:ref:`Cutadapt’s support for processing of colorspace data is described
+elsewhere <colorspace>`.
 
-The input file format is recognized from the file name extension (given in
-parentheses in the list above). You can also explicitly specify which format
-the input has by using the ``--format`` option.
+The input file format is recognized from the file name extension. You can
+override this by explicitly specifying which format the input with the
+``--format`` option.
 
-The output format is the same as the input format, except for the FASTA/QUAL
-pairs -- those will always be converted to FASTQ. Also, cutadapt does not check
+The output format is the same as the input format. However, cutadapt does not check
 the output file name: If you input FASTQ data, but use ``-o output.fasta``, then
 the output file will actually be in FASTQ format.
 
@@ -295,27 +291,52 @@ Using ``-a ADAPTER$`` will result in::
     MYSEQUENCE
     MYSEQUENCEADAPTERSOMETHINGELSE
 
-Only the middle read is trimmed at all.
+That is, only the middle read is trimmed at all.
 
 
 .. _linked-adapters:
 
-Linked adapters
----------------
+Linked adapters (combined 5' and 3' adapter)
+--------------------------------------------
 
-This is a combination of a 5' and a 3' adapter. Use ``-a ADAPTER1...ADAPTER2``
-to search for a linked adapter. ADAPTER1 is interpreted as an anchored 5'
-adapter, which is searched for first. Only if ADAPTER1 is found will then
-ADAPTER2 be searched for,  which is a regular 3' adapter.
+If your sequence of interest ist “framed” by a 5' and a 3' adapter, and you want
+to remove both adapters, then you may want to use a linked adapter, which
+combines an anchored 5' adapter and a 3' adapter.
 
-For example, when the 5' adapter is *FIRST* and the 3' adapter is *SECOND*, then
-the read could look like this::
+Use ``-a ADAPTER1...ADAPTER2`` to search for a linked adapter. ADAPTER1 is
+interpreted as an anchored 5' adapter and ADAPTER2 as a regular 3' adapter.
 
-    FIRSTMYSEQUENCESECOND
+For a read to be trimmed at all, the 5' adapter must occur, but the the 3'
+adapter is optional. In the statistics printed by the program, a read is counted
+as “trimmed” no matter whether the 5' adapter or both the 5' and 3' adapter
+occur.
 
+As an  example, assume the 5' adapter is *FIRST* and the 3' adapter is *SECOND*
+and you have these input reads::
 
-This feature is experimental and will probably break when used in combination
-with some other options, such as ``--info-file``, ``--mask-adapter``.
+    FIRSTMYSEQUENCESECONDEXTRABASES
+    FIRSTMYSEQUENCESEC
+    FIRSTMYSEQUE
+    ANOTHERREADSECOND
+
+Trimming with ::
+
+    cutadapt -a FIRST...SECOND input.fastq > output.fastq
+
+will result in ::
+
+    MYSEQUENCE
+    MYSEQUENCE
+    MYSEQUE
+    ANOTHERREADSECOND
+
+The 3' adapter in the last read is not trimmed because the read does not contain
+the 5' adapter. Note that ``FIRST`` is always an anchored 5' adapter (:ref:`see
+the previous section <anchored-5adapters>`) although there is no ``^`` character
+in the beginning.
+
+This feature does not work when used in combination with some other options,
+such as ``--info-file``, ``--mask-adapter``.
 
 
 .. _anywhere-adapters:
@@ -532,7 +553,7 @@ To remove the last seven bases of each read::
     cutadapt -u -7 -o trimmed.fastq reads.fastq
 
 The ``-u``/``--cut`` option can be combined with the other options, but
-the desired bases are removed *before* any adapter trimming.
+the ``--cut`` is applied *before* any adapter trimming.
 
 
 .. _quality-trimming:
@@ -593,6 +614,21 @@ the trimming position. Therefore, the read is trimmed to the first four bases,
 which have quality values 42, 40, 26, 27.
 
 
+Shortening reads to a fixed length
+----------------------------------
+
+To shorten each read down to a certain length, use the ``--length`` option or
+the short version ``-l``::
+
+    cutadapt -l 10 input.fastq > output.fastq
+
+This shortens all reads from ``input.fastq`` down to 10 bases. The removed bases
+are those on the 3' end.
+
+If you want to remove a fixed number of bases from each read, use
+:ref:`the --cut option instead <cut-bases>`.
+
+
 Modifying read names
 --------------------
 
@@ -635,13 +671,14 @@ each read. Steps not requested on the command-line are skipped.
 1. Unconditional base removal with ``--cut``
 2. Quality trimming (``-q``)
 3. Adapter trimming (``-a``, ``-b``, ``-g`` and uppercase versions)
-4. N-end trimming (``--trim-n``)
-5. Length tag modification (``--length-tag``)
-6. Read name suffixe removal (``--strip-suffix``)
-7. Addition of prefix and suffix to read name (``-x``/``--prefix`` and ``-y``/``--suffix``)
-8. Double-encode the sequence (only colorspace)
-9. Replace negative quality values with zero (zero capping, only colorspace)
-10. Trim primer base (only colorspace)
+4. Read shortening (``--length``)
+5. N-end trimming (``--trim-n``)
+6. Length tag modification (``--length-tag``)
+7. Read name suffixe removal (``--strip-suffix``)
+8. Addition of prefix and suffix to read name (``-x``/``--prefix`` and ``-y``/``--suffix``)
+9. Double-encode the sequence (only colorspace)
+10. Replace negative quality values with zero (zero capping, only colorspace)
+11. Trim primer base (only colorspace)
 
 The last three steps are colorspace-specific.
 
@@ -766,6 +803,7 @@ The following command-line options are applied to *both* reads:
 * ``--no-trim``
 * ``--trim-n``
 * ``--mask``
+* ``--length``
 * ``--length-tag``
 * ``--prefix``, ``--suffix``
 * ``--strip-f3``

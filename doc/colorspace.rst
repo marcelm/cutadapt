@@ -1,3 +1,5 @@
+.. _colorspace:
+
 Colorspace reads
 ================
 
@@ -5,15 +7,29 @@ Cutadapt was designed to work with colorspace reads from the ABi SOLiD
 sequencer. Colorspace trimming is activated by the ``--colorspace``
 option (or use ``-c`` for short). The input reads can be given either:
 
--  in a FASTA file
+-  in a FASTA file (typically extensions ``.csfasta`` or ``.csfa``)
 -  in a FASTQ file
 -  in a ``.csfasta`` and a ``.qual`` file (this is the native SOLiD
-   format).
+   format). That is, cutadapt expects *two* file names in this case.
 
 In all cases, the colors must be represented by the characters 0, 1, 2,
-3. Example input files are in the cutadapt distribution at
+3. Here is an example input file in ``.fastq`` format that is accepted::
+
+    @1_13_85_F3
+    T110020300.0113010210002110102330021
+    +
+    7&9<&77)& <7))%4'657-1+9;9,.<8);.;8
+    @1_13_573_F3
+    T312311200.3021301101113203302010003
+    +
+    6)3%)&&&& .1&(6:<'67..*,:75)'77&&&5
+
+Further example input files can be found in the cutadapt distribution at
 ``tests/data/solid.*``. The ``.csfasta``/``.qual`` file format is
-automatically assumed if two input files are given to cutadapt.
+automatically assumed if two input files are given to cutadapt, and when no
+paired-end trimming options are used.
+
+Cutadapt always converts input data given as a pair of FASTA/QUAL files to FASTQ.
 
 In colorspace mode, the adapter sequences given to the ``-a``, ``-b``
 and ``-g`` options can be given both as colors or as nucleotides. If
@@ -24,7 +40,7 @@ colorspace. For example, to trim an adapter from ``solid.csfasta`` and
     cutadapt -c -a CGCCTTGGCCGTACAGCAG solid.csfasta solid.qual > output.fastq
 
 In case you know the colorspace adapter sequence, you can also write
-``330201030313112312`` instead of ``CGCCTTGGCCGTACAGCAG`` and the result
+``330201030313112312`` instead of ``CGCCTTGGCCGTACAGCAG``, and the result
 is the same.
 
 Ambiguity in colorspace
