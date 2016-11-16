@@ -615,16 +615,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		for adapter in adapters + adapters2:
 			adapter.enable_debug()
 
-	if not adapters and not adapters2 and not cutoffs and \
-			options.nextseq_trim is None and \
-			options.cut == [] and options.cut2 == [] and \
-			options.minimum_length == 0 and \
-			options.maximum_length == sys.maxsize and \
-			quality_filename is None and \
-			options.max_n == -1 and not options.trim_n and \
-			options.length is None:
-		parser.error("You need to provide at least one read-modifying or filtering option.")
-
 	# Create the single-end processing pipeline (a list of "modifiers")
 	modifiers = []
 	if options.cut:

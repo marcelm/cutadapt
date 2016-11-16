@@ -32,13 +32,13 @@ Input files for cutadapt need to be in one the these formats:
 :ref:`Cutadapt’s support for processing of colorspace data is described
 elsewhere <colorspace>`.
 
-The input file format is recognized from the file name extension. You can
-override this by explicitly specifying which format the input with the
-``--format`` option.
+Input and output file formats are recognized from the file name extension. You
+can override the input format with the ``--format`` option.
 
-The output format is the same as the input format. However, cutadapt does not check
-the output file name: If you input FASTQ data, but use ``-o output.fasta``, then
-the output file will actually be in FASTQ format.
+You can even use this -- without any adapter trimming -- to convert from
+FASTQ to FASTA::
+
+    cutadapt -o output.fasta input.fastq.gz
 
 
 Compressed files

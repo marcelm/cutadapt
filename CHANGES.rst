@@ -5,10 +5,13 @@ Changes
 development version
 -------------------
 
-* The ``xopen`` module for opening compressed files was moved to a `separate
-  package on PyPI <https://pypi.python.org/pypi/xopen>`_.
 * Add read modification option ``--length`` (short: ``--l``), which will
   shorten each read to the given length.
+* Cutadapt will no longer complain that it has nothing to do when you do not
+  give it any adapters. For example, you can use this to convert file formats:
+  ``cutadapt -o output.fasta input.fastq.gz`` converts FASTQ to FASTA.
+* The ``xopen`` module for opening compressed files was moved to a `separate
+  package on PyPI <https://pypi.python.org/pypi/xopen>`_.
 
 v1.11 (2016-08-16)
 ------------------
