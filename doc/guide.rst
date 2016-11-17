@@ -258,7 +258,7 @@ high, even this read will be trimmed::
 
     BADAPTERSOMETHING
 
-The ``B`` in the beginnig is seen as an insertion. If you also want to prevent
+The ``B`` in the beginning is seen as an insertion. If you also want to prevent
 this from happening, use the option ``--no-indels`` to disallow insertions and
 deletions entirely.
 
@@ -674,7 +674,7 @@ each read. Steps not requested on the command-line are skipped.
 4. Read shortening (``--length``)
 5. N-end trimming (``--trim-n``)
 6. Length tag modification (``--length-tag``)
-7. Read name suffixe removal (``--strip-suffix``)
+7. Read name suffix removal (``--strip-suffix``)
 8. Addition of prefix and suffix to read name (``-x``/``--prefix`` and ``-y``/``--suffix``)
 9. Double-encode the sequence (only colorspace)
 10. Replace negative quality values with zero (zero capping, only colorspace)
@@ -1205,7 +1205,7 @@ Bisulfite sequencing (RRBS)
 ===========================
 
 When trimming reads that come from a library prepared with the RRBS (reduced
-representation bisulfit sequencing) protocol, the last two 3' bases must be
+representation bisulfite sequencing) protocol, the last two 3' bases must be
 removed in addition to the adapter itself. This can be achieved by using not
 the adapter sequence itself, but by adding two wildcard characters to its
 beginning. If the adapter sequence is ``ADAPTER``, the command for trimming
@@ -1261,7 +1261,7 @@ The next piece of information is this::
     No. of allowed errors:
     0-9 bp: 0; 10-19 bp: 1; 20 bp: 2
 
-The adapter has, as was shown above, has a length of 20
+The adapter, as was shown above, has a length of 20
 characters. We are using the default error rate of 0.1. What this
 implies is shown above: Matches up to a length of 9 bp are allowed to
 have no errors. Matches of lengths 10-19 bp are allowd to have 1 error
