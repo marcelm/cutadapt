@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v1.12 (2016-11-28)
+------------------
 
 * Add read modification option ``--length`` (short: ``--l``), which will
   shorten each read to the given length.
