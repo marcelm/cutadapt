@@ -339,6 +339,19 @@ This feature does not work when used in combination with some other options,
 such as ``--info-file``, ``--mask-adapter``.
 
 
+Linked adapter statistics
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For linked adapters, the statistics report contains a line like this::
+
+    === Adapter 1 ===
+
+    Sequence: AAAAAAAAA...TTTTTTTTTT; Type: linked; Length: 9+10; Trimmed: 3 times; Half matches: 2
+
+The value for “Half matches” tells you how often only the 5'-side of the adapter was found, but not
+the 3'-side of it. As described above, these matches are still trimmed and count as matches.
+
+
 .. _anywhere-adapters:
 
 5' or 3' adapters
