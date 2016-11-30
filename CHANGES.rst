@@ -2,6 +2,13 @@
 Changes
 =======
 
+development version
+-------------------
+
+* The 3' adapter of linked adapters can now be anchored. Write
+  ``-a ADAPTER1...ADAPTER2$`` to enable (the 5' adapter is always
+  anchored).
+
 v1.12 (2016-11-28)
 ------------------
 

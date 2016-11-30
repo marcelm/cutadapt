@@ -100,11 +100,16 @@ class AdapterParser(object):
 				else:  # -a ADAPTER1...ADAPTER2
 					if self.colorspace:
 						raise NotImplementedError('Using linked adapters in colorspace is not supported')
-					if sequence1.startswith('^') or sequence2.endswith('$'):
-						raise NotImplementedError('Using "$" or "^" when '
+					if sequence1.startswith('^'):
+						raise NotImplementedError('Using "^" when '
 							'specifying a linked adapter is not supported')
+					if sequence2.endswith('$'):
+						back_anchored = True
+						sequence2 = sequence2[:-1]
+					else:
+						back_anchored = False
 					return LinkedAdapter(sequence1, sequence2, name=name,
-						**self.constructor_args)
+						back_anchored=back_anchored, **self.constructor_args)
 			elif spec.endswith('$'):   # -a ADAPTER$
 				sequence, where = spec[:-1], SUFFIX
 		if not sequence:
@@ -508,7 +513,7 @@ class LinkedAdapter(object):
 		"""
 		kwargs are passed on to individual Adapter constructors
 		"""
-		assert front_anchored and not back_anchored
+		assert front_anchored, "untested feature"
 		where1 = PREFIX if front_anchored else FRONT
 		where2 = SUFFIX if back_anchored else BACK
 		self.front_anchored = front_anchored
@@ -526,8 +531,8 @@ class LinkedAdapter(object):
 
 	def match_to(self, read):
 		"""
-		Match the linked adapters against the given read. If the 'front' adapter
-		is not found, the 'back' adapter is not searched for.
+		Match the linked adapters against the given read. Any anchored adapters are
+		required to exist for a successful match.
 		"""
 		front_match = self.front_adapter.match_to(read)
 		if front_match is None:
@@ -536,6 +541,8 @@ class LinkedAdapter(object):
 		# statistics anymore
 		read = read[front_match.rstop:]
 		back_match = self.back_adapter.match_to(read)
+		if self.back_anchored and not back_match:
+			return None
 		return LinkedMatch(front_match, back_match, self)
 
 	def trimmed(self, match):

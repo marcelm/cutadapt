@@ -300,16 +300,28 @@ Linked adapters (combined 5' and 3' adapter)
 --------------------------------------------
 
 If your sequence of interest ist “framed” by a 5' and a 3' adapter, and you want
-to remove both adapters, then you may want to use a linked adapter, which
-combines an anchored 5' adapter and a 3' adapter.
+to remove both adapters, then you may want to use a *linked adapter*. A linked
+adapter combines an anchored 5' adapter and a 3' adapter. The 3' adapter can be
+regular or anchored. The idea is that a read is only trimmed if the anchored
+adapters occur. Thus, the 5' adapter is always required, and if the 3' adapter
+was specified as anchored, it also must exist for a successful match.
+
+:ref:`See the previous sections <anchored-5adapters>` for what anchoring means.
 
 Use ``-a ADAPTER1...ADAPTER2`` to search for a linked adapter. ADAPTER1 is
-interpreted as an anchored 5' adapter and ADAPTER2 as a regular 3' adapter.
+always interpreted as an anchored 5' adapter. Here, ADAPTER2 is a
+regular 3' adapter. If you write ``-a ADAPTER1...ADAPTER2$`` instead,
+then the 3' adapter also becomes anchored, that is, for a read to be
+trimmed, both adapters must exist at the respective ends.
 
-For a read to be trimmed at all, the 5' adapter must occur, but the the 3'
-adapter is optional. In the statistics printed by the program, a read is counted
-as “trimmed” no matter whether the 5' adapter or both the 5' and 3' adapter
-occur.
+Note that the ADAPTER1 is always interpreted as an anchored 5' adapter even though
+there is no ``^`` character in the beginning.
+
+In summary:
+
+* ``-a ADAPTER1...ADAPTER2``: The 5' adapter is removed if it occurs. If a 3' adapter
+  occurs, it is removed only when also a 5' adapter is present.
+* ``-a ADAPTER1...ADAPTER2$``: The adapters are removed only if both occur.
 
 As an  example, assume the 5' adapter is *FIRST* and the 3' adapter is *SECOND*
 and you have these input reads::
@@ -331,13 +343,15 @@ will result in ::
     ANOTHERREADSECOND
 
 The 3' adapter in the last read is not trimmed because the read does not contain
-the 5' adapter. Note that ``FIRST`` is always an anchored 5' adapter (:ref:`see
-the previous section <anchored-5adapters>`) although there is no ``^`` character
-in the beginning.
+the 5' adapter.
 
 This feature does not work when used in combination with some other options,
 such as ``--info-file``, ``--mask-adapter``.
 
+.. versionadded:: 1.10
+
+.. versionadded:: 1.13
+   Ability to anchor the 3' adapter.
 
 Linked adapter statistics
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -349,7 +363,7 @@ For linked adapters, the statistics report contains a line like this::
     Sequence: AAAAAAAAA...TTTTTTTTTT; Type: linked; Length: 9+10; Trimmed: 3 times; Half matches: 2
 
 The value for “Half matches” tells you how often only the 5'-side of the adapter was found, but not
-the 3'-side of it. As described above, these matches are still trimmed and count as matches.
+the 3'-side of it. This applies only to linked adapters with regular (non-anchored) 3' adapters.
 
 
 .. _anywhere-adapters:
