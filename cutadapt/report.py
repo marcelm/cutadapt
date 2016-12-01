@@ -245,7 +245,7 @@ def print_report(stats, adapters_pair):
 						adapter.back_adapter.sequence,
 						len(adapter.front_adapter.sequence),
 						len(adapter.back_adapter.sequence),
-						total_front, total_back))
+						total_front, total_front - total_back))
 			else:
 				print("Sequence: {0}; Type: {1}; Length: {2}; Trimmed: {3} times.".
 					format(adapter.sequence, ADAPTER_TYPES[adapter.where],
