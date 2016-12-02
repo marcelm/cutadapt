@@ -14,3 +14,4 @@ cutadapt/*.so
 doc/_build
 *.pyo
 .idea/
+*.egg-info/
