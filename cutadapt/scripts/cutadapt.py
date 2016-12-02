@@ -64,7 +64,7 @@ check_importability()
 import sys
 import time
 import errno
-from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
+from optparse import OptionParser, OptionGroup
 import functools
 import logging
 import platform
@@ -80,9 +80,10 @@ from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedire
 	LegacyPairedRedirector, TooShortReadFilter, TooLongReadFilter,
 	Demultiplexer, NContentFilter, DiscardUntrimmedFilter, DiscardTrimmedFilter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
-from cutadapt.compat import next
+
 
 logger = logging.getLogger()
+
 
 class CutadaptOptionParser(OptionParser):
 	def get_usage(self):
@@ -418,6 +419,8 @@ def get_option_parser():
 def pipeline_from_parsed_args(options, args, default_outfile):
 	"""
 	Setup a processing pipeline from parsed command-line options.
+
+	If there are any problems parsing the arguments, a CommandlineError is thrown.
 	"""
 	if len(args) == 0:
 		raise CommandlineError("At least one parameter needed: name of a FASTA or FASTQ file.")
@@ -706,8 +709,6 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 			adapter_cutter2 = AdapterCutter(adapters2, options.times,
 					None, None, None, options.action)
 			modifiers2.append(adapter_cutter2)
-		else:
-			adapter_cutter2 = None
 		modifiers2.extend(modifiers_both)
 
 	if paired:
