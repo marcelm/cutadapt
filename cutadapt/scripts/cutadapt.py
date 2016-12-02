@@ -52,7 +52,7 @@ sequencing reads. EMBnet.Journal, 17(1):10-12, May 2011.
 http://dx.doi.org/10.14806/ej.17.1.200
 
 Use "cutadapt --help" to see all command-line options.
-See http://cutadapt.readthedocs.org/ for full documentation.
+See http://cutadapt.readthedocs.io/ for full documentation.
 """
 
 from __future__ import print_function, division, absolute_import
