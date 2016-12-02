@@ -69,7 +69,8 @@ cdef class Sequence(object):
 			raise NotImplementedError()
 
 	def __reduce__(self):
-		return (Sequence, (self.name, self.sequence, self.qualities, self.second_header))
+		return (Sequence, (self.name, self.sequence, self.qualities, self.second_header,
+		    self.match, self.match_info))
 
 
 class FastqReader(SequenceReader):

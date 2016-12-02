@@ -153,6 +153,11 @@ class ColorspaceSequence(Sequence):
 			self.match_info)
 
 
+	def __reduce__(self):
+		return (ColorspaceSequence, (self.name, self.sequence, self.qualities, self.primer,
+			self.second_header, self.match, self.match_info))
+
+
 def sra_colorspace_sequence(name, sequence, qualities, second_header):
 	"""Factory for an SRA colorspace sequence (which has one quality value too many)"""
 	return ColorspaceSequence(name, sequence, qualities[1:], second_header=second_header)
