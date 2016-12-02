@@ -379,6 +379,10 @@ def test_linked():
 	run('-a AAAAAAAAAA...TTTTTTTTTT', 'linked.fasta', 'linked.fasta')
 
 
+def test_linked_multiple():
+	run('-a AAAAAAAAAA...TTTTTTTTTT -a AAAAAAAAAA...GCGCGCGCGC', 'linked.fasta', 'linked.fasta')
+
+
 def test_linked_anchored():
 	run('-a AAAAAAAAAA...TTTTT$', 'linked-anchored.fasta', 'linked.fasta')
 

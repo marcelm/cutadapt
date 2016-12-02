@@ -504,6 +504,13 @@ class LinkedMatch(object):
 		self.adapter = adapter
 		assert front_match is not None
 
+	@property
+	def matches(self):
+		m = self.front_match.matches
+		if self.back_match is not None:
+			m += self.back_match.matches
+		return m
+
 
 class LinkedAdapter(object):
 	"""
