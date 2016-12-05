@@ -588,7 +588,7 @@ the ``--cut`` is applied *before* any adapter trimming.
 Quality trimming
 ----------------
 
-The ``-q`` (or ``--trim-qualities``) parameter can be used to trim
+The ``-q`` (or ``--quality-cutoff``) parameter can be used to trim
 low-quality ends from reads before adapter removal. For this to work
 correctly, the quality values must be encoded as ascii(phred quality +
 33). If they are encoded as ascii(phred quality + 64), you need to add
