@@ -681,6 +681,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			modifiers2.append(adapter_cutter2)
 		else:
 			adapter_cutter2 = None
+
+		if options.trim_n:
+			modifiers2.append(NEndTrimmer())
+
 		modifiers2.extend(modifiers_both)
 
 	if paired:
