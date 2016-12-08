@@ -252,15 +252,18 @@ def test_no_trim():
 
 
 def test_bzip2():
-	'''test bzip2 support'''
 	run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.bz2')
+
+
+if sys.version_info[:2] >= (3, 3):
+	def test_bzip2_multiblock():
+		run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'multiblock.fastq.bz2')
 
 
 try:
 	import lzma
 
 	def test_xz():
-		'''test xz support'''
 		run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.xz')
 except ImportError:
 	pass
