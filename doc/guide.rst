@@ -58,6 +58,11 @@ Files compressed with bzip2 (``.bz2``) or xz (``.xz``) are also supported, but
 only if the Python installation includes the proper modules. xz files require
 Python 3.3 or later.
 
+Concatenated bz2 files are *not supported* on Python versions before 3.3.
+These files are created by utilities such as ``pbzip2`` (parallel bzip2).
+
+Concatenated gz files *are* supported on all supported Python versions.
+
 
 Standard input and output
 -------------------------
