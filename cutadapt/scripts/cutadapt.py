@@ -309,7 +309,7 @@ def get_option_parser():
 		help="Write reads that are too long (according to length specified by "
 		"-M) to FILE. Default: discard reads")
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
-		help="Write reads that do not contain the adapter to FILE. Default: "
+		help="Write reads that do not contain any adapter to FILE. Default: "
 			"output to same file as trimmed reads")
 	parser.add_option_group(group)
 
