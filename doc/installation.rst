@@ -39,7 +39,7 @@ Dependencies
 
 Cutadapt requires this software to be installed:
 
-* One of Python 2.6, 2.7, 3.3, 3.4 or 3.5. Python 2.7 is a bit faster than the
+* One of Python 2.7, 3.3, 3.4 or 3.5. Python 2.7 is slightly faster than the
   other versions.
 * A C compiler.
 
