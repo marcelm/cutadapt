@@ -142,7 +142,7 @@ Adapter type                                        Command-line option
 :ref:`Anchored 3' adapter <anchored-3adapters>`     ``-a ADAPTER$``
 :ref:`Anchored 5' adapter <anchored-5adapters>`     ``-g ^ADAPTER``
 :ref:`5' or 3' (both possible) <anywhere-adapters>` ``-b ADAPTER``
-:ref:`Linked adapter <linked-adapters>`              ``-a ADAPTER1...ADAPTER2``
+:ref:`Linked adapter <linked-adapters>`             ``-a ADAPTER1...ADAPTER2``
 =================================================== ===========================
 
 Here is an illustration of the allowed adapter locations relative to the read

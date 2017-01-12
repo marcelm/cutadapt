@@ -6,6 +6,7 @@ from nose.tools import raises
 from cutadapt.scripts import cutadapt
 from .utils import run, files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
+
 def run_paired(params, in1, in2, expected1, expected2):
 	if type(params) is str:
 		params = params.split()
@@ -44,13 +45,13 @@ def run_interleaved(params, inpath1, inpath2=None, expected1=None, expected2=Non
 
 
 def test_paired_separate():
-	'''test separate trimming of paired-end reads'''
+	"""test separate trimming of paired-end reads"""
 	run('-a TTAGACATAT', 'paired-separate.1.fastq', 'paired.1.fastq')
 	run('-a CAGTGGAGTA', 'paired-separate.2.fastq', 'paired.2.fastq')
 
 
 def test_paired_end_legacy():
-	'''--paired-output, not using -A/-B/-G'''
+	"""--paired-output, not using -A/-B/-G"""
 	# the -m 14 filters out one read, which should then also be filtered out in the second output file
 	# -q 10 should not change anything: qualities in file 1 are high enough,
 	# qualities in file 2 should not be inspected.
@@ -154,7 +155,7 @@ def test_paired_but_only_one_input_file():
 
 
 def test_legacy_minlength():
-	'''Ensure -m is not applied to second read in a pair in legacy mode'''
+	"""Ensure -m is not applied to second read in a pair in legacy mode"""
 	run_paired('-a XXX -m 27',
 		in1='paired.1.fastq', in2='paired.2.fastq',
 		expected1='paired-m27.1.fastq', expected2='paired-m27.2.fastq'
@@ -162,7 +163,7 @@ def test_legacy_minlength():
 
 
 def test_paired_end():
-	'''single-pass paired-end with -m'''
+	"""single-pass paired-end with -m"""
 	run_paired('-a TTAGACATAT -A CAGTGGAGTA -m 14',
 		in1='paired.1.fastq', in2='paired.2.fastq',
 		expected1='paired.1.fastq', expected2='paired.2.fastq'
@@ -177,7 +178,7 @@ def test_paired_anchored_back_no_indels():
 
 
 def test_paired_end_qualtrim():
-	'''single-pass paired-end with -q and -m'''
+	"""single-pass paired-end with -q and -m"""
 	run_paired('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
 		in1='paired.1.fastq', in2='paired.2.fastq',
 		expected1='pairedq.1.fastq', expected2='pairedq.2.fastq'
@@ -185,7 +186,7 @@ def test_paired_end_qualtrim():
 
 
 def test_paired_end_qualtrim_swapped():
-	'''single-pass paired-end with -q and -m, but files swapped'''
+	"""single-pass paired-end with -q and -m, but files swapped"""
 	run_paired('-q 20 -a CAGTGGAGTA -A TTAGACATAT -m 14',
 		in1='paired.2.fastq', in2='paired.1.fastq',
 		expected1='pairedq.2.fastq', expected2='pairedq.1.fastq'
@@ -223,14 +224,14 @@ def test_discard_trimmed():
 
 
 def test_interleaved_in_and_out():
-	'''Single-pass interleaved paired-end with -q and -m'''
+	"""Single-pass interleaved paired-end with -q and -m"""
 	run_interleaved('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
 		inpath1='interleaved.fastq', expected1='interleaved.fastq'
 	)
 
 
 def test_interleaved_in():
-	'''Interleaved input, two files output'''
+	"""Interleaved input, two files output"""
 	run_interleaved('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
 		inpath1='interleaved.fastq',
 		expected1='pairedq.1.fastq', expected2='pairedq.2.fastq'
@@ -238,7 +239,7 @@ def test_interleaved_in():
 
 
 def test_interleaved_out():
-	'''Two files input, interleaved output'''
+	"""Two files input, interleaved output"""
 	run_interleaved('-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
 		inpath1='paired.1.fastq', inpath2='paired.2.fastq',
 		expected1='interleaved.fastq'

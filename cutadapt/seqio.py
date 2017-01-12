@@ -152,7 +152,6 @@ class ColorspaceSequence(Sequence):
 			self.match,
 			self.match_info)
 
-
 	def __reduce__(self):
 		return (ColorspaceSequence, (self.name, self.sequence, self.qualities, self.primer,
 			self.second_header, self.match, self.match_info))
