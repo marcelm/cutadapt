@@ -229,12 +229,20 @@ def test_anchored_back():
 	run("-a BACKADAPTER$ -N", "anchored-back.fasta", "anchored-back.fasta")
 
 
+def test_anchored_back_ellipsis_notation():
+	run("-a ...BACKADAPTER$ -N", "anchored-back.fasta", "anchored-back.fasta")
+
+
 def test_anchored_back_no_indels():
 	run("-a BACKADAPTER$ -N --no-indels", "anchored-back.fasta", "anchored-back.fasta")
 
 
 def test_no_indels():
 	run('-a TTAGACATAT -g GAGATTGCCA --no-indels', 'no_indels.fasta', 'no_indels.fasta')
+
+
+def test_ellipsis_notation():
+	run('-a ...TTAGACATAT -g GAGATTGCCA --no-indels', 'no_indels.fasta', 'no_indels.fasta')
 
 
 def test_issue_46():
@@ -421,8 +429,30 @@ def test_linked_multiple():
 	run('-a AAAAAAAAAA...TTTTTTTTTT -a AAAAAAAAAA...GCGCGCGCGC', 'linked.fasta', 'linked.fasta')
 
 
-def test_linked_anchored():
+def test_linked_both_anchored():
 	run('-a AAAAAAAAAA...TTTTT$', 'linked-anchored.fasta', 'linked.fasta')
+
+
+def test_linked_5p_not_anchored():
+	run('-g AAAAAAAAAA...TTTTTTTTTT', 'linked-not-anchored.fasta', 'linked.fasta')
+
+
+@raises(SystemExit)
+def test_linked_anywhere():
+	with redirect_stderr():
+		cutadapt.main(['-b', 'AAA...TTT', datapath('linked.fasta')])
+
+
+@raises(SystemExit)
+def test_anywhere_anchored_5p():
+	with redirect_stderr():
+		cutadapt.main(['-b', '^AAA', datapath('small.fastq')])
+
+
+@raises(SystemExit)
+def test_anywhere_anchored_3p():
+	with redirect_stderr():
+		cutadapt.main(['-b', 'TTT$', datapath('small.fastq')])
 
 
 def test_fasta():

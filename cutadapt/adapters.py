@@ -83,38 +83,65 @@ class AdapterParser(object):
 		"""
 		if name is None:
 			name, spec = self._extract_name(spec)
-		sequence = spec
 		types = dict(back=BACK, front=FRONT, anywhere=ANYWHERE)
 		if cmdline_type not in types:
 			raise ValueError('cmdline_type cannot be {0!r}'.format(cmdline_type))
 		where = types[cmdline_type]
-		if where == FRONT and spec.startswith('^'):  # -g ^ADAPTER
-			sequence, where = spec[1:], PREFIX
-		elif where == BACK:
-			sequence1, middle, sequence2 = spec.partition('...')
-			if middle == '...':
-				if not sequence1:  # -a ...ADAPTER
-					sequence = sequence1[3:]
-				elif not sequence2:  # -a ADAPTER...
-					sequence, where = spec[:-3], PREFIX
-				else:  # -a ADAPTER1...ADAPTER2
-					if self.colorspace:
-						raise NotImplementedError('Using linked adapters in colorspace is not supported')
-					if sequence1.startswith('^'):
-						sequence1 = sequence1[1:]
-					if sequence2.endswith('$'):
-						back_anchored = True
-						sequence2 = sequence2[:-1]
-					else:
-						back_anchored = False
-					return LinkedAdapter(sequence1, sequence2, name=name,
-						back_anchored=back_anchored, **self.constructor_args)
-			elif spec.endswith('$'):   # -a ADAPTER$
-				sequence, where = spec[:-1], SUFFIX
-		if not sequence:
-			raise ValueError("The adapter sequence is empty.")
 
-		return self.adapter_class(sequence, where, name=name, **self.constructor_args)
+		front_anchored, back_anchored = False, False
+		if spec.startswith('^'):
+			spec = spec[1:]
+			front_anchored = True
+		if spec.endswith('$'):
+			spec = spec[:-1]
+			back_anchored = True
+
+		sequence1, middle, sequence2 = spec.partition('...')
+		if where == ANYWHERE:
+			if front_anchored or back_anchored:
+				raise ValueError("'anywhere' (-b) adapters may not be anchored")
+			if middle == '...':
+				raise ValueError("'anywhere' (-b) adapters may not be linked")
+			return self.adapter_class(sequence=spec, where=where, name=name, **self.constructor_args)
+
+		assert where == FRONT or where == BACK
+		if middle == '...':
+			if not sequence1:
+				if where == BACK:  # -a ...ADAPTER
+					spec = sequence2
+				else:  # -g ...ADAPTER
+					raise ValueError('Invalid adapter specification')
+			elif not sequence2:
+				if where == BACK:  # -a ADAPTER...
+					spec = sequence1
+					where = FRONT
+					front_anchored = True
+				else:  # -g ADAPTER...
+					spec = sequence1
+			else:
+				# linked adapter
+				if self.colorspace:
+					raise NotImplementedError(
+						'Using linked adapters in colorspace is not supported')
+				# automatically anchor 5' adapter if -a is used
+				if where == BACK:
+					front_anchored = True
+
+				return LinkedAdapter(sequence1, sequence2, name=name,
+					front_anchored=front_anchored, back_anchored=back_anchored,
+					**self.constructor_args)
+		if front_anchored and back_anchored:
+			raise ValueError('Cannot anchor both ends at the same time')
+		if front_anchored:
+			if where == BACK:
+				raise ValueError("Cannot anchor 3' adapter at 5' end")
+			where = PREFIX
+		elif back_anchored:
+			if where == FRONT:
+				raise ValueError("Cannot anchor 5' adapter at 3' end")
+			where = SUFFIX
+
+		return self.adapter_class(sequence=spec, where=where, name=name, **self.constructor_args)
 
 	def parse(self, spec, cmdline_type='back'):
 		"""
@@ -167,6 +194,7 @@ class Match(object):
 	TODO creating instances of this class is relatively slow and responsible for quite some runtime.
 	"""
 	__slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'front', 'adapter', 'read', 'length']
+
 	def __init__(self, astart, astop, rstart, rstop, matches, errors, front, adapter, read):
 		self.astart = astart
 		self.astop = astop
@@ -247,6 +275,7 @@ class Match(object):
 		
 		return info
 
+
 def _generate_adapter_name(_start=[1]):
 	name = str(_start[0])
 	_start[0] += 1
@@ -286,7 +315,8 @@ class Adapter(object):
 		self.debug = False
 		self.name = _generate_adapter_name() if name is None else name
 		self.sequence = parse_braces(sequence.upper().replace('U', 'T'))
-		assert len(self.sequence) > 0
+		if not self.sequence:
+			raise ValueError('Sequence is empty')
 		self.where = where
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min(min_overlap, len(self.sequence))
@@ -501,11 +531,12 @@ class LinkedMatch(object):
 		self.front_match = front_match
 		self.back_match = back_match
 		self.adapter = adapter
-		assert front_match is not None
+		assert not adapter.front_anchored or front_match is not None
+		assert not adapter.back_anchored or back_match is not None
 
 	@property
 	def matches(self):
-		m = self.front_match.matches
+		m = getattr(self.front_match, 'matches', [])
 		if self.back_match is not None:
 			m += self.back_match.matches
 		return m
@@ -519,7 +550,6 @@ class LinkedAdapter(object):
 		"""
 		kwargs are passed on to individual Adapter constructors
 		"""
-		assert front_anchored, "untested feature"
 		where1 = PREFIX if front_anchored else FRONT
 		where2 = SUFFIX if back_anchored else BACK
 		self.front_anchored = front_anchored
@@ -541,22 +571,24 @@ class LinkedAdapter(object):
 		required to exist for a successful match.
 		"""
 		front_match = self.front_adapter.match_to(read)
-		if front_match is None:
+		if self.front_anchored and front_match is None:
+			print('returning None')
 			return None
-		# TODO use match.trimmed() instead as soon as that does not update
-		# statistics anymore
-		read = read[front_match.rstop:]
+
+		if front_match is not None:
+			# TODO use match.trimmed() instead as soon as that does not update
+			# statistics anymore
+			read = read[front_match.rstop:]
 		back_match = self.back_adapter.match_to(read)
-		if self.back_anchored and not back_match:
+		if back_match is None and (self.back_anchored or front_match is None):
 			return None
 		return LinkedMatch(front_match, back_match, self)
 
 	def trimmed(self, match):
-		front_trimmed = self.front_adapter.trimmed(match.front_match)
 		if match.back_match:
 			return self.back_adapter.trimmed(match.back_match)
 		else:
-			return front_trimmed
+			return self.front_adapter.trimmed(match.front_match)
 
 	# Lots of forwarders (needed for the report). I’m sure this can be done
 	# in a better way.

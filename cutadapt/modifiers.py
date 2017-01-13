@@ -76,6 +76,8 @@ class AdapterCutter(object):
 
 	def __call__(self, read):
 		"""
+		Cut found adapters from a single read. Return modified read.
+
 		Determine the adapter that best matches the given read.
 		Since the best adapter is searched repeatedly, a list
 		of Match instances is returned, which
@@ -84,8 +86,6 @@ class AdapterCutter(object):
 
 		The read is converted to uppercase before it is compared to the adapter
 		sequences.
-
-		Cut found adapters from a single read. Return modified read.
 		"""
 		matches = []
 

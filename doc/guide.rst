@@ -358,6 +358,20 @@ such as ``--info-file``, ``--mask-adapter``.
 .. versionadded:: 1.13
    Ability to anchor the 3' adapter.
 
+
+Linked adapters without anchoring
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes, the 5' adapter of a linked adapter pair should not be anchored. It is possible to
+specify linked adapters also with ``-g ADAPTER1...ADAPTER2`` (note that ``-g`` is used instead
+of ``-a``). These work just like the linked adapters described in the previous section,
+*except that the 5' adapter is not anchored by default*.
+
+This feature has been added on a tentative basis. It may change in the next program version.
+
+.. versionadded:: 1.13
+
+
 Linked adapter statistics
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
