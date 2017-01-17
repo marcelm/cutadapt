@@ -17,30 +17,6 @@ if sys.version_info < (2, 6):
 	sys.exit(1)
 
 
-def out_of_date(extensions):
-	"""
-	Check whether any pyx source is newer than the corresponding generated
-	C source or whether any C source is missing.
-	"""
-	for extension in extensions:
-		for pyx in extension.sources:
-			path, ext = os.path.splitext(pyx)
-			if ext not in ('.pyx', '.py'):
-				continue
-			if extension.language == 'c++':
-				csource = path + '.cpp'
-			else:
-				csource = path + '.c'
-			# When comparing modification times, allow five seconds slack:
-			# If the installation is being run from pip, modification
-			# times are not preserved and therefore depends on the order in
-			# which files were unpacked.
-			if not os.path.exists(csource) or (
-				os.path.getmtime(pyx) > os.path.getmtime(csource) + 5):
-				return True
-	return False
-
-
 def no_cythonize(extensions, **_ignore):
 	"""
 	Change file extensions from .pyx to .c or .cpp.
