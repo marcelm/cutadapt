@@ -101,8 +101,7 @@ class AdapterParser(object):
 					if self.colorspace:
 						raise NotImplementedError('Using linked adapters in colorspace is not supported')
 					if sequence1.startswith('^'):
-						raise NotImplementedError('Using "^" when '
-							'specifying a linked adapter is not supported')
+						sequence1 = sequence1[1:]
 					if sequence2.endswith('$'):
 						back_anchored = True
 						sequence2 = sequence2[:-1]
