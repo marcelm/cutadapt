@@ -4,7 +4,7 @@ from __future__ import print_function, division, absolute_import
 import shutil
 from nose.tools import raises
 from cutadapt.scripts import cutadapt
-from .utils import run, files_equal, datapath, cutpath, redirect_stderr, temporary_path
+from .utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
 
 def run_paired(params, in1, in2, expected1, expected2):
@@ -15,8 +15,8 @@ def run_paired(params, in1, in2, expected1, expected2):
 			params += ['-o', p1, '-p', p2]
 			params += [datapath(in1), datapath(in2)]
 			assert cutadapt.main(params) is None
-			assert files_equal(cutpath(expected1), p1)
-			assert files_equal(cutpath(expected2), p2)
+			assert_files_equal(cutpath(expected1), p1)
+			assert_files_equal(cutpath(expected2), p2)
 
 
 def run_interleaved(params, inpath1, inpath2=None, expected1=None, expected2=None):
@@ -38,10 +38,10 @@ def run_interleaved(params, inpath1, inpath2=None, expected1=None, expected2=Non
 			with temporary_path('tmp2-' + expected2) as tmp2:
 				params += ['-p', tmp2]
 				assert cutadapt.main(params + paths) is None
-				assert files_equal(cutpath(expected2), tmp2)
+				assert_files_equal(cutpath(expected2), tmp2)
 		else:
 			assert cutadapt.main(params + paths) is None
-		assert files_equal(cutpath(expected1), tmp1)
+		assert_files_equal(cutpath(expected1), tmp1)
 
 
 def test_paired_separate():
@@ -70,8 +70,8 @@ def test_untrimmed_paired_output():
 				in1='paired.1.fastq', in2='paired.2.fastq',
 				expected1='paired-trimmed.1.fastq', expected2='paired-trimmed.2.fastq'
 			)
-			assert files_equal(cutpath('paired-untrimmed.1.fastq'), untrimmed1)
-			assert files_equal(cutpath('paired-untrimmed.2.fastq'), untrimmed2)
+			assert_files_equal(cutpath('paired-untrimmed.1.fastq'), untrimmed1)
+			assert_files_equal(cutpath('paired-untrimmed.2.fastq'), untrimmed2)
 
 
 def test_explicit_format_with_paired():
@@ -272,8 +272,8 @@ def test_too_short_paired_output():
 				in1='paired.1.fastq', in2='paired.2.fastq',
 				expected1='paired.1.fastq', expected2='paired.2.fastq'
 			)
-			assert files_equal(cutpath('paired-too-short.1.fastq'), p1)
-			assert files_equal(cutpath('paired-too-short.2.fastq'), p2)
+			assert_files_equal(cutpath('paired-too-short.1.fastq'), p1)
+			assert_files_equal(cutpath('paired-too-short.2.fastq'), p2)
 
 
 def test_too_long_output():
@@ -284,8 +284,8 @@ def test_too_long_output():
 				in1='paired.1.fastq', in2='paired.2.fastq',
 				expected1='paired-too-short.1.fastq', expected2='paired-too-short.2.fastq'
 			)
-			assert files_equal(cutpath('paired.1.fastq'), p1)
-			assert files_equal(cutpath('paired.2.fastq'), p2)
+			assert_files_equal(cutpath('paired.1.fastq'), p1)
+			assert_files_equal(cutpath('paired.2.fastq'), p2)
 
 
 @raises(SystemExit)

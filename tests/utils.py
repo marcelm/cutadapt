@@ -2,8 +2,10 @@
 from __future__ import print_function, division, absolute_import
 
 import sys, os
+import subprocess
 from contextlib import contextmanager
 from cutadapt.scripts import cutadapt
+
 
 @contextmanager
 def redirect_stderr():
@@ -32,8 +34,17 @@ def cutpath(path):
 	return os.path.join(os.path.dirname(__file__), 'cut', path)
 
 
-def files_equal(path1, path2):
-	return os.system("diff -u {0} {1}".format(path1, path2)) == 0
+class FilesDifferent(Exception):
+	pass
+
+
+def assert_files_equal(path1, path2):
+	try:
+		subprocess.check_output(['diff', '-u', path1, path2], stderr=subprocess.STDOUT)
+	except subprocess.CalledProcessError as e:
+		raise FilesDifferent('\n' + e.output.decode())
+	except AttributeError:  # Python 2.6
+		assert subprocess.call(['diff', '-u', path1, path2]) == 0
 
 
 def run(params, expected, inpath, inpath2=None):
@@ -46,5 +57,5 @@ def run(params, expected, inpath, inpath2=None):
 			params += [ datapath(inpath2) ]
 		assert cutadapt.main(params) is None
 		# TODO redirect standard output
-		assert files_equal(cutpath(expected), tmp_fastaq)
+		assert_files_equal(cutpath(expected), tmp_fastaq)
 	# TODO diff log files

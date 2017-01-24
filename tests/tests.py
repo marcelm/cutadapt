@@ -9,7 +9,7 @@ import sys
 from nose.tools import raises
 from cutadapt.scripts import cutadapt
 from cutadapt.compat import StringIO
-from .utils import run, files_equal, datapath, cutpath, redirect_stderr, temporary_path
+from .utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
 
 def test_example():
@@ -39,13 +39,13 @@ def test_rest():
 	"""-r/--rest-file"""
 	with temporary_path('rest.tmp') as rest_tmp:
 		run(['-b', 'ADAPTER', '-N', '-r', rest_tmp], "rest.fa", "rest.fa")
-		assert files_equal(datapath('rest.txt'), rest_tmp)
+		assert_files_equal(datapath('rest.txt'), rest_tmp)
 
 
 def test_restfront():
 	with temporary_path("rest.txt") as path:
 		run(['-g', 'ADAPTER', '-N', '-r', path], "restfront.fa", "rest.fa")
-		assert files_equal(datapath('restfront.txt'), path)
+		assert_files_equal(datapath('restfront.txt'), path)
 
 
 def test_discard():
@@ -81,14 +81,14 @@ def test_minimum_length():
 def test_too_short():
 	"""--too-short-output"""
 	run("-c -m 5 -a 330201030313112312 --too-short-output tooshort.tmp.fa", "minlen.fa", "lengths.fa")
-	assert files_equal(datapath('tooshort.fa'), "tooshort.tmp.fa")
+	assert_files_equal(datapath('tooshort.fa'), "tooshort.tmp.fa")
 	os.remove('tooshort.tmp.fa')
 
 
 def test_too_short_no_primer():
 	"""--too-short-output and --trim-primer"""
 	run("-c -m 5 -a 330201030313112312 --trim-primer --too-short-output tooshort.tmp.fa", "minlen.noprimer.fa", "lengths.fa")
-	assert files_equal(datapath('tooshort.noprimer.fa'), "tooshort.tmp.fa")
+	assert_files_equal(datapath('tooshort.noprimer.fa'), "tooshort.tmp.fa")
 	os.remove('tooshort.tmp.fa')
 
 
@@ -100,7 +100,7 @@ def test_maximum_length():
 def test_too_long():
 	"""--too-long-output"""
 	run("-c -M 5 --too-long-output toolong.tmp.fa -a 330201030313112312", "maxlen.fa", "lengths.fa")
-	assert files_equal(datapath('toolong.fa'), "toolong.tmp.fa")
+	assert_files_equal(datapath('toolong.fa'), "toolong.tmp.fa")
 	os.remove('toolong.tmp.fa')
 
 
@@ -261,13 +261,13 @@ def test_info_file():
 	#
 	with temporary_path("infotmp.txt") as infotmp:
 		run(["--info-file", infotmp, '-a', 'adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT'], "illumina.fastq", "illumina.fastq.gz")
-		assert files_equal(cutpath('illumina.info.txt'), infotmp)
+		assert_files_equal(cutpath('illumina.info.txt'), infotmp)
 
 
 def test_info_file_times():
 	with temporary_path("infotmp.txt") as infotmp:
 		run(["--info-file", infotmp, '--times', '2', '-a', 'adapt=GCCGAACTTCTTA', '-a', 'adapt2=GACTGCCTTAAGGACGT'], "illumina5.fastq", "illumina5.fastq")
-		assert files_equal(cutpath('illumina5.info.txt'), infotmp)
+		assert_files_equal(cutpath('illumina5.info.txt'), infotmp)
 
 
 def test_info_file_fasta():
@@ -354,7 +354,7 @@ def test_unconditional_cut_both():
 def test_untrimmed_output():
 	with temporary_path('untrimmed.tmp.fastq') as tmp:
 		run(['-a', 'TTAGACATATCTCCGTCG', '--untrimmed-output', tmp], 'small.trimmed.fastq', 'small.fastq')
-		assert files_equal(cutpath('small.untrimmed.fastq'), tmp)
+		assert_files_equal(cutpath('small.untrimmed.fastq'), tmp)
 
 
 def test_adapter_file():
@@ -381,9 +381,9 @@ def test_demultiplex():
 	multiout = os.path.join(os.path.dirname(__file__), 'data', 'tmp-demulti.{name}.fasta')
 	params = ['-a', 'first=AATTTCAGGAATT', '-a', 'second=GTTCTCTAGTTCT', '-o', multiout, datapath('twoadapters.fasta')]
 	assert cutadapt.main(params) is None
-	assert files_equal(cutpath('twoadapters.first.fasta'), multiout.format(name='first'))
-	assert files_equal(cutpath('twoadapters.second.fasta'), multiout.format(name='second'))
-	assert files_equal(cutpath('twoadapters.unknown.fasta'), multiout.format(name='unknown'))
+	assert_files_equal(cutpath('twoadapters.first.fasta'), multiout.format(name='first'))
+	assert_files_equal(cutpath('twoadapters.second.fasta'), multiout.format(name='second'))
+	assert_files_equal(cutpath('twoadapters.unknown.fasta'), multiout.format(name='unknown'))
 	os.remove(multiout.format(name='first'))
 	os.remove(multiout.format(name='second'))
 	os.remove(multiout.format(name='unknown'))
