@@ -1173,7 +1173,9 @@ If you have paired-end data, trim also read 2 with the reverse complement of the
 See also the :ref:`section about paired-end adapter trimming above <paired-end>`.
 
 If you want to simplify this a bit, you can also use the common prefix
-``AGATCGGAAGAGC`` as the adapter sequence in both cases::
+``AGATCGGAAGAGC`` as the adapter sequence in both cases. However, you should
+be aware that this sequence occurs multiple times in the human genome and it
+could therefore skew your results very slightly at those loci ::
 
     cutadapt \
 		-a AGATCGGAAGAGC -A AGATCGGAAGAGC \
@@ -1182,6 +1184,12 @@ If you want to simplify this a bit, you can also use the common prefix
 
 The adapter sequences can be found in the document `Illumina TruSeq Adapters
 De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf>`__.
+
+Under some circumstances you may want to consider not trimming adapters at all.
+If you have whole-exome or whole-genome reads, there will be very few reads
+with adapters anyway. And if you use BWA-MEM, the trailing (5') bases of
+a read that do not match the reference are soft-clipped, which  covers those
+cases in which an adapter does occur.
 
 
 .. _warnbase:
