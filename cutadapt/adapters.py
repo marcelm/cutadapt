@@ -371,7 +371,7 @@ class Adapter(object):
 		"""
 		Attempt to match this adapter to the given read.
 
-		Return an Match instance if a match was found;
+		Return a Match instance if a match was found;
 		return None if no match was found given the matching criteria (minimum
 		overlap length, maximum error rate).
 		"""
@@ -584,9 +584,14 @@ class LinkedAdapter(object):
 		return LinkedMatch(front_match, back_match, self)
 
 	def trimmed(self, match):
-		if match.back_match:
+		if match.front_match and match.back_match:
+			# TODO
+			# This does nothing except update the statistics
+			self.front_adapter.trimmed(match.front_match)
 			return self.back_adapter.trimmed(match.back_match)
-		else:
+		elif match.back_match:
+			return self.back_adapter.trimmed(match.back_match)
+		elif match.front_match :
 			return self.front_adapter.trimmed(match.front_match)
 
 	# Lots of forwarders (needed for the report). I’m sure this can be done

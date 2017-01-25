@@ -240,12 +240,13 @@ def print_report(stats, adapters_pair):
 			print("=" * 3, extra + "Adapter", adapter.name, "=" * 3)
 			print()
 			if where == LINKED:
-				print("Sequence: {0}...{1}; Type: linked; Length: {2}+{3}; Trimmed: {4} times; Half matches: {5}".
-					format(adapter.front_adapter.sequence,
+				print("Sequence: {0}...{1}; Type: linked; Length: {2}+{3}; "
+				      "5' trimmed: {4} times; 3' trimmed: {5} times".format(
+						adapter.front_adapter.sequence,
 						adapter.back_adapter.sequence,
 						len(adapter.front_adapter.sequence),
 						len(adapter.back_adapter.sequence),
-						total_front, total_front - total_back))
+						total_front, total_back))
 			else:
 				print("Sequence: {0}; Type: {1}; Length: {2}; Trimmed: {3} times.".
 					format(adapter.sequence, ADAPTER_TYPES[adapter.where],
