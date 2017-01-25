@@ -43,7 +43,7 @@ def assert_files_equal(path1, path2):
 		subprocess.check_output(['diff', '-u', path1, path2], stderr=subprocess.STDOUT)
 	except subprocess.CalledProcessError as e:
 		raise FilesDifferent('\n' + e.output.decode())
-	except AttributeError:  # Python 2.6
+	except AttributeError:  # Python 2.6 does not have check_output
 		assert subprocess.call(['diff', '-u', path1, path2]) == 0
 
 

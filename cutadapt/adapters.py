@@ -572,7 +572,6 @@ class LinkedAdapter(object):
 		"""
 		front_match = self.front_adapter.match_to(read)
 		if self.front_anchored and front_match is None:
-			print('returning None')
 			return None
 
 		if front_match is not None:
