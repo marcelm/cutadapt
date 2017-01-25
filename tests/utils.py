@@ -9,7 +9,7 @@ from cutadapt.scripts import cutadapt
 
 @contextmanager
 def redirect_stderr():
-	"Send stderr to stdout. Nose doesn't capture stderr, yet."
+	"""Send stderr to stdout. Nose doesn't capture stderr, yet."""
 	old_stderr = sys.stderr
 	sys.stderr = sys.stdout
 	yield

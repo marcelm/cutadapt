@@ -245,7 +245,7 @@ class FastqReader(SequenceReader):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
-	def __init__(self, file, sequence_class=Sequence): # TODO could be a class attribute
+	def __init__(self, file, sequence_class=Sequence):  # TODO could be a class attribute
 		"""
 		file is a path or a file-like object. compressed files are supported.
 
@@ -459,6 +459,7 @@ class InterleavedSequenceReader(object):
 	def __exit__(self, *args):
 		self.close()
 
+
 class FileWriter(object):
 	def __init__(self, file):
 		if isinstance(file, str):
@@ -480,10 +481,12 @@ class FileWriter(object):
 	def __exit__(self, *args):
 		self.close()
 
+
 class SingleRecordWriter(object):
 	"""Public interface to single-record files"""
 	def write(self, record):
 		raise NotImplementedError()
+
 
 class FastaWriter(FileWriter, SingleRecordWriter):
 	"""
@@ -572,6 +575,7 @@ class PairRecordWriter(object):
 	"""Public interface to paired-record files"""
 	def write(self, read1, read2):
 		raise NotImplementedError()
+
 	def close(self):
 		raise NotImplementedError()
 	
@@ -604,7 +608,8 @@ class InterleavedSequenceWriter(PairRecordWriter):
 	Write paired-end reads to an interleaved FASTA or FASTQ file
 	"""
 	def __init__(self, file, colorspace=False, fileformat='fastq', qualities=None):
-		self._writer = open(file, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
+		self._writer = open(
+			file, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
 
 	def write(self, read1, read2):
 		self._writer.write(read1)

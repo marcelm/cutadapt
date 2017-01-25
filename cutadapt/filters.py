@@ -15,7 +15,6 @@ The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded).
 """
 from __future__ import print_function, division, absolute_import
-from xopen import xopen
 from . import seqio
 
 # Constants used when returning from a Filter’s __call__ method to improve
@@ -31,7 +30,6 @@ class NoFilter(object):
 	def __init__(self, writer):
 		self.filtered = 0
 		self.writer = writer
-		self.filter = filter
 		self.written = 0  # no of written reads  TODO move to writer
 		self.written_bp = [0, 0]
 
@@ -95,7 +93,7 @@ class PairedRedirector(object):
 			1 means: the pair is discarded if any read matches
 			2 means: the pair is discarded if both reads match
 		"""
-		if not min_affected in (1, 2):
+		if min_affected not in (1, 2):
 			raise ValueError("min_affected must be 1 or 2")
 		self.filtered = 0
 		self.writer = writer
@@ -163,9 +161,9 @@ class TooLongReadFilter(object):
 
 class NContentFilter(object):
 	"""
-	Discards a reads that has a number of 'N's over a given threshold. It handles both raw counts of Ns as well
-	as proportions. Note, for raw counts, it is a greater than comparison, so a cutoff
-	of '1' will keep reads with a single N in it.
+	Discards a reads that has a number of 'N's over a given threshold. It handles both raw counts
+	of Ns as well as proportions. Note, for raw counts, it is a 'greater than' comparison,
+	so a cutoff of '1' will keep reads with a single N in it.
 	"""
 	def __init__(self, count):
 		"""
