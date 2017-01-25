@@ -213,7 +213,7 @@ class Match(object):
 		assert self.errors / self.length <= self.adapter.max_error_rate
 		assert self.length - self.errors > 0
 
-	def __str__(self):
+	def __repr__(self):
 		return 'Match(astart={0}, astop={1}, rstart={2}, rstop={3}, matches={4}, errors={5})'.format(
 			self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
 
