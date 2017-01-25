@@ -39,11 +39,10 @@ class Statistics:
 		self.quality_trimmed_bp = [0, 0]
 		self.did_quality_trimming = False
 		self.quality_trimmed = 0
-		self.total_written_bp = 0
 		self.adapters_pair = ([], [])
 
-		# TODO
-		# fractions should not be attributes
+		# These attributes are derived from the ones above
+		self.total_written_bp = 0
 		self.too_short_fraction = 0
 		self.too_long_fraction = 0
 		self.total_written_bp_fraction = 0
@@ -97,6 +96,7 @@ class Statistics:
 		self.quality_trimmed = sum(self.quality_trimmed_bp)
 		self.adapters_pair = adapters_pair
 
+		# Set the attributes that are derived from the other ones set above
 		self.total_written_bp = sum(self.written_bp)
 		self.written_fraction = safe_divide(self.written, self.n)
 		self.with_adapters_fraction = [safe_divide(v, self.n) for v in self.with_adapters]
