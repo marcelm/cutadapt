@@ -144,7 +144,7 @@ def print_histogram(d, adapter_length, n, error_rate, errors):
 		# when length surpasses adapter_length, the
 		# probability does not increase anymore
 		estimated = n * 0.25 ** min(length, adapter_length)
-		h.append( (length, d[length], estimated) )
+		h.append((length, d[length], estimated))
 
 	print("length", "count", "expect", "max.err", "error counts", sep="\t")
 	for length, count, estimate in h:
@@ -154,7 +154,7 @@ def print_histogram(d, adapter_length, n, error_rate, errors):
 	print()
 
 
-def print_adjacent_bases(bases, sequence):
+def print_adjacent_bases(bases):
 	"""
 	Print a summary of the bases preceding removed adapter sequences.
 	Print a warning if one of the bases is overrepresented and there are
@@ -314,7 +314,7 @@ def print_report(stats):
 				assert where in (BACK, SUFFIX)
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)
-				warning = warning or print_adjacent_bases(adapter.adjacent_bases, adapter.sequence)
+				warning = warning or print_adjacent_bases(adapter.adjacent_bases)
 				print("Overview of removed sequences")
 				print_histogram(adapter.lengths_back, len(adapter), stats.n, adapter.max_error_rate, adapter.errors_back)
 
