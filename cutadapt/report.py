@@ -5,7 +5,6 @@ Routines for printing a report.
 from __future__ import print_function, division, absolute_import
 
 import sys
-from collections import namedtuple
 from contextlib import contextmanager
 import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE, LINKED
@@ -14,12 +13,52 @@ from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadF
 	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, NContentFilter)
 
 
+def safe_divide(numerator, denominator):
+	if numerator is None or not denominator:
+		return 0.0
+	else:
+		return numerator / denominator
+
+
 class Statistics:
-	def __init__(self, n, total_bp1, total_bp2):
+	def __init__(self):
+		"""
+		"""
+		self.n = 0
+		self.total_bp = 0
+		self.total_bp1 = 0
+		self.total_bp2 = 0
+		self.paired = False
+		self.time = 0.01  # CPU time in seconds
+		self.too_short = None
+		self.too_long = None
+		self.written = 0
+		self.written_bp = [0, 0]
+		self.too_many_n = None
+		self.with_adapters = [0, 0]
+		self.quality_trimmed_bp = [0, 0]
+		self.did_quality_trimming = False
+		self.quality_trimmed = 0
+		self.total_written_bp = 0
+		self.adapters_pair = ([], [])
+
+		# TODO
+		# fractions should not be attributes
+		self.too_short_fraction = 0
+		self.too_long_fraction = 0
+		self.total_written_bp_fraction = 0
+		self.with_adapters_fraction = []
+		self.written_fraction = 0
+		self.quality_trimmed_fraction = 0
+		self.too_many_n_fraction = None
+
+	def collect(self, n, total_bp1, total_bp2, adapters_pair, time, modifiers, modifiers2, writers):
 		"""
 		n -- total number of reads
 		total_bp1 -- number of bases in first reads
-		total_bp2 -- number of bases in second reads (set to None for single-end data)
+		total_bp2 -- number of bases in second reads. None for single-end data.
+		adapters_pair -- a pair of lists of adapters
+		time -- CPU time
 		"""
 		self.n = n
 		self.total_bp = total_bp1
@@ -30,21 +69,15 @@ class Statistics:
 			self.paired = True
 			self.total_bp2 = total_bp2
 			self.total_bp += total_bp2
-
-	def collect(self, adapters_pair, time, modifiers, modifiers2, writers):
 		self.time = max(time, 0.01)
-		self.too_short = None
-		self.too_long = None
-		self.written = 0
-		self.written_bp = [0, 0]
-		self.too_many_n = None
+
 		# Collect statistics from writers/filters
 		for w in writers:
-			if isinstance(w, (NoFilter, PairedNoFilter, Demultiplexer)) or isinstance(w.filter, (DiscardTrimmedFilter, DiscardUntrimmedFilter)):
+			if isinstance(w, (NoFilter, PairedNoFilter, Demultiplexer)) or \
+					isinstance(w.filter, (DiscardTrimmedFilter, DiscardUntrimmedFilter)):
 				self.written += w.written
-				if self.n > 0:
-					self.written_fraction = self.written / self.n
-				self.written_bp = self.written_bp[0] + w.written_bp[0], self.written_bp[1] + w.written_bp[1]
+				self.written_bp[0] += w.written_bp[0]
+				self.written_bp[1] += w.written_bp[1]
 			elif isinstance(w.filter, TooShortReadFilter):
 				self.too_short = w.filtered
 			elif isinstance(w.filter, TooLongReadFilter):
@@ -54,9 +87,6 @@ class Statistics:
 		assert self.written is not None
 
 		# Collect statistics from modifiers
-		self.with_adapters = [0, 0]
-		self.quality_trimmed_bp = [0, 0]
-		self.did_quality_trimming = False
 		for i, modifiers_list in [(0, modifiers), (1, modifiers2)]:
 			for modifier in modifiers_list:
 				if isinstance(modifier, QualityTrimmer):
@@ -64,22 +94,18 @@ class Statistics:
 					self.did_quality_trimming = True
 				elif isinstance(modifier, AdapterCutter):
 					self.with_adapters[i] += modifier.with_adapters
-		self.with_adapters_fraction = [ (v / self.n if self.n > 0 else 0) for v in self.with_adapters ]
 		self.quality_trimmed = sum(self.quality_trimmed_bp)
-		self.quality_trimmed_fraction = self.quality_trimmed / self.total_bp if self.total_bp > 0 else 0.0
+		self.adapters_pair = adapters_pair
 
 		self.total_written_bp = sum(self.written_bp)
-		self.total_written_bp_fraction = self.total_written_bp / self.total_bp if self.total_bp > 0 else 0.0
+		self.written_fraction = safe_divide(self.written, self.n)
+		self.with_adapters_fraction = [safe_divide(v, self.n) for v in self.with_adapters]
+		self.quality_trimmed_fraction = safe_divide(self.quality_trimmed, self.total_bp)
+		self.total_written_bp_fraction = safe_divide(self.total_written_bp, self.total_bp)
+		self.too_short_fraction = safe_divide(self.too_short, self.n)
+		self.too_long_fraction = safe_divide(self.too_long, self.n)
+		self.too_many_n_fraction = safe_divide(self.too_many_n, self.n)
 
-		if self.n > 0:
-			if self.too_short is not None:
-				self.too_short_fraction = self.too_short / self.n
-			if self.too_long is not None:
-				self.too_long_fraction = self.too_long / self.n
-			if self.too_many_n is not None:
-				self.too_many_n_fraction = self.too_many_n / self.n
-
-		self.adapters_pair = adapters_pair
 
 ADAPTER_TYPES = {
 	BACK: "regular 3'",

@@ -127,13 +127,14 @@ class Pipeline(object):
 
 	def run(self):
 		start_time = time.clock()
-		stats = self.process_reads()
+		(n, total1_bp, total2_bp) = self.process_reads()
 		self.close_files()
 		elapsed_time = time.clock() - start_time
 		# TODO
 		m = self.modifiers if hasattr(self, 'modifiers') else self.modifiers1
 		m2 = getattr(self, 'modifiers2', [])
-		stats.collect((self.adapters, self.adapters2), elapsed_time,
+		stats = Statistics()
+		stats.collect(n, total1_bp, total2_bp, (self.adapters, self.adapters2), elapsed_time,
 			m, m2, self.filters)
 		return stats
 
@@ -149,7 +150,7 @@ class SingleEndPipeline(Pipeline):
 		self.filters = filters
 
 	def process_reads(self):
-		"""Run the pipeline. Return a Statistics object"""
+		"""Run the pipeline. Return statistics"""
 		n = 0  # no. of processed reads
 		total_bp = 0
 		for read in self.reader:
@@ -160,7 +161,7 @@ class SingleEndPipeline(Pipeline):
 			for filter in self.filters:
 				if filter(read):
 					break
-		return Statistics(n=n, total_bp1=total_bp, total_bp2=None)
+		return (n, total_bp, None)
 
 
 class PairedEndPipeline(Pipeline):
@@ -190,7 +191,7 @@ class PairedEndPipeline(Pipeline):
 				# Stop writing as soon as one of the filters was successful.
 				if filter(read1, read2):
 					break
-		return Statistics(n=n, total_bp1=total1_bp, total_bp2=total2_bp)
+		return (n, total1_bp, total2_bp)
 
 
 def setup_logging(stdout=False, quiet=False):
