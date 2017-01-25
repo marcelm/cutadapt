@@ -79,6 +79,7 @@ class Statistics:
 			if self.too_many_n is not None:
 				self.too_many_n_fraction = self.too_many_n / self.n
 
+		self.adapters_pair = adapters_pair
 
 ADAPTER_TYPES = {
 	BACK: "regular 3'",
@@ -168,7 +169,7 @@ def redirect_standard_output(file):
 	sys.stdout = old_stdout
 
 
-def print_report(stats, adapters_pair):
+def print_report(stats):
 	"""Print report to standard output."""
 	if stats.n == 0:
 		print("No reads processed! Either your input file is empty or you used the wrong -f/--format parameter.")
@@ -225,7 +226,7 @@ def print_report(stats, adapters_pair):
 
 	warning = False
 	for which_in_pair in (0, 1):
-		for adapter in adapters_pair[which_in_pair]:
+		for adapter in stats.adapters_pair[which_in_pair]:
 			total_front = sum(adapter.lengths_front.values())
 			total_back = sum(adapter.lengths_back.values())
 			total = total_front + total_back

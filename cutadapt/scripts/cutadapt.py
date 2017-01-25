@@ -780,7 +780,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
 		with redirect_standard_output(stat_file):
-			print_report(stats, (pipeline.adapters, pipeline.adapters2))
+			print_report(stats)
 
 
 if __name__ == '__main__':
