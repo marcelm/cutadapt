@@ -193,18 +193,26 @@ class Match(object):
 	"""
 	TODO creating instances of this class is relatively slow and responsible for quite some runtime.
 	"""
-	__slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'front', 'adapter', 'read', 'length']
+	__slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'remove_before',
+		'adapter', 'read', 'length', '_trimmed_read', 'adjacent_base']
 
-	def __init__(self, astart, astop, rstart, rstop, matches, errors, front, adapter, read):
+	def __init__(self, astart, astop, rstart, rstop, matches, errors, remove_before, adapter, read):
+		"""
+		remove_before -- True: remove bases before adapter. False: remove after
+		"""
 		self.astart = astart
 		self.astop = astop
 		self.rstart = rstart
 		self.rstop = rstop
 		self.matches = matches
 		self.errors = errors
-		self.front = self._guess_is_front() if front is None else front
 		self.adapter = adapter
 		self.read = read
+		if remove_before:
+			self._trim_front()
+		else:
+			self._trim_back()
+		self.remove_before = remove_before
 		# Number of aligned characters in the adapter. If there are
 		# indels, this may be different from the number of characters
 		# in the read.
@@ -217,15 +225,6 @@ class Match(object):
 		return 'Match(astart={0}, astop={1}, rstart={2}, rstop={3}, matches={4}, errors={5})'.format(
 			self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
 
-	def _guess_is_front(self):
-		"""
-		Return whether this is guessed to be a front adapter.
-
-		The match is assumed to be a front adapter when the first base of
-		the read is involved in the alignment to the adapter.
-		"""
-		return self.rstart == 0
-
 	def wildcards(self, wildcard_char='N'):
 		"""
 		Return a string that contains, for each wildcard character,
@@ -235,8 +234,10 @@ class Match(object):
 		If there are indels, this is not reliable as the full alignment
 		is not available.
 		"""
+		# TODO still assumes bytes
 		wildcards = [ self.read.sequence[self.rstart + i:self.rstart + i + 1] for i in range(self.length)
-			if self.adapter.sequence[self.astart + i] == wildcard_char and self.rstart + i < len(self.read.sequence) ]
+			if self.adapter.sequence[self.astart + i] == wildcard_char and
+				self.rstart + i < len(self.read.sequence) ]
 		return ''.join(wildcards)
 
 	def rest(self):
@@ -246,11 +247,11 @@ class Match(object):
 		return the part after the match if this is not a 'front' adapter (3').
 		This can be an empty string.
 		"""
-		if self.front:
+		if self.remove_before:
 			return self.read.sequence[:self.rstart]
 		else:
 			return self.read.sequence[self.rstop:]
-	
+
 	def get_info_record(self):
 		seq = self.read.sequence
 		qualities = self.read.qualities
@@ -271,9 +272,66 @@ class Match(object):
 				qualities[self.rstop:]
 			)
 		else:
-			info += ('','','')
-		
+			info += ('', '', '')
+
 		return info
+
+	def trimmed(self):
+		return self._trimmed_read
+
+	def _trim_front(self):
+		"""Compute the trimmed read, assuming it’s a 'front' adapter"""
+		self._trimmed_read = self.read[self.rstop:]
+		self.adjacent_base = ''
+
+	def _trim_back(self):
+		"""Compute the trimmed read, assuming it’s a 'back' adapter"""
+		adjacent_base = self.read.sequence[self.rstart-1:self.rstart]
+		if adjacent_base not in 'ACGT':
+			adjacent_base = ''
+		self.adjacent_base = adjacent_base
+		self._trimmed_read = self.read[:self.rstart]
+
+	def update_statistics(self, statistics):
+		"""Update AdapterStatistics in place"""
+		if self.remove_before:
+			statistics.errors_front[self.rstop][self.errors] += 1
+		else:
+			statistics.errors_back[len(self.read) - len(self._trimmed_read)][self.errors] += 1
+			statistics.adjacent_bases[self.adjacent_base] += 1
+
+
+class ColorspaceMatch(Match):
+	adjacent_base = ''
+
+	def _trim_front(self):
+		"""Return a trimmed read"""
+		read = self.read
+		# to remove a front adapter, we need to re-encode the first color following the adapter match
+		color_after_adapter = read.sequence[self.rstop:self.rstop + 1]  # TODO still assumes bytes
+		if not color_after_adapter:
+			# the read is empty
+			new_read = read[self.rstop:]
+		else:
+			base_after_adapter = colorspace.DECODE[self.adapter.nucleotide_sequence[-1:] + color_after_adapter]
+			new_first_color = colorspace.ENCODE[read.primer + base_after_adapter]
+			new_read = read[:]
+			new_read.sequence = new_first_color + read.sequence[(self.rstop + 1):]
+			new_read.qualities = read.qualities[self.rstop:] if read.qualities else None
+		self._trimmed_read =  new_read
+
+	def _trim_back(self):
+		"""Return a trimmed read"""
+		# trim one more color if long enough
+		adjusted_rstart = max(self.rstart - 1, 0)
+		self._trimmed_read = self.read[:adjusted_rstart]
+
+	def update_statistics(self, statistics):
+		"""Update AdapterStatistics in place"""
+		if self.remove_before:
+			statistics.errors_front[self.rstop][self.errors] += 1
+		else:
+			statistics.errors_back[len(self.read) - len(self._trimmed_read)][self.errors] += 1
 
 
 def _generate_adapter_name(_start=[1]):
@@ -284,9 +342,8 @@ def _generate_adapter_name(_start=[1]):
 
 class Adapter(object):
 	"""
-	An adapter knows how to match itself to a read.
-	In particular, it knows where it should be within the read and how to interpret
-	wildcard characters.
+	This class can find a single adapter characterized by sequence, error rate,
+	type etc. within reads.
 
 	where --  One of the BACK, FRONT, PREFIX, SUFFIX or ANYWHERE constants.
 		This influences where the adapter is allowed to appear within in the
@@ -310,11 +367,12 @@ class Adapter(object):
 	name -- optional name of the adapter. If not provided, the name is set to a
 		unique number.
 	"""
+
 	def __init__(self, sequence, where, max_error_rate=0.1, min_overlap=3,
 			read_wildcards=False, adapter_wildcards=True, name=None, indels=True):
 		self.debug = False
 		self.name = _generate_adapter_name() if name is None else name
-		self.sequence = parse_braces(sequence.upper().replace('U', 'T'))
+		self.sequence = parse_braces(sequence.upper().replace('U', 'T'))  # TODO move away
 		if not self.sequence:
 			raise ValueError('Sequence is empty')
 		self.where = where
@@ -323,25 +381,7 @@ class Adapter(object):
 		self.indels = indels
 		self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set('ACGT')
 		self.read_wildcards = read_wildcards
-		# redirect trimmed() to appropriate function depending on adapter type
-		trimmers = {
-			FRONT: self._trimmed_front,
-			PREFIX: self._trimmed_front,
-			BACK: self._trimmed_back,
-			SUFFIX: self._trimmed_back,
-			ANYWHERE: self._trimmed_anywhere
-		}
-		self.trimmed = trimmers[where]
-		if where == ANYWHERE:
-			self._front_flag = None  # means: guess
-		else:
-			self._front_flag = where not in (BACK, SUFFIX)
-		# statistics about length of removed sequences
-		self.lengths_front = defaultdict(int)
-		self.lengths_back = defaultdict(int)
-		self.errors_front = defaultdict(lambda: defaultdict(int))
-		self.errors_back = defaultdict(lambda: defaultdict(int))
-		self.adjacent_bases = { 'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0 }
+		self.remove_before = where not in (BACK, SUFFIX)
 
 		self.aligner = align.Aligner(self.sequence, self.max_error_rate,
 			flags=self.where, wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
@@ -353,7 +393,7 @@ class Adapter(object):
 			self.aligner.indel_cost = 100000
 
 	def __repr__(self):
-		return '<Adapter(name="{name}", sequence="{sequence}", where={where}, '\
+		return '<Adapter(name={name!r}, sequence={sequence!r}, where={where}, '\
 			'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
 			'read_wildcards={read_wildcards}, '\
 			'adapter_wildcards={adapter_wildcards}, '\
@@ -367,7 +407,7 @@ class Adapter(object):
 		self.debug = True
 		self.aligner.enable_debug()
 
-	def match_to(self, read):
+	def match_to(self, read, match_class=Match):
 		"""
 		Attempt to match this adapter to the given read.
 
@@ -375,7 +415,8 @@ class Adapter(object):
 		return None if no match was found given the matching criteria (minimum
 		overlap length, maximum error rate).
 		"""
-		read_seq = read.sequence.upper()
+		read_seq = read.sequence.upper()  # temporary copy
+		remove_before = self.remove_before
 		pos = -1
 		# try to find an exact match first unless wildcards are allowed
 		if not self.adapter_wildcards:
@@ -386,9 +427,12 @@ class Adapter(object):
 			else:
 				pos = read_seq.find(self.sequence)
 		if pos >= 0:
-			match = Match(
+			if self.where == ANYWHERE:
+				# guess: if alignment starts at pos 0, it’s a 5' adapter
+				remove_before = pos == 0
+			match = match_class(
 				0, len(self.sequence), pos, pos + len(self.sequence),
-				len(self.sequence), 0, self._front_flag, self, read)
+				len(self.sequence), 0, remove_before, self, read)
 		else:
 			# try approximate matching
 			if not self.indels and self.where in (PREFIX, SUFFIX):
@@ -400,7 +444,7 @@ class Adapter(object):
 						wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
 				astart, astop, rstart, rstop, matches, errors = alignment
 				if astop - astart >= self.min_overlap and errors / (astop - astart) <= self.max_error_rate:
-					match = Match(*(alignment + (self._front_flag, self, read)))
+					match = match_class(*(alignment + (remove_before, self, read)))
 				else:
 					match = None
 			else:
@@ -411,7 +455,10 @@ class Adapter(object):
 					match = None
 				else:
 					astart, astop, rstart, rstop, matches, errors = alignment
-					match = Match(astart, astop, rstart, rstop, matches, errors, self._front_flag, self, read)
+					if self.where == ANYWHERE:
+						# guess: if alignment starts at pos 0, it’s a 5' adapter
+						remove_before = rstart == 0
+					match = match_class(astart, astop, rstart, rstop, matches, errors, remove_before, self, read)
 
 		if match is None:
 			return None
@@ -419,37 +466,21 @@ class Adapter(object):
 		assert match.length >= self.min_overlap
 		return match
 
-	def _trimmed_anywhere(self, match):
-		"""Return a trimmed read"""
-		if match.front:
-			return self._trimmed_front(match)
-		else:
-			return self._trimmed_back(match)
-
-	def _trimmed_front(self, match):
-		"""Return a trimmed read"""
-		# TODO move away
-		self.lengths_front[match.rstop] += 1
-		self.errors_front[match.rstop][match.errors] += 1
-		return match.read[match.rstop:]
-
-	def _trimmed_back(self, match):
-		"""Return a trimmed read without the 3' (back) adapter"""
-		# TODO move away
-		self.lengths_back[len(match.read) - match.rstart] += 1
-		self.errors_back[len(match.read) - match.rstart][match.errors] += 1
-		adjacent_base = match.read.sequence[match.rstart-1:match.rstart]
-		if adjacent_base not in 'ACGT':
-			adjacent_base = ''
-		self.adjacent_bases[adjacent_base] += 1
-		return match.read[:match.rstart]
-
 	def __len__(self):
 		return len(self.sequence)
 
 
 class ColorspaceAdapter(Adapter):
+	"""
+	An Adapter, but in color space. It does not support all adapter types
+	(see the 'where' parameter).
+	"""
+
 	def __init__(self, *args, **kwargs):
+		"""
+		sequence -- the adapter sequence as a str, can be given in nucleotide space or in color space
+		where -- PREFIX, FRONT, BACK
+		"""
 		super(ColorspaceAdapter, self).__init__(*args, **kwargs)
 		has_nucleotide_seq = False
 		if set(self.sequence) <= set('ACGT'):
@@ -461,19 +492,26 @@ class ColorspaceAdapter(Adapter):
 			raise ValueError("A 5' colorspace adapter needs to be given in nucleotide space")
 		self.aligner.reference = self.sequence
 
-	def match_to(self, read):
-		"""Return Match instance"""
+	def __repr__(self):
+		return '<ColorspaceAdapter(sequence={0!r}, where={1})>'.format(self.sequence, self.where)
+
+	def match_to(self, read, match_class=ColorspaceMatch):
+		"""
+		Match the adapter to the given read
+
+		Return a ColorspaceMatch instance or None if the adapter was not found
+		"""
 		if self.where != PREFIX:
-			return super(ColorspaceAdapter, self).match_to(read)
+			return super(ColorspaceAdapter, self).match_to(read, match_class=match_class)
 		# create artificial adapter that includes a first color that encodes the
 		# transition from primer base into adapter
 		asequence = colorspace.ENCODE[read.primer + self.nucleotide_sequence[0:1]] + self.sequence
 
 		pos = 0 if read.sequence.startswith(asequence) else -1
 		if pos >= 0:
-			match = Match(
+			match = ColorspaceMatch(
 				0, len(asequence), pos, pos + len(asequence),
-				len(asequence), 0, self._front_flag, self, read)
+				len(asequence), 0, self.remove_before, self, read)
 		else:
 			# try approximate matching
 			self.aligner.reference = asequence
@@ -481,7 +519,7 @@ class ColorspaceAdapter(Adapter):
 			if self.debug:
 				print(self.aligner.dpmatrix)  # pragma: no cover
 			if alignment is not None:
-				match = Match(*(alignment + (self._front_flag, self, read)))
+				match = ColorspaceMatch(*(alignment + (self.remove_before, self, read)))
 			else:
 				match = None
 
@@ -491,55 +529,54 @@ class ColorspaceAdapter(Adapter):
 		assert match.length >= self.min_overlap
 		return match
 
-	def _trimmed_front(self, match):
-		"""Return a trimmed read"""
-		read = match.read
-		self.lengths_front[match.rstop] += 1
-		self.errors_front[match.rstop][match.errors] += 1
-		# to remove a front adapter, we need to re-encode the first color following the adapter match
-		color_after_adapter = read.sequence[match.rstop:match.rstop + 1]
-		if not color_after_adapter:
-			# the read is empty
-			return read[match.rstop:]
-		base_after_adapter = colorspace.DECODE[self.nucleotide_sequence[-1:] + color_after_adapter]
-		new_first_color = colorspace.ENCODE[read.primer + base_after_adapter]
-		new_read = read[:]
-		new_read.sequence = new_first_color + read.sequence[(match.rstop + 1):]
-		new_read.qualities = read.qualities[match.rstop:] if read.qualities else None
-		return new_read
-
-	def _trimmed_back(self, match):
-		"""Return a trimmed read"""
-		# trim one more color if long enough
-		adjusted_rstart = max(match.rstart - 1, 0)
-		self.lengths_back[len(match.read) - adjusted_rstart] += 1
-		self.errors_back[len(match.read) - adjusted_rstart][match.errors] += 1
-		return match.read[:adjusted_rstart]
-
-	def __repr__(self):
-		return '<ColorspaceAdapter(sequence={0!r}, where={1})>'.format(self.sequence, self.where)
-
 
 class LinkedMatch(object):
 	"""
-	Represent a match of a LinkedAdapter.
-
-	TODO
-	It shouldn’t be necessary to have both a Match and a LinkedMatch class.
+	Represent a match of a LinkedAdapter
 	"""
 	def __init__(self, front_match, back_match, adapter):
+		"""
+		One of front_match and back_match must be not None!
+		"""
+		# TODO
+		# use a list of matches instead of front_match, back_match
 		self.front_match = front_match
 		self.back_match = back_match
 		self.adapter = adapter
 		assert not adapter.front_anchored or front_match is not None
 		assert not adapter.back_anchored or back_match is not None
 
+	def __repr__(self):
+		return '<LinkedMatch(front_match={0!r}, back_match={1}, adapter={2})>'.format(
+			self.front_match, self.back_match, self.adapter)
+
 	@property
 	def matches(self):
+		"""Number of matching bases"""
 		m = getattr(self.front_match, 'matches', [])
 		if self.back_match is not None:
 			m += self.back_match.matches
 		return m
+
+	def trimmed(self):
+		if self.back_match:
+			# back match is relative to front match, so even if a front match exists,
+			# this is correct
+			return self.back_match.trimmed()
+		else:
+			assert self.front_match
+			return self.front_match.trimmed()
+
+	@property
+	def adjacent_base(self):
+		return self.back_match.adjacent_base
+
+	def update_statistics(self, statistics):
+		"""Update AdapterStatistics in place"""
+		if self.front_match:
+			statistics.errors_front[self.front_match.rstop][self.front_match.errors] += 1
+		if self.back_match:
+			statistics.errors_back[len(self.back_match.read) - self.back_match.rstop][self.back_match.errors] += 1
 
 
 class LinkedAdapter(object):
@@ -575,44 +612,9 @@ class LinkedAdapter(object):
 			return None
 
 		if front_match is not None:
-			# TODO use match.trimmed() instead as soon as that does not update
-			# statistics anymore
-			read = read[front_match.rstop:]
+			# TODO statistics
+			read = front_match.trimmed()
 		back_match = self.back_adapter.match_to(read)
 		if back_match is None and (self.back_anchored or front_match is None):
 			return None
 		return LinkedMatch(front_match, back_match, self)
-
-	def trimmed(self, match):
-		if match.front_match and match.back_match:
-			# TODO
-			# This does nothing except update the statistics
-			self.front_adapter.trimmed(match.front_match)
-			return self.back_adapter.trimmed(match.back_match)
-		elif match.back_match:
-			return self.back_adapter.trimmed(match.back_match)
-		elif match.front_match :
-			return self.front_adapter.trimmed(match.front_match)
-
-	# Lots of forwarders (needed for the report). I’m sure this can be done
-	# in a better way.
-
-	@property
-	def lengths_front(self):
-		return self.front_adapter.lengths_front
-
-	@property
-	def lengths_back(self):
-		return self.back_adapter.lengths_back
-
-	@property
-	def errors_front(self):
-		return self.front_adapter.errors_front
-
-	@property
-	def errors_back(self):
-		return self.back_adapter.errors_back
-
-	@property
-	def adjacent_bases(self):
-		return self.back_adapter.adjacent_bases

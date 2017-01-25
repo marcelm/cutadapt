@@ -108,11 +108,8 @@ class Pipeline(object):
 	"""
 	Processing pipeline that loops over reads and applies modifiers and filters
 	"""
-	def __init__(self, adapters, adapters2):
+	def __init__(self):
 		self._close_files = []
-		self.adapters = adapters
-		self.adapters2 = adapters2
-		self.n_adapters = len(adapters) + len(adapters2)
 
 	def register_file_to_close(self, file):
 		if file is not None and file is not sys.stdin and file is not sys.stdout:
@@ -134,8 +131,7 @@ class Pipeline(object):
 		m = self.modifiers if hasattr(self, 'modifiers') else self.modifiers1
 		m2 = getattr(self, 'modifiers2', [])
 		stats = Statistics()
-		stats.collect(n, total1_bp, total2_bp, (self.adapters, self.adapters2), elapsed_time,
-			m, m2, self.filters)
+		stats.collect(n, total1_bp, total2_bp, elapsed_time, m, m2, self.filters)
 		return stats
 
 
@@ -143,15 +139,15 @@ class SingleEndPipeline(Pipeline):
 	"""
 	Processing pipeline for single-end reads
 	"""
-	def __init__(self, adapters, adapters2, reader, modifiers, filters):
-		super(SingleEndPipeline, self).__init__(adapters, adapters2)
+	def __init__(self, reader, modifiers, filters):
+		super(SingleEndPipeline, self).__init__()
 		self.reader = reader
 		self.modifiers = modifiers
 		self.filters = filters
 
 	def process_reads(self):
 		"""Run the pipeline. Return statistics"""
-		n = 0  # no. of processed reads
+		n = 0  # no. of processed reads  # TODO turn into attribute
 		total_bp = 0
 		for read in self.reader:
 			n += 1
@@ -168,8 +164,8 @@ class PairedEndPipeline(Pipeline):
 	"""
 	Processing pipeline for paired-end reads.
 	"""
-	def __init__(self, adapters, adapters2, paired_reader, modifiers1, modifiers2, filters):
-		super(PairedEndPipeline, self).__init__(adapters, adapters2)
+	def __init__(self, paired_reader, modifiers1, modifiers2, filters):
+		super(PairedEndPipeline, self).__init__()
 		self.paired_reader = paired_reader
 		self.modifiers1 = modifiers1
 		self.modifiers2 = modifiers2
@@ -713,13 +709,14 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		modifiers2.extend(modifiers_both)
 
 	if paired:
-		pipeline = PairedEndPipeline(adapters, adapters2, reader, modifiers, modifiers2, filters)
+		pipeline = PairedEndPipeline(reader, modifiers, modifiers2, filters)
 	else:
-		pipeline = SingleEndPipeline(adapters, adapters2, reader, modifiers, filters)
+		pipeline = SingleEndPipeline(reader, modifiers, filters)
 
 	# TODO the following should be done some other way
 	pipeline.paired = paired
 	pipeline.error_rate = options.error_rate
+	pipeline.n_adapters = len(adapters) + len(adapters2)
 	pipeline.should_print_warning = paired == 'first' and (modifiers_both or cutoffs)
 	for f in [writer, untrimmed_writer,
 			options.rest_file, options.wildcard_file,

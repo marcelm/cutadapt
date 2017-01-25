@@ -7,8 +7,29 @@ need to be stored, and as a class with a __call__ method if there are parameters
 """
 from __future__ import print_function, division, absolute_import
 import re
+from collections import defaultdict
 from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
 from cutadapt.compat import maketrans
+
+
+class AdapterStatistics(object):
+	def __init__(self, adapter):
+		self.adapter = adapter
+		self.errors_front = defaultdict(lambda: defaultdict(int))
+		self.errors_back = defaultdict(lambda: defaultdict(int))
+		self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
+
+	@property
+	def lengths_front(self):
+		# Python 2.6 has no dict comprehension
+		d = dict((length, sum(errors.values())) for length, errors in self.errors_front.items())
+		return d
+
+	@property
+	def lengths_back(self):
+		# Python 2.6 has no dict comprehension
+		d = dict((length, sum(errors.values())) for length, errors in self.errors_back.items())
+		return d
 
 
 class AdapterCutter(object):
@@ -32,7 +53,8 @@ class AdapterCutter(object):
 		self.rest_writer = rest_writer
 		self.action = action
 		self.with_adapters = 0
-		self.keep_match_info = self.info_file is not None
+		self.keep_match_info = self.info_file is not None  # TODO what is this needed for?
+		self.adapter_statistics = dict((a, AdapterStatistics(a)) for a in adapters)  # Python 2.6
 
 	def _best_match(self, read):
 		"""
@@ -40,6 +62,9 @@ class AdapterCutter(object):
 
 		Return either a Match instance or None if there are no matches.
 		"""
+		# TODO
+		# try to sort adapters by length, longest first, break when current best
+		# match is longer than length of next adapter to try
 		best = None
 		for adapter in self.adapters:
 			match = adapter.match_to(read)
@@ -54,10 +79,10 @@ class AdapterCutter(object):
 	def _write_info(self, read):
 		"""
 		Write to the info, wildcard and rest files.
+		"""
 		# TODO
 		# This design with a read having a .match attribute and
 		# a match having a .read attribute is really confusing.
-		"""
 		match = read.match
 		if self.rest_writer and match:
 			self.rest_writer.write(match)
@@ -66,7 +91,7 @@ class AdapterCutter(object):
 			print(match.wildcards(), read.name, file=self.wildcard_file)
 
 		if self.info_file:
-			if read.match_info:
+			if read.match_info:  # TODO pass this in as a parameter, not as an attribute of read
 				for m in read.match_info:
 					print(*m, sep='\t', file=self.info_file)
 			else:
@@ -97,14 +122,15 @@ class AdapterCutter(object):
 				# nothing found
 				break
 			matches.append(match)
-			trimmed_read = match.adapter.trimmed(match)
-		
+			trimmed_read = match.trimmed()
+			match.update_statistics(self.adapter_statistics[match.adapter])
+
 		if not matches:
 			trimmed_read.match = None
 			trimmed_read.match_info = None
 			self._write_info(trimmed_read)
 			return trimmed_read
-		
+
 		if __debug__:
 			assert len(trimmed_read) < len(read), "Trimmed read isn't shorter than original"
 
@@ -116,9 +142,9 @@ class AdapterCutter(object):
 			masked_sequence = trimmed_read.sequence
 			for match in sorted(matches, reverse=True, key=lambda m: m.astart):
 				ns = 'N' * (len(match.read.sequence) -
-							len(match.adapter.trimmed(match).sequence))
+							len(match.trimmed().sequence))  # TODO is this correct? -> stats?
 				# add N depending on match position
-				if match.front:
+				if match.remove_before:
 					masked_sequence = ns + masked_sequence
 				else:
 					masked_sequence += ns
@@ -261,7 +287,7 @@ class QualityTrimmer(object):
 
 
 class Shortener(object):
-	"""Uncoditionally shorten a read to the given length"""
+	"""Unconditionally shorten a read to the given length"""
 	def __init__(self, length):
 		self.length = length
 

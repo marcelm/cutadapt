@@ -39,7 +39,8 @@ class Statistics:
 		self.quality_trimmed_bp = [0, 0]
 		self.did_quality_trimming = False
 		self.quality_trimmed = 0
-		self.adapters_pair = ([], [])
+		self.adapter_stats = [None, None]
+		self.adapter_lists = [[],[]]
 
 		# These attributes are derived from the ones above
 		self.total_written_bp = 0
@@ -51,12 +52,11 @@ class Statistics:
 		self.quality_trimmed_fraction = 0
 		self.too_many_n_fraction = None
 
-	def collect(self, n, total_bp1, total_bp2, adapters_pair, time, modifiers, modifiers2, writers):
+	def collect(self, n, total_bp1, total_bp2, time, modifiers, modifiers2, writers):
 		"""
 		n -- total number of reads
 		total_bp1 -- number of bases in first reads
 		total_bp2 -- number of bases in second reads. None for single-end data.
-		adapters_pair -- a pair of lists of adapters
 		time -- CPU time
 		"""
 		self.n = n
@@ -93,10 +93,11 @@ class Statistics:
 					self.did_quality_trimming = True
 				elif isinstance(modifier, AdapterCutter):
 					self.with_adapters[i] += modifier.with_adapters
-		self.quality_trimmed = sum(self.quality_trimmed_bp)
-		self.adapters_pair = adapters_pair
+					self.adapter_stats[i] = modifier.adapter_statistics
+					self.adapter_lists[i] = modifier.adapters
 
 		# Set the attributes that are derived from the other ones set above
+		self.quality_trimmed = sum(self.quality_trimmed_bp)
 		self.total_written_bp = sum(self.written_bp)
 		self.written_fraction = safe_divide(self.written, self.n)
 		self.with_adapters_fraction = [safe_divide(v, self.n) for v in self.with_adapters]
@@ -252,9 +253,10 @@ def print_report(stats):
 
 	warning = False
 	for which_in_pair in (0, 1):
-		for adapter in stats.adapters_pair[which_in_pair]:
-			total_front = sum(adapter.lengths_front.values())
-			total_back = sum(adapter.lengths_back.values())
+		for adapter in stats.adapter_lists[which_in_pair]:
+			adapter_statistics = stats.adapter_stats[which_in_pair][adapter]
+			total_front = sum(adapter_statistics.lengths_front.values())
+			total_back = sum(adapter_statistics.lengths_back.values())
 			total = total_front + total_back
 			where = adapter.where
 			assert where in (ANYWHERE, LINKED) or (where in (BACK, SUFFIX) and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
@@ -266,9 +268,10 @@ def print_report(stats):
 
 			print("=" * 3, extra + "Adapter", adapter.name, "=" * 3)
 			print()
+
 			if where == LINKED:
 				print("Sequence: {0}...{1}; Type: linked; Length: {2}+{3}; "
-				      "5' trimmed: {4} times; 3' trimmed: {5} times".format(
+					"5' trimmed: {4} times; 3' trimmed: {5} times".format(
 						adapter.front_adapter.sequence,
 						adapter.back_adapter.sequence,
 						len(adapter.front_adapter.sequence),
@@ -287,36 +290,36 @@ def print_report(stats):
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)
 				print("Overview of removed sequences (5')")
-				print_histogram(adapter.lengths_front, len(adapter), stats.n, adapter.max_error_rate, adapter.errors_front)
+				print_histogram(adapter_statistics.lengths_front, len(adapter), stats.n, adapter.max_error_rate, adapter_statistics.errors_front)
 				print()
 				print("Overview of removed sequences (3' or within)")
-				print_histogram(adapter.lengths_back, len(adapter), stats.n, adapter.max_error_rate, adapter.errors_back)
+				print_histogram(adapter_statistics.lengths_back, len(adapter), stats.n, adapter.max_error_rate, adapter_statistics.errors_back)
 			elif where == LINKED:
 				print()
 				print_error_ranges(len(adapter.front_adapter), adapter.front_adapter.max_error_rate)
 				print_error_ranges(len(adapter.back_adapter), adapter.back_adapter.max_error_rate)
 				print("Overview of removed sequences at 5' end")
-				print_histogram(adapter.front_adapter.lengths_front,
+				print_histogram(adapter_statistics.lengths_front,
 					len(adapter.front_adapter), stats.n,
 					adapter.front_adapter.max_error_rate,
-					adapter.front_adapter.errors_front)
+					adapter_statistics.errors_front)
 				print()
 				print("Overview of removed sequences at 3' end")
-				print_histogram(adapter.back_adapter.lengths_back,
+				print_histogram(adapter_statistics.lengths_back,
 					len(adapter.back_adapter), stats.n,
-					adapter.back_adapter.max_error_rate, adapter.back_adapter.errors_back)
+					adapter.back_adapter.max_error_rate, adapter_statistics.errors_back)
 			elif where in (FRONT, PREFIX):
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)
 				print("Overview of removed sequences")
-				print_histogram(adapter.lengths_front, len(adapter), stats.n, adapter.max_error_rate, adapter.errors_front)
+				print_histogram(adapter_statistics.lengths_front, len(adapter), stats.n, adapter.max_error_rate, adapter_statistics.errors_front)
 			else:
 				assert where in (BACK, SUFFIX)
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)
-				warning = warning or print_adjacent_bases(adapter.adjacent_bases)
+				warning = warning or print_adjacent_bases(adapter_statistics.adjacent_bases)
 				print("Overview of removed sequences")
-				print_histogram(adapter.lengths_back, len(adapter), stats.n, adapter.max_error_rate, adapter.errors_back)
+				print_histogram(adapter_statistics.lengths_back, len(adapter), stats.n, adapter.max_error_rate, adapter_statistics.errors_back)
 
 	if warning:
 		print('WARNING:')

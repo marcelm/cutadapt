@@ -6,6 +6,7 @@ from cutadapt.seqio import Sequence
 from cutadapt.adapters import (Adapter, Match, ColorspaceAdapter, FRONT, BACK,
 	parse_braces, LinkedAdapter)
 
+
 def test_issue_52():
 	adapter = Adapter(
 		sequence='GAACTCCAGTCACNNNNN',
@@ -15,7 +16,8 @@ def test_issue_52():
 		read_wildcards=False,
 		adapter_wildcards=True)
 	read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
-	am = Match(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, front=None, adapter=adapter, read=read)
+	am = Match(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2,
+		remove_before=False, adapter=adapter, read=read)
 	assert am.wildcards() == 'GGC'
 	"""
 	The result above should actually be 'CGGC' since the correct
@@ -91,8 +93,7 @@ def test_parse_braces_fail():
 def test_linked_adapter():
 	linked_adapter = LinkedAdapter('AAAA', 'TTTT')
 	sequence = Sequence(name='seq', sequence='AAAACCCCCTTTT')
-	match = linked_adapter.match_to(sequence)
-	trimmed = linked_adapter.trimmed(match)
+	trimmed = linked_adapter.match_to(sequence).trimmed()
 	assert trimmed.name == 'seq'
 	assert trimmed.sequence == 'CCCCC'
 
@@ -107,9 +108,8 @@ def test_info_record():
 		adapter_wildcards=True,
 		name="Foo")
 	read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
-	am = Match(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, front=None, 
+	am = Match(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, remove_before=False,
 		adapter=adapter, read=read)
-	print(am.get_info_record())
 	assert am.get_info_record() == (
 		"abc",
 		2,

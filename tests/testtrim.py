@@ -5,6 +5,7 @@ from cutadapt.seqio import ColorspaceSequence, Sequence
 from cutadapt.adapters import Adapter, ColorspaceAdapter, PREFIX, BACK
 from cutadapt.modifiers import AdapterCutter
 
+
 def test_cs_5p():
 	read = ColorspaceSequence("name", "0123", "DEFG", "T")
 	adapter = ColorspaceAdapter("CG", PREFIX, 0.1)
@@ -22,6 +23,6 @@ def test_statistics():
 	# TODO make this a lot simpler
 	trimmed_bp = 0
 	for adapter in adapters:
-		for d in (adapter.lengths_front, adapter.lengths_back):
+		for d in (cutter.adapter_statistics[adapter].lengths_front, cutter.adapter_statistics[adapter].lengths_back):
 			trimmed_bp += sum(seqlen * count for (seqlen, count) in d.items())
 	assert trimmed_bp <= len(read), trimmed_bp
