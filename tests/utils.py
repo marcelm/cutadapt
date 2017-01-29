@@ -16,11 +16,16 @@ def redirect_stderr():
 	sys.stderr = old_stderr
 
 
-@contextmanager
-def temporary_path(name):
+def temporary_directory():
 	directory = os.path.join(os.path.dirname(__file__), 'testtmp')
 	if not os.path.isdir(directory):
 		os.mkdir(directory)
+	return directory
+
+
+@contextmanager
+def temporary_path(name):
+	directory = temporary_directory()
 	path = os.path.join(directory, name)
 	yield path
 	os.remove(path)
