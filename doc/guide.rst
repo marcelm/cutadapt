@@ -627,6 +627,30 @@ with a cutoff of 10. If you only want to trim the 5' end, then use a cutoff of
 0 for the 3' end, as in ``-q 10,0``.
 
 
+.. _nextseq-trim:
+
+Quality trimming of reads using two-color chemistry (NextSeq)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some Illumina instruments use a two-color chemistry to encode the four bases.
+This includes the NextSeq and the (at the time of this writing) recently
+announced NovaSeq. In those instruments, a 'dark cycle' (with no detected color)
+encodes a ``G``. However, dark cycles also occur when when sequencing "falls
+off" the end of the fragment. The read then `contains a run of high-quality, but
+incorrect ``G`` calls <https://sequencing.qcfail.com/articles/illumina-2-colour-chemistry-can-overcall-high-confidence-g-bases/>`_
+at its 3' end.
+
+Since the regular quality-trimming algorithm cannot deal with this situation,
+you need to use the ``--nextseq-trim`` option::
+
+    cutadapt --nextseq-trim=20 -o out.fastq input.fastq
+
+This works like regular quality trimming (where one would use ``-q 20``
+instead), except that the qualities of ``G`` bases are ignored.
+
+.. versionadded:: 1.10
+
+
 Quality trimming algorithm
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
