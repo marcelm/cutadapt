@@ -622,9 +622,9 @@ trim the 5' end as well, use the ``-q`` option with two comma-separated cutoffs:
 
     cutadapt -q 15,10 -o output.fastq input.fastq
 
-The 5' end will then be trimmed with a cutoff of 15, and the 3' will be trimmed
-with a cutoff of 10. If you only want to trim the 5' end, then use a cutoff of
-0 for the 3' end, as in ``-q 10,0``.
+The 5' end will then be trimmed with a cutoff of 15, and the 3' end will be
+trimmed with a cutoff of 10. If you only want to trim the 5' end, then use a
+cutoff of 0 for the 3' end, as in ``-q 10,0``.
 
 
 .. _nextseq-trim:
