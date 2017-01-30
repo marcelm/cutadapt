@@ -20,17 +20,15 @@ cdef class Sequence(object):
 		public str qualities
 		public bint second_header
 		public object match
-		public object match_info
 
-	def __init__(self, str name, str sequence, str qualities=None, bint second_header=False, match=None,
-				 match_info=None):
+	def __init__(self, str name, str sequence, str qualities=None, bint second_header=False,
+	        match=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
 		self.second_header = second_header
 		self.match = match
-		self.match_info = match_info
 		if qualities is not None and len(qualities) != len(sequence):
 			rname = _shorten(name)
 			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length "
@@ -44,8 +42,7 @@ cdef class Sequence(object):
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
 			self.second_header,
-			self.match,
-			self.match_info)
+			self.match)
 
 	def __repr__(self):
 		qstr = ''
@@ -70,7 +67,7 @@ cdef class Sequence(object):
 
 	def __reduce__(self):
 		return (Sequence, (self.name, self.sequence, self.qualities, self.second_header,
-		    self.match, self.match_info))
+		    self.match))
 
 
 class FastqReader(SequenceReader):

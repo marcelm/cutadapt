@@ -53,7 +53,6 @@ class AdapterCutter(object):
 		self.rest_writer = rest_writer
 		self.action = action
 		self.with_adapters = 0
-		self.keep_match_info = self.info_file is not None  # TODO what is this needed for?
 		self.adapter_statistics = dict((a, AdapterStatistics(a)) for a in adapters)  # Python 2.6
 
 	def _best_match(self, read):
@@ -76,7 +75,7 @@ class AdapterCutter(object):
 				best = match
 		return best
 
-	def _write_info(self, read):
+	def _write_info(self, read, matches):
 		"""
 		Write to the info, wildcard and rest files.
 		"""
@@ -91,9 +90,10 @@ class AdapterCutter(object):
 			print(match.wildcards(), read.name, file=self.wildcard_file)
 
 		if self.info_file:
-			if read.match_info:  # TODO pass this in as a parameter, not as an attribute of read
-				for m in read.match_info:
-					print(*m, sep='\t', file=self.info_file)
+			if matches:
+				for match in matches:
+					info_record = match.get_info_record()
+					print(*info_record, sep='\t', file=self.info_file)
 			else:
 				seq = read.sequence
 				qualities = read.qualities if read.qualities is not None else ''
@@ -127,8 +127,7 @@ class AdapterCutter(object):
 
 		if not matches:
 			trimmed_read.match = None
-			trimmed_read.match_info = None
-			self._write_info(trimmed_read)
+			self._write_info(trimmed_read, [])
 			return trimmed_read
 
 		if __debug__:
@@ -151,16 +150,12 @@ class AdapterCutter(object):
 			# set masked sequence as sequence with original quality
 			trimmed_read.sequence = masked_sequence
 			trimmed_read.qualities = matches[0].read.qualities
-
 			assert len(trimmed_read.sequence) == len(read)
 		elif self.action is None:
 			trimmed_read = read
-		
+
 		trimmed_read.match = matches[-1]
-		if self.keep_match_info:
-			trimmed_read.match_info = [match.get_info_record() for match in matches]
-		self._write_info(trimmed_read)
-		
+		self._write_info(trimmed_read, matches)
 		self.with_adapters += 1
 		return trimmed_read
 
