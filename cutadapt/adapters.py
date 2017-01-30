@@ -234,8 +234,7 @@ class Match(object):
 		If there are indels, this is not reliable as the full alignment
 		is not available.
 		"""
-		# TODO still assumes bytes
-		wildcards = [ self.read.sequence[self.rstart + i:self.rstart + i + 1] for i in range(self.length)
+		wildcards = [ self.read.sequence[self.rstart + i] for i in range(self.length)
 			if self.adapter.sequence[self.astart + i] == wildcard_char and
 				self.rstart + i < len(self.read.sequence) ]
 		return ''.join(wildcards)
@@ -308,7 +307,7 @@ class ColorspaceMatch(Match):
 		"""Return a trimmed read"""
 		read = self.read
 		# to remove a front adapter, we need to re-encode the first color following the adapter match
-		color_after_adapter = read.sequence[self.rstop:self.rstop + 1]  # TODO still assumes bytes
+		color_after_adapter = read.sequence[self.rstop:self.rstop + 1]
 		if not color_after_adapter:
 			# the read is empty
 			new_read = read[self.rstop:]
@@ -538,8 +537,6 @@ class LinkedMatch(object):
 		"""
 		One of front_match and back_match must be not None!
 		"""
-		# TODO
-		# use a list of matches instead of front_match, back_match
 		self.front_match = front_match
 		self.back_match = back_match
 		self.adapter = adapter
