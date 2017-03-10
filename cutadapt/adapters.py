@@ -1,6 +1,9 @@
 # coding: utf-8
 """
-Adapters
+Adapter finding and trimming classes
+
+The ...Adapter classes are responsible for finding adapters.
+The ...Match classes trim the reads.
 """
 from __future__ import print_function, division, absolute_import
 import sys
@@ -191,6 +194,8 @@ class AdapterParser(object):
 
 class Match(object):
 	"""
+	Representation of a single adapter matched to a single read.
+
 	TODO creating instances of this class is relatively slow and responsible for quite some runtime.
 	"""
 	__slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'remove_before',
@@ -317,7 +322,7 @@ class ColorspaceMatch(Match):
 			new_read = read[:]
 			new_read.sequence = new_first_color + read.sequence[(self.rstop + 1):]
 			new_read.qualities = read.qualities[self.rstop:] if read.qualities else None
-		self._trimmed_read =  new_read
+		self._trimmed_read = new_read
 
 	def _trim_back(self):
 		"""Return a trimmed read"""
