@@ -132,7 +132,7 @@ def print_error_ranges(adapter_length, error_rate):
 	print()
 
 
-def print_histogram(adapter_statistics, where, adapter, n):
+def print_histogram(adapter_statistics, where, adapter, n, gc_content):
 	"""
 	Print a histogram. Also, print the no. of reads expected to be
 	trimmed by chance (assuming a uniform distribution of nucleotides in the reads).
@@ -151,7 +151,7 @@ def print_histogram(adapter_statistics, where, adapter, n):
 		d = adapter_statistics.lengths_back
 		errors = adapter_statistics.errors_back
 
-	match_probabilities = adapter.random_match_probabilities(gc_content=0.5)
+	match_probabilities = adapter.random_match_probabilities(gc_content=gc_content)
 	print("length", "count", "expect", "max.err", "error counts", sep="\t")
 	for length in sorted(d):
 		# when length surpasses adapter_length, the
@@ -211,7 +211,7 @@ def redirect_standard_output(file):
 	sys.stdout = old_stdout
 
 
-def print_report(stats):
+def print_report(stats, gc_content):
 	"""Print report to standard output."""
 	if stats.n == 0:
 		print("No reads processed! Either your input file is empty or you used the wrong -f/--format parameter.")
@@ -305,33 +305,33 @@ def print_report(stats):
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)
 				print("Overview of removed sequences (5')")
-				print_histogram(adapter_statistics, 'front', adapter, stats.n)
+				print_histogram(adapter_statistics, 'front', adapter, stats.n, gc_content)
 				print()
 				print("Overview of removed sequences (3' or within)")
-				print_histogram(adapter_statistics, 'back', adapter, stats.n)
+				print_histogram(adapter_statistics, 'back', adapter, stats.n, gc_content)
 			elif where == LINKED:
 				print()
 				print_error_ranges(len(adapter.front_adapter), adapter.front_adapter.max_error_rate)
 				print_error_ranges(len(adapter.back_adapter), adapter.back_adapter.max_error_rate)
 				print("Overview of removed sequences at 5' end")
 				print_histogram(adapter_statistics, 'front',
-					adapter.front_adapter, stats.n)
+					adapter.front_adapter, stats.n, gc_content)
 				print()
 				print("Overview of removed sequences at 3' end")
 				print_histogram(adapter_statistics, 'back',
-					adapter.back_adapter, stats.n)
+					adapter.back_adapter, stats.n, gc_content)
 			elif where in (FRONT, PREFIX):
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)
 				print("Overview of removed sequences")
-				print_histogram(adapter_statistics, 'front', adapter, stats.n)
+				print_histogram(adapter_statistics, 'front', adapter, stats.n, gc_content)
 			else:
 				assert where in (BACK, SUFFIX)
 				print()
 				print_error_ranges(len(adapter), adapter.max_error_rate)
 				warning = warning or print_adjacent_bases(adapter_statistics.adjacent_bases)
 				print("Overview of removed sequences")
-				print_histogram(adapter_statistics, 'back', adapter, stats.n)
+				print_histogram(adapter_statistics, 'back', adapter, stats.n, gc_content)
 
 	if warning:
 		print('WARNING:')

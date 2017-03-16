@@ -8,6 +8,11 @@ development version
 * The 3' adapter of linked adapters can now be anchored. Write
   ``-a ADAPTER1...ADAPTER2$`` to enable (the 5' adapter is always
   anchored).
+* Issue #236: For more accurate statistics, it is now possible to specify the
+  GC content of the input reads with ``--gc-content``. This does
+  not change trimming results, only the number in the "expect"
+  column of the report. Since this is probably not needed by many
+  people, the option is not listed when running ``cutadapt --help``.
 
 v1.12 (2016-11-28)
 ------------------

@@ -64,7 +64,7 @@ check_importability()
 import sys
 import time
 import errno
-from optparse import OptionParser, OptionGroup
+from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
 import functools
 import logging
 import platform
@@ -212,6 +212,10 @@ def get_option_parser():
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
 			"from file name extension.")
+
+	# Hidden option for now
+	parser.add_option("--gc-content", type=float, default=50,  # it's a percentage
+		help=SUPPRESS_HELP)
 
 	group = OptionGroup(parser, "Finding adapters:",
 		description="Parameters -a, -g, -b specify adapters to be removed from "
@@ -743,6 +747,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if not logging.root.handlers:
 		setup_logging(stdout=bool(options.output), quiet=options.quiet)
 
+	if not 0 <= options.gc_content <= 100:
+		parser.error("GC content must be given as percentage between 0 and 100")
 	try:
 		pipeline = pipeline_from_parsed_args(options, args, default_outfile)
 	except CommandlineError as e:
@@ -781,7 +787,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
 		with redirect_standard_output(stat_file):
-			print_report(stats)
+			print_report(stats, options.gc_content / 100)
 
 
 if __name__ == '__main__':

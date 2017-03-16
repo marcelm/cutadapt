@@ -1369,11 +1369,14 @@ In the last row, for example, 358 reads matched the adapter with zero
 errors, 36 with 1 error, and 3 matched with 2 errors.
 
 The "expect" column gives only a rough estimate of the number of
-sequences that is expected to match randomly (it assumes a GC content of
-50%, for example), but it can help to estimate whether the matches that
-were found are true adapter matches or if they are due to chance. At
-lengths 6, for example, only 2.4 reads are expected, but 35 do match,
-which hints that most of these matches are due to actual adapters.
+sequences that is expected to match randomly, but it can help to
+estimate whether the matches that were found are true adapter matches
+or if they are due to chance. At lengths 6, for example, only 2.4
+reads are expected, but 35 do match, which hints that most of these
+matches are due to actual adapters.
+For slightly more accurate estimates, you can provide the correct
+GC content (as a percentage) of your reads with the option
+``--gc-content``. The default is ``--gc-content=50``.
 
 Note that the "length" column refers to the length of the removed
 sequence. That is, the actual length of the match in the above row at
