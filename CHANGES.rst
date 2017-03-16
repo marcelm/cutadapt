@@ -13,6 +13,12 @@ development version
   not change trimming results, only the number in the "expect"
   column of the report. Since this is probably not needed by many
   people, the option is not listed when running ``cutadapt --help``.
+* Issue #235: Adapter sequences are now required to contain only
+  valid IUPAC codes (lowercase is also allowed, ``U`` is an alias
+  for ``T``). This should help to catch hard-to-find bugs, especially
+  in scripts. Use option ``-N`` to match characters literally
+  (possibly useful for amino acid sequences).
+
 
 v1.12 (2016-11-28)
 ------------------

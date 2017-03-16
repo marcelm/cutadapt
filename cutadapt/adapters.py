@@ -383,6 +383,14 @@ class Adapter(object):
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min(min_overlap, len(self.sequence))
 		self.indels = indels
+		iupac = frozenset('XACGTURYSWKMBDHVN')
+		if adapter_wildcards and not set(self.sequence) <= iupac:
+			for c in self.sequence:
+				if c not in iupac:
+					raise ValueError('Character {!r} in adapter sequence {!r} is '
+						'not a valid IUPAC code. Use only characters '
+						'XACGTURYSWKMBDHVN.'.format(c, self.sequence))
+		# Optimization: Use non-wildcard matching if only ACGT is used
 		self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set('ACGT')
 		self.read_wildcards = read_wildcards
 		self.remove_before = where not in (BACK, SUFFIX)
@@ -509,6 +517,9 @@ class ColorspaceAdapter(Adapter):
 		sequence -- the adapter sequence as a str, can be given in nucleotide space or in color space
 		where -- PREFIX, FRONT, BACK
 		"""
+		if kwargs.get('adapter_wildcards', False):
+			raise ValueError('Wildcards not supported for colorspace adapters')
+		kwargs['adapter_wildcards'] = False
 		super(ColorspaceAdapter, self).__init__(*args, **kwargs)
 		has_nucleotide_seq = False
 		if set(self.sequence) <= set('ACGT'):

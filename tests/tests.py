@@ -339,6 +339,12 @@ def test_anchored_no_indels_wildcard_adapt():
 	run('-g ^TTAGACANAT --no-indels -e 0.1', 'anchored_no_indels.fasta', 'anchored_no_indels.fasta')
 
 
+@raises(SystemExit)
+def test_non_iupac_characters():
+	with redirect_stderr():
+		cutadapt.main(['-a', 'ZACGT', datapath('small.fastq')])
+
+
 def test_unconditional_cut_front():
 	run('-u 5', 'unconditional-front.fastq', 'small.fastq')
 

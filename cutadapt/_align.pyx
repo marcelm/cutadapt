@@ -52,7 +52,7 @@ def _iupac_table():
 	C = 2
 	G = 4
 	T = 8
-	d = dict(
+	iupac = dict(
 		X=0,
 		A=A,
 		C=C,
@@ -72,7 +72,7 @@ def _iupac_table():
 		N=A|C|G|T
 	)
 	t = bytearray(b'\0') * 256
-	for c, v in d.items():
+	for c, v in iupac.items():
 		t[ord(c)] = v
 		t[ord(c.lower())] = v
 	return bytes(t)
