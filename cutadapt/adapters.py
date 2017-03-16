@@ -473,6 +473,30 @@ class Adapter(object):
 	def __len__(self):
 		return len(self.sequence)
 
+	def random_match_probabilities(self, gc_content):
+		"""
+		Estimate probabilities that this adapter matches a
+		random sequence. Indels are not taken into account.
+
+		Returns a list p, where p[i] is the probability that
+		i bases of this adapter match a random sequence with
+		GC content gc_content.
+		"""
+		if self.remove_before:
+			seq = self.sequence[::-1]
+		else:
+			seq = self.sequence
+		allowed_bases = 'CGRYSKMBDHVN' if self.adapter_wildcards else 'GC'
+		p = 1
+		probabilities = [p]
+		for i, c in enumerate(seq):
+			if c in allowed_bases:
+				p *= gc_content / 2.
+			else:
+				p *= (1 - gc_content) / 2
+			probabilities.append(p)
+		return probabilities
+
 
 class ColorspaceAdapter(Adapter):
 	"""

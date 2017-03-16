@@ -140,19 +140,22 @@ def print_histogram(d, adapter, n, errors):
 	adapter_length -- adapter length
 	n -- total no. of reads.
 	"""
-	adapter_length = len(adapter)
-	h = []
+	match_probabilities = adapter.random_match_probabilities(gc_content=0.5)
+	print("length", "count", "expect", "max.err", "error counts", sep="\t")
 	for length in sorted(d):
 		# when length surpasses adapter_length, the
 		# probability does not increase anymore
-		estimated = n * 0.25 ** min(length, adapter_length)
-		h.append((length, d[length], estimated))
-
-	print("length", "count", "expect", "max.err", "error counts", sep="\t")
-	for length, count, estimate in h:
+		expect = n * match_probabilities[min(len(adapter), length)]
+		count = d[length]
 		max_errors = max(errors[length].keys())
 		errs = ' '.join(str(errors[length][e]) for e in range(max_errors+1))
-		print(length, count, "{0:.1F}".format(estimate), int(adapter.max_error_rate*min(length, adapter_length)), errs, sep="\t")
+		print(
+			length,
+			count,
+			"{0:.1F}".format(expect),
+			int(adapter.max_error_rate*min(length, len(adapter))),
+			errs,
+			sep="\t")
 	print()
 
 
