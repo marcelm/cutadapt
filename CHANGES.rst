@@ -2,12 +2,15 @@
 Changes
 =======
 
-development version
--------------------
+v1.13 (2017-03-16)
+------------------
 
 * The 3' adapter of linked adapters can now be anchored. Write
-  ``-a ADAPTER1...ADAPTER2$`` to enable (the 5' adapter is always
-  anchored).
+  ``-a ADAPTER1...ADAPTER2$`` to enable this. Note that the
+  5' adapter is always anchored in this notation.
+* Issue #224: If you want the 5' part of a linked adapter *not* to be
+  anchored, you can now write ``-g ADAPTER...ADAPTER2`` (note ``-g``
+  instead of ``-a``).
 * Issue #236: For more accurate statistics, it is now possible to specify the
   GC content of the input reads with ``--gc-content``. This does
   not change trimming results, only the number in the "expect"
@@ -18,7 +21,7 @@ development version
   for ``T``). This should help to catch hard-to-find bugs, especially
   in scripts. Use option ``-N`` to match characters literally
   (possibly useful for amino acid sequences).
-
+* Documentation updates and some refactoring of the code
 
 v1.12 (2016-11-28)
 ------------------
