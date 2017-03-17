@@ -10,7 +10,8 @@ v1.13 (2017-03-16)
   5' adapter is always anchored in this notation.
 * Issue #224: If you want the 5' part of a linked adapter *not* to be
   anchored, you can now write ``-g ADAPTER...ADAPTER2`` (note ``-g``
-  instead of ``-a``).
+  instead of ``-a``). This feature is experimental and may change behavior
+  in the next release.
 * Issue #236: For more accurate statistics, it is now possible to specify the
   GC content of the input reads with ``--gc-content``. This does
   not change trimming results, only the number in the "expect"
