@@ -91,11 +91,15 @@ def test_parse_braces_fail():
 
 
 def test_linked_adapter():
-	linked_adapter = LinkedAdapter('AAAA', 'TTTT')
+	linked_adapter = LinkedAdapter('AAAA', 'TTTT', min_overlap=4)
+	assert linked_adapter.front_adapter.min_overlap == 4
+	assert linked_adapter.back_adapter.min_overlap == 4
+
 	sequence = Sequence(name='seq', sequence='AAAACCCCCTTTT')
 	trimmed = linked_adapter.match_to(sequence).trimmed()
 	assert trimmed.name == 'seq'
 	assert trimmed.sequence == 'CCCCC'
+
 
 
 def test_info_record():
