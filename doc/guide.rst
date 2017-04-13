@@ -1129,6 +1129,15 @@ abbreviated)::
 
     cutadapt -a file:barcodes.fasta --no-trim --untrimmed-o untrimmed.fastq.gz -o trimmed-{name}.fastq.gz input.fastq.gz
 
+Here is a made-up example for the ``barcodes.fasta`` file::
+
+    >barcode01
+    TTAAGGCC
+    >barcode02
+    TAGCTAGC
+    >barcode03
+    ATGATGAT
+
 
 .. _more-than-one:
 
