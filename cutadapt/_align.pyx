@@ -192,6 +192,11 @@ cdef class Aligner:
 	cdef bytes _reference  # TODO rename to translated_reference or so
 	cdef str str_reference
 
+	START_WITHIN_REFERENCE = 1
+	START_WITHIN_QUERY = 2
+	STOP_WITHIN_REFERENCE = 4
+	STOP_WITHIN_QUERY = 8
+
 	def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, bint wildcard_ref=False, bint wildcard_query=False):
 		self.max_error_rate = max_error_rate
 		self.flags = flags
