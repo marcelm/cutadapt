@@ -86,6 +86,7 @@ class AdapterParser(object):
 		"""
 		if name is None:
 			name, spec = self._extract_name(spec)
+		orig_spec = spec
 		types = dict(back=BACK, front=FRONT, anywhere=ANYWHERE)
 		if cmdline_type not in types:
 			raise ValueError('cmdline_type cannot be {0!r}'.format(cmdline_type))
@@ -134,10 +135,10 @@ class AdapterParser(object):
 					front_anchored=front_anchored, back_anchored=back_anchored,
 					**self.constructor_args)
 		if front_anchored and back_anchored:
-			raise ValueError('Cannot anchor both ends at the same time')
+			raise ValueError('Trying to use both "^" and "$" in adapter specification {!r}'.format(orig_spec))
 		if front_anchored:
 			if where == BACK:
-				raise ValueError("Cannot anchor 3' adapter at 5' end")
+				raise ValueError("Cannot anchor the 3' adapter at its 5' end")
 			where = PREFIX
 		elif back_anchored:
 			if where == FRONT:
