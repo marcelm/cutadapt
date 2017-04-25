@@ -614,7 +614,7 @@ class LinkedMatch(object):
 		if self.front_match:
 			statistics.errors_front[self.front_match.rstop][self.front_match.errors] += 1
 		if self.back_match:
-			statistics.errors_back[len(self.back_match.read) - self.back_match.rstop][self.back_match.errors] += 1
+			statistics.errors_back[len(self.back_match.read) - self.back_match.rstart][self.back_match.errors] += 1
 
 
 class LinkedAdapter(object):

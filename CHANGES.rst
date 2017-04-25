@@ -2,6 +2,11 @@
 Changes
 =======
 
+development version
+-------------------
+
+* Fix: Statistics for 3' part of a linked adapter were reported incorrectly
+
 v1.13 (2017-03-16)
 ------------------
 
