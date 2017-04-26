@@ -1346,13 +1346,13 @@ The meaning of this should be obvious.
 The next piece of information is this::
 
     No. of allowed errors:
-    0-9 bp: 0; 10-19 bp: 1; 20 bp: 2
+    0-7 bp: 0; 8-15 bp: 1; 16-20 bp: 2
 
 The adapter, as was shown above, has a length of 20
-characters. We are using the default error rate of 0.1. What this
-implies is shown above: Matches up to a length of 9 bp are allowed to
-have no errors. Matches of lengths 10-19 bp are allowd to have 1 error
-and matches of length 20 can have 2 errors. See also :ref:`the section about
+characters. We are using a custom error rate of 0.12. What this
+implies is shown above: Matches up to a length of 7 bp are allowed to
+have no errors. Matches of lengths 8-15 bp are allowd to have 1 error
+and matches of length 16 or more can have 2 errors. See also :ref:`the section about
 error-tolerant matching <error-tolerance>`.
 
 Finally, a table is output that gives more detailed information about
@@ -1365,17 +1365,25 @@ some rows are left out::
     4       57      39.1    0       57
     5       50      9.8     0       50
     6       35      2.4     0       35
+    7       13      0.3     0       1 12
+    8       31      0.1     1       0 31
     ...
     100     397     0.0     3       358 36 3
 
 The first row tells us the following: Three bases were removed in 140
 reads; randomly, one would expect this to occur 156.2 times; the maximum
 number of errors at that match length is 0 (this is actually redundant
-since we know already that no errors are allowed at lengths 0-9 bp).
+since we know already that no errors are allowed at lengths 0-7 bp).
 
 The last column shows the number of reads that had 0, 1, 2 ... errors.
 In the last row, for example, 358 reads matched the adapter with zero
 errors, 36 with 1 error, and 3 matched with 2 errors.
+
+In the row for length 7 is an apparent anomaly, where the max.err column
+is 0 and yet we have 31 reads matching with 1 error. This is because the
+matches are actually contributed by alignments to the first 8 bases of
+the adapter with one deletion, so 7 bases are removed but the error
+cut-off applied is for length 8.
 
 The "expect" column gives only a rough estimate of the number of
 sequences that is expected to match randomly, but it can help to
