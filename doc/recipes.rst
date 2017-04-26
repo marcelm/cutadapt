@@ -100,6 +100,72 @@ would match the end of every read (because ``N`` matches anything), and ten
 bases would then be removed from every read.
 
 
+Trimming (amplicon-) primers from both ends of paired-end reads
+---------------------------------------------------------------
+
+If you want to remove primer sequences that flank your sequence of
+interest, you should use a :ref:`"linked adapter" <linked-adapters>`
+to remove them. If you have paired-end data (with R1 and R2), you
+can correctly trim both R1 and R2 by using linked adapters for both
+R1 and R2. Here is how to do this.
+
+The full DNA fragment that is put on the sequencer looks like this
+(looking only at the forward strand):
+
+   5' sequencing primer -- forward primer -- sequence of interest -- reverse complement of reverse primer -- reverse complement of 3' sequencing primer
+
+Since sequencing of R1 starts after the 5' sequencing primer, R1 will
+start with the forward primer and then continue into the sequence of
+interest and into the two primers to the right of it, depending on
+the read length and how long the sequence of interest is. For R1,
+the linked adapter option that needs to be used is therefore
+
+    -a FWDPRIMER...RCREVPRIMER
+
+where ``FWDPRIMER`` needs to be replaced with the sequence of your
+forward primer and ``RCREVPRIMER`` with the reverse complement of
+the reverse primer. The three dots ``...`` need to be entered
+as they are -- they tell cutadapt that this is a linked adapter
+with a 5' and a 3' part.
+
+Sequencing of R2 starts before the 3' sequencing primer and
+proceeds along the reverse-complementary strand. For the correct
+linked adapter, the sequences from above therefore need to be
+swapped and reverse-complemented::
+
+    -A REVPRIMER...RCFWDPRIMER
+
+The uppercase ``-A`` specifies that this option is
+meant to work on R2. Similar to above, ``REVPRIMER`` is
+the sequence of the reverse primer and ``RCFWDPRIMER`` is the
+reverse-complement of the forward primer. Note that cutadapt
+does not reverse-complement any sequences of its own; you
+will have to do that yourself.
+
+Finally, you may want to filter the trimmed read pairs.
+Use ``--discard-untrimmed`` to throw away all read pairs in
+which R1 doesn’t start with ``FWDPRIMER`` or in which R2
+does not start with ``REVPRIMER``.
+
+A note on how the filtering works: In linked adapters, by default
+the first part (before the ``...``) is anchored. Anchored
+sequences *must* occur. If they don’t, then the other sequence
+(after the ``...``) is not even searched for and the entire
+read is internally marked as “untrimmed”. This is done for both
+R1 and R2 and as soon as *any* of them is marked as “untrimmed”,
+the entire pair is considered to be “untrimmed”. If
+``--discard-untrimmed`` is used, this means that the entire
+pair is discarded if R1 or R2 are untrimmed. (Option
+``--pair-filter=both`` can be used to change this to require
+that *both* were marked as untrimmed.)
+
+In summary, this is how to trim your data and discard all
+read pairs that do not contain the primer sequences that
+you know must be there::
+
+    cutadapt -a FWDPRIMER...RCREVPRIMER -A REVPRIMER...RCFWDPRIMER --discard-untrimmed -o out.1.fastq.gz -p out.2.fastq.gz in.1.fastq.gz in.2.fastq.gz
+
+
 Other things (unfinished)
 -------------------------
 
