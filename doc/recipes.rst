@@ -118,7 +118,7 @@ Since sequencing of R1 starts after the 5' sequencing primer, R1 will
 start with the forward primer and then continue into the sequence of
 interest and into the two primers to the right of it, depending on
 the read length and how long the sequence of interest is. For R1,
-the linked adapter option that needs to be used is therefore
+the linked adapter option that needs to be used is therefore ::
 
     -a FWDPRIMER...RCREVPRIMER
 
