@@ -12,6 +12,7 @@ Table of contents
    colorspace
    recipes
    ideas
+   develop
    changes
 
 
