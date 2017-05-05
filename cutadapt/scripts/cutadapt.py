@@ -438,7 +438,10 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		# Modify first read only, keep second in sync (-p given, but not -A/-G/-B/-U).
 		# This exists for backwards compatibility ('legacy mode').
 		paired = 'first'
-	# Any of these options switch off legacy mode
+
+	# Switch off legacy mode if certain options given
+	if paired and options.nextseq_trim:
+		paired = 'both'
 	if (options.adapters2 or options.front2 or options.anywhere2 or
 			options.cut2 or options.interleaved or options.pair_filter or
 			options.too_short_paired_output or options.too_long_paired_output):
@@ -659,7 +662,6 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 
 	if options.nextseq_trim is not None:
 		modifiers.append(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
-
 	if cutoffs:
 		modifiers.append(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
 	if adapters:
@@ -704,6 +706,8 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 				if cut != 0:
 					modifiers2.append(UnconditionalCutter(cut))
 
+		if options.nextseq_trim is not None:
+			modifiers2.append(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
 		if cutoffs:
 			modifiers2.append(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
 		if adapters2:

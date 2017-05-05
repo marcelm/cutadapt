@@ -325,3 +325,8 @@ def test_too_short_output_paired_option_missing():
 			in1='paired.1.fastq', in2='paired.2.fastq',
 			expected1='paired.1.fastq', expected2='paired.2.fastq'
 		)
+
+
+def test_nextseq_paired():
+	run_paired('--nextseq-trim 22', in1='nextseq.fastq', in2='nextseq.fastq',
+		expected1='nextseq.fastq', expected2='nextseq.fastq')

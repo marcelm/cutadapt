@@ -6,6 +6,9 @@ development version
 -------------------
 
 * Fix: Statistics for 3' part of a linked adapter were reported incorrectly
+* Fix: Quality trimming with ``--nextseq-trim`` would not apply to R2 when
+  trimming paired-end reads.
+* ``--nextseq-trim`` now disables legacy mode.
 
 v1.13 (2017-03-16)
 ------------------
