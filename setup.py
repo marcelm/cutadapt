@@ -92,7 +92,9 @@ class sdist(versioneer_sdist):
 cmdclass['build_ext'] = build_ext
 cmdclass['sdist'] = sdist
 
-with open('README.rst', encoding='utf-8') as f:
+
+encoding_arg = {'encoding': 'utf-8'} if sys.version > '3' else dict()
+with open('README.rst', **encoding_arg) as f:
 	long_description = f.read()
 
 setup(
