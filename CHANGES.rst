@@ -2,13 +2,16 @@
 Changes
 =======
 
-development version
--------------------
+v1.14 (2017-06-16)
+------------------
 
 * Fix: Statistics for 3' part of a linked adapter were reported incorrectly
-* Fix: Quality trimming with ``--nextseq-trim`` would not apply to R2 when
+* Fix `issue #244 <https://github.com/marcelm/cutadapt/issues/244>`_:
+  Quality trimming with ``--nextseq-trim`` would not apply to R2 when
   trimming paired-end reads.
 * ``--nextseq-trim`` now disables legacy mode.
+* Fix `issue #246 <https://github.com/marcelm/cutadapt/issues/246>`_: installation
+  failed on non-UTF8 locale
 
 v1.13 (2017-03-16)
 ------------------
