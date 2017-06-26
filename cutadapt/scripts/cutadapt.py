@@ -725,7 +725,8 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	pipeline.paired = paired
 	pipeline.error_rate = options.error_rate
 	pipeline.n_adapters = len(adapters) + len(adapters2)
-	pipeline.should_print_warning = paired == 'first' and (modifiers_both or cutoffs)
+	pipeline.should_print_warning = paired == 'first' and (modifiers_both or
+			cutoffs or len(filters) > 1)
 	for f in [writer, untrimmed_writer,
 			options.rest_file, options.wildcard_file,
 			options.info_file, too_short_writer, too_long_writer,
@@ -769,11 +770,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[pipeline.paired])
 
 	if pipeline.should_print_warning:
-		logger.warning('\n'.join(textwrap.wrap('WARNING: Requested read '
-			'modifications are applied only to the first '
-			'read since backwards compatibility mode is enabled. '
-			'To modify both reads, also use any of the -A/-B/-G/-U options. '
-			'Use a dummy adapter sequence when necessary: -A XXX')))
+		logger.warning('\n'.join(textwrap.wrap('WARNING: Legacy mode is '
+			'enabled. Read modification and filtering options *ignore* '
+			'the second read. To switch to regular paired-end mode, '
+			'provide the --pair-filter=any option or use any of the '
+			'-A/-B/-G/-U/--interleaved options.'
+			)))
 
 	try:
 		stats = pipeline.run()
