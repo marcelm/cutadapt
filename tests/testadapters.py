@@ -101,7 +101,6 @@ def test_linked_adapter():
 	assert trimmed.sequence == 'CCCCC'
 
 
-
 def test_info_record():
 	adapter = Adapter(
 		sequence='GAACTCCAGTCACNNNNN',

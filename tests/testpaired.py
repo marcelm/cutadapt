@@ -2,6 +2,8 @@
 from __future__ import print_function, division, absolute_import
 
 import shutil
+import tempfile
+import os.path
 from nose.tools import raises
 from cutadapt.scripts import cutadapt
 from .utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
@@ -143,7 +145,7 @@ def test_second_too_short():
 @raises(SystemExit)
 def test_unmatched_read_names():
 	with temporary_path("swapped.1.fastq") as swapped:
-		# Create a file in which reads 2 and are swapped
+		# Create a file in which reads 2 and 1 are swapped
 		with open(datapath('paired.1.fastq')) as f:
 			lines = f.readlines()
 			lines = lines[0:4] + lines[8:12] + lines[4:8] + lines[12:]
@@ -330,3 +332,22 @@ def test_too_short_output_paired_option_missing():
 def test_nextseq_paired():
 	run_paired('--nextseq-trim 22', in1='nextseq.fastq', in2='nextseq.fastq',
 		expected1='nextseq.fastq', expected2='nextseq.fastq')
+
+
+def test_paired_demultiplex():
+	tempdir = tempfile.mkdtemp(prefix='cutadapt-tests.')
+	multiout1 = os.path.join(tempdir, 'demultiplexed.{name}.1.fastq')
+	multiout2 = os.path.join(tempdir, 'demultiplexed.{name}.2.fastq')
+	params = [
+		'-a', 'first=AACATTAGACA', '-a', 'second=CATTAGACATATCGG',
+		'-A', 'ignored=CAGTGGAGTA', '-A', 'alsoignored=AATAACAGTGGAGTA',
+		'-o', multiout1, '-p', multiout2,
+		datapath('paired.1.fastq'), datapath('paired.2.fastq')]
+	assert cutadapt.main(params) is None
+	assert_files_equal(cutpath('demultiplexed.first.1.fastq'), multiout1.format(name='first'))
+	assert_files_equal(cutpath('demultiplexed.second.1.fastq'), multiout1.format(name='second'))
+	assert_files_equal(cutpath('demultiplexed.unknown.1.fastq'), multiout1.format(name='unknown'))
+	assert_files_equal(cutpath('demultiplexed.first.2.fastq'), multiout2.format(name='first'))
+	assert_files_equal(cutpath('demultiplexed.second.2.fastq'), multiout2.format(name='second'))
+	assert_files_equal(cutpath('demultiplexed.unknown.2.fastq'), multiout2.format(name='unknown'))
+	shutil.rmtree(tempdir)

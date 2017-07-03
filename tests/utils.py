@@ -1,7 +1,8 @@
 # coding: utf-8
 from __future__ import print_function, division, absolute_import
 
-import sys, os
+import sys
+import os.path
 import subprocess
 from tempfile import mkdtemp
 from shutil import rmtree
@@ -53,10 +54,10 @@ def run(params, expected, inpath, inpath2=None):
 	if type(params) is str:
 		params = params.split()
 	with temporary_path(expected) as tmp_fastaq:
-		params += ['-o', tmp_fastaq ] # TODO not parallelizable
-		params += [ datapath(inpath) ]
+		params += ['-o', tmp_fastaq]  # TODO not parallelizable
+		params += [datapath(inpath)]
 		if inpath2:
-			params += [ datapath(inpath2) ]
+			params += [datapath(inpath2)]
 		assert cutadapt.main(params) is None
 		# TODO redirect standard output
 		assert_files_equal(cutpath(expected), tmp_fastaq)

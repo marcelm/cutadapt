@@ -2,6 +2,12 @@
 Changes
 =======
 
+development version
+-------------------
+
+* `Issue #118 <https://github.com/marcelm/cutadapt/issues/118>`_:
+  Added support for demultiplexing of paired-end data.
+
 v1.14 (2017-06-16)
 ------------------
 

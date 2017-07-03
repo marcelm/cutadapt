@@ -78,7 +78,8 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer, Shortener)
 from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedirector,
 	LegacyPairedRedirector, TooShortReadFilter, TooLongReadFilter,
-	Demultiplexer, NContentFilter, DiscardUntrimmedFilter, DiscardTrimmedFilter)
+	Demultiplexer, PairedEndDemultiplexer, NContentFilter, DiscardUntrimmedFilter,
+	DiscardTrimmedFilter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
 
 
@@ -491,7 +492,8 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	elif len(args) == 2:
 		quality_filename = args[1]
 		if options.format is not None:
-			raise CommandlineError("If a pair of .fasta and .qual files is given, the -f/--format parameter cannot be used.")
+			raise CommandlineError('If a pair of .fasta and .qual files is given, the -f/--format '
+				'parameter cannot be used.')
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
 		raise CommandlineError("The input file format must be either 'fasta', 'fastq' or "
@@ -557,18 +559,36 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	demultiplexer = None
 	untrimmed_writer = None
 	writer = None
+	if (options.paired_output is not None and '{name}' in options.paired_output
+			and '{name}' not in options.output):
+		raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
+			'both output file names (-o and -p)')
+
 	if options.output is not None and '{name}' in options.output:
 		if options.discard_trimmed:
 			raise CommandlineError("Do not use --discard-trimmed when demultiplexing.")
-		if paired:
-			raise CommandlineError("Demultiplexing not supported for paired-end files, yet.")
 		untrimmed = options.output.replace('{name}', 'unknown')
 		if options.untrimmed_output:
 			untrimmed = options.untrimmed_output
 		if options.discard_untrimmed:
 			untrimmed = None
-		demultiplexer = Demultiplexer(options.output, untrimmed,
-			qualities=reader.delivers_qualities, colorspace=options.colorspace)
+
+		if paired:
+			untrimmed_paired = options.paired_output.replace('{name}', 'unknown')
+			if options.untrimmed_paired_output:
+				untrimmed_paired = options.untrimmed_paired_output
+			if options.discard_untrimmed:
+				untrimmed_paired = None
+
+			if '{name}' not in options.paired_output:
+				raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
+					'both output file names (-o and -p)')
+			demultiplexer = PairedEndDemultiplexer(options.output, options.paired_output,
+				untrimmed, untrimmed_paired, qualities=reader.delivers_qualities,
+				colorspace=options.colorspace)
+		else:
+			demultiplexer = Demultiplexer(options.output, untrimmed,
+				qualities=reader.delivers_qualities, colorspace=options.colorspace)
 		filters.append(demultiplexer)
 	else:
 		# Set up the remaining filters to deal with --discard-trimmed,

@@ -224,31 +224,69 @@ class Demultiplexer(object):
 		self.colorspace = colorspace
 		self.qualities = qualities
 
-	def __call__(self, read1, read2=None):
-		if read2 is None:
-			# single-end read
-			if read1.match is None:
-				if self.untrimmed_writer is None and self.untrimmed_path is not None:
-					self.untrimmed_writer = seqio.open(self.untrimmed_path,
-						mode='w', colorspace=self.colorspace, qualities=self.qualities)
-				if self.untrimmed_writer is not None:
-					self.written += 1
-					self.written_bp[0] += len(read1)
-					self.untrimmed_writer.write(read1)
-			else:
-				name = read1.match.adapter.name
-				if name not in self.writers:
-					self.writers[name] = seqio.open(self.template.replace('{name}', name),
-						mode='w', colorspace=self.colorspace, qualities=self.qualities)
+	def write(self, read, match):
+		"""
+		Write the read to the proper output file according to the match
+		"""
+		if match is None:
+			if self.untrimmed_writer is None and self.untrimmed_path is not None:
+				self.untrimmed_writer = seqio.open(self.untrimmed_path,
+					mode='w', colorspace=self.colorspace, qualities=self.qualities)
+			if self.untrimmed_writer is not None:
 				self.written += 1
-				self.written_bp[0] += len(read1)
-				self.writers[name].write(read1)
-			return DISCARD
+				self.written_bp[0] += len(read)
+				self.untrimmed_writer.write(read)
 		else:
-			assert False, "Not supported"  # pragma: no cover
+			name = match.adapter.name
+			if name not in self.writers:
+				self.writers[name] = seqio.open(self.template.replace('{name}', name),
+					mode='w', colorspace=self.colorspace, qualities=self.qualities)
+			self.written += 1
+			self.written_bp[0] += len(read)
+			self.writers[name].write(read)
+
+	def __call__(self, read1, read2=None):
+		assert read2 is None
+		self.write(read1, read1.match)
+		return DISCARD
 
 	def close(self):
 		for w in self.writers.values():
 			w.close()
 		if self.untrimmed_writer is not None:
 			self.untrimmed_writer.close()
+
+
+class PairedEndDemultiplexer(object):
+	"""
+	Demultiplex trimmed paired-end reads. Reads are written to different output files
+	depending on which adapter (in read 1) matches.
+	"""
+	def __init__(self, path_template, path_paired_template, untrimmed_path, untrimmed_paired_path,
+			colorspace, qualities):
+		"""
+		The path templates must contain the string '{name}', which will be replaced
+		with the name of the adapter to form the final output path.
+		Read pairs without an adapter match are written to the files named by
+		untrimmed_path.
+		"""
+		self._demultiplexer1 = Demultiplexer(path_template, untrimmed_path, colorspace, qualities)
+		self._demultiplexer2 = Demultiplexer(path_paired_template, untrimmed_paired_path,
+			colorspace, qualities)
+
+	@property
+	def written(self):
+		return self._demultiplexer1.written + self._demultiplexer2.written
+
+	@property
+	def written_bp(self):
+		return [self._demultiplexer1.written_bp[0], self._demultiplexer2.written_bp[0]]
+
+	def __call__(self, read1, read2):
+		assert read2 is not None
+		self._demultiplexer1.write(read1, read1.match)
+		self._demultiplexer2.write(read2, read1.match)
+
+	def close(self):
+		self._demultiplexer1.close()
+		self._demultiplexer1.close()

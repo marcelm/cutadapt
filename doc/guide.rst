@@ -893,7 +893,6 @@ The following limitations still exist:
 
 * The ``--info-file``, ``--rest-file`` and ``--wildcard-file`` options write out
   information only from the first read.
-* Demultiplexing is not yet supported with paired-end data.
 
 
 
@@ -1117,10 +1116,6 @@ to the path in which ``{name}`` is replaced with the name of the adapter that
 was found in the read. Reads in which no adapter was found will be written to a
 file in which ``{name}`` is replaced with ``unknown``.
 
-.. note:
-    Demultiplexing is currently only supported for single-end reads. Paired-end
-    support is planned for one of the next versions.
-
 Example::
 
     cutadapt -a one=TATA -a two=GCGC -o trimmed-{name}.fastq.gz input.fastq.gz
@@ -1147,6 +1142,25 @@ Here is a made-up example for the ``barcodes.fasta`` file::
     >barcode03
     ATGATGAT
 
+Demultiplexing is also supported for paired-end data if you provide the ``{name}`` template
+in both output file names (``-o`` and ``-p``). Paired-end demultiplexing always uses the adapter
+matches of the *first* read to decide where a read should be written.
+If adapters to be found in read 2 are given (``-A``/``-G``), they are detected and removed as normal, but
+these matches do not influence where the read pair is written. This is
+to ensure that read 1 and read 2 are always synchronized. Example::
+
+    cutadapt -a first=AACCGG -a second=TTTTGG -A ACGTACGT -A TGCATGCA -o trimmed-{name}.1.fastq.gz -p trimmed-{name}.2.fastq.gz input.1.fastq.gz input.2.fastq.gz
+
+This will create up to six output files named ``trimmed-first.1.fastq.gz``, ``trimmed-second.1.fastq.gz``,
+``trimmed-unknown.1.fastq.gz`` and ``trimmed-first.2.fastq.gz``, ``trimmed-second.2.fastq.gz``,
+``trimmed-unknown.2.fastq.gz``.
+
+You can use ``--untrimmed-paired-output`` to change the name for the output file that receives the
+untrimmed second reads.
+
+
+.. versionadded:: 1.15
+   Demultiplexing of paired-end data.
 
 .. _more-than-one:
 
