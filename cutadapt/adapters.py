@@ -34,7 +34,7 @@ def parse_braces(sequence):
 	# Simple DFA with four states, encoded in prev
 	result = ''
 	prev = None
-	for s in re.split('(\{|\})', sequence):
+	for s in re.split('([{}])', sequence):
 		if s == '':
 			continue
 		if prev is None:
