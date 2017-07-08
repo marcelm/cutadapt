@@ -10,14 +10,19 @@ To trim a 3' adapter, the basic command-line for cutadapt is::
     cutadapt -a AACCGGTT -o output.fastq input.fastq
 
 The sequence of the adapter is given with the ``-a`` option. You need to replace
-``AACCGGTT`` with your actual adapter sequence. Reads are read from the input
-file ``input.fastq`` and written to the output file ``output.fastq``.
+``AACCGGTT`` with the correct adapter sequence. Reads are read from the input
+file ``input.fastq`` and are written to the output file ``output.fastq``.
+
+Compressed in- and output files are also supported::
+
+    cutadapt -a AACCGGTT -o output.fastq.gz input.fastq.gz
 
 Cutadapt searches for the adapter in all reads and removes it when it finds it.
-All reads that were present in the input file will also be present in the output
-file, some of them trimmed, some of them not. Even reads that were trimmed
-entirely (because the adapter was found in the very beginning) are output. All
-of this can be changed with command-line options, explained further down.
+Unless you use a filtering option, all reads that were present in the input file
+will also be present in the output file, some of them trimmed, some of them not.
+Even reads that were trimmed entirely (because the adapter was found in the very
+beginning) are output. All of this can be changed with command-line options,
+explained further down.
 
 
 Input and output file formats
@@ -25,9 +30,9 @@ Input and output file formats
 
 Input files for cutadapt need to be in one the these formats:
 
-* FASTA (file name extensions: ``.fasta``, ``.fa``, ``.fna``)
-* FASTQ (extensions: ``.fastq``, ``.fq``)
-* Any of the above, but compressed as ``.gz`` (even ``.bz2`` and ``.xz`` are supported).
+* FASTA with extensions ``.fasta``, ``.fa`` or ``.fna``
+* FASTQ with extensions ``.fastq`` or ``.fq``
+* Any of the above, but compressed as ``.gz``, ``.bz2`` or ``.xz``
 
 :ref:`Cutadapt’s support for processing of colorspace data is described
 elsewhere <colorspace>`.
@@ -35,11 +40,13 @@ elsewhere <colorspace>`.
 Input and output file formats are recognized from the file name extension. You
 can override the input format with the ``--format`` option.
 
-You can even use this -- without any adapter trimming -- to convert from
-FASTQ to FASTA::
+You can use the automatic format detection to convert from FASTQ to FASTA
+(without doing any adapter trimming)::
 
-    cutadapt -o output.fasta input.fastq.gz
+    cutadapt -o output.fasta.gz input.fastq.gz
 
+
+.. _compressed-files:
 
 Compressed files
 ----------------
@@ -47,8 +54,7 @@ Compressed files
 Cutadapt supports compressed input and output files. Whether an input file
 needs to be decompressed or an output file needs to be compressed is detected
 automatically by inspecting the file name: If it ends in ``.gz``, then gzip
-compression is assumed. You can therefore run cutadapt like this and it works
-as expected::
+compression is assumed. This is why the example given above works::
 
     cutadapt -a AACCGGTT -o output.fastq.gz input.fastq.gz
 
@@ -58,10 +64,10 @@ Files compressed with bzip2 (``.bz2``) or xz (``.xz``) are also supported, but
 only if the Python installation includes the proper modules. xz files require
 Python 3.3 or later.
 
-Concatenated bz2 files are *not supported* on Python versions before 3.3.
+Concatenated bz2 input files are *not supported* on Python versions before 3.3.
 These files are created by utilities such as ``pbzip2`` (parallel bzip2).
 
-Concatenated gz files *are* supported on all supported Python versions.
+Concatenated gz input files *are* supported on all supported Python versions.
 
 
 Standard input and output
@@ -338,7 +344,7 @@ and you have these input reads::
 
 Trimming with ::
 
-    cutadapt -a FIRST...SECOND input.fastq > output.fastq
+    cutadapt -a FIRST...SECOND -o output.fastq input.fastq
 
 will result in ::
 
@@ -542,17 +548,20 @@ useful for trimming adapters with an embedded variable barcode::
 
     cutadapt -a ACGTAANNNNTTAGC -o output.fastq input.fastq
 
-Wildcard characters in the adapter are enabled by default. Use the option ``-N``
-to disable this.
+Even the ``X`` wildcard that does not match any nucleotide is supported. It is
+useful, for example, :ref:`as a trick for avoiding internal adapter
+matches <avoid-internal-adapter-matches>`.
 
-Matching of wildcards in the reads is also possible, but disabled by default
-in order to avoid matches in reads that consist of many (often low-quality)
-``N`` bases. Use ``--match-read-wildcards`` to enable wildcards also in reads.
+Wildcard characters are by default only allowed in adapter sequences and
+are not recognized when they occur in a read. This is to avoid matches in reads
+that consist of many (often low-quality) ``N`` bases. Use
+``--match-read-wildcards`` to enable wildcards also in reads.
 
-If wildcards are disabled entirely (that is, you use ``-N`` and *do not* use
-``--match-read-wildcards``), then cutadapt compares characters by ASCII value.
-Thus, both the read and adapter can be arbitrary strings (such as ``SEQUENCE``
-or ``ADAPTER`` as used here in the examples).
+Use the option ``-N`` to disable interpretation of wildcard characters even in
+the adapters. If wildcards are disabled entirely, that is, when you use ``-N``
+and *do not* use ``--match-read-wildcards``, then cutadapt compares characters
+by their ASCII value. Thus, both the read and adapter can be arbitrary strings
+(such as ``SEQUENCE`` or ``ADAPTER`` as used here in the examples).
 
 Wildcards do not work in colorspace.
 
@@ -690,9 +699,9 @@ Shortening reads to a fixed length
 To shorten each read down to a certain length, use the ``--length`` option or
 the short version ``-l``::
 
-    cutadapt -l 10 input.fastq > output.fastq
+    cutadapt -l 10 -o output.fastq.gz input.fastq.gz
 
-This shortens all reads from ``input.fastq`` down to 10 bases. The removed bases
+This shortens all reads from ``input.fastq.gz`` down to 10 bases. The removed bases
 are those on the 3' end.
 
 If you want to remove a fixed number of bases from each read, use

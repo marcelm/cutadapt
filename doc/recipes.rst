@@ -5,6 +5,7 @@ Recipes (FAQ)
 This section gives answers to frequently asked questions. It shows you how to
 get cutadapt to do what you want it to do!
 
+.. _avoid-internal-adapter-matches:
 
 Avoid internal adapter matches
 ------------------------------
