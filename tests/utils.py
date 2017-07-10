@@ -3,6 +3,8 @@ from __future__ import print_function, division, absolute_import
 
 import sys, os
 import subprocess
+from tempfile import mkdtemp
+from shutil import rmtree
 from contextlib import contextmanager
 from cutadapt.scripts import cutadapt
 
@@ -18,12 +20,12 @@ def redirect_stderr():
 
 @contextmanager
 def temporary_path(name):
-	directory = os.path.join(os.path.dirname(__file__), 'testtmp')
-	if not os.path.isdir(directory):
-		os.mkdir(directory)
-	path = os.path.join(directory, name)
-	yield path
-	os.remove(path)
+	tempdir = mkdtemp(prefix='cutadapt-tests.')
+	path = os.path.join(tempdir, name)
+	try:
+		yield path
+	finally:
+		rmtree(tempdir)
 
 
 def datapath(path):

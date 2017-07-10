@@ -6,6 +6,8 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import sys
+import tempfile
+import shutil
 from nose.tools import raises
 from cutadapt.scripts import cutadapt
 from cutadapt.compat import StringIO
@@ -384,15 +386,14 @@ def test_adapter_file_3p_anchored_no_indels():
 
 
 def test_demultiplex():
-	multiout = os.path.join(os.path.dirname(__file__), 'data', 'tmp-demulti.{name}.fasta')
+	tempdir = tempfile.mkdtemp(prefix='cutadapt-tests.')
+	multiout = os.path.join(tempdir, 'tmp-demulti.{name}.fasta')
 	params = ['-a', 'first=AATTTCAGGAATT', '-a', 'second=GTTCTCTAGTTCT', '-o', multiout, datapath('twoadapters.fasta')]
 	assert cutadapt.main(params) is None
 	assert_files_equal(cutpath('twoadapters.first.fasta'), multiout.format(name='first'))
 	assert_files_equal(cutpath('twoadapters.second.fasta'), multiout.format(name='second'))
 	assert_files_equal(cutpath('twoadapters.unknown.fasta'), multiout.format(name='unknown'))
-	os.remove(multiout.format(name='first'))
-	os.remove(multiout.format(name='second'))
-	os.remove(multiout.format(name='unknown'))
+	shutil.rmtree(tempdir)
 
 
 def test_max_n():
