@@ -6,11 +6,9 @@ The ...Adapter classes are responsible for finding adapters.
 The ...Match classes trim the reads.
 """
 from __future__ import print_function, division, absolute_import
-import sys
 import re
-from collections import defaultdict
 from cutadapt import align, colorspace
-from cutadapt.seqio import ColorspaceSequence, FastaReader
+from cutadapt.seqio import FastaReader
 
 # Constants for the find_best_alignment function.
 # The function is called with SEQ1 as the adapter, SEQ2 as the read.
