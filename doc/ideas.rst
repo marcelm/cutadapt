@@ -43,7 +43,7 @@ to add new adapter types in the feature.
     anywhere,``-b ADAPTER``, ``-a ...ADAPTER...`` ???
     unconditional,``-u +10``,``-a 10...`` (collides with colorspace)
     unconditional,``-u -10``,``-a ...10$``
-    linked,(not implemented),``-a ADAPTER...ADAPTER`` or ``-a ^ADAPTER...ADAPTER``
+    linked,``-a ADAPTER...ADAPTER``,``-a ADAPTER...ADAPTER`` or ``-a ^ADAPTER...ADAPTER``
 
 Or add only ``-a ADAPTER...`` as an alias for ``-g ^ADAPTER`` and
 ``-a ...ADAPTER`` as an alias for ``-a ADAPTER``.
