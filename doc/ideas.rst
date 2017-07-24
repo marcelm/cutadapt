@@ -99,5 +99,5 @@ Available/used letters for command-line options
 -----------------------------------------------
 
 * Remaining characters: All uppercase letters except A, B, G, M, N, O, U
-* Lowercase letters: i, j, k, l, s, w
+* Lowercase letters: i, j, k, s, w
 * Planned/reserved: Q (paired-end quality trimming), j (multithreading)
