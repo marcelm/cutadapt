@@ -218,7 +218,7 @@ def get_option_parser():
 	parser.add_option("--gc-content", type=float, default=50,  # it's a percentage
 		help=SUPPRESS_HELP)
 
-	group = OptionGroup(parser, "Finding adapters:",
+	group = OptionGroup(parser, "Finding adapters",
 		description="Parameters -a, -g, -b specify adapters to be removed from "
 			"each read (or from the first read in a pair if data is paired). "
 			"If specified multiple times, only the best matching adapter is "
@@ -254,9 +254,8 @@ def get_option_parser():
 	group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
 		help="Remove up to COUNT adapters from each read. Default: %default")
 	group.add_option("-O", "--overlap", type=int, metavar="MINLENGTH", default=3,
-		help="If the overlap between the read and the adapter is shorter than "
-			"MINLENGTH, the read is not modified. Reduces the no. of bases "
-			"trimmed due to random adapter matches. Default: %default")
+		help="Require MINLENGTH overlap between read and adapter for an adapter "
+			"to be found. Default: %default")
 	group.add_option("--match-read-wildcards", action="store_true", default=False,
 		help="Interpret IUPAC wildcards in reads. Default: %default")
 	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
@@ -277,7 +276,7 @@ def get_option_parser():
 			"Can be used twice if LENGTHs have different signs.")
 	group.add_option("--nextseq-trim", type=int, default=None, metavar="3'CUTOFF",
 		help="NextSeq-specific quality trimming (each read). Trims also dark "
-			"cycles appearing as high-quality G bases (EXPERIMENTAL).")
+			"cycles appearing as high-quality G bases.")
 	group.add_option("-q", "--quality-cutoff", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
 		help="Trim low-quality bases from 5' and/or 3' ends of each read before "
 			"adapter removal. Applied to both reads if data is paired. If one "
@@ -306,25 +305,22 @@ def get_option_parser():
 		help="Add this suffix to read names; can also include {name}")
 	parser.add_option_group(group)
 
-	group = OptionGroup(parser, "Filtering of processed reads")
+	group = OptionGroup(parser, "Filtering of processed reads",
+		description="Filters are applied after above read modifications. "
+			"Paired-end reads are always discarded pairwise (see also "
+			"--pair-filter).")
 	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
-		help="Discard trimmed reads that are shorter than LENGTH. Reads that "
-			"are too short even before adapter removal are also discarded. In "
-			"colorspace, an initial primer is not counted. Default: 0")
+		help="Discard reads shorter than LENGTH. Default: 0")
 	group.add_option("-M", "--maximum-length", type=int, default=sys.maxsize, metavar="LENGTH",
-		help="Discard trimmed reads that are longer than LENGTH. "
-			"Reads that are too long even before adapter removal "
-			"are also discarded. In colorspace, an initial primer "
-			"is not counted. Default: no limit")
+		help="Discard reads longer than LENGTH. Default: no limit")
 	group.add_option("--max-n", type=float, default=-1.0, metavar="COUNT",
-		help="Discard reads with too many N bases. If COUNT is an integer, it "
-			"is treated as the absolute number of N bases. If it is between 0 "
-			"and 1, it is treated as the proportion of N's allowed in a read.")
+		help="Discard reads with more than COUNT 'N' bases. If COUNT is a number "
+			"between 0 and 1, it is interpreted as a fraction of the read length.")
 	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
 		help="Discard reads that contain an adapter. Also use -O to avoid "
 			"discarding too many randomly matching reads!")
 	group.add_option("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
-		help="Discard reads that do not contain the adapter.")
+		help="Discard reads that do not contain an adapter.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Output")
@@ -340,11 +336,10 @@ def get_option_parser():
 			"See the documentation for the file format.")
 	group.add_option("-r", "--rest-file", metavar="FILE",
 		help="When the adapter matches in the middle of a read, write the "
-			"rest (after the adapter) into FILE.")
+			"rest (after the adapter) to FILE.")
 	group.add_option("--wildcard-file", metavar="FILE",
-		help="When the adapter has N bases (wildcards), write adapter bases "
-			"matching wildcard positions to FILE. When there are indels in the "
-			"alignment, this will often not be accurate.")
+		help="When the adapter has N wildcard bases, write adapter bases "
+			"matching wildcard positions to FILE. (Inaccurate with indels.)")
 	group.add_option("--too-short-output", metavar="FILE",
 		help="Write reads that are too short (according to length specified by "
 		"-m) to FILE. Default: discard reads")
@@ -358,25 +353,22 @@ def get_option_parser():
 
 	group = OptionGroup(parser, "Colorspace options")
 	group.add_option("-c", "--colorspace", action='store_true', default=False,
-		help="Enable colorspace mode: Also trim the color that is adjacent to the found adapter.")
+		help="Enable colorspace mode")
 	group.add_option("-d", "--double-encode", action='store_true', default=False,
 		help="Double-encode colors (map 0,1,2,3,4 to A,C,G,T,N).")
 	group.add_option("-t", "--trim-primer", action='store_true', default=False,
-		help="Trim primer base and the first color (which is the transition "
-			"to the first nucleotide)")
+		help="Trim primer base and the first color")
 	group.add_option("--strip-f3", action='store_true', default=False,
 		help="Strip the _F3 suffix of read names")
 	group.add_option("--maq", "--bwa", action='store_true', default=False,
 		help="MAQ- and BWA-compatible colorspace output. This enables -c, -d, "
 			"-t, --strip-f3 and -y '/1'.")
-	group.add_option("--no-zero-cap", dest='zero_cap', action='store_false',
-		help="Do not change negative quality values to zero in colorspace "
-			"data. By default, they are since many tools have problems with "
-			"negative qualities.")
 	group.add_option("--zero-cap", "-z", action='store_true',
-		help="Change negative quality values to zero. This is enabled "
-		"by default when -c/--colorspace is also enabled. Use the above option "
-		"to disable it.")
+		help="Change negative quality values to zero. Enabled by default "
+			"in colorspace mode since many tools have problems with "
+			"negative qualities")
+	group.add_option("--no-zero-cap", dest='zero_cap', action='store_false',
+		help="Disable zero capping")
 	parser.set_defaults(zero_cap=None, action='trim')
 	parser.add_option_group(group)
 
@@ -398,7 +390,7 @@ def get_option_parser():
 	group.add_option("--pair-filter", metavar='(any|both)', default=None,
 		choices=("any", "both"),
 		help="Which of the reads in a paired-end read have to match the "
-			"filtering criterion in order for it to be filtered. "
+			"filtering criterion in order for the pair to be filtered. "
 			"Default: any")
 	group.add_option("--interleaved", action='store_true', default=False,
 		help="Read and write interleaved paired-end reads.")
