@@ -3,6 +3,7 @@ language: python
 cache:
   directories:
     - $HOME/.cache/pip
+
 python:
   - "2.6"
   - "2.7"
@@ -13,6 +14,12 @@ python:
   - "3.6-dev"
   - "3.7-dev"
   - "nightly"
+
+matrix:
+  allow_failures:
+    - python: "3.6-dev"
+    - python: "3.7-dev"
+    - python: "nightly"
 
 install:
   - pip install --upgrade pip wheel
