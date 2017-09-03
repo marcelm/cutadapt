@@ -167,6 +167,25 @@ you know must be there::
     cutadapt -a FWDPRIMER...RCREVPRIMER -A REVPRIMER...RCFWDPRIMER --discard-untrimmed -o out.1.fastq.gz -p out.2.fastq.gz in.1.fastq.gz in.2.fastq.gz
 
 
+Piping paired-end data
+----------------------
+
+Sometimes it is necessary to run cutadapt twice on your data. For example, when
+you want to change the order in which read modification or filtering options are
+applied. To simplify this, you can use Unix pipes (``|``), but this is more
+difficult with paired-end data since then input and output consists of two files
+each.
+
+The solution is to interleave the paired-end data, send it over the pipe
+and then de-interleave it in the other process. Here is how this looks in
+principle::
+
+    cutadapt [options] --interleaved in.1.fastq.gz in.2.fastq.gz | \
+      cutadapt [options] --interleaved -o out.1.fastq.gz -p out.2.fastq.gz -
+
+Note the ``-`` character in the second invocation to cutadapt.
+
+
 Other things (unfinished)
 -------------------------
 
