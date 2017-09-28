@@ -273,7 +273,8 @@ def get_option_parser():
 		help="Remove bases from each read (first read only if paired). "
 			"If LENGTH is positive, remove bases from the beginning. "
 			"If LENGTH is negative, remove bases from the end. "
-			"Can be used twice if LENGTHs have different signs.")
+			"Can be used twice if LENGTHs have different signs. "
+			"This is applied *before* adapter trimming.")
 	group.add_option("--nextseq-trim", type=int, default=None, metavar="3'CUTOFF",
 		help="NextSeq-specific quality trimming (each read). Trims also dark "
 			"cycles appearing as high-quality G bases.")
