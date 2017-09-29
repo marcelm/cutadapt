@@ -140,16 +140,17 @@ Removing adapters
 
 Cutadapt supports trimming of multiple types of adapters:
 
-=================================================== ===========================
-Adapter type                                        Command-line option
-=================================================== ===========================
-:ref:`3' adapter <three-prime-adapters>`            ``-a ADAPTER``
-:ref:`5' adapter <five-prime-adapters>`             ``-g ADAPTER``
-:ref:`Anchored 3' adapter <anchored-3adapters>`     ``-a ADAPTER$``
-:ref:`Anchored 5' adapter <anchored-5adapters>`     ``-g ^ADAPTER``
-:ref:`5' or 3' (both possible) <anywhere-adapters>` ``-b ADAPTER``
-:ref:`Linked adapter <linked-adapters>`             ``-a ADAPTER1...ADAPTER2``
-=================================================== ===========================
+======================================================= ===========================
+Adapter type                                            Command-line option
+======================================================= ===========================
+:ref:`3' adapter <three-prime-adapters>`                ``-a ADAPTER``
+:ref:`5' adapter <five-prime-adapters>`                 ``-g ADAPTER``
+:ref:`Anchored 3' adapter <anchored-3adapters>`         ``-a ADAPTER$``
+:ref:`Anchored 5' adapter <anchored-5adapters>`         ``-g ^ADAPTER``
+:ref:`5' or 3' (both possible) <anywhere-adapters>`     ``-b ADAPTER``
+:ref:`Linked adapter <linked-adapters>`                 ``-a ADAPTER1...ADAPTER2``
+:ref:`Non-anchored linked adapter <linked-nonanchored>` ``-g ADAPTER1...ADAPTER2``
+======================================================= ===========================
 
 Here is an illustration of the allowed adapter locations relative to the read
 and depending on the adapter type:
@@ -364,6 +365,8 @@ such as ``--info-file``, ``--mask-adapter``.
 .. versionadded:: 1.13
    Ability to anchor the 3' adapter.
 
+
+.. _linked-nonanchored:
 
 Linked adapters without anchoring
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
