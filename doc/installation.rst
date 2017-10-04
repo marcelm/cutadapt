@@ -37,9 +37,13 @@ If neither `pip` nor `conda` installation works, keep reading.
 Dependencies
 ------------
 
+Cutadapt is being developed and tested under Linux. It also runs under macOS.
+It should also be possible to make it run on Windows, but I do not have the
+resources to support this.
+
 Cutadapt requires this software to be installed:
 
-* One of Python 2.7, 3.3, 3.4 or 3.5.
+* Python 2.7 or at least Python 3.3
 * A C compiler.
 
 Under Ubuntu, you may need to install the packages ``build-essential`` and
