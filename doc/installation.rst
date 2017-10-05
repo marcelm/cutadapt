@@ -2,8 +2,12 @@
 Installation
 ============
 
-Quickstart
-----------
+Cutadapt is being developed and tested under Linux. Users have run it
+successfully under macOS and Windows.
+
+
+Quick installation
+------------------
 
 The easiest way to install cutadapt is to use ``pip`` on the command line::
 
@@ -24,7 +28,7 @@ If you want to avoid typing the full path, add the directory
 Installation with conda
 -----------------------
 
-Alternatively, cutadapt is also available as a conda package from the
+Alternatively, cutadapt is available as a conda package from the
 `bioconda channel <https://bioconda.github.io/>`_. If you do not have conda,
 `install miniconda <http://conda.pydata.org/miniconda.html>`_ first.
 Then install cutadapt like this::
@@ -37,17 +41,16 @@ If neither `pip` nor `conda` installation works, keep reading.
 Dependencies
 ------------
 
-Cutadapt is being developed and tested under Linux. It also runs under macOS.
-It should also be possible to make it run on Windows, but I do not have the
-resources to support this.
-
-Cutadapt requires this software to be installed:
+Cutadapt installation requires this software to be installed:
 
 * Python 2.7 or at least Python 3.3
 * A C compiler.
 
 Under Ubuntu, you may need to install the packages ``build-essential`` and
-``python-dev`` (or ``python3-dev``).
+``python-dev`` (or ``python3-dev``) to get a C compiler.
+
+On Windows, you need `Microsoft Visual C++ Compiler for
+Python 2.7 <https://www.microsoft.com/en-us/download/details.aspx?id=44266>`_.
 
 
 Installation
