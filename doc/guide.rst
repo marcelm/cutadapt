@@ -785,18 +785,21 @@ modifications have been applied (adapter removal, quality trimming etc.). A
 processed read can be identical to the input read if no modifications were done.
 
 
-``--minimum-length N`` or ``-m N``
-    Throw away processed reads shorter than *N* bases.
+``--minimum-length LENGTH`` or ``-m LENGTH``
+    Discard processed reads that are shorter than LENGTH. Reads that are too
+    short even before adapter removal are also discarded. Without this option,
+    reads that have a length of zero (empty reads) are kept in the output.
 
 ``--too-short-output FILE``
-    Instead of throwing away the reads that are too short according to ``-m``,
+    Instead of discarding the reads that are too short according to ``-m``,
     write them to *FILE* (in FASTA/FASTQ format).
 
-``--maximum-length N`` or ``-M N``
-    Throw away processed reads longer than *N* bases.
+``--maximum-length LENGTH`` or ``-M LENGTH``
+    Discard processed reads that are longer than LENGTH. Reads that are too
+    long even before adapter removal are also discarded.
 
 ``--too-long-output FILE``
-    Instead of throwing away the reads that are too long (according to ``-M``),
+    Instead of discarding reads that are too long (according to ``-M``),
     write them to *FILE* (in FASTA/FASTQ format).
 
 ``--untrimmed-output FILE``
@@ -804,10 +807,10 @@ processed read can be identical to the input read if no modifications were done.
     of writing them to the regular output file.
 
 ``--discard-trimmed``
-   Throw away reads in which an adapter was found.
+   Discard reads in which an adapter was found.
 
 ``--discard-untrimmed``
-   Throw away reads in which *no* adapter was found. This has the same effect as
+   Discard reads in which *no* adapter was found. This has the same effect as
    specifying ``--untrimmed-output /dev/null``.
 
 The options ``--too-short-output`` and ``--too-long-output`` are applied first.
@@ -938,9 +941,18 @@ These are the paired-end specific filtering and output options:
     Used together with ``--untrimmed-output``. The second read in a pair is
     written to this file when the processed pair was *not* trimmed.
 
+``--too-short-paired-output FILE``
+    Write the second read in a pair to this file if pair is too short. Use
+    together with ``--too-short-output``.
+
+``--too-long-paired-output FILE``
+    Write the second read in a pair to this file if pair is too long. Use
+    together with ``--too-long-output``.
+
 ``--pair-filter=(any|both)``
     Which of the reads in a paired-end read have to match the filtering
     criterion in order for it to be filtered.
+
 
 Note that the option names can be abbreviated as long as it is clear which
 option is meant (unique prefix). For example, instead of ``--untrimmed-output``
@@ -1492,7 +1504,8 @@ accordingly for columns 9-11). For subsequent lines, the shown sequence are the
 ones that were used in subsequent rounds of adapter trimming, that is, they get
 successively shorter.
 
-Columns 9-11 have been added in cutadapt version 1.9.
+.. versionadded:: 1.9
+    Columns 9-11 were added.
 
 
 .. _algorithm:
