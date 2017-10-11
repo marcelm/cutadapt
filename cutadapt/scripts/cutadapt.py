@@ -109,6 +109,8 @@ class Pipeline(object):
 	"""
 	Processing pipeline that loops over reads and applies modifiers and filters
 	"""
+	should_warn = False
+
 	def __init__(self):
 		self._close_files = []
 
@@ -129,8 +131,8 @@ class Pipeline(object):
 		self.close_files()
 		elapsed_time = time.clock() - start_time
 		# TODO
-		m = self.modifiers if hasattr(self, 'modifiers') else self.modifiers1
-		m2 = getattr(self, 'modifiers2', [])
+		m = self._modifiers if hasattr(self, '_modifiers') else self._modifiers1
+		m2 = getattr(self, '_modifiers2', [])
 		stats = Statistics()
 		stats.collect(n, total1_bp, total2_bp, elapsed_time, m, m2, self.filters)
 		return stats
@@ -140,11 +142,14 @@ class SingleEndPipeline(Pipeline):
 	"""
 	Processing pipeline for single-end reads
 	"""
-	def __init__(self, reader, modifiers, filters):
+	def __init__(self, reader, filters):
 		super(SingleEndPipeline, self).__init__()
 		self.reader = reader
-		self.modifiers = modifiers
 		self.filters = filters
+		self._modifiers = []
+
+	def add(self, modifier):
+		self._modifiers.append(modifier)
 
 	def process_reads(self):
 		"""Run the pipeline. Return statistics"""
@@ -153,7 +158,7 @@ class SingleEndPipeline(Pipeline):
 		for read in self.reader:
 			n += 1
 			total_bp += len(read.sequence)
-			for modifier in self.modifiers:
+			for modifier in self._modifiers:
 				read = modifier(read)
 			for filter in self.filters:
 				if filter(read):
@@ -165,12 +170,31 @@ class PairedEndPipeline(Pipeline):
 	"""
 	Processing pipeline for paired-end reads.
 	"""
-	def __init__(self, paired_reader, modifiers1, modifiers2, filters):
+	def __init__(self, paired_reader, filters, modify_first_read_only):
+		"""Setting modify_first_read_only to True enables "legacy mode"
+		"""
 		super(PairedEndPipeline, self).__init__()
 		self.paired_reader = paired_reader
-		self.modifiers1 = modifiers1
-		self.modifiers2 = modifiers2
 		self.filters = filters
+		self._modifiers1 = []
+		self._modifiers2 = []
+		self._modify_first_read_only = modify_first_read_only
+		self._add_both_called = False
+		self._should_warn = False
+
+	def add(self, modifier):
+		self._modifiers1.append(modifier)
+		if not self._modify_first_read_only:
+			self._modifiers2.append(modifier)
+		else:
+			self._should_warn = True
+
+	def add1(self, modifier):
+		self._modifiers1.append(modifier)
+
+	def add2(self, modifier):
+		assert not self._modify_first_read_only
+		self._modifiers2.append(modifier)
 
 	def process_reads(self):
 		n = 0  # no. of processed reads
@@ -180,15 +204,23 @@ class PairedEndPipeline(Pipeline):
 			n += 1
 			total1_bp += len(read1.sequence)
 			total2_bp += len(read2.sequence)
-			for modifier in self.modifiers1:
+			for modifier in self._modifiers1:
 				read1 = modifier(read1)
-			for modifier in self.modifiers2:
+			for modifier in self._modifiers2:
 				read2 = modifier(read2)
 			for filter in self.filters:
 				# Stop writing as soon as one of the filters was successful.
 				if filter(read1, read2):
 					break
 		return (n, total1_bp, total2_bp)
+
+	@property
+	def should_warn(self):
+		return self._should_warn or self._modify_first_read_only and len(self.filters) > 1
+
+	@should_warn.setter
+	def should_warn(self, value):
+		self._should_warn = bool(value)
 
 
 def setup_logging(stdout=False, quiet=False):
@@ -520,11 +552,6 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	except (seqio.UnknownFileType, IOError) as e:
 		raise CommandlineError(e)
 
-	if options.quality_cutoff is not None:
-		cutoffs = parse_cutoffs(options.quality_cutoff)
-	else:
-		cutoffs = None
-
 	open_writer = functools.partial(seqio.open, mode='w',
 		qualities=reader.delivers_qualities, colorspace=options.colorspace)
 
@@ -671,84 +698,77 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		for adapter in adapters + adapters2:
 			adapter.enable_debug()
 
-	# Create the single-end processing pipeline (a list of "modifiers")
-	modifiers = []
+	# For paired-end data, create a second processing pipeline.
+	# However, if no second-read adapters were given (via -A/-G/-B/-U), we need to
+	# be backwards compatible and *no modifications* are done to the second read.
+	if paired:
+		pipeline = PairedEndPipeline(reader, filters, modify_first_read_only=paired == 'first')
+	else:
+		pipeline = SingleEndPipeline(reader, filters)
+
 	if options.cut:
 		if len(options.cut) > 2:
 			raise CommandlineError("You cannot remove bases from more than two ends.")
 		if len(options.cut) == 2 and options.cut[0] * options.cut[1] > 0:
 			raise CommandlineError("You cannot remove bases from the same end twice.")
 		for cut in options.cut:
+			addfunc = pipeline.add1 if paired else pipeline.add
 			if cut != 0:
-				modifiers.append(UnconditionalCutter(cut))
+				addfunc(UnconditionalCutter(cut))
+
+	if options.cut2:
+		if len(options.cut2) > 2:
+			raise CommandlineError("You cannot remove bases from more than two ends.")
+		if len(options.cut2) == 2 and options.cut2[0] * options.cut2[1] > 0:
+			raise CommandlineError("You cannot remove bases from the same end twice.")
+		for cut in options.cut2:
+			if cut != 0:
+				pipeline.add2(UnconditionalCutter(cut))
 
 	if options.nextseq_trim is not None:
-		modifiers.append(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
-	if cutoffs:
-		modifiers.append(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
+		pipeline.add(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
+	if options.quality_cutoff is not None:
+		cutoffs = parse_cutoffs(options.quality_cutoff)
+		pipeline.add(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
+		pipeline.should_warn = True
+
 	if adapters:
 		adapter_cutter = AdapterCutter(adapters, options.times,
 				options.wildcard_file, options.info_file,
 				rest_writer, options.action)
-		modifiers.append(adapter_cutter)
+		if paired:
+			pipeline.add1(adapter_cutter)
+		else:
+			pipeline.add(adapter_cutter)
+	if adapters2:
+		adapter_cutter2 = AdapterCutter(adapters2, options.times,
+				None, None, None, options.action)
+		pipeline.add2(adapter_cutter2)
 
 	# Modifiers that apply to both reads of paired-end reads unless in legacy mode
-	modifiers_both = []
 	if options.length is not None:
-		modifiers_both.append(Shortener(options.length))
+		pipeline.add(Shortener(options.length))
 	if options.trim_n:
-		modifiers_both.append(NEndTrimmer())
+		pipeline.add(NEndTrimmer())
 	if options.length_tag:
-		modifiers_both.append(LengthTagModifier(options.length_tag))
+		pipeline.add(LengthTagModifier(options.length_tag))
 	if options.strip_f3:
 		options.strip_suffix.append('_F3')
 	for suffix in options.strip_suffix:
-		modifiers_both.append(SuffixRemover(suffix))
+		pipeline.add(SuffixRemover(suffix))
 	if options.prefix or options.suffix:
-		modifiers_both.append(PrefixSuffixAdder(options.prefix, options.suffix))
+		pipeline.add(PrefixSuffixAdder(options.prefix, options.suffix))
 	if options.double_encode:
-		modifiers_both.append(DoubleEncoder())
+		pipeline.add(DoubleEncoder())
 	if options.zero_cap and reader.delivers_qualities:
-		modifiers_both.append(ZeroCapper(quality_base=options.quality_base))
+		pipeline.add(ZeroCapper(quality_base=options.quality_base))
 	if options.trim_primer:
-		modifiers_both.append(PrimerTrimmer)
-	modifiers.extend(modifiers_both)
-
-	# For paired-end data, create a second processing pipeline.
-	# However, if no second-read adapters were given (via -A/-G/-B/-U), we need to
-	# be backwards compatible and *no modifications* are done to the second read.
-	modifiers2 = []
-	if paired == 'both':
-		if options.cut2:
-			if len(options.cut2) > 2:
-				raise CommandlineError("You cannot remove bases from more than two ends.")
-			if len(options.cut2) == 2 and options.cut2[0] * options.cut2[1] > 0:
-				raise CommandlineError("You cannot remove bases from the same end twice.")
-			for cut in options.cut2:
-				if cut != 0:
-					modifiers2.append(UnconditionalCutter(cut))
-
-		if options.nextseq_trim is not None:
-			modifiers2.append(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
-		if cutoffs:
-			modifiers2.append(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
-		if adapters2:
-			adapter_cutter2 = AdapterCutter(adapters2, options.times,
-					None, None, None, options.action)
-			modifiers2.append(adapter_cutter2)
-		modifiers2.extend(modifiers_both)
-
-	if paired:
-		pipeline = PairedEndPipeline(reader, modifiers, modifiers2, filters)
-	else:
-		pipeline = SingleEndPipeline(reader, modifiers, filters)
+		pipeline.add(PrimerTrimmer)
 
 	# TODO the following should be done some other way
 	pipeline.paired = paired
 	pipeline.error_rate = options.error_rate
 	pipeline.n_adapters = len(adapters) + len(adapters2)
-	pipeline.should_print_warning = paired == 'first' and (modifiers_both or
-			cutoffs or len(filters) > 1)
 	for f in [writer, untrimmed_writer,
 			options.rest_file, options.wildcard_file,
 			options.info_file, too_short_writer, too_long_writer,
@@ -789,9 +809,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
 		pipeline.n_adapters, 's' if pipeline.n_adapters != 1 else '',
 		pipeline.error_rate * 100,
-		{ False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end' }[pipeline.paired])
+		{False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end'}[pipeline.paired])
 
-	if pipeline.should_print_warning:
+	if pipeline.should_warn:
 		logger.warning('\n'.join(textwrap.wrap('WARNING: Legacy mode is '
 			'enabled. Read modification and filtering options *ignore* '
 			'the second read. To switch to regular paired-end mode, '
