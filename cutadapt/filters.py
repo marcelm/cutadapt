@@ -124,7 +124,6 @@ class PairedRedirector(object):
 
 
 class TooShortReadFilter(object):
-	# TODO paired_outfile is left at its default value None (read2 is silently discarded)
 	def __init__(self, minimum_length):
 		self.minimum_length = minimum_length
 
