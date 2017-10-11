@@ -411,6 +411,25 @@ def get_option_parser():
 	return parser
 
 
+def parse_cutoffs(s):
+	"""Parse a string INT[,INT] into a two-element list of integers"""
+	cutoffs = s.split(',')
+	if len(cutoffs) == 1:
+		try:
+			cutoffs = [0, int(cutoffs[0])]
+		except ValueError as e:
+			raise CommandlineError("Quality cutoff value not recognized: {0}".format(e))
+	elif len(cutoffs) == 2:
+		try:
+			cutoffs = [int(cutoffs[0]), int(cutoffs[1])]
+		except ValueError as e:
+			raise CommandlineError("Quality cutoff value not recognized: {0}".format(e))
+	else:
+		raise CommandlineError("Expected one value or two values separated by comma for "
+			"the quality cutoff")
+	return cutoffs
+
+
 def pipeline_from_parsed_args(options, args, default_outfile):
 	"""
 	Setup a processing pipeline from parsed command-line options.
@@ -457,7 +476,8 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		interleaved_input = len(args) == 1
 		interleaved_output = not options.paired_output
 		if not interleaved_input and not interleaved_output:
-			raise CommandlineError("When --interleaved is used, you cannot provide both two input files and two output files")
+			raise CommandlineError("When --interleaved is used, you cannot provide both two "
+				"input files and two output files")
 
 	# Assign input_paired_filename and quality_filename
 	input_paired_filename = None
@@ -501,19 +521,7 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		raise CommandlineError(e)
 
 	if options.quality_cutoff is not None:
-		cutoffs = options.quality_cutoff.split(',')
-		if len(cutoffs) == 1:
-			try:
-				cutoffs = [0, int(cutoffs[0])]
-			except ValueError as e:
-				raise CommandlineError("Quality cutoff value not recognized: {0}".format(e))
-		elif len(cutoffs) == 2:
-			try:
-				cutoffs = [int(cutoffs[0]), int(cutoffs[1])]
-			except ValueError as e:
-				raise CommandlineError("Quality cutoff value not recognized: {0}".format(e))
-		else:
-			raise CommandlineError("Expected one value or two values separated by comma for the quality cutoff")
+		cutoffs = parse_cutoffs(options.quality_cutoff)
 	else:
 		cutoffs = None
 
@@ -527,7 +535,8 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		filter_wrapper = Redirector
 	elif paired == 'first':
 		filter_wrapper = LegacyPairedRedirector
-	elif paired == 'both':
+	else:
+		assert paired == 'both'
 		filter_wrapper = functools.partial(PairedRedirector, min_affected=min_affected)
 	filters = []
 	# TODO open_files = []
