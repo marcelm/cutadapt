@@ -82,55 +82,36 @@ class Redirector(object):
 
 class PairedRedirector(object):
 	"""
-	Redirect discarded reads to the given writer. This is for paired-end reads,
-	using the 'new-style' filtering where both reads are inspected. That is,
-	the entire pair is discarded if at least 1 or 2 of the reads match the
-	filtering criteria.
+	Redirect paired-end reads matching a filtering criterion to a writer.
+	Different filtering styles are supported, differing by which of the
+	two reads in a pair have to fulfill the filtering criterion.
 	"""
-	def __init__(self, writer, filter, min_affected=1):
+	def __init__(self, writer, filter, affected='any'):
 		"""
-		min_affected -- values 1 and 2 are allowed.
-			1 means: the pair is discarded if any read matches
-			2 means: the pair is discarded if both reads match
+		min_affected -- these values are allowed:
+			'any': The pair is discarded if any read matches.
+			'both': The pair is discarded if both reads match.
+			'first': The pair is discarded if the first read matches
+				('legacy' mode, backwards compatibility). With 'first', the
+				second read is not inspected.
 		"""
-		if min_affected not in (1, 2):
-			raise ValueError("min_affected must be 1 or 2")
-		self.filtered = 0
-		self.writer = writer
-		self.filter = filter
-		self._min_affected = min_affected
-		self.written = 0  # no of written reads or read pairs  TODO move to writer
-		self.written_bp = [0, 0]
-
-	def __call__(self, read1, read2):
-		if self.filter(read1) + self.filter(read2) >= self._min_affected:
-			self.filtered += 1
-			# discard read
-			if self.writer is not None:
-				self.writer.write(read1, read2)
-				self.written += 1
-				self.written_bp[0] += len(read1)
-				self.written_bp[1] += len(read2)
-			return DISCARD
-		return KEEP
-
-
-class LegacyPairedRedirector(object):
-	"""
-	Redirect discarded reads to the given writer. This is for paired-end reads,
-	using the 'legacy' filtering mode (backwards compatibility). That is, if
-	the first read matches the filtering criteria, the pair is discarded. The
-	second read is not inspected.
-	"""
-	def __init__(self, writer, filter):
+		if affected not in ('any', 'both', 'first'):
+			raise ValueError("affected must be 'any', 'both' or 'first'")
 		self.filtered = 0
 		self.writer = writer
 		self.filter = filter
 		self.written = 0  # no of written reads or read pairs  TODO move to writer
 		self.written_bp = [0, 0]
+		if affected == 'any':
+			self._is_filtered = lambda r1, r2: self.filter(r1) or self.filter(r2)
+		elif affected == 'both':
+			self._is_filtered = lambda r1, r2: self.filter(r1) and self.filter(r2)
+		else:
+			assert affected == 'first'
+			self._is_filtered = lambda r1, r2: self.filter(r1)
 
 	def __call__(self, read1, read2):
-		if self.filter(read1):
+		if self._is_filtered(read1, read2):
 			self.filtered += 1
 			# discard read
 			if self.writer is not None:

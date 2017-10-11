@@ -77,7 +77,7 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer, Shortener)
 from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedirector,
-	LegacyPairedRedirector, TooShortReadFilter, TooLongReadFilter,
+	TooShortReadFilter, TooLongReadFilter,
 	Demultiplexer, PairedEndDemultiplexer, NContentFilter, DiscardUntrimmedFilter,
 	DiscardTrimmedFilter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
@@ -555,16 +555,18 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	open_writer = functools.partial(seqio.open, mode='w',
 		qualities=reader.delivers_qualities, colorspace=options.colorspace)
 
-	if options.pair_filter is None:
-		options.pair_filter = 'any'
-	min_affected = 2 if options.pair_filter == 'both' else 1
 	if not paired:
 		filter_wrapper = Redirector
-	elif paired == 'first':
-		filter_wrapper = LegacyPairedRedirector
 	else:
-		assert paired == 'both'
-		filter_wrapper = functools.partial(PairedRedirector, min_affected=min_affected)
+		if paired == 'first':
+			assert options.pair_filter is None
+			affected = 'first'
+		elif options.pair_filter is None:
+			affected = 'any'
+		else:
+			affected = options.pair_filter  # 'both' or 'any'
+		filter_wrapper = functools.partial(PairedRedirector, affected=affected)
+
 	filters = []
 	# TODO open_files = []
 	too_short_writer = None  # too short reads go here
