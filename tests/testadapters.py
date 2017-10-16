@@ -142,3 +142,9 @@ def test_random_match_probabilities():
 	assert a.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
 	assert a.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
+
+def test_issue_265():
+	"Crash when accessing the matches property of non-anchored linked adapters"
+	s = Sequence('name', 'AAAATTTT')
+	la = LinkedAdapter('GGG', 'TTT', front_anchored=False, back_anchored=False)
+	assert la.match_to(s).matches == 3

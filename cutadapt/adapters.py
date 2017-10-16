@@ -589,7 +589,7 @@ class LinkedMatch(object):
 	@property
 	def matches(self):
 		"""Number of matching bases"""
-		m = getattr(self.front_match, 'matches', [])
+		m = getattr(self.front_match, 'matches', 0)
 		if self.back_match is not None:
 			m += self.back_match.matches
 		return m
