@@ -15,7 +15,6 @@ improvements.
 - search for adapters in the order in which they are given on the
   command line
 - more tests for the alignment algorithm
-- deprecate ``--rest-file``
 - ``--detect`` prints out best guess which of the given adapters is the correct one
 - alignment algorithm: make a 'banded' version
 - it seems the str.find optimization isn't very helpful. In any case, it should be
@@ -26,6 +25,17 @@ improvements.
 - try multithreading again, this time use os.pipe() or 0mq
 - extensible file type detection
 - the --times setting should be an attribute of Adapter
+
+
+Backwards-incompatible changes
+------------------------------
+
+- Drop ``--rest-file`` support
+- Possibly drop wildcard-file support, extend info-file instead
+- Drop "legacy mode"
+- For non-anchored 5' adapters, find rightmost match
+- Move ``scripts/cutadapt.py`` to ``__main__.py``
+
 
 Specifying adapters
 -------------------
