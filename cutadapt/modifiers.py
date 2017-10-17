@@ -141,7 +141,7 @@ class AdapterCutter(object):
 			masked_sequence = trimmed_read.sequence
 			for match in sorted(matches, reverse=True, key=lambda m: m.astart):
 				ns = 'N' * (len(match.read.sequence) -
-							len(match.trimmed().sequence))  # TODO is this correct? -> stats?
+							len(match.trimmed().sequence))
 				# add N depending on match position
 				if match.remove_before:
 					masked_sequence = ns + masked_sequence
