@@ -109,7 +109,7 @@ class Pipeline(object):
 	"""
 	Processing pipeline that loops over reads and applies modifiers and filters
 	"""
-	should_warn = False
+	should_warn_legacy = False
 
 	def __init__(self):
 		self._close_files = []
@@ -195,20 +195,26 @@ class PairedEndPipeline(Pipeline):
 		self._modifiers2 = []
 		self._modify_first_read_only = modify_first_read_only
 		self._add_both_called = False
-		self._should_warn = False
+		self._should_warn_legacy = False
 		self._reader = None
 
 	def add(self, modifier):
+		"""
+		Add a modifier for R1 and R2. If modify_first_read_only is True,
+		the modifier is *not* added for R2.
+		"""
 		self._modifiers1.append(modifier)
 		if not self._modify_first_read_only:
 			self._modifiers2.append(modifier)
 		else:
-			self._should_warn = True
+			self._should_warn_legacy = True
 
 	def add1(self, modifier):
+		"""Add a modifier for R1 only"""
 		self._modifiers1.append(modifier)
 
 	def add2(self, modifier):
+		"""Add a modifier for R2 only"""
 		assert not self._modify_first_read_only
 		self._modifiers2.append(modifier)
 
@@ -231,12 +237,12 @@ class PairedEndPipeline(Pipeline):
 		return (n, total1_bp, total2_bp)
 
 	@property
-	def should_warn(self):
-		return self._should_warn or self._modify_first_read_only and len(self._filters) > 1
+	def should_warn_legacy(self):
+		return self._should_warn_legacy or self._modify_first_read_only and len(self._filters) > 1
 
-	@should_warn.setter
-	def should_warn(self, value):
-		self._should_warn = bool(value)
+	@should_warn_legacy.setter
+	def should_warn_legacy(self, value):
+		self._should_warn_legacy = bool(value)
 
 
 def setup_logging(stdout=False, quiet=False):
@@ -644,7 +650,7 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	if options.quality_cutoff is not None:
 		cutoffs = parse_cutoffs(options.quality_cutoff)
 		pipeline.add(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
-		pipeline.should_warn = True
+		pipeline.should_warn_legacy = True
 
 	# Open info file and other info-like files (rest file, wildcard file)
 	if options.rest_file is not None:
@@ -828,7 +834,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		pipeline.error_rate * 100,
 		{False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end'}[pipeline.paired])
 
-	if pipeline.should_warn:
+	if pipeline.should_warn_legacy:
 		logger.warning('\n'.join(textwrap.wrap('WARNING: Legacy mode is '
 			'enabled. Read modification and filtering options *ignore* '
 			'the second read. To switch to regular paired-end mode, '
