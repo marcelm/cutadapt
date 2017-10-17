@@ -123,6 +123,7 @@ class AdapterCutter(object):
 				break
 			matches.append(match)
 			trimmed_read = match.trimmed()
+			trimmed_read.match = match
 			match.update_statistics(self.adapter_statistics[match.adapter])
 
 		if not matches:
@@ -153,8 +154,8 @@ class AdapterCutter(object):
 			assert len(trimmed_read.sequence) == len(read)
 		elif self.action is None:
 			trimmed_read = read
+			trimmed_read.match = matches[-1]
 
-		trimmed_read.match = matches[-1]
 		self._write_info(trimmed_read, matches)
 		self.with_adapters += 1
 		return trimmed_read
