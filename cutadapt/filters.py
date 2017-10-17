@@ -270,3 +270,48 @@ class PairedEndDemultiplexer(object):
 	def close(self):
 		self._demultiplexer1.close()
 		self._demultiplexer1.close()
+
+
+class RestFileWriter(object):
+	def __init__(self, file):
+		self.file = file
+
+	def __call__(self, read, read2=None):
+		if read.match:
+			rest = read.match.rest()
+			if len(rest) > 0:
+				print(rest, read.name, file=self.file)
+		return KEEP
+
+
+class WildcardFileWriter(object):
+	def __init__(self, file):
+		self.file = file
+
+	def __call__(self, read, read2=None):
+		if read.match:
+			print(read.match.wildcards(), read.name, file=self.file)
+		return KEEP
+
+
+class InfoFileWriter(object):
+	def __init__(self, file):
+		self.file = file
+
+	def __call__(self, read, read2=None):
+		matches = []
+		r = read
+		while r.match is not None:
+			matches.append(r.match)
+			r = r.match.read
+		matches = matches[::-1]
+		if matches:
+			for match in matches:
+				info_record = match.get_info_record()
+				print(*info_record, sep='\t', file=self.file)
+		else:
+			seq = read.sequence
+			qualities = read.qualities if read.qualities is not None else ''
+			print(read.name, -1, seq, qualities, sep='\t', file=self.file)
+
+		return KEEP

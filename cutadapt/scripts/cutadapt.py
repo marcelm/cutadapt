@@ -79,7 +79,7 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedirector,
 	TooShortReadFilter, TooLongReadFilter,
 	Demultiplexer, PairedEndDemultiplexer, NContentFilter, DiscardUntrimmedFilter,
-	DiscardTrimmedFilter)
+	DiscardTrimmedFilter, RestFileWriter, InfoFileWriter, WildcardFileWriter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
 
 
@@ -93,16 +93,6 @@ class CutadaptOptionParser(OptionParser):
 
 class CommandlineError(Exception):
 	pass
-
-
-class RestFileWriter(object):
-	def __init__(self, file):
-		self.file = file
-
-	def write(self, match):
-		rest = match.rest()
-		if len(rest) > 0:
-			print(rest, match.read.name, file=self.file)
 
 
 class Pipeline(object):
@@ -660,25 +650,11 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		pipeline.add(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
 		pipeline.should_warn_legacy = True
 
-	# Open info file and other info-like files (rest file, wildcard file)
-	if options.rest_file is not None:
-		options.rest_file = xopen(options.rest_file, 'w')
-		rest_writer = RestFileWriter(options.rest_file)
-	else:
-		rest_writer = None
-	if options.info_file is not None:
-		options.info_file = xopen(options.info_file, 'w')
-	if options.wildcard_file is not None:
-		options.wildcard_file = xopen(options.wildcard_file, 'w')
-
 	if adapters:
-		adapter_cutter = AdapterCutter(adapters, options.times,
-				options.wildcard_file, options.info_file,
-				rest_writer, options.action)
+		adapter_cutter = AdapterCutter(adapters, options.times, options.action)
 		pipeline.add1(adapter_cutter)
 	if adapters2:
-		adapter_cutter2 = AdapterCutter(adapters2, options.times,
-				None, None, None, options.action)
+		adapter_cutter2 = AdapterCutter(adapters2, options.times, options.action)
 		pipeline.add2(adapter_cutter2)
 
 	# Modifiers that apply to both reads of paired-end reads unless in legacy mode
@@ -718,6 +694,19 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 
 	filters = []
 	# TODO open_files = []
+
+	# Open info file and other info-like files (rest file, wildcard file)
+	rest_file = info_file = wildcard_file = None
+	if options.rest_file is not None:
+		rest_file = xopen(options.rest_file, 'w')
+		filters.append(RestFileWriter(rest_file))
+	if options.info_file is not None:
+		info_file = xopen(options.info_file, 'w')
+		filters.append(InfoFileWriter(info_file))
+	if options.wildcard_file is not None:
+		wildcard_file = xopen(options.wildcard_file, 'w')
+		filters.append(WildcardFileWriter(wildcard_file))
+
 	too_short_writer = None  # too short reads go here
 	# TODO pass file name to TooShortReadFilter, add a .close() method?
 	if options.minimum_length > 0:
@@ -800,9 +789,9 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	pipeline.error_rate = options.error_rate
 	pipeline.n_adapters = len(adapters) + len(adapters2)
 	for f in [writer, untrimmed_writer,
-			options.rest_file, options.wildcard_file,
-			options.info_file, too_short_writer, too_long_writer,
-			options.info_file, demultiplexer]:
+			rest_file, wildcard_file,
+			info_file, too_short_writer, too_long_writer,
+			demultiplexer]:
 		pipeline.register_file_to_close(f)
 	return pipeline
 

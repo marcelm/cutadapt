@@ -39,8 +39,7 @@ class AdapterCutter(object):
 	times parameter.
 	"""
 
-	def __init__(self, adapters, times=1, wildcard_file=None, info_file=None,
-			rest_writer=None, action='trim'):
+	def __init__(self, adapters, times=1, action='trim'):
 		"""
 		adapters -- list of Adapter objects
 
@@ -48,9 +47,6 @@ class AdapterCutter(object):
 		"""
 		self.adapters = adapters
 		self.times = times
-		self.wildcard_file = wildcard_file
-		self.info_file = info_file
-		self.rest_writer = rest_writer
 		self.action = action
 		self.with_adapters = 0
 		self.adapter_statistics = dict((a, AdapterStatistics(a)) for a in adapters)  # Python 2.6
@@ -74,30 +70,6 @@ class AdapterCutter(object):
 			if best is None or match.matches > best.matches:
 				best = match
 		return best
-
-	def _write_info(self, read, matches):
-		"""
-		Write to the info, wildcard and rest files.
-		"""
-		# TODO
-		# This design with a read having a .match attribute and
-		# a match having a .read attribute is really confusing.
-		match = read.match
-		if self.rest_writer and match:
-			self.rest_writer.write(match)
-
-		if self.wildcard_file and match:
-			print(match.wildcards(), read.name, file=self.wildcard_file)
-
-		if self.info_file:
-			if matches:
-				for match in matches:
-					info_record = match.get_info_record()
-					print(*info_record, sep='\t', file=self.info_file)
-			else:
-				seq = read.sequence
-				qualities = read.qualities if read.qualities is not None else ''
-				print(read.name, -1, seq, qualities, sep='\t', file=self.info_file)
 
 	def __call__(self, read):
 		"""
@@ -128,7 +100,6 @@ class AdapterCutter(object):
 
 		if not matches:
 			trimmed_read.match = None
-			self._write_info(trimmed_read, [])
 			return trimmed_read
 
 		if __debug__:
@@ -156,7 +127,6 @@ class AdapterCutter(object):
 			trimmed_read = read
 			trimmed_read.match = matches[-1]
 
-		self._write_info(trimmed_read, matches)
 		self.with_adapters += 1
 		return trimmed_read
 
