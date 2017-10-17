@@ -585,6 +585,8 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		raise CommandlineError("The maximum error rate must be between 0 and 1.")
 	if options.overlap < 1:
 		raise CommandlineError("The overlap must be at least 1.")
+	if not (0 <= options.gc_content <= 100):
+		raise CommandlineError("GC content must be given as percentage between 0 and 100")
 
 	if options.colorspace:
 		if options.match_read_wildcards:
@@ -817,8 +819,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if not logging.root.handlers:
 		setup_logging(stdout=bool(options.output), quiet=options.quiet)
 
-	if not 0 <= options.gc_content <= 100:
-		parser.error("GC content must be given as percentage between 0 and 100")
 	try:
 		pipeline = pipeline_from_parsed_args(options, args, default_outfile)
 	except CommandlineError as e:
