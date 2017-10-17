@@ -113,6 +113,20 @@ class Pipeline(object):
 
 	def __init__(self):
 		self._close_files = []
+		self._reader = None
+		self._filters = []
+
+	def set_filters(self, filters):
+		self._filters = filters
+
+	def open_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
+			interleaved=False):
+		self._reader = seqio.open(file1, file2, qualfile, colorspace, fileformat,
+			interleaved, mode='r')
+
+	@property
+	def uses_qualities(self):
+		return self._reader.delivers_qualities
 
 	def register_file_to_close(self, file):
 		if file is not None and file is not sys.stdin and file is not sys.stdout:
@@ -134,7 +148,7 @@ class Pipeline(object):
 		m = self._modifiers if hasattr(self, '_modifiers') else self._modifiers1
 		m2 = getattr(self, '_modifiers2', [])
 		stats = Statistics()
-		stats.collect(n, total1_bp, total2_bp, elapsed_time, m, m2, self.filters)
+		stats.collect(n, total1_bp, total2_bp, elapsed_time, m, m2, self._filters)
 		return stats
 
 
@@ -142,25 +156,28 @@ class SingleEndPipeline(Pipeline):
 	"""
 	Processing pipeline for single-end reads
 	"""
-	def __init__(self, reader, filters):
+	def __init__(self):
 		super(SingleEndPipeline, self).__init__()
-		self.reader = reader
-		self.filters = filters
+		self._filters = []
 		self._modifiers = []
 
 	def add(self, modifier):
 		self._modifiers.append(modifier)
 
+	def add1(self, modifier):
+		"""An alias for the add() function. Makes the interface similar to PairedEndPipeline"""
+		self.add(modifier)
+
 	def process_reads(self):
 		"""Run the pipeline. Return statistics"""
 		n = 0  # no. of processed reads  # TODO turn into attribute
 		total_bp = 0
-		for read in self.reader:
+		for read in self._reader:
 			n += 1
 			total_bp += len(read.sequence)
 			for modifier in self._modifiers:
 				read = modifier(read)
-			for filter in self.filters:
+			for filter in self._filters:
 				if filter(read):
 					break
 		return (n, total_bp, None)
@@ -170,17 +187,16 @@ class PairedEndPipeline(Pipeline):
 	"""
 	Processing pipeline for paired-end reads.
 	"""
-	def __init__(self, paired_reader, filters, modify_first_read_only):
+	def __init__(self, modify_first_read_only):
 		"""Setting modify_first_read_only to True enables "legacy mode"
 		"""
 		super(PairedEndPipeline, self).__init__()
-		self.paired_reader = paired_reader
-		self.filters = filters
 		self._modifiers1 = []
 		self._modifiers2 = []
 		self._modify_first_read_only = modify_first_read_only
 		self._add_both_called = False
 		self._should_warn = False
+		self._reader = None
 
 	def add(self, modifier):
 		self._modifiers1.append(modifier)
@@ -200,7 +216,7 @@ class PairedEndPipeline(Pipeline):
 		n = 0  # no. of processed reads
 		total1_bp = 0
 		total2_bp = 0
-		for read1, read2 in self.paired_reader:
+		for read1, read2 in self._reader:
 			n += 1
 			total1_bp += len(read1.sequence)
 			total2_bp += len(read2.sequence)
@@ -208,7 +224,7 @@ class PairedEndPipeline(Pipeline):
 				read1 = modifier(read1)
 			for modifier in self._modifiers2:
 				read2 = modifier(read2)
-			for filter in self.filters:
+			for filter in self._filters:
 				# Stop writing as soon as one of the filters was successful.
 				if filter(read1, read2):
 					break
@@ -216,7 +232,7 @@ class PairedEndPipeline(Pipeline):
 
 	@property
 	def should_warn(self):
-		return self._should_warn or self._modify_first_read_only and len(self.filters) > 1
+		return self._should_warn or self._modify_first_read_only and len(self._filters) > 1
 
 	@should_warn.setter
 	def should_warn(self, value):
@@ -502,12 +518,12 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 			raise CommandlineError("Option --untrimmed-paired-output can only be used when "
 				"trimming paired-end reads (with option -p).")
 
-	interleaved_input = False
-	interleaved_output = False
+	is_interleaved_input = False
+	is_interleaved_output = False
 	if options.interleaved:
-		interleaved_input = len(args) == 1
-		interleaved_output = not options.paired_output
-		if not interleaved_input and not interleaved_output:
+		is_interleaved_input = len(args) == 1
+		is_interleaved_output = not options.paired_output
+		if not is_interleaved_input and not is_interleaved_output:
 			raise CommandlineError("When --interleaved is used, you cannot provide both two "
 				"input files and two output files")
 
@@ -515,9 +531,9 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	input_paired_filename = None
 	quality_filename = None
 	if paired:
-		if not interleaved_input:
+		if not is_interleaved_input:
 			input_paired_filename = args[1]
-		if not interleaved_output:
+		if not is_interleaved_output:
 			if not options.paired_output:
 				raise CommandlineError("When paired-end trimming is enabled via -A/-G/-B/-U, "
 					"a second output file needs to be specified via -p (--paired-output).")
@@ -544,16 +560,135 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		raise CommandlineError("The input file format must be either 'fasta', 'fastq' or "
 			"'sra-fastq' (not '{0}').".format(options.format))
 
-	# Open input file(s)
+	if options.maq:
+		options.colorspace = True
+		options.double_encode = True
+		options.trim_primer = True
+		options.strip_suffix.append('_F3')
+		options.suffix = "/1"
+	if options.zero_cap is None:
+		options.zero_cap = options.colorspace
+	if options.trim_primer and not options.colorspace:
+		raise CommandlineError("Trimming the primer makes only sense in colorspace.")
+	if options.double_encode and not options.colorspace:
+		raise CommandlineError("Double-encoding makes only sense in colorspace.")
+	if options.anywhere and options.colorspace:
+		raise CommandlineError("Using --anywhere with colorspace reads is currently not supported "
+			"(if you think this may be useful, contact the author).")
+	if not (0 <= options.error_rate <= 1.):
+		raise CommandlineError("The maximum error rate must be between 0 and 1.")
+	if options.overlap < 1:
+		raise CommandlineError("The overlap must be at least 1.")
+
+	if options.colorspace:
+		if options.match_read_wildcards:
+			raise CommandlineError('IUPAC wildcards not supported in colorspace')
+		options.match_adapter_wildcards = False
+
+	adapter_parser = AdapterParser(
+		colorspace=options.colorspace,
+		max_error_rate=options.error_rate,
+		min_overlap=options.overlap,
+		read_wildcards=options.match_read_wildcards,
+		adapter_wildcards=options.match_adapter_wildcards,
+		indels=options.indels)
+
 	try:
-		reader = seqio.open(input_filename, file2=input_paired_filename,
+		adapters = adapter_parser.parse_multi(options.adapters, options.anywhere, options.front)
+		adapters2 = adapter_parser.parse_multi(options.adapters2, options.anywhere2, options.front2)
+	except IOError as e:
+		if e.errno == errno.ENOENT:
+			raise CommandlineError(e)
+		raise
+	except ValueError as e:
+		raise CommandlineError(e)
+	if options.debug:
+		for adapter in adapters + adapters2:
+			adapter.enable_debug()
+
+	# Create the processing pipeline.
+	# If no second-read adapters were given (via -A/-G/-B/-U), we need to
+	# be backwards compatible and *no modifications* are done to the second read.
+	if paired:
+		pipeline = PairedEndPipeline(modify_first_read_only=paired == 'first')
+	else:
+		pipeline = SingleEndPipeline()
+
+	try:
+		pipeline.open_input(input_filename, file2=input_paired_filename,
 				qualfile=quality_filename, colorspace=options.colorspace,
-				fileformat=options.format, interleaved=interleaved_input)
+				fileformat=options.format, interleaved=is_interleaved_input)
 	except (seqio.UnknownFileType, IOError) as e:
 		raise CommandlineError(e)
 
+	if options.cut:
+		if len(options.cut) > 2:
+			raise CommandlineError("You cannot remove bases from more than two ends.")
+		if len(options.cut) == 2 and options.cut[0] * options.cut[1] > 0:
+			raise CommandlineError("You cannot remove bases from the same end twice.")
+		for cut in options.cut:
+			if cut != 0:
+				pipeline.add1(UnconditionalCutter(cut))
+
+	if options.cut2:
+		if len(options.cut2) > 2:
+			raise CommandlineError("You cannot remove bases from more than two ends.")
+		if len(options.cut2) == 2 and options.cut2[0] * options.cut2[1] > 0:
+			raise CommandlineError("You cannot remove bases from the same end twice.")
+		for cut in options.cut2:
+			if cut != 0:
+				pipeline.add2(UnconditionalCutter(cut))
+
+	if options.nextseq_trim is not None:
+		pipeline.add(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
+	if options.quality_cutoff is not None:
+		cutoffs = parse_cutoffs(options.quality_cutoff)
+		pipeline.add(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
+		pipeline.should_warn = True
+
+	# Open info file and other info-like files (rest file, wildcard file)
+	if options.rest_file is not None:
+		options.rest_file = xopen(options.rest_file, 'w')
+		rest_writer = RestFileWriter(options.rest_file)
+	else:
+		rest_writer = None
+	if options.info_file is not None:
+		options.info_file = xopen(options.info_file, 'w')
+	if options.wildcard_file is not None:
+		options.wildcard_file = xopen(options.wildcard_file, 'w')
+
+	if adapters:
+		adapter_cutter = AdapterCutter(adapters, options.times,
+				options.wildcard_file, options.info_file,
+				rest_writer, options.action)
+		pipeline.add1(adapter_cutter)
+	if adapters2:
+		adapter_cutter2 = AdapterCutter(adapters2, options.times,
+				None, None, None, options.action)
+		pipeline.add2(adapter_cutter2)
+
+	# Modifiers that apply to both reads of paired-end reads unless in legacy mode
+	if options.length is not None:
+		pipeline.add(Shortener(options.length))
+	if options.trim_n:
+		pipeline.add(NEndTrimmer())
+	if options.length_tag:
+		pipeline.add(LengthTagModifier(options.length_tag))
+	if options.strip_f3:
+		options.strip_suffix.append('_F3')
+	for suffix in options.strip_suffix:
+		pipeline.add(SuffixRemover(suffix))
+	if options.prefix or options.suffix:
+		pipeline.add(PrefixSuffixAdder(options.prefix, options.suffix))
+	if options.double_encode:
+		pipeline.add(DoubleEncoder())
+	if options.zero_cap and pipeline.uses_qualities:
+		pipeline.add(ZeroCapper(quality_base=options.quality_base))
+	if options.trim_primer:
+		pipeline.add(PrimerTrimmer)
+
 	open_writer = functools.partial(seqio.open, mode='w',
-		qualities=reader.delivers_qualities, colorspace=options.colorspace)
+		qualities=pipeline.uses_qualities, colorspace=options.colorspace)
 
 	if not paired:
 		filter_wrapper = Redirector
@@ -615,11 +750,11 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 				raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
 					'both output file names (-o and -p)')
 			demultiplexer = PairedEndDemultiplexer(options.output, options.paired_output,
-				untrimmed, untrimmed_paired, qualities=reader.delivers_qualities,
+				untrimmed, untrimmed_paired, qualities=pipeline.uses_qualities,
 				colorspace=options.colorspace)
 		else:
 			demultiplexer = Demultiplexer(options.output, untrimmed,
-				qualities=reader.delivers_qualities, colorspace=options.colorspace)
+				qualities=pipeline.uses_qualities, colorspace=options.colorspace)
 		filters.append(demultiplexer)
 	else:
 		# Set up the remaining filters to deal with --discard-trimmed,
@@ -637,135 +772,15 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		# Finally, figure out where the reads that passed all the previous
 		# filters should go.
 		if options.output is not None:
-			writer = open_writer(options.output, options.paired_output, interleaved=interleaved_output)
+			writer = open_writer(options.output, options.paired_output, interleaved=is_interleaved_output)
 		else:
-			writer = open_writer(default_outfile, interleaved=interleaved_output)
+			writer = open_writer(default_outfile, interleaved=is_interleaved_output)
 		if not paired:
 			filters.append(NoFilter(writer))
 		else:
 			filters.append(PairedNoFilter(writer))
 
-	if options.maq:
-		options.colorspace = True
-		options.double_encode = True
-		options.trim_primer = True
-		options.strip_suffix.append('_F3')
-		options.suffix = "/1"
-	if options.zero_cap is None:
-		options.zero_cap = options.colorspace
-	if options.trim_primer and not options.colorspace:
-		raise CommandlineError("Trimming the primer makes only sense in colorspace.")
-	if options.double_encode and not options.colorspace:
-		raise CommandlineError("Double-encoding makes only sense in colorspace.")
-	if options.anywhere and options.colorspace:
-		raise CommandlineError("Using --anywhere with colorspace reads is currently not supported (if you think this may be useful, contact the author).")
-	if not (0 <= options.error_rate <= 1.):
-		raise CommandlineError("The maximum error rate must be between 0 and 1.")
-	if options.overlap < 1:
-		raise CommandlineError("The overlap must be at least 1.")
-
-	if options.rest_file is not None:
-		options.rest_file = xopen(options.rest_file, 'w')
-		rest_writer = RestFileWriter(options.rest_file)
-	else:
-		rest_writer = None
-	if options.info_file is not None:
-		options.info_file = xopen(options.info_file, 'w')
-	if options.wildcard_file is not None:
-		options.wildcard_file = xopen(options.wildcard_file, 'w')
-
-	if options.colorspace:
-		if options.match_read_wildcards:
-			raise CommandlineError('IUPAC wildcards not supported in colorspace')
-		options.match_adapter_wildcards = False
-
-	adapter_parser = AdapterParser(
-		colorspace=options.colorspace,
-		max_error_rate=options.error_rate,
-		min_overlap=options.overlap,
-		read_wildcards=options.match_read_wildcards,
-		adapter_wildcards=options.match_adapter_wildcards,
-		indels=options.indels)
-
-	try:
-		adapters = adapter_parser.parse_multi(options.adapters, options.anywhere, options.front)
-		adapters2 = adapter_parser.parse_multi(options.adapters2, options.anywhere2, options.front2)
-	except IOError as e:
-		if e.errno == errno.ENOENT:
-			raise CommandlineError(e)
-		raise
-	except ValueError as e:
-		raise CommandlineError(e)
-	if options.debug:
-		for adapter in adapters + adapters2:
-			adapter.enable_debug()
-
-	# For paired-end data, create a second processing pipeline.
-	# However, if no second-read adapters were given (via -A/-G/-B/-U), we need to
-	# be backwards compatible and *no modifications* are done to the second read.
-	if paired:
-		pipeline = PairedEndPipeline(reader, filters, modify_first_read_only=paired == 'first')
-	else:
-		pipeline = SingleEndPipeline(reader, filters)
-
-	if options.cut:
-		if len(options.cut) > 2:
-			raise CommandlineError("You cannot remove bases from more than two ends.")
-		if len(options.cut) == 2 and options.cut[0] * options.cut[1] > 0:
-			raise CommandlineError("You cannot remove bases from the same end twice.")
-		for cut in options.cut:
-			addfunc = pipeline.add1 if paired else pipeline.add
-			if cut != 0:
-				addfunc(UnconditionalCutter(cut))
-
-	if options.cut2:
-		if len(options.cut2) > 2:
-			raise CommandlineError("You cannot remove bases from more than two ends.")
-		if len(options.cut2) == 2 and options.cut2[0] * options.cut2[1] > 0:
-			raise CommandlineError("You cannot remove bases from the same end twice.")
-		for cut in options.cut2:
-			if cut != 0:
-				pipeline.add2(UnconditionalCutter(cut))
-
-	if options.nextseq_trim is not None:
-		pipeline.add(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
-	if options.quality_cutoff is not None:
-		cutoffs = parse_cutoffs(options.quality_cutoff)
-		pipeline.add(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
-		pipeline.should_warn = True
-
-	if adapters:
-		adapter_cutter = AdapterCutter(adapters, options.times,
-				options.wildcard_file, options.info_file,
-				rest_writer, options.action)
-		if paired:
-			pipeline.add1(adapter_cutter)
-		else:
-			pipeline.add(adapter_cutter)
-	if adapters2:
-		adapter_cutter2 = AdapterCutter(adapters2, options.times,
-				None, None, None, options.action)
-		pipeline.add2(adapter_cutter2)
-
-	# Modifiers that apply to both reads of paired-end reads unless in legacy mode
-	if options.length is not None:
-		pipeline.add(Shortener(options.length))
-	if options.trim_n:
-		pipeline.add(NEndTrimmer())
-	if options.length_tag:
-		pipeline.add(LengthTagModifier(options.length_tag))
-	if options.strip_f3:
-		options.strip_suffix.append('_F3')
-	for suffix in options.strip_suffix:
-		pipeline.add(SuffixRemover(suffix))
-	if options.prefix or options.suffix:
-		pipeline.add(PrefixSuffixAdder(options.prefix, options.suffix))
-	if options.double_encode:
-		pipeline.add(DoubleEncoder())
-	if options.zero_cap and reader.delivers_qualities:
-		pipeline.add(ZeroCapper(quality_base=options.quality_base))
-	if options.trim_primer:
-		pipeline.add(PrimerTrimmer)
+	pipeline.set_filters(filters)
 
 	# TODO the following should be done some other way
 	pipeline.paired = paired
@@ -818,8 +833,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			'enabled. Read modification and filtering options *ignore* '
 			'the second read. To switch to regular paired-end mode, '
 			'provide the --pair-filter=any option or use any of the '
-			'-A/-B/-G/-U/--interleaved options.'
-			)))
+			'-A/-B/-G/-U/--interleaved options.')))
 
 	try:
 		stats = pipeline.run()
