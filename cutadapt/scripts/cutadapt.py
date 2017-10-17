@@ -156,6 +156,8 @@ class SingleEndPipeline(Pipeline):
 	"""
 	Processing pipeline for single-end reads
 	"""
+	paired = False
+
 	def __init__(self):
 		super(SingleEndPipeline, self).__init__()
 		self._filters = []
@@ -243,6 +245,10 @@ class PairedEndPipeline(Pipeline):
 	@should_warn_legacy.setter
 	def should_warn_legacy(self, value):
 		self._should_warn_legacy = bool(value)
+
+	@property
+	def paired(self):
+		return 'first' if self._modify_first_read_only else 'both'
 
 
 def setup_logging(stdout=False, quiet=False):
@@ -791,7 +797,6 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	pipeline.set_filters(filters)
 
 	# TODO the following should be done some other way
-	pipeline.paired = paired
 	pipeline.error_rate = options.error_rate
 	pipeline.n_adapters = len(adapters) + len(adapters2)
 	for f in [writer, untrimmed_writer,
@@ -843,7 +848,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	try:
 		stats = pipeline.run()
-	except KeyboardInterrupt as e:
+	except KeyboardInterrupt:
 		print("Interrupted", file=sys.stderr)
 		sys.exit(130)
 	except IOError as e:
