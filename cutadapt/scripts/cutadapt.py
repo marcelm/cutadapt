@@ -480,6 +480,119 @@ def parse_cutoffs(s):
 	return cutoffs
 
 
+def setup_filters(options, paired, qualities, is_interleaved_output, default_outfile):
+	open_writer = functools.partial(seqio.open, mode='w',
+		qualities=qualities, colorspace=options.colorspace)
+
+	if not paired:
+		filter_wrapper = Redirector
+	else:
+		if paired == 'first':
+			assert options.pair_filter is None
+			affected = 'first'
+		elif options.pair_filter is None:
+			affected = 'any'
+		else:
+			affected = options.pair_filter  # 'both' or 'any'
+		filter_wrapper = functools.partial(PairedRedirector, affected=affected)
+
+	filters = []
+	# TODO open_files = []
+
+	# Open info file and other info-like files (rest file, wildcard file)
+	rest_file = info_file = wildcard_file = None
+	if options.rest_file is not None:
+		rest_file = xopen(options.rest_file, 'w')
+		filters.append(RestFileWriter(rest_file))
+	if options.info_file is not None:
+		info_file = xopen(options.info_file, 'w')
+		filters.append(InfoFileWriter(info_file))
+	if options.wildcard_file is not None:
+		wildcard_file = xopen(options.wildcard_file, 'w')
+		filters.append(WildcardFileWriter(wildcard_file))
+
+	too_short_writer = None  # too short reads go here
+	# TODO pass file name to TooShortReadFilter, add a .close() method?
+	if options.minimum_length > 0:
+		if options.too_short_output:
+			too_short_writer = open_writer(options.too_short_output, options.too_short_paired_output)
+		filters.append(filter_wrapper(too_short_writer, TooShortReadFilter(options.minimum_length)))
+	too_long_writer = None  # too long reads go here
+	if options.maximum_length < sys.maxsize:
+		if options.too_long_output is not None:
+			too_long_writer = open_writer(options.too_long_output, options.too_long_paired_output)
+		filters.append(filter_wrapper(too_long_writer, TooLongReadFilter(options.maximum_length)))
+
+	if options.max_n != -1:
+		filters.append(filter_wrapper(None, NContentFilter(options.max_n)))
+
+	if int(options.discard_trimmed) + int(options.discard_untrimmed) + int(options.untrimmed_output is not None) > 1:
+		raise CommandlineError("Only one of the --discard-trimmed, --discard-untrimmed "
+			"and --untrimmed-output options can be used at the same time.")
+	demultiplexer = None
+	untrimmed_writer = None
+	writer = None
+	if (options.paired_output is not None and '{name}' in options.paired_output
+			and '{name}' not in options.output):
+		raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
+			'both output file names (-o and -p)')
+
+	if options.output is not None and '{name}' in options.output:
+		if options.discard_trimmed:
+			raise CommandlineError("Do not use --discard-trimmed when demultiplexing.")
+		untrimmed = options.output.replace('{name}', 'unknown')
+		if options.untrimmed_output:
+			untrimmed = options.untrimmed_output
+		if options.discard_untrimmed:
+			untrimmed = None
+
+		if paired:
+			untrimmed_paired = options.paired_output.replace('{name}', 'unknown')
+			if options.untrimmed_paired_output:
+				untrimmed_paired = options.untrimmed_paired_output
+			if options.discard_untrimmed:
+				untrimmed_paired = None
+
+			if '{name}' not in options.paired_output:
+				raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
+					'both output file names (-o and -p)')
+			demultiplexer = PairedEndDemultiplexer(options.output, options.paired_output,
+				untrimmed, untrimmed_paired, qualities=qualities,
+				colorspace=options.colorspace)
+		else:
+			demultiplexer = Demultiplexer(options.output, untrimmed,
+				qualities=qualities, colorspace=options.colorspace)
+		filters.append(demultiplexer)
+	else:
+		# Set up the remaining filters to deal with --discard-trimmed,
+		# --discard-untrimmed and --untrimmed-output. These options
+		# are mutually exclusive in order to avoid brain damage.
+		if options.discard_trimmed:
+			filters.append(filter_wrapper(None, DiscardTrimmedFilter()))
+		elif options.discard_untrimmed:
+			filters.append(filter_wrapper(None, DiscardUntrimmedFilter()))
+		elif options.untrimmed_output:
+			untrimmed_writer = open_writer(options.untrimmed_output,
+				options.untrimmed_paired_output)
+			filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
+
+		# Finally, figure out where the reads that passed all the previous
+		# filters should go.
+		if options.output is not None:
+			writer = open_writer(options.output, options.paired_output, interleaved=is_interleaved_output)
+		else:
+			writer = open_writer(default_outfile, interleaved=is_interleaved_output)
+		if not paired:
+			filters.append(NoFilter(writer))
+		else:
+			filters.append(PairedNoFilter(writer))
+
+	return filters, [writer, untrimmed_writer,
+			rest_file, wildcard_file,
+			info_file, too_short_writer, too_long_writer,
+			demultiplexer]
+
+
 def pipeline_from_parsed_args(options, args, default_outfile):
 	"""
 	Setup a processing pipeline from parsed command-line options.
@@ -677,122 +790,15 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	if options.trim_primer:
 		pipeline.add(PrimerTrimmer)
 
-	open_writer = functools.partial(seqio.open, mode='w',
-		qualities=pipeline.uses_qualities, colorspace=options.colorspace)
-
-	if not paired:
-		filter_wrapper = Redirector
-	else:
-		if paired == 'first':
-			assert options.pair_filter is None
-			affected = 'first'
-		elif options.pair_filter is None:
-			affected = 'any'
-		else:
-			affected = options.pair_filter  # 'both' or 'any'
-		filter_wrapper = functools.partial(PairedRedirector, affected=affected)
-
-	filters = []
-	# TODO open_files = []
-
-	# Open info file and other info-like files (rest file, wildcard file)
-	rest_file = info_file = wildcard_file = None
-	if options.rest_file is not None:
-		rest_file = xopen(options.rest_file, 'w')
-		filters.append(RestFileWriter(rest_file))
-	if options.info_file is not None:
-		info_file = xopen(options.info_file, 'w')
-		filters.append(InfoFileWriter(info_file))
-	if options.wildcard_file is not None:
-		wildcard_file = xopen(options.wildcard_file, 'w')
-		filters.append(WildcardFileWriter(wildcard_file))
-
-	too_short_writer = None  # too short reads go here
-	# TODO pass file name to TooShortReadFilter, add a .close() method?
-	if options.minimum_length > 0:
-		if options.too_short_output:
-			too_short_writer = open_writer(options.too_short_output, options.too_short_paired_output)
-		filters.append(filter_wrapper(too_short_writer, TooShortReadFilter(options.minimum_length)))
-	too_long_writer = None  # too long reads go here
-	if options.maximum_length < sys.maxsize:
-		if options.too_long_output is not None:
-			too_long_writer = open_writer(options.too_long_output, options.too_long_paired_output)
-		filters.append(filter_wrapper(too_long_writer, TooLongReadFilter(options.maximum_length)))
-
-	if options.max_n != -1:
-		filters.append(filter_wrapper(None, NContentFilter(options.max_n)))
-
-	if int(options.discard_trimmed) + int(options.discard_untrimmed) + int(options.untrimmed_output is not None) > 1:
-		raise CommandlineError("Only one of the --discard-trimmed, --discard-untrimmed "
-			"and --untrimmed-output options can be used at the same time.")
-	demultiplexer = None
-	untrimmed_writer = None
-	writer = None
-	if (options.paired_output is not None and '{name}' in options.paired_output
-			and '{name}' not in options.output):
-		raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
-			'both output file names (-o and -p)')
-
-	if options.output is not None and '{name}' in options.output:
-		if options.discard_trimmed:
-			raise CommandlineError("Do not use --discard-trimmed when demultiplexing.")
-		untrimmed = options.output.replace('{name}', 'unknown')
-		if options.untrimmed_output:
-			untrimmed = options.untrimmed_output
-		if options.discard_untrimmed:
-			untrimmed = None
-
-		if paired:
-			untrimmed_paired = options.paired_output.replace('{name}', 'unknown')
-			if options.untrimmed_paired_output:
-				untrimmed_paired = options.untrimmed_paired_output
-			if options.discard_untrimmed:
-				untrimmed_paired = None
-
-			if '{name}' not in options.paired_output:
-				raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
-					'both output file names (-o and -p)')
-			demultiplexer = PairedEndDemultiplexer(options.output, options.paired_output,
-				untrimmed, untrimmed_paired, qualities=pipeline.uses_qualities,
-				colorspace=options.colorspace)
-		else:
-			demultiplexer = Demultiplexer(options.output, untrimmed,
-				qualities=pipeline.uses_qualities, colorspace=options.colorspace)
-		filters.append(demultiplexer)
-	else:
-		# Set up the remaining filters to deal with --discard-trimmed,
-		# --discard-untrimmed and --untrimmed-output. These options
-		# are mutually exclusive in order to avoid brain damage.
-		if options.discard_trimmed:
-			filters.append(filter_wrapper(None, DiscardTrimmedFilter()))
-		elif options.discard_untrimmed:
-			filters.append(filter_wrapper(None, DiscardUntrimmedFilter()))
-		elif options.untrimmed_output:
-			untrimmed_writer = open_writer(options.untrimmed_output,
-				options.untrimmed_paired_output)
-			filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
-
-		# Finally, figure out where the reads that passed all the previous
-		# filters should go.
-		if options.output is not None:
-			writer = open_writer(options.output, options.paired_output, interleaved=is_interleaved_output)
-		else:
-			writer = open_writer(default_outfile, interleaved=is_interleaved_output)
-		if not paired:
-			filters.append(NoFilter(writer))
-		else:
-			filters.append(PairedNoFilter(writer))
-
+	filters, files_to_close = setup_filters(options, paired, pipeline.uses_qualities,
+		is_interleaved_output, default_outfile)
 	pipeline.set_filters(filters)
+	for f in files_to_close:
+		pipeline.register_file_to_close(f)
 
 	# TODO the following should be done some other way
 	pipeline.error_rate = options.error_rate
 	pipeline.n_adapters = len(adapters) + len(adapters2)
-	for f in [writer, untrimmed_writer,
-			rest_file, wildcard_file,
-			info_file, too_short_writer, too_long_writer,
-			demultiplexer]:
-		pipeline.register_file_to_close(f)
 	return pipeline
 
 
