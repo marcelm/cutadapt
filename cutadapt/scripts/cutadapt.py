@@ -100,11 +100,13 @@ class Pipeline(object):
 	Processing pipeline that loops over reads and applies modifiers and filters
 	"""
 	should_warn_legacy = False
+	n_adapters = 0
 
 	def __init__(self):
 		self._close_files = []
 		self._reader = None
 		self._filters = []
+		self._modifiers = []
 
 	def set_filters(self, filters):
 		self._filters = filters
@@ -113,6 +115,9 @@ class Pipeline(object):
 			interleaved=False):
 		self._reader = seqio.open(file1, file2, qualfile, colorspace, fileformat,
 			interleaved, mode='r')
+		# Special treatment: Disable zero-capping if no qualities are available
+		if not self._reader.delivers_qualities:
+			self._modifiers = [m for m in self._modifiers if not isinstance(m, ZeroCapper)]
 
 	@property
 	def uses_qualities(self):
@@ -135,7 +140,7 @@ class Pipeline(object):
 		self.close_files()
 		elapsed_time = time.clock() - start_time
 		# TODO
-		m = self._modifiers if hasattr(self, '_modifiers') else self._modifiers1
+		m = self._modifiers
 		m2 = getattr(self, '_modifiers2', [])
 		stats = Statistics()
 		stats.collect(n, total1_bp, total2_bp, elapsed_time, m, m2, self._filters)
@@ -150,7 +155,6 @@ class SingleEndPipeline(Pipeline):
 
 	def __init__(self):
 		super(SingleEndPipeline, self).__init__()
-		self._filters = []
 		self._modifiers = []
 
 	def add(self, modifier):
@@ -183,19 +187,23 @@ class PairedEndPipeline(Pipeline):
 		"""Setting modify_first_read_only to True enables "legacy mode"
 		"""
 		super(PairedEndPipeline, self).__init__()
-		self._modifiers1 = []
 		self._modifiers2 = []
 		self._modify_first_read_only = modify_first_read_only
 		self._add_both_called = False
 		self._should_warn_legacy = False
 		self._reader = None
 
+	def open_input(self, *args, **kwargs):
+		super(PairedEndPipeline, self).open_input(*args, **kwargs)
+		if not self._reader.delivers_qualities:
+			self._modifiers2 = [m for m in self._modifiers2 if not isinstance(m, ZeroCapper)]
+
 	def add(self, modifier):
 		"""
 		Add a modifier for R1 and R2. If modify_first_read_only is True,
 		the modifier is *not* added for R2.
 		"""
-		self._modifiers1.append(modifier)
+		self._modifiers.append(modifier)
 		if not self._modify_first_read_only:
 			self._modifiers2.append(modifier)
 		else:
@@ -203,7 +211,7 @@ class PairedEndPipeline(Pipeline):
 
 	def add1(self, modifier):
 		"""Add a modifier for R1 only"""
-		self._modifiers1.append(modifier)
+		self._modifiers.append(modifier)
 
 	def add2(self, modifier):
 		"""Add a modifier for R2 only"""
@@ -218,7 +226,7 @@ class PairedEndPipeline(Pipeline):
 			n += 1
 			total1_bp += len(read1.sequence)
 			total2_bp += len(read2.sequence)
-			for modifier in self._modifiers1:
+			for modifier in self._modifiers:
 				read1 = modifier(read1)
 			for modifier in self._modifiers2:
 				read2 = modifier(read2)
@@ -480,7 +488,7 @@ def parse_cutoffs(s):
 	return cutoffs
 
 
-def setup_filters(options, paired, qualities, is_interleaved_output, default_outfile):
+def filters_from_parsed_args(options, paired, qualities, is_interleaved_output, default_outfile):
 	open_writer = functools.partial(seqio.open, mode='w',
 		qualities=qualities, colorspace=options.colorspace)
 
@@ -593,26 +601,21 @@ def setup_filters(options, paired, qualities, is_interleaved_output, default_out
 			demultiplexer]
 
 
-def pipeline_from_parsed_args(options, args, default_outfile):
+def determine_paired_mode(options):
 	"""
-	Setup a processing pipeline from parsed command-line options.
+	Determine the paired-end mode: single-end, paired-end or legacy paired-end.
 
-	If there are any problems parsing the arguments, a CommandlineError is thrown.
+	Return False, 'first' or 'both'.
+
+	False -- single-end
+	'first' -- Backwards-compatible "legacy" mode in which read modifications apply only to read 1
+	'both' -- normal paired-end mode in which read modifications apply to read 1 and 2
+
+	Legacy mode is deactivated as soon as any option is used that exists only in cutadapt 1.8 or
+	later, such as -A/-G/-B/-U/--interleaved/--nextseq-trim.
 	"""
-	if len(args) == 0:
-		raise CommandlineError("At least one parameter needed: name of a FASTA or FASTQ file.")
-	elif len(args) > 2:
-		raise CommandlineError("Too many parameters.")
-	input_filename = args[0]
-	if input_filename.endswith('.qual'):
-		raise CommandlineError("If a .qual file is given, it must be the second argument.")
-
-	# Find out which 'mode' we need to use.
-	# Default: single-read trimming (neither -p nor -A/-G/-B/-U/--interleaved given)
 	paired = False
 	if options.paired_output:
-		# Modify first read only, keep second in sync (-p given, but not -A/-G/-B/-U).
-		# This exists for backwards compatibility ('legacy mode').
 		paired = 'first'
 
 	# Switch off legacy mode if certain options given
@@ -621,18 +624,11 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	if (options.adapters2 or options.front2 or options.anywhere2 or
 			options.cut2 or options.interleaved or options.pair_filter or
 			options.too_short_paired_output or options.too_long_paired_output):
-		# Full paired-end trimming when both -p and -A/-G/-B/-U given
-		# Read modifications (such as quality trimming) are applied also to second read.
 		paired = 'both'
+	return paired
 
-	if paired and len(args) == 1 and not options.interleaved:
-		raise CommandlineError("When paired-end trimming is enabled via -A/-G/-B/-U/"
-			"--interleaved or -p, two input files are required.")
-	if not paired:
-		if options.untrimmed_paired_output:
-			raise CommandlineError("Option --untrimmed-paired-output can only be used when "
-				"trimming paired-end reads (with option -p).")
 
+def determine_interleaved(options, args):
 	is_interleaved_input = False
 	is_interleaved_output = False
 	if options.interleaved:
@@ -641,13 +637,50 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		if not is_interleaved_input and not is_interleaved_output:
 			raise CommandlineError("When --interleaved is used, you cannot provide both two "
 				"input files and two output files")
+	return is_interleaved_input, is_interleaved_output
 
-	# Assign input_paired_filename and quality_filename
+
+def input_files_from_parsed_args(args, paired, is_interleaved_input):
+	"""
+	Return tuple (input_filename, input_paired_filename, quality_filename)
+	"""
+	if len(args) == 0:
+		raise CommandlineError("At least one parameter needed: name of a FASTA or FASTQ file.")
+	elif len(args) > 2:
+		raise CommandlineError("Too many parameters.")
+	input_filename = args[0]
+	if input_filename.endswith('.qual'):
+		raise CommandlineError("If a .qual file is given, it must be the second argument.")
+	if paired and len(args) == 1 and not is_interleaved_input:
+		raise CommandlineError("When paired-end trimming is enabled via -A/-G/-B/-U/"
+			"--interleaved or -p, two input files are required.")
+
 	input_paired_filename = None
 	quality_filename = None
 	if paired:
 		if not is_interleaved_input:
 			input_paired_filename = args[1]
+	elif len(args) == 2:
+		quality_filename = args[1]
+
+	return input_filename, input_paired_filename, quality_filename
+
+
+def pipeline_from_parsed_args(options, paired, quality_filename, is_interleaved_output):
+	"""
+	Setup a processing pipeline from parsed command-line options.
+
+	If there are any problems parsing the arguments, a CommandlineError is thrown.
+
+	Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
+	"""
+
+	if not paired:
+		if options.untrimmed_paired_output:
+			raise CommandlineError("Option --untrimmed-paired-output can only be used when "
+				"trimming paired-end reads (with option -p).")
+
+	if paired:
 		if not is_interleaved_output:
 			if not options.paired_output:
 				raise CommandlineError("When paired-end trimming is enabled via -A/-G/-B/-U, "
@@ -665,8 +698,7 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		if options.too_long_output and not options.too_long_paired_output:
 			raise CommandlineError("When using --too-long-output with paired-end "
 				"reads, you also need to use --too-long-paired-output")
-	elif len(args) == 2:
-		quality_filename = args[1]
+	elif quality_filename is not None:
 		if options.format is not None:
 			raise CommandlineError('If a pair of .fasta and .qual files is given, the -f/--format '
 				'parameter cannot be used.')
@@ -731,13 +763,6 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	else:
 		pipeline = SingleEndPipeline()
 
-	try:
-		pipeline.open_input(input_filename, file2=input_paired_filename,
-				qualfile=quality_filename, colorspace=options.colorspace,
-				fileformat=options.format, interleaved=is_interleaved_input)
-	except (seqio.UnknownFileType, IOError) as e:
-		raise CommandlineError(e)
-
 	if options.cut:
 		if len(options.cut) > 2:
 			raise CommandlineError("You cannot remove bases from more than two ends.")
@@ -766,9 +791,11 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 	if adapters:
 		adapter_cutter = AdapterCutter(adapters, options.times, options.action)
 		pipeline.add1(adapter_cutter)
+		pipeline.n_adapters += len(adapters)
 	if adapters2:
 		adapter_cutter2 = AdapterCutter(adapters2, options.times, options.action)
 		pipeline.add2(adapter_cutter2)
+		pipeline.n_adapters += len(adapters2)
 
 	# Modifiers that apply to both reads of paired-end reads unless in legacy mode
 	if options.length is not None:
@@ -785,20 +812,11 @@ def pipeline_from_parsed_args(options, args, default_outfile):
 		pipeline.add(PrefixSuffixAdder(options.prefix, options.suffix))
 	if options.double_encode:
 		pipeline.add(DoubleEncoder())
-	if options.zero_cap and pipeline.uses_qualities:
+	if options.zero_cap:
 		pipeline.add(ZeroCapper(quality_base=options.quality_base))
 	if options.trim_primer:
 		pipeline.add(PrimerTrimmer)
 
-	filters, files_to_close = setup_filters(options, paired, pipeline.uses_qualities,
-		is_interleaved_output, default_outfile)
-	pipeline.set_filters(filters)
-	for f in files_to_close:
-		pipeline.register_file_to_close(f)
-
-	# TODO the following should be done some other way
-	pipeline.error_rate = options.error_rate
-	pipeline.n_adapters = len(adapters) + len(adapters2)
 	return pipeline
 
 
@@ -820,9 +838,31 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		setup_logging(stdout=bool(options.output), quiet=options.quiet)
 
 	try:
-		pipeline = pipeline_from_parsed_args(options, args, default_outfile)
+		paired = determine_paired_mode(options)
+		is_interleaved_input, is_interleaved_output = determine_interleaved(options, args)
+		input_filename, input_paired_filename, quality_filename = input_files_from_parsed_args(args,
+			paired, is_interleaved_input)
+		pipeline = pipeline_from_parsed_args(options, paired, quality_filename, is_interleaved_output)
 	except CommandlineError as e:
 		parser.error(e)
+		return  # avoid IDE warnings below
+
+	try:
+		pipeline.open_input(input_filename, file2=input_paired_filename,
+				qualfile=quality_filename, colorspace=options.colorspace,
+				fileformat=options.format, interleaved=is_interleaved_input)
+	except (seqio.UnknownFileType, IOError) as e:
+		parser.error(e)
+
+	try:
+		filters, files_to_close = filters_from_parsed_args(options, paired, pipeline.uses_qualities,
+			is_interleaved_output, default_outfile)
+	except CommandlineError as e:
+		parser.error(e)
+		return
+	pipeline.set_filters(filters)
+	for f in files_to_close:
+		pipeline.register_file_to_close(f)
 
 	implementation = platform.python_implementation()
 	opt = ' (' + implementation + ')' if implementation != 'CPython' else ''
@@ -831,7 +871,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
 	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
 		pipeline.n_adapters, 's' if pipeline.n_adapters != 1 else '',
-		pipeline.error_rate * 100,
+		options.error_rate * 100,
 		{False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end'}[pipeline.paired])
 
 	if pipeline.should_warn_legacy:
