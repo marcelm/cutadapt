@@ -69,6 +69,7 @@ import functools
 import logging
 import platform
 import textwrap
+from collections import namedtuple
 from xopen import xopen
 
 from cutadapt import seqio, __version__
@@ -488,7 +489,63 @@ def parse_cutoffs(s):
 	return cutoffs
 
 
-def filters_from_parsed_args(options, paired, qualities, is_interleaved_output, default_outfile):
+OutputFiles = namedtuple('OutputFiles',
+	'rest info wildcard too_short too_short2 too_long too_long2 untrimmed untrimmed2 out out2')
+
+
+def open_output_files(options, default_outfile, demultiplex):
+	"""
+	Return OutputFiles. If demultiplex is True, the untrimmed, untrimmed2, out and out2
+	files are not opened.
+	"""
+	rest_file = info_file = wildcard = None
+	if options.rest_file is not None:
+		rest_file = xopen(options.rest_file, 'w')
+	if options.info_file is not None:
+		info_file = xopen(options.info_file, 'w')
+	if options.wildcard_file is not None:
+		wildcard = xopen(options.wildcard_file, 'w')
+
+	def open2(path1, path2):
+		file1 = file2 = None
+		if path1 is not None:
+			file1 = xopen(path1, 'w')
+			if path2 is not None:
+				file2 = xopen(path2, 'w')
+		return file1, file2
+
+	too_short = too_short2 = None
+	if options.minimum_length > 0:
+		too_short, too_short2 = open2(options.too_short_output, options.too_short_paired_output)
+
+	too_long = too_long2 = None
+	if options.maximum_length < sys.maxsize:
+		too_long, too_long2 = open2(options.too_long_output, options.too_long_paired_output)
+
+	if demultiplex:
+		untrimmed = untrimmed2 = out = out2 = None
+	else:
+		untrimmed, untrimmed2 = open2(options.untrimmed_output, options.untrimmed_paired_output)
+		out, out2 = open2(options.output, options.paired_output)
+		if out is None:
+			out = default_outfile
+
+	return OutputFiles(
+		rest=rest_file,
+		info=info_file,
+		wildcard=wildcard,
+		too_short=too_short,
+		too_short2=too_short2,
+		too_long=too_long,
+		too_long2=too_long2,
+		untrimmed=untrimmed,
+		untrimmed2=untrimmed2,
+		out=out,
+		out2=out2,
+	)
+
+
+def filters_from_parsed_args(options, paired, qualities, is_interleaved_output, outfiles, demultiplex):
 	open_writer = functools.partial(seqio.open, mode='w',
 		qualities=qualities, colorspace=options.colorspace)
 
@@ -505,30 +562,24 @@ def filters_from_parsed_args(options, paired, qualities, is_interleaved_output, 
 		filter_wrapper = functools.partial(PairedRedirector, affected=affected)
 
 	filters = []
-	# TODO open_files = []
 
-	# Open info file and other info-like files (rest file, wildcard file)
-	rest_file = info_file = wildcard_file = None
-	if options.rest_file is not None:
-		rest_file = xopen(options.rest_file, 'w')
-		filters.append(RestFileWriter(rest_file))
-	if options.info_file is not None:
-		info_file = xopen(options.info_file, 'w')
-		filters.append(InfoFileWriter(info_file))
-	if options.wildcard_file is not None:
-		wildcard_file = xopen(options.wildcard_file, 'w')
-		filters.append(WildcardFileWriter(wildcard_file))
+	if outfiles.rest:
+		filters.append(RestFileWriter(outfiles.rest))
+	if outfiles.info:
+		filters.append(InfoFileWriter(outfiles.info))
+	if outfiles.wildcard:
+		filters.append(WildcardFileWriter(outfiles.wildcard))
 
-	too_short_writer = None  # too short reads go here
-	# TODO pass file name to TooShortReadFilter, add a .close() method?
+	too_short_writer = None
 	if options.minimum_length > 0:
-		if options.too_short_output:
-			too_short_writer = open_writer(options.too_short_output, options.too_short_paired_output)
+		if outfiles.too_short:
+			too_short_writer = open_writer(outfiles.too_short, outfiles.too_short2)
 		filters.append(filter_wrapper(too_short_writer, TooShortReadFilter(options.minimum_length)))
-	too_long_writer = None  # too long reads go here
+
+	too_long_writer = None
 	if options.maximum_length < sys.maxsize:
-		if options.too_long_output is not None:
-			too_long_writer = open_writer(options.too_long_output, options.too_long_paired_output)
+		if outfiles.too_long:
+			too_long_writer = open_writer(outfiles.too_long, outfiles.too_long2)
 		filters.append(filter_wrapper(too_long_writer, TooLongReadFilter(options.maximum_length)))
 
 	if options.max_n != -1:
@@ -537,15 +588,16 @@ def filters_from_parsed_args(options, paired, qualities, is_interleaved_output, 
 	if int(options.discard_trimmed) + int(options.discard_untrimmed) + int(options.untrimmed_output is not None) > 1:
 		raise CommandlineError("Only one of the --discard-trimmed, --discard-untrimmed "
 			"and --untrimmed-output options can be used at the same time.")
-	demultiplexer = None
 	untrimmed_writer = None
 	writer = None
+
 	if (options.paired_output is not None and '{name}' in options.paired_output
 			and '{name}' not in options.output):
 		raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
 			'both output file names (-o and -p)')
 
-	if options.output is not None and '{name}' in options.output:
+	demultiplexer = None
+	if demultiplex:
 		if options.discard_trimmed:
 			raise CommandlineError("Do not use --discard-trimmed when demultiplexing.")
 		untrimmed = options.output.replace('{name}', 'unknown')
@@ -580,25 +632,32 @@ def filters_from_parsed_args(options, paired, qualities, is_interleaved_output, 
 		elif options.discard_untrimmed:
 			filters.append(filter_wrapper(None, DiscardUntrimmedFilter()))
 		elif options.untrimmed_output:
-			untrimmed_writer = open_writer(options.untrimmed_output,
-				options.untrimmed_paired_output)
+			untrimmed_writer = open_writer(outfiles.untrimmed, outfiles.untrimmed2)
 			filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
 
 		# Finally, figure out where the reads that passed all the previous
 		# filters should go.
-		if options.output is not None:
-			writer = open_writer(options.output, options.paired_output, interleaved=is_interleaved_output)
-		else:
-			writer = open_writer(default_outfile, interleaved=is_interleaved_output)
+		writer = open_writer(outfiles.out, outfiles.out2, interleaved=is_interleaved_output)
 		if not paired:
 			filters.append(NoFilter(writer))
 		else:
 			filters.append(PairedNoFilter(writer))
 
 	return filters, [writer, untrimmed_writer,
-			rest_file, wildcard_file,
-			info_file, too_short_writer, too_long_writer,
-			demultiplexer]
+		outfiles.rest,
+		outfiles.wildcard,
+		outfiles.info,
+		outfiles.out,
+		outfiles.out2,
+		outfiles.untrimmed,
+		outfiles.untrimmed2,
+		outfiles.too_short,
+		outfiles.too_short2,
+		outfiles.too_long,
+		outfiles.too_long2,
+		too_short_writer,
+		too_long_writer,
+		demultiplexer]
 
 
 def determine_paired_mode(options):
@@ -849,14 +908,16 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	try:
 		pipeline.open_input(input_filename, file2=input_paired_filename,
-				qualfile=quality_filename, colorspace=options.colorspace,
-				fileformat=options.format, interleaved=is_interleaved_input)
+			qualfile=quality_filename, colorspace=options.colorspace,
+			fileformat=options.format, interleaved=is_interleaved_input)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
 
+	demultiplex = options.output is not None and '{name}' in options.output
+	outfiles = open_output_files(options, default_outfile, demultiplex)
 	try:
 		filters, files_to_close = filters_from_parsed_args(options, paired, pipeline.uses_qualities,
-			is_interleaved_output, default_outfile)
+			is_interleaved_output, outfiles, demultiplex)
 	except CommandlineError as e:
 		parser.error(e)
 		return
