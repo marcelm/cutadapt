@@ -1,9 +1,13 @@
 from __future__ import print_function, division, absolute_import
 
+import io
 import sys
 import time
 import logging
 import functools
+from multiprocessing import Process, Pipe, Queue
+
+from xopen import xopen
 
 from . import seqio
 from .modifiers import ZeroCapper
@@ -20,8 +24,8 @@ class OutputFiles(object):
 	The attributes are open file-like objects except when demultiplex is True. In that case,
 	untrimmed, untrimmed2 are file names, and out and out2 are file name templates
 	containing '{name}'.
-	If interleaved is True, then out is written interleaved
-	Files may also be set to None if not specified on the command-line.
+	If interleaved is True, then out is written interleaved.
+	Files may also be None.
 	"""
 	# TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?
 	def __init__(self,
@@ -161,18 +165,10 @@ class Pipeline(object):
 	def uses_qualities(self):
 		return self._reader.delivers_qualities
 
-	def register_file_to_close(self, file):
-		if file is not None and file is not sys.stdin and file is not sys.stdout:
-			self._close_files.append(file)
-
-	def close_files(self):
-		for f in self._close_files:
-			f.close()
-
 	def run(self):
 		start_time = time.clock()
 		(n, total1_bp, total2_bp) = self.process_reads()
-		self.close_files()
+		#self.close_files()
 		elapsed_time = time.clock() - start_time
 		# TODO
 		m = self._modifiers
@@ -319,3 +315,263 @@ class PairedEndPipeline(Pipeline):
 		return PairedEndDemultiplexer(outfiles.out, outfiles.out2,
 			outfiles.untrimmed, outfiles.untrimmed2, qualities=self.uses_qualities,
 			colorspace=self._colorspace)
+
+
+BUFFER_SIZE = 4000000
+
+
+def find_fasta_record_end(buf, end):
+	"""
+	Search for the end of the last complete FASTA record within buf[start:end]
+	"""
+	pos = buf.rfind(b'\n>', 0, end)
+	if pos != -1:
+		return pos + 1
+	if buf[0:1] == b'>':
+		return 0
+	# TODO
+	assert False
+
+
+def find_fastq_record_end(buf, end, _newline=ord('\n')):
+	"""
+	Search for the end of the last complete FASTQ record in buf[:end]
+	"""
+	linebreaks = buf.count(_newline, 0, end)
+	right = end
+	for _ in range(linebreaks % 4 + 1):
+		right = buf.rfind(_newline, 0, right)
+		assert right != -1  # TODO
+	return right + 1
+
+
+def read_chunks_from_file(f, buffer_size=4000000):
+	"""
+	f needs to be a file opened in binary mode
+	"""
+	# This buffer is re-used in each iteration.
+	buf = bytearray(buffer_size)
+
+	# Read one byte to determine file format
+	# TODO if there is a comment char, we assume FASTA
+	start = f.readinto(memoryview(buf)[0:1])
+	if start == 1 and buf[0:1] == b'@':
+		find_record_end = find_fastq_record_end
+	elif start == 1 and buf[0:1] == b'#' or buf[0:1] == b'>':
+		find_record_end = find_fasta_record_end
+	elif start > 0:
+		raise ValueError('input file format unknown')
+
+	while True:
+		bufend = f.readinto(memoryview(buf)[start:]) + start
+		if start == bufend:
+			# End of file
+			break
+		end = find_record_end(buf, bufend)
+		assert end <= bufend
+		if end > 0:
+			yield memoryview(buf)[0:end]
+		start = bufend - end
+		assert start >= 0
+		buf[0:start] = buf[end:bufend]
+
+	if start > 0:
+		yield memoryview(buf)[0:start]
+
+
+def reader_process(file, connections, queue):
+	"""
+	Read chunks of FASTA or FASTQ data from *file* and send to a worker.
+
+	queue -- a Queue of worker indices. A worker writes its own index into this
+		queue to notify us that it is ready to receive more data.
+	connections -- a list of Connection objects, one for each worker.
+
+	The function repeatedly
+
+	- reads a chunk from the file
+	- reads a worker index from the Queue
+	- sends the chunk to connections[index]
+
+	and finally sends "poison pills" (the value -1) to all connections.
+	"""
+	with xopen(file, 'rb') as f:
+		for chunk_index, chunk in enumerate(read_chunks_from_file(f)):
+			# Determine the worker that should get this chunk
+			worker_index = queue.get()
+			pipe = connections[worker_index]
+			pipe.send(chunk_index)
+			pipe.send_bytes(chunk)
+
+	# Send poison pills to all workers
+	for _ in range(len(connections)):
+		worker_index = queue.get()
+		connections[worker_index].send(-1)
+
+	# try:
+	#   ...
+	# except Exception as e:
+	# 	traceb = traceback.format_exc()
+	# 	reads_queue.put((e, traceb))
+
+
+class WorkerProcess(Process):
+	"""
+	The worker repeatedly reads chunks of data from the read_pipe, runs the pipeline on it
+	and sends the processed chunks to the write_pipe.
+
+	To notify the reader process that it wants data, it puts its own identifier into the queue
+	before attempting to read data from the read_pipe.
+	"""
+	def __init__(self, id_, pipeline, filtering_options, orig_outfiles, read_pipe, write_pipe,
+			need_work_queue, work_done_queue):
+		super(WorkerProcess, self).__init__()
+		self._id = id_
+		self._pipeline = pipeline
+		self._filtering_options = filtering_options
+		self._orig_outfiles = orig_outfiles
+		self._read_pipe = read_pipe
+		self._write_pipe = write_pipe
+		self._need_work_queue = need_work_queue
+		self._work_done_queue = work_done_queue
+
+	def run(self):
+		n = 0  # no. of processed reads  # TODO turn into attribute
+		total_bp = 0
+
+		while True:
+			# Notify reader that we need data
+			self._need_work_queue.put(self._id)
+			chunk_index = self._read_pipe.recv()
+			if chunk_index == -1:
+				# reader is done
+				break
+			data = self._read_pipe.recv_bytes()
+
+			# logger.info('WORKER: Read %d bytes', len(data))
+			input = io.TextIOWrapper(io.BytesIO(data), encoding='ascii')
+			output = io.TextIOWrapper(io.BytesIO(), encoding='ascii')
+			# Output format depends on file name, so make output file name available
+			output.buffer.name = self._orig_outfiles.out.name
+
+			outfiles = OutputFiles(out=output)
+			self._pipeline.set_input(input)
+			self._pipeline.set_output(outfiles, *self._filtering_options[0], **self._filtering_options[1])
+			stats = self._pipeline.run()  # TODO accumulate stats
+			output.flush()
+			processed_chunk = output.buffer.getvalue()
+
+			self._work_done_queue.put(self._id)
+			self._write_pipe.send(chunk_index)
+			self._write_pipe.send_bytes(processed_chunk)
+
+		self._work_done_queue.put(-1)
+
+		# TODO
+		# return pipeline statistics
+
+
+class ParallelPipelineRunner(object):
+	"""
+	Wrap a SingleEndPipeline, running it in parallel
+
+
+	"""
+
+	def __init__(self, pipeline, n_workers):
+		self._pipeline = pipeline
+		self._pipes = []  # the workers read from these
+		self._reader_process = None
+		self._filtering_options = None
+		self._outfiles = None
+		self._n_workers = n_workers
+		self._need_work_queue = Queue()
+		self._work_done_queue = Queue()
+
+	def set_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
+			interleaved=False):
+		if self._reader_process is not None:
+			raise RuntimeError('Do not call set_input more than once')
+		assert file2 is None and qualfile is None and colorspace is False and fileformat is None and interleaved is False
+		connections = [Pipe(duplex=False) for _ in range(self._n_workers)]
+		self._pipes, connw = zip(*connections)
+		p = Process(target=reader_process, args=(file1, connw, self._need_work_queue))
+		p.daemon = True
+		p.start()
+		self._reader_process = p
+
+	@staticmethod
+	def can_output_to(outfiles):
+		return (
+			outfiles.out is not None
+			and outfiles.out2 is None
+			and outfiles.rest is None
+			and outfiles.info is None
+			and outfiles.wildcard is None
+			and outfiles.too_short is None
+			and outfiles.too_short2 is None
+			and outfiles.too_long is None
+			and outfiles.too_long2 is None
+			and outfiles.untrimmed is None
+			and outfiles.untrimmed2 is None
+			and not outfiles.demultiplex
+			and not outfiles.interleaved
+		)
+
+	def set_output(self, outfiles, *args, **kwargs):
+		if not self.can_output_to(outfiles):
+			raise ValueError()
+		self._filtering_options = args, kwargs
+		self._outfiles = outfiles
+
+	def _start_workers(self):
+		workers = []
+		connections = []
+		for index in range(self._n_workers):
+			conn_r, conn_w = Pipe(duplex=False)
+			connections.append(conn_r)
+			worker = WorkerProcess(index, self._pipeline,
+				self._filtering_options, self._outfiles, self._pipes[index], conn_w,
+				self._need_work_queue, self._work_done_queue)
+			worker.daemon = True
+			worker.start()
+			workers.append(worker)
+		return workers, connections
+
+	def run(self):
+		start_time = time.clock()
+		workers, connections = self._start_workers()
+		chunks = dict()
+		current_chunk = 0
+		# TODO we could use multiprocessing.connection.wait() here
+		for _ in connections:
+			for conn_index in iter(self._work_done_queue.get, -1):
+				worker = connections[conn_index]
+				chunk_index = worker.recv()
+				assert chunk_index != -1
+				data = worker.recv_bytes()
+				chunks[chunk_index] = data
+				while current_chunk in chunks:
+					self._outfiles.out.write(chunks[current_chunk].decode('utf-8'))  # TODO could be written as binary
+					del chunks[current_chunk]
+					current_chunk += 1
+
+		for w in workers:
+			w.join()
+		self._reader_process.join()
+
+		(n, total1_bp, total2_bp) = (0, 0, 0)  # TODO
+		#self._pipeline.close()
+		elapsed_time = time.clock() - start_time
+		# TODO
+		m = self._pipeline._modifiers
+		m2 = getattr(self, '_modifiers2', [])
+		stats = Statistics()
+		stats.collect(n, total1_bp, total2_bp, elapsed_time, m, m2, self._pipeline._filters)
+		return stats
+
+	def close(self):
+		for f in self._outfiles:
+			# TODO do not use hasattr
+			if f is not None and f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
+				f.close()

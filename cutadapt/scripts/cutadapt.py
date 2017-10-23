@@ -75,7 +75,8 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer, Shortener)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
-from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles
+from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles, ParallelPipelineRunner
+from cutadapt.compat import PY3
 
 logger = logging.getLogger()
 
@@ -111,6 +112,8 @@ def get_option_parser():
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
 			"from file name extension.")
+	parser.add_option('-j', '--threads', type=int, default=1,  # TODO
+		help='Number of threads')
 
 	# Hidden option for now
 	parser.add_option("--gc-content", type=float, default=50,  # it's a percentage
@@ -672,15 +675,28 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error(e)
 		return  # avoid IDE warnings below
 
+	parallel_runner = ParallelPipelineRunner(pipeline, options.threads)
+	if (
+		PY3
+		and parallel_runner.can_output_to(outfiles)
+		and input_paired_filename is None
+		and quality_filename is None
+		and not options.colorspace
+		and not is_interleaved_input
+		and options.format is None
+		and options.threads > 1
+	):
+		runner = parallel_runner
+	else:
+		runner = pipeline
 	try:
-		pipeline.set_input(input_filename, file2=input_paired_filename,
+		runner.set_input(input_filename, file2=input_paired_filename,
 			qualfile=quality_filename, colorspace=options.colorspace,
 			fileformat=options.format, interleaved=is_interleaved_input)
+		runner.set_output(outfiles, options.minimum_length, options.maximum_length, options.max_n,
+			options.discard_trimmed, options.discard_untrimmed)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
-
-	pipeline.set_output(outfiles, options.minimum_length, options.maximum_length, options.max_n,
-		options.discard_trimmed, options.discard_untrimmed)
 
 	implementation = platform.python_implementation()
 	opt = ' (' + implementation + ')' if implementation != 'CPython' else ''
@@ -700,8 +716,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			'-A/-B/-G/-U/--interleaved options.')))
 
 	try:
-		stats = pipeline.run()
-		pipeline.close()
+		stats = runner.run()
+		# cProfile.runctx('stats=runner.run()', globals(), locals(), 'profile_main.prof')
+		runner.close()
 	except KeyboardInterrupt:
 		print("Interrupted", file=sys.stderr)
 		sys.exit(130)

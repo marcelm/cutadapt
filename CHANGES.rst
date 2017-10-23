@@ -5,6 +5,7 @@ Changes
 development version
 -------------------
 
+* Cutadapt now supports parallel processing!
 * `Issue #118 <https://github.com/marcelm/cutadapt/issues/118>`_:
   Added support for demultiplexing of paired-end data.
 
