@@ -629,6 +629,7 @@ class UnknownFileType(Exception):
 	"""
 
 
+# TODO rename
 def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 	interleaved=False, mode='r', qualities=None):
 	"""
@@ -747,7 +748,7 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
 			# Format not recognized, but know we want to write reads with qualities
 			format = 'fastq'
 		elif mode == 'w' and qualities is False:
-			# Same, but we know that we want to write reads without qualities
+			# Format not recognized, but know we want to write reads without qualities
 			format = 'fasta'
 		else:
 			raise UnknownFileType("Could not determine whether file {0!r} is FASTA "
@@ -768,6 +769,7 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
 		raise UnknownFileType('Cannot determine whether to write in FASTA or '
 			'FASTQ format')
 	# No name available. Try to autodetect type by reading from the file.
+	# TODO this could use file.buffer.peek() instead
 	for line in file:
 		if line.startswith('#'):
 			# Skip comment lines (needed for csfasta)
