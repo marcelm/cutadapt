@@ -64,11 +64,9 @@ check_importability()
 import sys
 import errno
 from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
-import functools
 import logging
 import platform
 import textwrap
-from collections import namedtuple
 from xopen import xopen
 
 from cutadapt import seqio, __version__
@@ -76,12 +74,8 @@ from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer, Shortener)
-from cutadapt.filters import (NoFilter, PairedNoFilter, Redirector, PairedRedirector,
-	TooShortReadFilter, TooLongReadFilter,
-	Demultiplexer, PairedEndDemultiplexer, NContentFilter, DiscardUntrimmedFilter,
-	DiscardTrimmedFilter, RestFileWriter, InfoFileWriter, WildcardFileWriter)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
-from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
+from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles
 
 logger = logging.getLogger()
 
@@ -334,18 +328,6 @@ def parse_cutoffs(s):
 	return cutoffs
 
 
-# The attributes are open file-like objects except when demultiplex is True. In that case,
-# untrimmed, untrimmed2 are file names, and out and out2 are file name templates
-# containing '{name}'.
-# If interleaved is True, then out is written interleaved
-# TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?
-# Files may also be set to None if not specified on the command-line.
-# TODO move to pipeline
-OutputFiles = namedtuple('OutputFiles',
-	'rest info wildcard too_short too_short2 too_long too_long2 untrimmed untrimmed2 out out2 '
-	'demultiplex interleaved')
-
-
 def open_output_files(options, default_outfile, interleaved):
 	"""
 	Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
@@ -413,7 +395,7 @@ def open_output_files(options, default_outfile, interleaved):
 			out = default_outfile
 
 	if demultiplex:
-		assert '{name}' in out and (out2 is None or '{name}' in out2)
+		assert out is not None and '{name}' in out and (out2 is None or '{name}' in out2)
 	return OutputFiles(
 		rest=rest_file,
 		info=info_file,
@@ -429,24 +411,6 @@ def open_output_files(options, default_outfile, interleaved):
 		demultiplex=demultiplex,
 		interleaved=interleaved,
 	)
-
-
-# TODO files to close
-	# [writer, untrimmed_writer,
-	# 	outfiles.rest,
-	# 	outfiles.wildcard,
-	# 	outfiles.info,
-	# 	outfiles.out,
-	# 	outfiles.out2,
-	# 	outfiles.untrimmed,
-	# 	outfiles.untrimmed2,
-	# 	outfiles.too_short,
-	# 	outfiles.too_short2,
-	# 	outfiles.too_long,
-	# 	outfiles.too_long2,
-	# 	too_short_writer,
-	# 	too_long_writer,
-	# 	demultiplexer]
 
 
 def determine_paired_mode(options):
@@ -717,10 +681,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	pipeline.set_output(outfiles, options.minimum_length, options.maximum_length, options.max_n,
 		options.discard_trimmed, options.discard_untrimmed)
-
-	# TODO
-	#for f in files_to_close:
-	#	pipeline.register_file_to_close(f)
 
 	implementation = platform.python_implementation()
 	opt = ' (' + implementation + ')' if implementation != 'CPython' else ''

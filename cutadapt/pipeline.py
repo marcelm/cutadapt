@@ -1,12 +1,10 @@
 from __future__ import print_function, division, absolute_import
 
-import io
 import sys
 import time
 import logging
 import functools
-
-from xopen import xopen
+from collections import namedtuple
 
 from . import seqio
 from .modifiers import ZeroCapper
@@ -17,6 +15,18 @@ from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, In
 
 
 logger = logging.getLogger()
+
+
+# The attributes are open file-like objects except when demultiplex is True. In that case,
+# untrimmed, untrimmed2 are file names, and out and out2 are file name templates
+# containing '{name}'.
+# If interleaved is True, then out is written interleaved
+# TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?
+# Files may also be set to None if not specified on the command-line.
+# TODO move to pipeline
+OutputFiles = namedtuple('OutputFiles',
+	'rest info wildcard too_short too_short2 too_long too_long2 untrimmed untrimmed2 out out2 '
+	'demultiplex interleaved')
 
 
 class Pipeline(object):
