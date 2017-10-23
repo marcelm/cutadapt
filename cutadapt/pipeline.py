@@ -4,7 +4,6 @@ import sys
 import time
 import logging
 import functools
-from collections import namedtuple
 
 from . import seqio
 from .modifiers import ZeroCapper
@@ -13,20 +12,59 @@ from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, In
 	RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
 	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, PairedEndDemultiplexer)
 
-
 logger = logging.getLogger()
 
 
-# The attributes are open file-like objects except when demultiplex is True. In that case,
-# untrimmed, untrimmed2 are file names, and out and out2 are file name templates
-# containing '{name}'.
-# If interleaved is True, then out is written interleaved
-# TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?
-# Files may also be set to None if not specified on the command-line.
-# TODO move to pipeline
-OutputFiles = namedtuple('OutputFiles',
-	'rest info wildcard too_short too_short2 too_long too_long2 untrimmed untrimmed2 out out2 '
-	'demultiplex interleaved')
+class OutputFiles(object):
+	"""
+	The attributes are open file-like objects except when demultiplex is True. In that case,
+	untrimmed, untrimmed2 are file names, and out and out2 are file name templates
+	containing '{name}'.
+	If interleaved is True, then out is written interleaved
+	Files may also be set to None if not specified on the command-line.
+	"""
+	# TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?
+	def __init__(self,
+			out=None,
+			out2=None,
+			untrimmed=None,
+			untrimmed2=None,
+			too_short=None,
+			too_short2=None,
+			too_long=None,
+			too_long2=None,
+			info=None,
+			rest=None,
+			wildcard=None,
+			demultiplex=False,
+			interleaved=False,
+	):
+		self.out = out
+		self.out2 = out2
+		self.untrimmed = untrimmed
+		self.untrimmed2 = untrimmed2
+		self.too_short = too_short
+		self.too_short2 = too_short2
+		self.too_long = too_long
+		self.too_long2 = too_long2
+		self.info = info
+		self.rest = rest
+		self.wildcard = wildcard
+		self.demultiplex = demultiplex
+		self.interleaved = interleaved
+
+	def __iter__(self):
+		yield self.out
+		yield self.out2
+		yield self.untrimmed
+		yield self.untrimmed2
+		yield self.too_short
+		yield self.too_short2
+		yield self.too_long
+		yield self.too_long2
+		yield self.info
+		yield self.rest
+		yield self.wildcard
 
 
 class Pipeline(object):
