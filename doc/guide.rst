@@ -929,16 +929,20 @@ To require that filtering criteria must apply to *both* reads in order for a
 read pair to be discarded, use the option ``--pair-filter=both``. The following
 table describes the effect for each filtering option.
 
-============================ ======================================================== ========================================================
-Filtering option             With ``--pair-filter=any``, the pair is discarded if ... With ``-pair-filter=both``, the pair is discarded if ...
-============================ ======================================================== ========================================================
-``--minimum-length``         one of the reads is too short                            both reads are too short
-``--maximum-length``         one of the reads is too long                             both reads are too long
-``--discard-trimmed``        one of the reads contains an adapter                     both reads contain an adapter
-``--discard-untrimmed``      one of the reads does not contain an adapter             both reads do not contain an adapter
-``--max-n``                  one of the reads contains too many ``N`` bases           both reads contain too many ``N`` bases
-============================ ======================================================== ========================================================
-
++----------------------------+------------------------------------------------+-----------------------------------------+
+| Filtering option           | With ``--pair-filter=any``, the pair           | With ``-pair-filter=both``, the pair    |
+|                            | is discarded if ...                            | is discarded if ...                     |
++============================+================================================+=========================================+
+| ``--minimum-length``       | one of the reads is too short                  | both reads are too short                |
++----------------------------+------------------------------------------------+-----------------------------------------+
+| ``--maximum-length``       | one of the reads is too long                   | both reads are too long                 |
++----------------------------+------------------------------------------------+-----------------------------------------+
+| ``--discard-trimmed``      | one of the reads contains an adapter           | both reads contain an adapter           |
++----------------------------+------------------------------------------------+-----------------------------------------+
+| ``--discard-untrimmed``    | one of the reads does not contain an adapter   | both reads do not contain an adapter    |
++----------------------------+------------------------------------------------+-----------------------------------------+
+| ``--max-n``                | one of the reads contains too many ``N`` bases | both reads contain too many ``N`` bases |
++----------------------------+------------------------------------------------+-----------------------------------------+
 
 To further complicate matters, cutadapt switches to a backwards compatibility
 mode ("legacy mode") when none of the uppercase modification options
