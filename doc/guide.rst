@@ -908,21 +908,37 @@ Filtering paired-end reads
 --------------------------
 
 The :ref:`filtering options listed above <filtering>` can also be used when
-trimming paired-end data. Since there are two reads, however, the filtering
-criteria are checked for both reads. The question is what to do when a criterion
-applies to only one read and not the other.
+trimming paired-end data.
 
-By default, the filtering options discard or redirect the read pair if *any*
-of the two reads fulfill the criteria. That is, ``--max-n`` discards the pair
-if one of the two reads has too many ``N`` bases; ``--discard-untrimmed``
-discards the pair if one of the reads does not contain an adapter;
-``--minimum-length`` discards the pair if one of the reads is too short;
-and ``--maximum-length`` discards the pair if one of the reads is too long.
-Note that the ``--discard-trimmed`` filter would also apply because it is also
-the case that at least one of the reads is *trimmed*!
+Importantly, cutadapt *always discards both reads of a pair* if it determines
+that the pair should be discarded. This ensures that the reads in the output
+files are in sync. (If you don’t want or need this, you can run cutadapt
+separately on the R1 and R2 files.)
+
+The same applies also to the options that redirect reads to other files if they
+fulfill a filtering criterion, such as
+``--too-short-output``/``--too-short-paired-output``. That is, the reads are
+always sent in pairs to these alternative output files.
+
+By default, a read pair is discarded (or redirected) if one of the reads
+(R1 or R2) fulfills the filtering criterion. As an example, if option
+``--minimum-length=20`` is used and paired-end data is processed, a read pair
+if discarded if one of the reads is shorter than 20 nt.
 
 To require that filtering criteria must apply to *both* reads in order for a
-read pair to be considered "filtered", use the option ``--pair-filter=both``.
+read pair to be discarded, use the option ``--pair-filter=both``. The following
+table describes the effect for each filtering option.
+
+============================ ======================================================== ========================================================
+Filtering option             With ``--pair-filter=any``, the pair is discarded if ... With ``-pair-filter=both``, the pair is discarded if ...
+============================ ======================================================== ========================================================
+``--minimum-length``         one of the reads is too short                            both reads are too short
+``--maximum-length``         one of the reads is too long                             both reads are too long
+``--discard-trimmed``        one of the reads contains an adapter                     both reads contain an adapter
+``--discard-untrimmed``      one of the reads does not contain an adapter             both reads do not contain an adapter
+``--max-n``                  one of the reads contains too many ``N`` bases           both reads contain too many ``N`` bases
+============================ ======================================================== ========================================================
+
 
 To further complicate matters, cutadapt switches to a backwards compatibility
 mode ("legacy mode") when none of the uppercase modification options
