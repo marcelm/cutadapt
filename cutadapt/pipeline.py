@@ -6,6 +6,7 @@ import time
 import logging
 import functools
 from multiprocessing import Process, Pipe, Queue
+import multiprocessing.connection
 
 from xopen import xopen
 
@@ -424,7 +425,7 @@ class WorkerProcess(Process):
 	before attempting to read data from the read_pipe.
 	"""
 	def __init__(self, id_, pipeline, filtering_options, orig_outfiles, read_pipe, write_pipe,
-			need_work_queue, work_done_queue):
+			need_work_queue):
 		super(WorkerProcess, self).__init__()
 		self._id = id_
 		self._pipeline = pipeline
@@ -433,7 +434,6 @@ class WorkerProcess(Process):
 		self._read_pipe = read_pipe
 		self._write_pipe = write_pipe
 		self._need_work_queue = need_work_queue
-		self._work_done_queue = work_done_queue
 
 	def run(self):
 		n = 0  # no. of processed reads  # TODO turn into attribute
@@ -461,14 +461,11 @@ class WorkerProcess(Process):
 			output.flush()
 			processed_chunk = output.buffer.getvalue()
 
-			self._work_done_queue.put(self._id)
-			self._write_pipe.send(chunk_index)
+			self._write_pipe.send((chunk_index, stats))  # TODO does not work
 			self._write_pipe.send_bytes(processed_chunk)
 
-		self._work_done_queue.put(-1)
 
-		# TODO
-		# return pipeline statistics
+		self._write_pipe.send(-1)
 
 
 class ParallelPipelineRunner(object):
@@ -486,7 +483,6 @@ class ParallelPipelineRunner(object):
 		self._outfiles = None
 		self._n_workers = n_workers
 		self._need_work_queue = Queue()
-		self._work_done_queue = Queue()
 
 	def set_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 			interleaved=False):
@@ -532,7 +528,7 @@ class ParallelPipelineRunner(object):
 			connections.append(conn_r)
 			worker = WorkerProcess(index, self._pipeline,
 				self._filtering_options, self._outfiles, self._pipes[index], conn_w,
-				self._need_work_queue, self._work_done_queue)
+				self._need_work_queue)
 			worker.daemon = True
 			worker.start()
 			workers.append(worker)
@@ -543,13 +539,15 @@ class ParallelPipelineRunner(object):
 		workers, connections = self._start_workers()
 		chunks = dict()
 		current_chunk = 0
-		# TODO we could use multiprocessing.connection.wait() here
-		for _ in connections:
-			for conn_index in iter(self._work_done_queue.get, -1):
-				worker = connections[conn_index]
-				chunk_index = worker.recv()
-				assert chunk_index != -1
-				data = worker.recv_bytes()
+		while connections:
+			ready_connections = multiprocessing.connection.wait(connections)
+			for connection in ready_connections:
+				chunk_index = connection.recv()
+				if chunk_index == -1:
+					# the worker is done
+					connections.remove(connection)
+					continue
+				data = connection.recv_bytes()
 				chunks[chunk_index] = data
 				while current_chunk in chunks:
 					self._outfiles.out.write(chunks[current_chunk].decode('utf-8'))  # TODO could be written as binary
