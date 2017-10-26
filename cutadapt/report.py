@@ -26,7 +26,6 @@ class Statistics:
 		"""
 		"""
 		self.n = 0
-		self.total_bp = 0
 		self.total_bp1 = 0
 		self.total_bp2 = 0
 		self.paired = False
@@ -39,19 +38,8 @@ class Statistics:
 		self.with_adapters = [0, 0]
 		self.quality_trimmed_bp = [0, 0]
 		self.did_quality_trimming = False
-		self.quality_trimmed = 0
 		self.adapter_stats = [None, None]
 		self.adapter_lists = [[], []]
-
-		# These attributes are derived from the ones above
-		self.total_written_bp = 0
-		self.too_short_fraction = 0
-		self.too_long_fraction = 0
-		self.total_written_bp_fraction = 0
-		self.with_adapters_fraction = []
-		self.written_fraction = 0
-		self.quality_trimmed_fraction = 0
-		self.too_many_n_fraction = None
 
 	def collect(self, n, total_bp1, total_bp2, time, modifiers, modifiers2, writers):
 		"""
@@ -61,14 +49,12 @@ class Statistics:
 		time -- CPU time
 		"""
 		self.n = n
-		self.total_bp = total_bp1
 		self.total_bp1 = total_bp1
 		if total_bp2 is None:
 			self.paired = False
 		else:
 			self.paired = True
 			self.total_bp2 = total_bp2
-			self.total_bp += total_bp2
 		self.time = max(time, 0.01)
 
 		# Collect statistics from writers/filters
@@ -99,16 +85,45 @@ class Statistics:
 					self.adapter_stats[i] = modifier.adapter_statistics
 					self.adapter_lists[i] = modifier.adapters
 
-		# Set the attributes that are derived from the other ones
-		self.quality_trimmed = sum(self.quality_trimmed_bp)
-		self.total_written_bp = sum(self.written_bp)
-		self.written_fraction = safe_divide(self.written, self.n)
-		self.with_adapters_fraction = [safe_divide(v, self.n) for v in self.with_adapters]
-		self.quality_trimmed_fraction = safe_divide(self.quality_trimmed, self.total_bp)
-		self.total_written_bp_fraction = safe_divide(self.total_written_bp, self.total_bp)
-		self.too_short_fraction = safe_divide(self.too_short, self.n)
-		self.too_long_fraction = safe_divide(self.too_long, self.n)
-		self.too_many_n_fraction = safe_divide(self.too_many_n, self.n)
+	@property
+	def total_bp(self):
+		return self.total_bp1 + self.total_bp2
+
+	@property
+	def quality_trimmed(self):
+		return sum(self.quality_trimmed_bp)
+
+	@property
+	def total_written_bp(self):
+		return sum(self.written_bp)
+
+	@property
+	def written_fraction(self):
+		return safe_divide(self.written, self.n)
+
+	@property
+	def with_adapters_fraction(self):
+		return [safe_divide(v, self.n) for v in self.with_adapters]
+
+	@property
+	def quality_trimmed_fraction(self):
+		return safe_divide(self.quality_trimmed, self.total_bp)
+
+	@property
+	def total_written_bp_fraction(self):
+		return safe_divide(self.total_written_bp, self.total_bp)
+
+	@property
+	def too_short_fraction(self):
+		return safe_divide(self.too_short, self.n)
+
+	@property
+	def too_long_fraction(self):
+		return safe_divide(self.too_long, self.n)
+
+	@property
+	def too_many_n_fraction(self):
+		return safe_divide(self.too_many_n, self.n)
 
 
 ADAPTER_TYPES = {
@@ -225,48 +240,43 @@ def print_report(stats, gc_content):
 	report = "\n=== Summary ===\n\n"
 	if stats.paired:
 		report += textwrap.dedent("""\
-		Total read pairs processed:      {n:13,d}
-		  Read 1 with adapter:           {with_adapters[0]:13,d} ({with_adapters_fraction[0]:.1%})
-		  Read 2 with adapter:           {with_adapters[1]:13,d} ({with_adapters_fraction[1]:.1%})
+		Total read pairs processed:      {o.n:13,d}
+		  Read 1 with adapter:           {o.with_adapters[0]:13,d} ({o.with_adapters_fraction[0]:.1%})
+		  Read 2 with adapter:           {o.with_adapters[1]:13,d} ({o.with_adapters_fraction[1]:.1%})
 		""")
 	else:
 		report += textwrap.dedent("""\
-		Total reads processed:           {n:13,d}
-		Reads with adapters:             {with_adapters[0]:13,d} ({with_adapters_fraction[0]:.1%})
+		Total reads processed:           {o.n:13,d}
+		Reads with adapters:             {o.with_adapters[0]:13,d} ({o.with_adapters_fraction[0]:.1%})
 		""")
 	if stats.too_short is not None:
-		report += "{pairs_or_reads} that were too short:       {too_short:13,d} ({too_short_fraction:.1%})\n"
+		report += "{pairs_or_reads} that were too short:       {o.too_short:13,d} ({o.too_short_fraction:.1%})\n"
 	if stats.too_long is not None:
-		report += "{pairs_or_reads} that were too long:        {too_long:13,d} ({too_long_fraction:.1%})\n"
+		report += "{pairs_or_reads} that were too long:        {o.too_long:13,d} ({o.too_long_fraction:.1%})\n"
 	if stats.too_many_n is not None:
-		report += "{pairs_or_reads} with too many N:           {too_many_n:13,d} ({too_many_n_fraction:.1%})\n"
+		report += "{pairs_or_reads} with too many N:           {o.too_many_n:13,d} ({o.too_many_n_fraction:.1%})\n"
 
 	report += textwrap.dedent("""\
-	{pairs_or_reads} written (passing filters): {written:13,d} ({written_fraction:.1%})
+	{pairs_or_reads} written (passing filters): {o.written:13,d} ({o.written_fraction:.1%})
 
-	Total basepairs processed: {total_bp:13,d} bp
+	Total basepairs processed: {o.total_bp:13,d} bp
 	""")
 	if stats.paired:
-		report += "  Read 1: {total_bp1:13,d} bp\n"
-		report += "  Read 2: {total_bp2:13,d} bp\n"
+		report += "  Read 1: {o.total_bp1:13,d} bp\n"
+		report += "  Read 2: {o.total_bp2:13,d} bp\n"
 
 	if stats.did_quality_trimming:
-		report += "Quality-trimmed:           {quality_trimmed:13,d} bp ({quality_trimmed_fraction:.1%})\n"
+		report += "Quality-trimmed:           {o.quality_trimmed:13,d} bp ({o.quality_trimmed_fraction:.1%})\n"
 		if stats.paired:
-			report += "  Read 1: {quality_trimmed_bp[0]:13,d} bp\n"
-			report += "  Read 2: {quality_trimmed_bp[1]:13,d} bp\n"
+			report += "  Read 1: {o.quality_trimmed_bp[0]:13,d} bp\n"
+			report += "  Read 2: {o.quality_trimmed_bp[1]:13,d} bp\n"
 
-	report += "Total written (filtered):  {total_written_bp:13,d} bp ({total_written_bp_fraction:.1%})\n"
+	report += "Total written (filtered):  {o.total_written_bp:13,d} bp ({o.total_written_bp_fraction:.1%})\n"
 	if stats.paired:
-		report += "  Read 1: {written_bp[0]:13,d} bp\n"
-		report += "  Read 2: {written_bp[1]:13,d} bp\n"
-	v = vars(stats)
-	v['pairs_or_reads'] = "Pairs" if stats.paired else "Reads"
-	try:
-		report = report.format(**v)
-	except ValueError:
-		# Python 2.6 does not support the comma format specifier (PEP 378)
-		report = report.replace(",d}", "d}").format(**v)
+		report += "  Read 1: {o.written_bp[0]:13,d} bp\n"
+		report += "  Read 2: {o.written_bp[1]:13,d} bp\n"
+	pairs_or_reads = "Pairs" if stats.paired else "Reads"
+	report = report.format(o=stats, pairs_or_reads=pairs_or_reads)
 	print(report)
 
 	warning = False
