@@ -23,7 +23,8 @@ def test_statistics():
 	# TODO make this a lot simpler
 	trimmed_bp = 0
 	for adapter in adapters:
-		for d in (cutter.adapter_statistics[adapter].lengths_front, cutter.adapter_statistics[adapter].lengths_back):
+		for d in (cutter.adapter_statistics[adapter].front.lengths,
+				cutter.adapter_statistics[adapter].back.lengths):
 			trimmed_bp += sum(seqlen * count for (seqlen, count) in d.items())
 	assert trimmed_bp <= len(read), trimmed_bp
 
@@ -43,14 +44,14 @@ def test_end_trim_with_mismatch():
 	trimmed_read = cutter(read)
 
 	assert trimmed_read.sequence == 'AAAAAAAAAAA'
-	assert cutter.adapter_statistics[adapter].lengths_back == {9: 1}
+	assert cutter.adapter_statistics[adapter].back.lengths == {9: 1}
 	# We see 1 error at length 9 even though the number of allowed mismatches at
 	# length 9 is 0.
-	assert cutter.adapter_statistics[adapter].errors_back[9][1] == 1
+	assert cutter.adapter_statistics[adapter].back.errors[9][1] == 1
 
 	read = Sequence('foo2', 'AAAAAAAAAAATCGAACGA')
 	cutter = AdapterCutter([adapter], times=1)
 	trimmed_read = cutter(read)
 
 	assert trimmed_read.sequence == read.sequence
-	assert cutter.adapter_statistics[adapter].lengths_back == {}
+	assert cutter.adapter_statistics[adapter].back.lengths == {}

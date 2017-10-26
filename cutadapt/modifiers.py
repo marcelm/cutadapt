@@ -7,29 +7,9 @@ need to be stored, and as a class with a __call__ method if there are parameters
 """
 from __future__ import print_function, division, absolute_import
 import re
-from collections import defaultdict
+from collections import OrderedDict
 from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
 from cutadapt.compat import maketrans
-
-
-class AdapterStatistics(object):
-	def __init__(self, adapter):
-		self.adapter = adapter
-		self.errors_front = defaultdict(lambda: defaultdict(int))
-		self.errors_back = defaultdict(lambda: defaultdict(int))
-		self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
-
-	@property
-	def lengths_front(self):
-		# Python 2.6 has no dict comprehension
-		d = dict((length, sum(errors.values())) for length, errors in self.errors_front.items())
-		return d
-
-	@property
-	def lengths_back(self):
-		# Python 2.6 has no dict comprehension
-		d = dict((length, sum(errors.values())) for length, errors in self.errors_back.items())
-		return d
 
 
 class AdapterCutter(object):
@@ -49,7 +29,7 @@ class AdapterCutter(object):
 		self.times = times
 		self.action = action
 		self.with_adapters = 0
-		self.adapter_statistics = dict((a, AdapterStatistics(a)) for a in adapters)  # Python 2.6
+		self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
 
 	def _best_match(self, read):
 		"""

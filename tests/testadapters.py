@@ -4,7 +4,7 @@ from nose.tools import raises, assert_raises
 
 from cutadapt.seqio import Sequence
 from cutadapt.adapters import (Adapter, Match, ColorspaceAdapter, FRONT, BACK,
-	parse_braces, LinkedAdapter)
+	parse_braces, LinkedAdapter, AdapterStatistics)
 
 
 def test_issue_52():
@@ -129,18 +129,18 @@ def test_info_record():
 
 
 def test_random_match_probabilities():
-	a = Adapter('A', where=BACK, max_error_rate=0.1)
-	assert a.random_match_probabilities(0.5) == [1, 0.25]
-	assert a.random_match_probabilities(0.2) == [1, 0.4]
+	a = Adapter('A', where=BACK, max_error_rate=0.1).create_statistics()
+	assert a.back.random_match_probabilities(0.5) == [1, 0.25]
+	assert a.back.random_match_probabilities(0.2) == [1, 0.4]
 
 	for s in ('ACTG', 'XMWH'):
-		a = Adapter(s, where=BACK, max_error_rate=0.1)
-		assert a.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
-		assert a.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
+		a = Adapter(s, where=BACK, max_error_rate=0.1).create_statistics()
+		assert a.back.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
+		assert a.back.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
-	a = Adapter('GTCA', where=FRONT, max_error_rate=0.1)
-	assert a.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
-	assert a.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
+	a = Adapter('GTCA', where=FRONT, max_error_rate=0.1).create_statistics()
+	assert a.front.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
+	assert a.front.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
 
 def test_issue_265():

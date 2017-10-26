@@ -7,8 +7,10 @@ The ...Match classes trim the reads.
 """
 from __future__ import print_function, division, absolute_import
 import re
+from collections import defaultdict
 from cutadapt import align, colorspace
 from cutadapt.seqio import FastaReader
+
 
 # Constants for the find_best_alignment function.
 # The function is called with SEQ1 as the adapter, SEQ2 as the read.
@@ -191,6 +193,68 @@ class AdapterParser(object):
 		return adapters
 
 
+class EndStatistics(object):
+	"""Statistics about the 5' or 3' end"""
+
+	def __init__(self, adapter):
+		self.where = adapter.where
+		self.max_error_rate = adapter.max_error_rate
+		self.sequence = adapter.sequence
+		self.has_wildcards = adapter.adapter_wildcards
+		self.errors = defaultdict(lambda: defaultdict(int))
+		self._remove_before = adapter.remove_before
+		self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
+
+	@property
+	def lengths(self):
+		# Python 2.6 has no dict comprehension
+		d = dict((length, sum(errors.values())) for length, errors in self.errors.items())
+		return d
+
+	def random_match_probabilities(self, gc_content):
+		"""
+		Estimate probabilities that this adapter end matches a
+		random sequence. Indels are not taken into account.
+
+		Returns a list p, where p[i] is the probability that
+		i bases of this adapter match a random sequence with
+		GC content gc_content.
+
+		The where parameter is necessary for linked adapters to
+		specify which (front or back) of the two adapters is meant.
+		"""
+		seq = self.sequence
+		if self._remove_before:
+			seq = seq[::-1]
+		allowed_bases = 'CGRYSKMBDHVN' if self.has_wildcards else 'GC'
+		p = 1
+		probabilities = [p]
+		for i, c in enumerate(seq):
+			if c in allowed_bases:
+				p *= gc_content / 2.
+			else:
+				p *= (1 - gc_content) / 2
+			probabilities.append(p)
+		return probabilities
+
+
+class AdapterStatistics(object):
+	"""
+	Statistics about an adapter. An adapter can work on the 5' end (front)
+	or 3' end (back) of a read, and statistics for that are captured
+	separately.
+	"""
+
+	def __init__(self, adapter, adapter2=None, where=None):
+		self.name = adapter.name
+		self.where = where if where is not None else adapter.where
+		self.front = EndStatistics(adapter)
+		if adapter2 is None:
+			self.back = EndStatistics(adapter)
+		else:
+			self.back = EndStatistics(adapter2)
+
+
 class Match(object):
 	"""
 	Representation of a single adapter matched to a single read.
@@ -298,10 +362,10 @@ class Match(object):
 	def update_statistics(self, statistics):
 		"""Update AdapterStatistics in place"""
 		if self.remove_before:
-			statistics.errors_front[self.rstop][self.errors] += 1
+			statistics.front.errors[self.rstop][self.errors] += 1
 		else:
-			statistics.errors_back[len(self.read) - len(self._trimmed_read)][self.errors] += 1
-			statistics.adjacent_bases[self.adjacent_base] += 1
+			statistics.back.errors[len(self.read) - len(self._trimmed_read)][self.errors] += 1
+			statistics.back.adjacent_bases[self.adjacent_base] += 1
 
 
 class ColorspaceMatch(Match):
@@ -332,9 +396,9 @@ class ColorspaceMatch(Match):
 	def update_statistics(self, statistics):
 		"""Update AdapterStatistics in place"""
 		if self.remove_before:
-			statistics.errors_front[self.rstop][self.errors] += 1
+			statistics.front.errors[self.rstop][self.errors] += 1
 		else:
-			statistics.errors_back[len(self.read) - len(self._trimmed_read)][self.errors] += 1
+			statistics.back.errors[len(self.read) - len(self._trimmed_read)][self.errors] += 1
 
 
 def _generate_adapter_name(_start=[1]):
@@ -480,29 +544,8 @@ class Adapter(object):
 	def __len__(self):
 		return len(self.sequence)
 
-	def random_match_probabilities(self, gc_content):
-		"""
-		Estimate probabilities that this adapter matches a
-		random sequence. Indels are not taken into account.
-
-		Returns a list p, where p[i] is the probability that
-		i bases of this adapter match a random sequence with
-		GC content gc_content.
-		"""
-		if self.remove_before:
-			seq = self.sequence[::-1]
-		else:
-			seq = self.sequence
-		allowed_bases = 'CGRYSKMBDHVN' if self.adapter_wildcards else 'GC'
-		p = 1
-		probabilities = [p]
-		for i, c in enumerate(seq):
-			if c in allowed_bases:
-				p *= gc_content / 2.
-			else:
-				p *= (1 - gc_content) / 2
-			probabilities.append(p)
-		return probabilities
+	def create_statistics(self):
+		return AdapterStatistics(self)
 
 
 class ColorspaceAdapter(Adapter):
@@ -610,9 +653,9 @@ class LinkedMatch(object):
 	def update_statistics(self, statistics):
 		"""Update AdapterStatistics in place"""
 		if self.front_match:
-			statistics.errors_front[self.front_match.rstop][self.front_match.errors] += 1
+			statistics.front.errors[self.front_match.rstop][self.front_match.errors] += 1
 		if self.back_match:
-			statistics.errors_back[len(self.back_match.read) - self.back_match.rstart][self.back_match.errors] += 1
+			statistics.back.errors[len(self.back_match.read) - self.back_match.rstart][self.back_match.errors] += 1
 
 
 class LinkedAdapter(object):
@@ -654,3 +697,6 @@ class LinkedAdapter(object):
 		if back_match is None and (self.back_anchored or front_match is None):
 			return None
 		return LinkedMatch(front_match, back_match, self)
+
+	def create_statistics(self):
+		return AdapterStatistics(self.front_adapter, self.back_adapter, where=LINKED)
