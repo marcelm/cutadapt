@@ -1485,7 +1485,11 @@ Format of the info file
 When the ``--info-file`` command-line parameter is given, detailed
 information about the found adapters is written to the given file. The
 output is a tab-separated text file. Each line corresponds to one read
-of the input file (unless `--times` is used, see below). The fields are:
+of the input file (unless `--times` is used, see below). A row is written
+for *all* reads, even those that are discarded from the final output
+FASTA/FASTQ due to filtering options (such as ``--minimum-length``).
+
+The fields in each row are:
 
 1. Read name
 2. Number of errors
