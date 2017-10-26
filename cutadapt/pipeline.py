@@ -1,12 +1,20 @@
 from __future__ import print_function, division, absolute_import
 
+import io
 import sys
 import time
 import logging
+import functools
+
+from xopen import xopen
 
 from . import seqio
 from .modifiers import ZeroCapper
 from .report import Statistics
+from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
+	RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
+	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, PairedEndDemultiplexer)
+
 
 logger = logging.getLogger()
 
@@ -18,22 +26,88 @@ class Pipeline(object):
 	should_warn_legacy = False
 	n_adapters = 0
 
-	def __init__(self):
+	def __init__(self, ):
 		self._close_files = []
 		self._reader = None
 		self._filters = []
 		self._modifiers = []
+		self._colorspace = None
+		self._outfiles = None
+		self._demultiplexer = None
 
-	def set_filters(self, filters):
-		self._filters = filters
-
-	def open_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
+	def set_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 			interleaved=False):
 		self._reader = seqio.open(file1, file2, qualfile, colorspace, fileformat,
 			interleaved, mode='r')
+		self._colorspace = colorspace
 		# Special treatment: Disable zero-capping if no qualities are available
 		if not self._reader.delivers_qualities:
 			self._modifiers = [m for m in self._modifiers if not isinstance(m, ZeroCapper)]
+
+	def _open_writer(self, file, file2, **kwargs):
+		# TODO backwards-incompatible change (?) would be to use outfiles.interleaved
+		# for all outputs
+		return seqio.open(file, file2, mode='w', qualities=self.uses_qualities,
+			colorspace=self._colorspace, **kwargs)
+
+	# TODO set max_n default to None
+	def set_output(self, outfiles, minimum_length=0, maximum_length=sys.maxsize,
+			max_n=-1, discard_trimmed=False, discard_untrimmed=False):
+		self._filters = []
+		self._outfiles = outfiles
+		filter_wrapper = self._filter_wrapper()
+
+		if outfiles.rest:
+			self._filters.append(RestFileWriter(outfiles.rest))
+		if outfiles.info:
+			self._filters.append(InfoFileWriter(outfiles.info))
+		if outfiles.wildcard:
+			self._filters.append(WildcardFileWriter(outfiles.wildcard))
+
+		too_short_writer = None
+		if minimum_length > 0:
+			if outfiles.too_short:
+				too_short_writer = self._open_writer(outfiles.too_short, outfiles.too_short2)
+			self._filters.append(
+				filter_wrapper(too_short_writer, TooShortReadFilter(minimum_length)))
+
+		too_long_writer = None
+		if maximum_length < sys.maxsize:
+			if outfiles.too_long:
+				too_long_writer = self._open_writer(outfiles.too_long, outfiles.too_long2)
+			self._filters.append(
+				filter_wrapper(too_long_writer, TooLongReadFilter(maximum_length)))
+
+		if max_n != -1:
+			self._filters.append(filter_wrapper(None, NContentFilter(max_n)))
+
+		if int(discard_trimmed) + int(discard_untrimmed) + int(outfiles.untrimmed is not None) > 1:
+			raise ValueError('discard_trimmed, discard_untrimmed and outfiles.untrimmed must not '
+				'be set simultaneously')
+
+		if outfiles.demultiplex:
+			self._demultiplexer = self._create_demultiplexer(outfiles)
+			self._filters.append(self._demultiplexer)
+		else:
+			# Set up the remaining filters to deal with --discard-trimmed,
+			# --discard-untrimmed and --untrimmed-output. These options
+			# are mutually exclusive in order to avoid brain damage.
+			if discard_trimmed:
+				self._filters.append(filter_wrapper(None, DiscardTrimmedFilter()))
+			elif discard_untrimmed:
+				self._filters.append(filter_wrapper(None, DiscardUntrimmedFilter()))
+			elif outfiles.untrimmed:
+				untrimmed_writer = self._open_writer(outfiles.untrimmed, outfiles.untrimmed2)
+				self._filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
+			self._filters.append(self._final_filter(outfiles))
+
+	def close(self):
+		for f in self._outfiles:
+			# TODO do not use hasattr
+			if f is not None and f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
+				f.close()
+		if self._demultiplexer is not None:
+			self._demultiplexer.close()
 
 	@property
 	def uses_qualities(self):
@@ -47,9 +121,6 @@ class Pipeline(object):
 		for f in self._close_files:
 			f.close()
 
-	def process_reads(self):
-		raise NotImplementedError()
-
 	def run(self):
 		start_time = time.clock()
 		(n, total1_bp, total2_bp) = self.process_reads()
@@ -61,6 +132,18 @@ class Pipeline(object):
 		stats = Statistics()
 		stats.collect(n, total1_bp, total2_bp, elapsed_time, m, m2, self._filters)
 		return stats
+
+	def process_reads(self):
+		raise NotImplementedError()
+
+	def _filter_wrapper(self):
+		raise NotImplementedError()
+
+	def _final_filter(self, outfiles):
+		raise NotImplementedError()
+
+	def _create_demultiplexer(self, outfiles):
+		raise NotImplementedError()
 
 
 class SingleEndPipeline(Pipeline):
@@ -94,23 +177,36 @@ class SingleEndPipeline(Pipeline):
 					break
 		return (n, total_bp, None)
 
+	def _filter_wrapper(self):
+		return Redirector
+
+	def _final_filter(self, outfiles):
+		writer = self._open_writer(outfiles.out, outfiles.out2)
+		return NoFilter(writer)
+
+	def _create_demultiplexer(self, outfiles):
+		return Demultiplexer(outfiles.out, outfiles.untrimmed, qualities=self.uses_qualities,
+			colorspace=self._colorspace)
+
 
 class PairedEndPipeline(Pipeline):
 	"""
 	Processing pipeline for paired-end reads.
 	"""
-	def __init__(self, modify_first_read_only):
+
+	def __init__(self, pair_filter_mode, modify_first_read_only=False):
 		"""Setting modify_first_read_only to True enables "legacy mode"
 		"""
 		super(PairedEndPipeline, self).__init__()
 		self._modifiers2 = []
+		self._pair_filter_mode = pair_filter_mode
 		self._modify_first_read_only = modify_first_read_only
 		self._add_both_called = False
 		self._should_warn_legacy = False
 		self._reader = None
 
-	def open_input(self, *args, **kwargs):
-		super(PairedEndPipeline, self).open_input(*args, **kwargs)
+	def set_input(self, *args, **kwargs):
+		super(PairedEndPipeline, self).set_input(*args, **kwargs)
 		if not self._reader.delivers_qualities:
 			self._modifiers2 = [m for m in self._modifiers2 if not isinstance(m, ZeroCapper)]
 
@@ -163,3 +259,15 @@ class PairedEndPipeline(Pipeline):
 	@property
 	def paired(self):
 		return 'first' if self._modify_first_read_only else 'both'
+
+	def _filter_wrapper(self):
+		return functools.partial(PairedRedirector, pair_filter_mode=self._pair_filter_mode)
+
+	def _final_filter(self, outfiles):
+		writer = self._open_writer(outfiles.out, outfiles.out2, interleaved=outfiles.interleaved)
+		return PairedNoFilter(writer)
+
+	def _create_demultiplexer(self, outfiles):
+		return PairedEndDemultiplexer(outfiles.out, outfiles.out2,
+			outfiles.untrimmed, outfiles.untrimmed2, qualities=self.uses_qualities,
+			colorspace=self._colorspace)

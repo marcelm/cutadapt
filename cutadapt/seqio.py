@@ -81,6 +81,7 @@ class Sequence(object):
 class SequenceReader(object):
 	"""Read possibly compressed files containing sequences"""
 	_close_on_exit = False
+	paired = False
 
 	def __init__(self, file):
 		"""
@@ -193,6 +194,7 @@ class FastaReader(SequenceReader):
 	"""
 	Reader for FASTA files.
 	"""
+
 	def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence):
 		"""
 		file is a path or a file-like object. In both cases, the file may
@@ -311,6 +313,7 @@ class FastaQualReader(object):
 	Reader for reads that are stored in .(CS)FASTA and .QUAL files.
 	"""
 	delivers_qualities = True
+	paired = False
 
 	def __init__(self, fastafile, qualfile, sequence_class=Sequence):
 		"""
@@ -382,6 +385,8 @@ class PairedSequenceReader(object):
 	Wraps two SequenceReader instances, making sure that reads are properly
 	paired.
 	"""
+	paired = True
+
 	def __init__(self, file1, file2, colorspace=False, fileformat=None):
 		self.reader1 = open(file1, colorspace=colorspace, fileformat=fileformat)
 		self.reader2 = open(file2, colorspace=colorspace, fileformat=fileformat)
@@ -430,6 +435,8 @@ class InterleavedSequenceReader(object):
 	"""
 	Read paired-end reads from an interleaved FASTQ file.
 	"""
+	paired = True
+
 	def __init__(self, file, colorspace=False, fileformat=None):
 		self.reader = open(file, colorspace=colorspace, fileformat=fileformat)
 		self.delivers_qualities = self.reader.delivers_qualities

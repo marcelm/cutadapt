@@ -334,14 +334,22 @@ def parse_cutoffs(s):
 	return cutoffs
 
 
+# The attributes are open file-like objects except when demultiplex is True. In that case,
+# untrimmed, untrimmed2 are file names, and out and out2 are file name templates
+# containing '{name}'.
+# If interleaved is True, then out is written interleaved
+# TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?
+# Files may also be set to None if not specified on the command-line.
+# TODO move to pipeline
 OutputFiles = namedtuple('OutputFiles',
-	'rest info wildcard too_short too_short2 too_long too_long2 untrimmed untrimmed2 out out2')
+	'rest info wildcard too_short too_short2 too_long too_long2 untrimmed untrimmed2 out out2 '
+	'demultiplex interleaved')
 
 
-def open_output_files(options, default_outfile, demultiplex):
+def open_output_files(options, default_outfile, interleaved):
 	"""
-	Return OutputFiles. If demultiplex is True, the untrimmed, untrimmed2, out and out2
-	files are not opened.
+	Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
+	attributes are not opened files, but paths (out and out2 with the '{name}' template).
 	"""
 	rest_file = info_file = wildcard = None
 	if options.rest_file is not None:
@@ -367,14 +375,45 @@ def open_output_files(options, default_outfile, demultiplex):
 	if options.maximum_length < sys.maxsize:
 		too_long, too_long2 = open2(options.too_long_output, options.too_long_paired_output)
 
+	if int(options.discard_trimmed) + int(options.discard_untrimmed) + int(
+					options.untrimmed_output is not None) > 1:
+		raise CommandlineError("Only one of the --discard-trimmed, --discard-untrimmed "
+			"and --untrimmed-output options can be used at the same time.")
+
+	demultiplex = options.output is not None and '{name}' in options.output
+	if options.paired_output is not None and (demultiplex != ('{name}' in options.paired_output)):
+		raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
+			'both output file names (-o and -p)')
+
 	if demultiplex:
-		untrimmed = untrimmed2 = out = out2 = None
+		if options.discard_trimmed:
+			raise CommandlineError("Do not use --discard-trimmed when demultiplexing.")
+
+		out = options.output
+		untrimmed = options.output.replace('{name}', 'unknown')
+		if options.untrimmed_output:
+			untrimmed = options.untrimmed_output
+		if options.discard_untrimmed:
+			untrimmed = None
+
+		if options.paired_output is not None:
+			out2 = options.paired_output
+			untrimmed2 = options.paired_output.replace('{name}', 'unknown')
+			if options.untrimmed_paired_output:
+				untrimmed2 = options.untrimmed_paired_output
+			if options.discard_untrimmed:
+				untrimmed2 = None
+
+		else:
+			untrimmed2 = out2 = None
 	else:
 		untrimmed, untrimmed2 = open2(options.untrimmed_output, options.untrimmed_paired_output)
 		out, out2 = open2(options.output, options.paired_output)
 		if out is None:
 			out = default_outfile
 
+	if demultiplex:
+		assert '{name}' in out and (out2 is None or '{name}' in out2)
 	return OutputFiles(
 		rest=rest_file,
 		info=info_file,
@@ -387,122 +426,27 @@ def open_output_files(options, default_outfile, demultiplex):
 		untrimmed2=untrimmed2,
 		out=out,
 		out2=out2,
+		demultiplex=demultiplex,
+		interleaved=interleaved,
 	)
 
 
-def filters_from_parsed_args(options, paired, qualities, is_interleaved_output, outfiles, demultiplex):
-	open_writer = functools.partial(seqio.open, mode='w',
-		qualities=qualities, colorspace=options.colorspace)
-
-	if not paired:
-		filter_wrapper = Redirector
-	else:
-		if paired == 'first':
-			assert options.pair_filter is None
-			affected = 'first'
-		elif options.pair_filter is None:
-			affected = 'any'
-		else:
-			affected = options.pair_filter  # 'both' or 'any'
-		filter_wrapper = functools.partial(PairedRedirector, affected=affected)
-
-	filters = []
-
-	if outfiles.rest:
-		filters.append(RestFileWriter(outfiles.rest))
-	if outfiles.info:
-		filters.append(InfoFileWriter(outfiles.info))
-	if outfiles.wildcard:
-		filters.append(WildcardFileWriter(outfiles.wildcard))
-
-	too_short_writer = None
-	if options.minimum_length > 0:
-		if outfiles.too_short:
-			too_short_writer = open_writer(outfiles.too_short, outfiles.too_short2)
-		filters.append(filter_wrapper(too_short_writer, TooShortReadFilter(options.minimum_length)))
-
-	too_long_writer = None
-	if options.maximum_length < sys.maxsize:
-		if outfiles.too_long:
-			too_long_writer = open_writer(outfiles.too_long, outfiles.too_long2)
-		filters.append(filter_wrapper(too_long_writer, TooLongReadFilter(options.maximum_length)))
-
-	if options.max_n != -1:
-		filters.append(filter_wrapper(None, NContentFilter(options.max_n)))
-
-	if int(options.discard_trimmed) + int(options.discard_untrimmed) + int(options.untrimmed_output is not None) > 1:
-		raise CommandlineError("Only one of the --discard-trimmed, --discard-untrimmed "
-			"and --untrimmed-output options can be used at the same time.")
-	untrimmed_writer = None
-	writer = None
-
-	if (options.paired_output is not None and '{name}' in options.paired_output
-			and '{name}' not in options.output):
-		raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
-			'both output file names (-o and -p)')
-
-	demultiplexer = None
-	if demultiplex:
-		if options.discard_trimmed:
-			raise CommandlineError("Do not use --discard-trimmed when demultiplexing.")
-		untrimmed = options.output.replace('{name}', 'unknown')
-		if options.untrimmed_output:
-			untrimmed = options.untrimmed_output
-		if options.discard_untrimmed:
-			untrimmed = None
-
-		if paired:
-			untrimmed_paired = options.paired_output.replace('{name}', 'unknown')
-			if options.untrimmed_paired_output:
-				untrimmed_paired = options.untrimmed_paired_output
-			if options.discard_untrimmed:
-				untrimmed_paired = None
-
-			if '{name}' not in options.paired_output:
-				raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
-					'both output file names (-o and -p)')
-			demultiplexer = PairedEndDemultiplexer(options.output, options.paired_output,
-				untrimmed, untrimmed_paired, qualities=qualities,
-				colorspace=options.colorspace)
-		else:
-			demultiplexer = Demultiplexer(options.output, untrimmed,
-				qualities=qualities, colorspace=options.colorspace)
-		filters.append(demultiplexer)
-	else:
-		# Set up the remaining filters to deal with --discard-trimmed,
-		# --discard-untrimmed and --untrimmed-output. These options
-		# are mutually exclusive in order to avoid brain damage.
-		if options.discard_trimmed:
-			filters.append(filter_wrapper(None, DiscardTrimmedFilter()))
-		elif options.discard_untrimmed:
-			filters.append(filter_wrapper(None, DiscardUntrimmedFilter()))
-		elif options.untrimmed_output:
-			untrimmed_writer = open_writer(outfiles.untrimmed, outfiles.untrimmed2)
-			filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
-
-		# Finally, figure out where the reads that passed all the previous
-		# filters should go.
-		writer = open_writer(outfiles.out, outfiles.out2, interleaved=is_interleaved_output)
-		if not paired:
-			filters.append(NoFilter(writer))
-		else:
-			filters.append(PairedNoFilter(writer))
-
-	return filters, [writer, untrimmed_writer,
-		outfiles.rest,
-		outfiles.wildcard,
-		outfiles.info,
-		outfiles.out,
-		outfiles.out2,
-		outfiles.untrimmed,
-		outfiles.untrimmed2,
-		outfiles.too_short,
-		outfiles.too_short2,
-		outfiles.too_long,
-		outfiles.too_long2,
-		too_short_writer,
-		too_long_writer,
-		demultiplexer]
+# TODO files to close
+	# [writer, untrimmed_writer,
+	# 	outfiles.rest,
+	# 	outfiles.wildcard,
+	# 	outfiles.info,
+	# 	outfiles.out,
+	# 	outfiles.out2,
+	# 	outfiles.untrimmed,
+	# 	outfiles.untrimmed2,
+	# 	outfiles.too_short,
+	# 	outfiles.too_short2,
+	# 	outfiles.too_long,
+	# 	outfiles.too_long2,
+	# 	too_short_writer,
+	# 	too_long_writer,
+	# 	demultiplexer]
 
 
 def determine_paired_mode(options):
@@ -544,7 +488,7 @@ def determine_interleaved(options, args):
 	return is_interleaved_input, is_interleaved_output
 
 
-def input_files_from_parsed_args(args, paired, is_interleaved_input):
+def input_files_from_parsed_args(args, paired, interleaved):
 	"""
 	Return tuple (input_filename, input_paired_filename, quality_filename)
 	"""
@@ -555,14 +499,14 @@ def input_files_from_parsed_args(args, paired, is_interleaved_input):
 	input_filename = args[0]
 	if input_filename.endswith('.qual'):
 		raise CommandlineError("If a .qual file is given, it must be the second argument.")
-	if paired and len(args) == 1 and not is_interleaved_input:
+	if paired and len(args) == 1 and not interleaved:
 		raise CommandlineError("When paired-end trimming is enabled via -A/-G/-B/-U/"
 			"--interleaved or -p, two input files are required.")
 
 	input_paired_filename = None
 	quality_filename = None
 	if paired:
-		if not is_interleaved_input:
+		if not interleaved:
 			input_paired_filename = args[1]
 	elif len(args) == 2:
 		quality_filename = args[1]
@@ -570,7 +514,7 @@ def input_files_from_parsed_args(args, paired, is_interleaved_input):
 	return input_filename, input_paired_filename, quality_filename
 
 
-def pipeline_from_parsed_args(options, paired, quality_filename, is_interleaved_output):
+def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filename, is_interleaved_output):
 	"""
 	Setup a processing pipeline from parsed command-line options.
 
@@ -663,7 +607,7 @@ def pipeline_from_parsed_args(options, paired, quality_filename, is_interleaved_
 	# If no second-read adapters were given (via -A/-G/-B/-U), we need to
 	# be backwards compatible and *no modifications* are done to the second read.
 	if paired:
-		pipeline = PairedEndPipeline(modify_first_read_only=paired == 'first')
+		pipeline = PairedEndPipeline(pair_filter_mode, modify_first_read_only=paired == 'first')
 	else:
 		pipeline = SingleEndPipeline()
 
@@ -726,8 +670,7 @@ def pipeline_from_parsed_args(options, paired, quality_filename, is_interleaved_
 
 def main(cmdlineargs=None, default_outfile=sys.stdout):
 	"""
-	Main function that evaluates command-line parameters and iterates
-	over all reads.
+	Main function that sets up a processing pipeline and runs it.
 
 	default_outfile is the file to which trimmed reads are sent if the ``-o``
 	parameter is not used.
@@ -741,34 +684,43 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if not logging.root.handlers:
 		setup_logging(stdout=bool(options.output), quiet=options.quiet)
 
+	paired = determine_paired_mode(options)
+	assert paired in (False, 'first', 'both')
+
+	if paired == 'first':
+		# legacy mode
+		assert options.pair_filter is None
+		pair_filter_mode = 'first'
+	elif options.pair_filter is None:
+		# default
+		pair_filter_mode = 'any'
+	else:
+		# user-provided behavior
+		pair_filter_mode = options.pair_filter
+
 	try:
-		paired = determine_paired_mode(options)
 		is_interleaved_input, is_interleaved_output = determine_interleaved(options, args)
 		input_filename, input_paired_filename, quality_filename = input_files_from_parsed_args(args,
 			paired, is_interleaved_input)
-		pipeline = pipeline_from_parsed_args(options, paired, quality_filename, is_interleaved_output)
+		pipeline = pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filename, is_interleaved_output)
+		outfiles = open_output_files(options, default_outfile, is_interleaved_output)
 	except CommandlineError as e:
 		parser.error(e)
 		return  # avoid IDE warnings below
 
 	try:
-		pipeline.open_input(input_filename, file2=input_paired_filename,
+		pipeline.set_input(input_filename, file2=input_paired_filename,
 			qualfile=quality_filename, colorspace=options.colorspace,
 			fileformat=options.format, interleaved=is_interleaved_input)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
 
-	demultiplex = options.output is not None and '{name}' in options.output
-	outfiles = open_output_files(options, default_outfile, demultiplex)
-	try:
-		filters, files_to_close = filters_from_parsed_args(options, paired, pipeline.uses_qualities,
-			is_interleaved_output, outfiles, demultiplex)
-	except CommandlineError as e:
-		parser.error(e)
-		return
-	pipeline.set_filters(filters)
-	for f in files_to_close:
-		pipeline.register_file_to_close(f)
+	pipeline.set_output(outfiles, options.minimum_length, options.maximum_length, options.max_n,
+		options.discard_trimmed, options.discard_untrimmed)
+
+	# TODO
+	#for f in files_to_close:
+	#	pipeline.register_file_to_close(f)
 
 	implementation = platform.python_implementation()
 	opt = ' (' + implementation + ')' if implementation != 'CPython' else ''
@@ -789,6 +741,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	try:
 		stats = pipeline.run()
+		pipeline.close()
 	except KeyboardInterrupt:
 		print("Interrupted", file=sys.stderr)
 		sys.exit(130)

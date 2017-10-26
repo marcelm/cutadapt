@@ -34,8 +34,8 @@ def test_ncontentfilter_paired():
 	]
 	for seq1, seq2, count, expected in params:
 		filter = NContentFilter(count=count)
-		filter_legacy = PairedRedirector(None, filter, affected='first')
-		filter_any = PairedRedirector(None, filter, affected='any')
+		filter_legacy = PairedRedirector(None, filter, pair_filter_mode='first')
+		filter_any = PairedRedirector(None, filter, pair_filter_mode='any')
 		read1 = Sequence('read1', seq1, qualities='#'*len(seq1))
 		read2 = Sequence('read1', seq2, qualities='#'*len(seq2))
 		assert filter_legacy(read1, read2) == filter(read1)

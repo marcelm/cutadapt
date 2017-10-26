@@ -86,28 +86,28 @@ class PairedRedirector(object):
 	Different filtering styles are supported, differing by which of the
 	two reads in a pair have to fulfill the filtering criterion.
 	"""
-	def __init__(self, writer, filter, affected='any'):
+	def __init__(self, writer, filter, pair_filter_mode='any'):
 		"""
-		min_affected -- these values are allowed:
+		pair_filter_mode -- these values are allowed:
 			'any': The pair is discarded if any read matches.
 			'both': The pair is discarded if both reads match.
 			'first': The pair is discarded if the first read matches
 				('legacy' mode, backwards compatibility). With 'first', the
 				second read is not inspected.
 		"""
-		if affected not in ('any', 'both', 'first'):
-			raise ValueError("affected must be 'any', 'both' or 'first'")
+		if pair_filter_mode not in ('any', 'both', 'first'):
+			raise ValueError("pair_filter_mode must be 'any', 'both' or 'first'")
 		self.filtered = 0
 		self.writer = writer
 		self.filter = filter
 		self.written = 0  # no of written reads or read pairs  TODO move to writer
 		self.written_bp = [0, 0]
-		if affected == 'any':
+		if pair_filter_mode == 'any':
 			self._is_filtered = lambda r1, r2: self.filter(r1) or self.filter(r2)
-		elif affected == 'both':
+		elif pair_filter_mode == 'both':
 			self._is_filtered = lambda r1, r2: self.filter(r1) and self.filter(r2)
 		else:
-			assert affected == 'first'
+			assert pair_filter_mode == 'first'
 			self._is_filtered = lambda r1, r2: self.filter(r1)
 
 	def __call__(self, read1, read2):
