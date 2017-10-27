@@ -29,28 +29,28 @@ def test_statistics():
 
 
 def test_end_trim_with_mismatch():
-    """
-    Test the not-so-obvious case where an adapter of length 13 is trimmed from
-    the end of a sequence with overlap 9 and there is one deletion.
-    In this case the algorithm starts with 10 bases of the adapter to get
-    the hit and so the match is considered good. An insertion or substitution
-    at the same spot is not a match.
-    """
-    adapter = Adapter('TCGATCGATCGAT', BACK, 0.1)
+	"""
+	Test the not-so-obvious case where an adapter of length 13 is trimmed from
+	the end of a sequence with overlap 9 and there is one deletion.
+	In this case the algorithm starts with 10 bases of the adapter to get
+	the hit and so the match is considered good. An insertion or substitution
+	at the same spot is not a match.
+	"""
+	adapter = Adapter('TCGATCGATCGAT', BACK, 0.1)
 
-    read = Sequence('foo1', 'AAAAAAAAAAATCGTCGATC')
-    cutter = AdapterCutter([adapter], times=1)
-    trimmed_read = cutter(read)
+	read = Sequence('foo1', 'AAAAAAAAAAATCGTCGATC')
+	cutter = AdapterCutter([adapter], times=1)
+	trimmed_read = cutter(read)
 
-    assert trimmed_read.sequence == 'AAAAAAAAAAA'
-    assert cutter.adapter_statistics[adapter].lengths_back == {9: 1}
-    # We see 1 error at length 9 even though the number of allowed mismatches at
-    # length 9 is 0.
-    assert cutter.adapter_statistics[adapter].errors_back[9][1] == 1
+	assert trimmed_read.sequence == 'AAAAAAAAAAA'
+	assert cutter.adapter_statistics[adapter].lengths_back == {9: 1}
+	# We see 1 error at length 9 even though the number of allowed mismatches at
+	# length 9 is 0.
+	assert cutter.adapter_statistics[adapter].errors_back[9][1] == 1
 
-    read = Sequence('foo2', 'AAAAAAAAAAATCGAACGA')
-    cutter = AdapterCutter([adapter], times=1)
-    trimmed_read = cutter(read)
+	read = Sequence('foo2', 'AAAAAAAAAAATCGAACGA')
+	cutter = AdapterCutter([adapter], times=1)
+	trimmed_read = cutter(read)
 
-    assert trimmed_read.sequence == read.sequence
-    assert cutter.adapter_statistics[adapter].lengths_back == {}
+	assert trimmed_read.sequence == read.sequence
+	assert cutter.adapter_statistics[adapter].lengths_back == {}
