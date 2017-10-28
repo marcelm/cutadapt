@@ -374,7 +374,7 @@ def read_chunks_from_file(f, buffer_size=4000000):
 		yield memoryview(buf)[0:start]
 
 
-def reader_process(file, connections, queue):
+def reader_process(file, connections, queue, buffer_size):
 	"""
 	Read chunks of FASTA or FASTQ data from *file* and send to a worker.
 
@@ -391,7 +391,7 @@ def reader_process(file, connections, queue):
 	and finally sends "poison pills" (the value -1) to all connections.
 	"""
 	with xopen(file, 'rb') as f:
-		for chunk_index, chunk in enumerate(read_chunks_from_file(f)):
+		for chunk_index, chunk in enumerate(read_chunks_from_file(f, buffer_size)):
 			# Determine the worker that should get this chunk
 			worker_index = queue.get()
 			pipe = connections[worker_index]
@@ -493,7 +493,7 @@ class ParallelPipelineRunner(object):
 	processed by that worker.
 	"""
 
-	def __init__(self, pipeline, n_workers):
+	def __init__(self, pipeline, n_workers, buffer_size=4000000):
 		self._pipeline = pipeline
 		self._pipes = []  # the workers read from these
 		self._reader_process = None
@@ -501,6 +501,7 @@ class ParallelPipelineRunner(object):
 		self._outfiles = None
 		self._n_workers = n_workers
 		self._need_work_queue = Queue()
+		self._buffer_size = buffer_size
 
 	def set_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 			interleaved=False):
@@ -509,7 +510,7 @@ class ParallelPipelineRunner(object):
 		assert file2 is None and qualfile is None and colorspace is False and fileformat is None and interleaved is False
 		connections = [Pipe(duplex=False) for _ in range(self._n_workers)]
 		self._pipes, connw = zip(*connections)
-		p = Process(target=reader_process, args=(file1, connw, self._need_work_queue))
+		p = Process(target=reader_process, args=(file1, connw, self._need_work_queue, self._buffer_size))
 		p.daemon = True
 		p.start()
 		self._reader_process = p

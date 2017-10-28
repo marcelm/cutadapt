@@ -116,9 +116,11 @@ def get_option_parser():
 	parser.add_option('-j', '--threads', type=int, default=1,  # TODO
 		help='Number of threads')
 
-	# Hidden option for now
+	# Hidden options
 	parser.add_option("--gc-content", type=float, default=50,  # it's a percentage
 		help=SUPPRESS_HELP)
+	parser.add_option("--buffer-size", type=int, default=4000000,
+		help=SUPPRESS_HELP)  # buffer size for the reader process when running in parallel
 
 	group = OptionGroup(parser, "Finding adapters",
 		description="Parameters -a, -g, -b specify adapters to be removed from "
@@ -677,7 +679,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error(e)
 		return  # avoid IDE warnings below
 
-	parallel_runner = ParallelPipelineRunner(pipeline, options.threads)
+	parallel_runner = ParallelPipelineRunner(pipeline, options.threads, options.buffer_size)
 	if (
 		PY3
 		and parallel_runner.can_output_to(outfiles)
