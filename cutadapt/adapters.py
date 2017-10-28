@@ -271,7 +271,7 @@ class AdapterStatistics(object):
 			self.back = EndStatistics(adapter2)
 
 	def __iadd__(self, other):
-		if self.name != other.name or self.where != other.where:
+		if self.where != other.where:  # TODO self.name != other.name or
 			raise ValueError('incompatible objects')
 		self.front += other.front
 		self.back += other.back

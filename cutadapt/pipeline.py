@@ -169,7 +169,6 @@ class Pipeline(object):
 	def run(self):
 		start_time = time.clock()
 		(n, total1_bp, total2_bp) = self.process_reads()
-		#self.close_files()
 		elapsed_time = time.clock() - start_time
 		# TODO
 		m = self._modifiers
@@ -436,8 +435,11 @@ class WorkerProcess(Process):
 		self._need_work_queue = need_work_queue
 
 	def run(self):
-		n = 0  # no. of processed reads  # TODO turn into attribute
-		total_bp = 0
+		start_time = time.clock()
+		stats = Statistics()
+		overall_n = 0
+		overall_bp1 = 0
+		overall_bp2 = 0 if self._pipeline.paired else None
 
 		while True:
 			# Notify reader that we need data
@@ -457,15 +459,27 @@ class WorkerProcess(Process):
 			outfiles = OutputFiles(out=output)
 			self._pipeline.set_input(input)
 			self._pipeline.set_output(outfiles, *self._filtering_options[0], **self._filtering_options[1])
-			stats = self._pipeline.run()  # TODO accumulate stats
+			(n, bp1, bp2) = self._pipeline.process_reads()
+			cur_stats = Statistics()
+			cur_stats.collect(n, bp1, bp2, 0, [], [], self._pipeline._filters)
+			stats += cur_stats
+
 			output.flush()
 			processed_chunk = output.buffer.getvalue()
 
-			self._write_pipe.send((chunk_index, stats))  # TODO does not work
+			self._write_pipe.send(chunk_index)
 			self._write_pipe.send_bytes(processed_chunk)
 
+		elapsed_time = time.clock() - start_time
+		m = self._pipeline._modifiers
+		m2 = getattr(self._pipeline, '_modifiers2', [])
+		modifier_stats = Statistics()
+		modifier_stats.collect(0, 0, 0 if self._pipeline.paired else None, 0, m, m2, [])
+		stats += modifier_stats
+		stats.elapsed_time = elapsed_time
 
 		self._write_pipe.send(-1)
+		self._write_pipe.send(stats)
 
 
 class ParallelPipelineRunner(object):
@@ -535,16 +549,21 @@ class ParallelPipelineRunner(object):
 		return workers, connections
 
 	def run(self):
-		start_time = time.clock()
 		workers, connections = self._start_workers()
 		chunks = dict()
 		current_chunk = 0
+		stats = None
 		while connections:
 			ready_connections = multiprocessing.connection.wait(connections)
 			for connection in ready_connections:
 				chunk_index = connection.recv()
 				if chunk_index == -1:
 					# the worker is done
+					cur_stats = connection.recv()
+					if stats is None:
+						stats = cur_stats
+					else:
+						stats += cur_stats
 					connections.remove(connection)
 					continue
 				data = connection.recv_bytes()
@@ -557,15 +576,6 @@ class ParallelPipelineRunner(object):
 		for w in workers:
 			w.join()
 		self._reader_process.join()
-
-		(n, total1_bp, total2_bp) = (0, 0, 0)  # TODO
-		#self._pipeline.close()
-		elapsed_time = time.clock() - start_time
-		# TODO
-		m = self._pipeline._modifiers
-		m2 = getattr(self, '_modifiers2', [])
-		stats = Statistics()
-		stats.collect(n, total1_bp, total2_bp, elapsed_time, m, m2, self._pipeline._filters)
 		return stats
 
 	def close(self):
