@@ -5,8 +5,13 @@ Changes
 development version
 -------------------
 
-* Cutadapt now supports parallel processing! There are some limitations. More
-  documentation to follow.
+* Cutadapt now supports parallel processing!
+* Parallel processing is enabled automatically and uses up to eight
+  available processor cores. The number of cores can be set explicitly
+  with ``-j`` (also to values higher than eight).
+* Multi-core support is not available for some combinations of command-line
+  arguments, yet, and cutadapt will automatically revert to single-core
+  processing if necessary.
 * `Issue #118 <https://github.com/marcelm/cutadapt/issues/118>`_:
   Added support for demultiplexing of paired-end data.
 

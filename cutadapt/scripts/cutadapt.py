@@ -76,7 +76,7 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer, Shortener)
 from cutadapt.report import Statistics, print_report, redirect_standard_output
-from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles, ParallelPipelineRunner
+from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles, ParallelPipelineRunner, available_cpu_count
 from cutadapt.compat import PY3
 
 logger = logging.getLogger()
@@ -113,8 +113,8 @@ def get_option_parser():
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
 			"from file name extension.")
-	parser.add_option('-j', '--threads', type=int, default=1,  # TODO
-		help='Number of threads')
+	parser.add_option('-j', '--threads', type=int, default=None,
+		help='Number of threads. Default: no. of available CPUs, but at most 8')
 
 	# Hidden options
 	parser.add_option("--gc-content", type=float, default=50,  # it's a percentage
@@ -679,21 +679,23 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error(e)
 		return  # avoid IDE warnings below
 
-	parallel_runner = ParallelPipelineRunner(pipeline, options.threads, options.buffer_size)
+	if options.threads is None:
+		cores = min(8, available_cpu_count())
+	else:
+		cores = max(1, options.threads)
 	if (
 		PY3
-		and parallel_runner.can_output_to(outfiles)
+		and ParallelPipelineRunner.can_output_to(outfiles)
 		and input_paired_filename is None
 		and quality_filename is None
 		and not options.colorspace
 		and not is_interleaved_input
 		and options.format is None
-		and options.threads > 1
+		and cores > 1
 	):
-		is_parallel = True
-		runner = parallel_runner
+		runner = ParallelPipelineRunner(pipeline, cores, options.buffer_size)
 	else:
-		is_parallel = False
+		cores = 1
 		runner = pipeline
 	try:
 		runner.set_input(input_filename, file2=input_paired_filename,
@@ -709,16 +711,16 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	logger.info("This is cutadapt %s with Python %s%s", __version__,
 		platform.python_version(), opt)
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-	if options.threads > 1 and not is_parallel:
+	if options.threads is not None and options.threads > cores:
 		if not PY3:
 			logger.warning('WARNING: Running in parallel is not supported on Python 2')
 		else:
 			logger.warning('WARNING: Running in parallel is currently not supported for '
 				'the given combination of command-line parameters.')
-	elif options.threads > 1:
-		logger.info('Running in parallel using %d processes.', options.threads)
-	elif PY3:
-		logger.info('Not running in parallel. Consider using option -j to speed up processing.')
+	elif cores > 1:
+		logger.info('Running in parallel using %d cores.', cores)
+	elif cores == 1 and PY3:
+		logger.info('Running on a single core only. Consider using option -j for speedups.')
 	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
 		pipeline.n_adapters, 's' if pipeline.n_adapters != 1 else '',
 		options.error_rate * 100,
