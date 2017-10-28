@@ -196,13 +196,18 @@ class AdapterParser(object):
 class EndStatistics(object):
 	"""Statistics about the 5' or 3' end"""
 
+	@staticmethod
+	def returns_defaultdict_int():
+		# we need this to make the class picklable
+		return defaultdict(int)
+
 	def __init__(self, adapter):
 		self.where = adapter.where
 		self.max_error_rate = adapter.max_error_rate
 		self.sequence = adapter.sequence
 		self.has_wildcards = adapter.adapter_wildcards
 		# self.errors[l][e] == n iff n times a sequence of length l matching at e errors was removed
-		self.errors = defaultdict(lambda: defaultdict(int))
+		self.errors = defaultdict(self.returns_defaultdict_int)
 		self._remove_before = adapter.remove_before
 		self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
 
