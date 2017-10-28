@@ -690,8 +690,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		and options.format is None
 		and options.threads > 1
 	):
+		is_parallel = True
 		runner = parallel_runner
 	else:
+		is_parallel = False
 		runner = pipeline
 	try:
 		runner.set_input(input_filename, file2=input_paired_filename,
@@ -707,6 +709,16 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	logger.info("This is cutadapt %s with Python %s%s", __version__,
 		platform.python_version(), opt)
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
+	if options.threads > 1 and not is_parallel:
+		if not PY3:
+			logger.warning('WARNING: Running in parallel is not supported on Python 2')
+		else:
+			logger.warning('WARNING: Running in parallel is currently not supported for '
+				'the given combination of command-line parameters.')
+	elif options.threads > 1:
+		logger.info('Running in parallel using %d processes.', options.threads)
+	elif PY3:
+		logger.info('Not running in parallel. Consider using option -j to speed up processing.')
 	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
 		pipeline.n_adapters, 's' if pipeline.n_adapters != 1 else '',
 		options.error_rate * 100,
