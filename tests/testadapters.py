@@ -143,6 +143,47 @@ def test_random_match_probabilities():
 	assert a.front.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
 
+def test_add_adapter_statistics():
+	stats = Adapter('A', name='name', where=BACK, max_error_rate=0.1).create_statistics()
+	end_stats = stats.back
+	end_stats.adjacent_bases['A'] = 7
+	end_stats.adjacent_bases['C'] = 19
+	end_stats.adjacent_bases['G'] = 23
+	end_stats.adjacent_bases['T'] = 42
+	end_stats.adjacent_bases[''] = 45
+
+	end_stats.errors[10][0] = 100
+	end_stats.errors[10][1] = 11
+	end_stats.errors[10][2] = 3
+	end_stats.errors[20][0] = 600
+	end_stats.errors[20][1] = 66
+	end_stats.errors[20][2] = 6
+
+	stats2 = Adapter('A', name='name', where=BACK, max_error_rate=0.1).create_statistics()
+	end_stats2 = stats2.back
+	end_stats2.adjacent_bases['A'] = 43
+	end_stats2.adjacent_bases['C'] = 31
+	end_stats2.adjacent_bases['G'] = 27
+	end_stats2.adjacent_bases['T'] = 8
+	end_stats2.adjacent_bases[''] = 5
+	end_stats2.errors[10][0] = 234
+	end_stats2.errors[10][1] = 14
+	end_stats2.errors[10][3] = 5
+	end_stats2.errors[15][0] = 90
+	end_stats2.errors[15][1] = 17
+	end_stats2.errors[15][2] = 2
+
+	stats += stats2
+	r = stats.back
+
+	assert r.adjacent_bases == {'A': 50, 'C': 50, 'G': 50, 'T': 50, '': 50}
+	assert r.errors == {
+		10: {0: 334, 1: 25, 2: 3, 3: 5},
+		15: {0: 90, 1: 17, 2: 2},
+		20: {0: 600, 1: 66, 2: 6},
+	}
+
+
 def test_issue_265():
 	"Crash when accessing the matches property of non-anchored linked adapters"
 	s = Sequence('name', 'AAAATTTT')

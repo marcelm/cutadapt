@@ -201,9 +201,20 @@ class EndStatistics(object):
 		self.max_error_rate = adapter.max_error_rate
 		self.sequence = adapter.sequence
 		self.has_wildcards = adapter.adapter_wildcards
+		# self.errors[l][e] == n iff n times a sequence of length l matching at e errors was removed
 		self.errors = defaultdict(lambda: defaultdict(int))
 		self._remove_before = adapter.remove_before
 		self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
+
+	def __iadd__(self, other):
+		if self.where != other.where or self.max_error_rate != other.max_error_rate or self.sequence != other.sequence:
+			raise RuntimeError('Incompatible EndStatistics, cannot be added')
+		for base in ('A', 'C', 'G', 'T', ''):
+			self.adjacent_bases[base] += other.adjacent_bases[base]
+		for length, error_dict in other.errors.items():
+			for errors in error_dict:
+				self.errors[length][errors] += other.errors[length][errors]
+		return self
 
 	@property
 	def lengths(self):
@@ -253,6 +264,13 @@ class AdapterStatistics(object):
 			self.back = EndStatistics(adapter)
 		else:
 			self.back = EndStatistics(adapter2)
+
+	def __iadd__(self, other):
+		if self.name != other.name or self.where != other.where:
+			raise ValueError('incompatible objects')
+		self.front += other.front
+		self.back += other.back
+		return self
 
 
 class Match(object):

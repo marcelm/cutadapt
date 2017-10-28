@@ -37,7 +37,40 @@ class Statistics:
 		self.with_adapters = [0, 0]
 		self.quality_trimmed_bp = [0, 0]
 		self.did_quality_trimming = False
-		self.adapter_stats = [dict(), dict()]
+		self.adapter_stats = [[], []]
+
+	def __iadd__(self, other):
+		if self.paired != other.paired or self.did_quality_trimming != other.did_quality_trimming:
+			raise ValueError('Incompatible Statistics objects')
+		self.n += other.n
+		self.time += other.time
+		if self.too_short is not None:
+			self.too_short += other.too_short
+		else:
+			assert other.too_short is None
+		if self.too_long is not None:
+			self.too_long += other.too_short
+		else:
+			assert other.too_long is None
+		if self.too_many_n is not None:
+			self.too_many_n += other.too_many_n
+		else:
+			assert other.too_many_n is None
+		self.written += other.written
+		for i in (0, 1):
+			self.total_bp[i] += other.total_bp[i]
+			self.written_bp[i] += other.written_bp[i]
+			self.with_adapters[i] += other.with_adapters[i]
+			self.quality_trimmed_bp[i] += other.quality_trimmed_bp[i]
+			if self.adapter_stats[i] and other.adapter_stats[i]:
+				if len(self.adapter_stats[i]) != len(other.adapter_stats[i]):
+					raise ValueError('Incompatible Statistics objects (adapter_stats length)')
+				for j in range(len(self.adapter_stats[i])):
+					self.adapter_stats[i][j] += other.adapter_stats[i][j]
+			elif other.adapter_stats[i]:
+				assert self.adapter_stats[i] == []
+				self.adapter_stats[i] = other.adapter_stats[i]
+		return self
 
 	def collect(self, n, total_bp1, total_bp2, time, modifiers, modifiers2, writers):
 		"""
@@ -80,7 +113,7 @@ class Statistics:
 					self.did_quality_trimming = True
 				elif isinstance(modifier, AdapterCutter):
 					self.with_adapters[i] += modifier.with_adapters
-					self.adapter_stats[i] = modifier.adapter_statistics
+					self.adapter_stats[i] = list(modifier.adapter_statistics.values())
 
 	@property
 	def total(self):
@@ -271,7 +304,7 @@ def print_report(stats, gc_content):
 
 	warning = False
 	for which_in_pair in (0, 1):
-		for adapter_statistics in stats.adapter_stats[which_in_pair].values():
+		for adapter_statistics in stats.adapter_stats[which_in_pair]:
 			total_front = sum(adapter_statistics.front.lengths.values())
 			total_back = sum(adapter_statistics.back.lengths.values())
 			total = total_front + total_back
