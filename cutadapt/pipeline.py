@@ -317,9 +317,6 @@ class PairedEndPipeline(Pipeline):
 			colorspace=self._colorspace)
 
 
-BUFFER_SIZE = 4000000
-
-
 def find_fasta_record_end(buf, end):
 	"""
 	Search for the end of the last complete FASTA record within buf[start:end]
@@ -437,9 +434,6 @@ class WorkerProcess(Process):
 	def run(self):
 		start_time = time.clock()
 		stats = Statistics()
-		overall_n = 0
-		overall_bp1 = 0
-		overall_bp2 = 0 if self._pipeline.paired else None
 
 		while True:
 			# Notify reader that we need data
@@ -486,7 +480,23 @@ class ParallelPipelineRunner(object):
 	"""
 	Wrap a SingleEndPipeline, running it in parallel
 
+	- When set_input() is called, a reader process is spawned.
+	- When run() is called, as many worker processes as requested are spawned.
+	- In the main process, results are written to the output files in the correct
+	  order, and statistics are aggregated.
 
+	If a worker needs work, it puts its own index into a Queue() (_need_work_queue).
+	The reader process listens on this queue and sends the raw data to the
+	worker that has requested work. For sending the data from reader to worker,
+	a Connection() is used. There is one such connection for each worker (self._pipes).
+
+	For sending the processed data from the worker to the main process, there
+	is a second set of connections, again one for each worker.
+
+	When the reader is finished, it sends 'poison pills' to all workers.
+	When a worker receives this, it sends a poison pill to the main process,
+	followed by a Statistics object that contains statistics about all the reads
+	processed by that worker.
 	"""
 
 	def __init__(self, pipeline, n_workers):
