@@ -25,36 +25,41 @@ class Statistics:
 	def __init__(self):
 		"""
 		"""
-		self.n = 0
-		self.total_bp = [0, 0]
-		self.paired = False
+		self.paired = None
 		self.too_short = None
 		self.too_long = None
 		self.too_many_n = None
+		self.did_quality_trimming = None
+		self.n = 0
 		self.written = 0
+		self.total_bp = [0, 0]
 		self.written_bp = [0, 0]
 		self.with_adapters = [0, 0]
 		self.quality_trimmed_bp = [0, 0]
-		self.did_quality_trimming = False
 		self.adapter_stats = [[], []]
 
 	def __iadd__(self, other):
-		if self.paired != other.paired or self.did_quality_trimming != other.did_quality_trimming:
-			raise ValueError('Incompatible Statistics objects')
 		self.n += other.n
-		if self.too_short is not None:
-			self.too_short += other.too_short
-		else:
-			assert other.too_short is None
-		if self.too_long is not None:
-			self.too_long += other.too_short
-		else:
-			assert other.too_long is None
-		if self.too_many_n is not None:
-			self.too_many_n += other.too_many_n
-		else:
-			assert other.too_many_n is None
 		self.written += other.written
+
+		if self.paired is None:
+			self.paired = other.paired
+		elif self.paired != other.paired:
+			raise ValueError('Incompatible Statistics: paired is not equal')
+		if self.did_quality_trimming is None:
+			self.did_quality_trimming = other.did_quality_trimming
+		elif self.did_quality_trimming != other.did_quality_trimming:
+			raise ValueError('Incompatible Statistics: did_quality_trimming is not equal')
+
+		def add_if_not_none(a, b):
+			if a is None:
+				return b
+			if b is None:
+				return a
+			return a + b
+		self.too_short = add_if_not_none(self.too_short, other.too_short)
+		self.too_long = add_if_not_none(self.too_long, other.too_long)
+		self.too_many_n = add_if_not_none(self.too_many_n, other.too_many_n)
 		for i in (0, 1):
 			self.total_bp[i] += other.total_bp[i]
 			self.written_bp[i] += other.written_bp[i]
