@@ -7,6 +7,7 @@ import logging
 import functools
 from multiprocessing import Process, Pipe, Queue
 import multiprocessing.connection
+import traceback
 
 from xopen import xopen
 
@@ -426,12 +427,6 @@ def reader_process(file, connections, queue, buffer_size):
 		worker_index = queue.get()
 		connections[worker_index].send(-1)
 
-	# try:
-	#   ...
-	# except Exception as e:
-	# 	traceb = traceback.format_exc()
-	# 	reads_queue.put((e, traceb))
-
 
 class WorkerProcess(Process):
 	"""
@@ -453,44 +448,47 @@ class WorkerProcess(Process):
 		self._need_work_queue = need_work_queue
 
 	def run(self):
-		stats = Statistics()
-		while True:
-			# Notify reader that we need data
-			self._need_work_queue.put(self._id)
-			chunk_index = self._read_pipe.recv()
-			if chunk_index == -1:
-				# reader is done
-				break
-			data = self._read_pipe.recv_bytes()
+		try:
+			stats = Statistics()
+			while True:
+				# Notify reader that we need data
+				self._need_work_queue.put(self._id)
+				chunk_index = self._read_pipe.recv()
+				if chunk_index == -1:
+					# reader is done
+					break
+				data = self._read_pipe.recv_bytes()
 
-			# logger.info('WORKER: Read %d bytes', len(data))
-			input = io.TextIOWrapper(io.BytesIO(data), encoding='ascii')
-			output = io.TextIOWrapper(io.BytesIO(), encoding='ascii')
-			# Output format depends on file name, so make output file name available
-			output.buffer.name = self._orig_outfiles.out.name
+				# logger.info('WORKER: Read %d bytes', len(data))
+				input = io.TextIOWrapper(io.BytesIO(data), encoding='ascii')
+				output = io.TextIOWrapper(io.BytesIO(), encoding='ascii')
+				# Output format depends on file name, so make output file name available
+				output.buffer.name = self._orig_outfiles.out.name
 
-			outfiles = OutputFiles(out=output)
-			self._pipeline.set_input(input)
-			self._pipeline.set_output(outfiles, *self._filtering_options[0], **self._filtering_options[1])
-			(n, bp1, bp2) = self._pipeline.process_reads()
-			cur_stats = Statistics()
-			cur_stats.collect(n, bp1, bp2, [], [], self._pipeline._filters)
-			stats += cur_stats
+				outfiles = OutputFiles(out=output)
+				self._pipeline.set_input(input)
+				self._pipeline.set_output(outfiles, *self._filtering_options[0], **self._filtering_options[1])
+				(n, bp1, bp2) = self._pipeline.process_reads()
+				cur_stats = Statistics()
+				cur_stats.collect(n, bp1, bp2, [], [], self._pipeline._filters)
+				stats += cur_stats
 
-			output.flush()
-			processed_chunk = output.buffer.getvalue()
+				output.flush()
+				processed_chunk = output.buffer.getvalue()
 
-			self._write_pipe.send(chunk_index)
-			self._write_pipe.send_bytes(processed_chunk)
+				self._write_pipe.send(chunk_index)
+				self._write_pipe.send_bytes(processed_chunk)
 
-		m = self._pipeline._modifiers
-		m2 = getattr(self._pipeline, '_modifiers2', [])
-		modifier_stats = Statistics()
-		modifier_stats.collect(0, 0, 0 if self._pipeline.paired else None, m, m2, [])
-		stats += modifier_stats
-
-		self._write_pipe.send(-1)
-		self._write_pipe.send(stats)
+			m = self._pipeline._modifiers
+			m2 = getattr(self._pipeline, '_modifiers2', [])
+			modifier_stats = Statistics()
+			modifier_stats.collect(0, 0, 0 if self._pipeline.paired else None, m, m2, [])
+			stats += modifier_stats
+			self._write_pipe.send(-1)
+			self._write_pipe.send(stats)
+		except Exception as e:
+			self._write_pipe.send(-2)
+			self._write_pipe.send((e, traceback.format_exc()))
 
 
 class ParallelPipelineRunner(object):
@@ -594,6 +592,13 @@ class ParallelPipelineRunner(object):
 						stats += cur_stats
 					connections.remove(connection)
 					continue
+				elif chunk_index == -2:
+					# An exception has occurred in the worker
+					e, tb_str = connection.recv()
+					logger.error('%s', tb_str)
+					# We should use the worker's actual traceback object
+					# here, but traceback objects are not picklable.
+					raise e
 				data = connection.recv_bytes()
 				chunks[chunk_index] = data
 				while current_chunk in chunks:
