@@ -63,6 +63,7 @@ check_importability()
 
 import sys
 import errno
+import time
 from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
 import logging
 import platform
@@ -642,6 +643,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	default_outfile is the file to which trimmed reads are sent if the ``-o``
 	parameter is not used.
 	"""
+	start_time = time.time()
 	parser = get_option_parser()
 	if cmdlineargs is None:
 		cmdlineargs = sys.argv[1:]
@@ -729,11 +731,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	except (seqio.FormatError, EOFError) as e:
 		sys.exit("cutadapt: error: {0}".format(e))
 
+	elapsed = time.time() - start_time
 	if not options.quiet:
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
 		with redirect_standard_output(stat_file):
-			print_report(stats, options.gc_content / 100)
+			print_report(stats, elapsed, options.gc_content / 100)
 
 
 if __name__ == '__main__':

@@ -28,7 +28,6 @@ class Statistics:
 		self.n = 0
 		self.total_bp = [0, 0]
 		self.paired = False
-		self.time = 0.01  # CPU time in seconds
 		self.too_short = None
 		self.too_long = None
 		self.too_many_n = None
@@ -43,7 +42,6 @@ class Statistics:
 		if self.paired != other.paired or self.did_quality_trimming != other.did_quality_trimming:
 			raise ValueError('Incompatible Statistics objects')
 		self.n += other.n
-		self.time += other.time
 		if self.too_short is not None:
 			self.too_short += other.too_short
 		else:
@@ -72,12 +70,11 @@ class Statistics:
 				self.adapter_stats[i] = other.adapter_stats[i]
 		return self
 
-	def collect(self, n, total_bp1, total_bp2, time, modifiers, modifiers2, writers):
+	def collect(self, n, total_bp1, total_bp2, modifiers, modifiers2, writers):
 		"""
 		n -- total number of reads
 		total_bp1 -- number of bases in first reads
 		total_bp2 -- number of bases in second reads. None for single-end data.
-		time -- CPU time
 		"""
 		self.n = n
 		self.total_bp[0] = total_bp1
@@ -86,7 +83,6 @@ class Statistics:
 		else:
 			self.paired = True
 			self.total_bp[1] = total_bp2
-		self.time = max(time, 0.01)
 
 		# Collect statistics from writers/filters
 		for w in writers:
@@ -252,13 +248,13 @@ def redirect_standard_output(file):
 	sys.stdout = old_stdout
 
 
-def print_report(stats, gc_content):
+def print_report(stats, time, gc_content):
 	"""Print report to standard output."""
 	if stats.n == 0:
 		print("No reads processed! Either your input file is empty or you used the wrong -f/--format parameter.")
 		return
 	print("Finished in {0:.2F} s ({1:.0F} us/read; {2:.2F} M reads/minute).".format(
-		stats.time, 1E6 * stats.time / stats.n, stats.n / stats.time * 60 / 1E6))
+		time, 1E6 * time / stats.n, stats.n / time * 60 / 1E6))
 
 	report = "\n=== Summary ===\n\n"
 	if stats.paired:

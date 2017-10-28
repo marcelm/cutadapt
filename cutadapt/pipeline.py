@@ -167,14 +167,12 @@ class Pipeline(object):
 		return self._reader.delivers_qualities
 
 	def run(self):
-		start_time = time.clock()
 		(n, total1_bp, total2_bp) = self.process_reads()
-		elapsed_time = time.clock() - start_time
 		# TODO
 		m = self._modifiers
 		m2 = getattr(self, '_modifiers2', [])
 		stats = Statistics()
-		stats.collect(n, total1_bp, total2_bp, elapsed_time, m, m2, self._filters)
+		stats.collect(n, total1_bp, total2_bp, m, m2, self._filters)
 		return stats
 
 	def process_reads(self):
@@ -432,9 +430,7 @@ class WorkerProcess(Process):
 		self._need_work_queue = need_work_queue
 
 	def run(self):
-		start_time = time.clock()
 		stats = Statistics()
-
 		while True:
 			# Notify reader that we need data
 			self._need_work_queue.put(self._id)
@@ -455,7 +451,7 @@ class WorkerProcess(Process):
 			self._pipeline.set_output(outfiles, *self._filtering_options[0], **self._filtering_options[1])
 			(n, bp1, bp2) = self._pipeline.process_reads()
 			cur_stats = Statistics()
-			cur_stats.collect(n, bp1, bp2, 0, [], [], self._pipeline._filters)
+			cur_stats.collect(n, bp1, bp2, [], [], self._pipeline._filters)
 			stats += cur_stats
 
 			output.flush()
@@ -464,13 +460,11 @@ class WorkerProcess(Process):
 			self._write_pipe.send(chunk_index)
 			self._write_pipe.send_bytes(processed_chunk)
 
-		elapsed_time = time.clock() - start_time
 		m = self._pipeline._modifiers
 		m2 = getattr(self._pipeline, '_modifiers2', [])
 		modifier_stats = Statistics()
-		modifier_stats.collect(0, 0, 0 if self._pipeline.paired else None, 0, m, m2, [])
+		modifier_stats.collect(0, 0, 0 if self._pipeline.paired else None, m, m2, [])
 		stats += modifier_stats
-		stats.elapsed_time = elapsed_time
 
 		self._write_pipe.send(-1)
 		self._write_pipe.send(stats)
