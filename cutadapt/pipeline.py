@@ -586,6 +586,13 @@ class ParallelPipelineRunner(object):
 				if chunk_index == -1:
 					# the worker is done
 					cur_stats = connection.recv()
+					if stats == -2:
+						# An exception has occurred in the worker (see below,
+						# this happens only when there is an exception sending
+						# the statistics)
+						e, tb_str = connection.recv()
+						logger.error('%s', tb_str)
+						raise e
 					if stats is None:
 						stats = cur_stats
 					else:

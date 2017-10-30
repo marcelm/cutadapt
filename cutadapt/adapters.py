@@ -193,13 +193,15 @@ class AdapterParser(object):
 		return adapters
 
 
+def returns_defaultdict_int():
+	# We need this function to make EndStatistics picklable.
+	# Even a @staticmethod of EndStatistics is not sufficient
+	# as that is not picklable before Python 3.5.
+	return defaultdict(int)
+
+
 class EndStatistics(object):
 	"""Statistics about the 5' or 3' end"""
-
-	@staticmethod
-	def returns_defaultdict_int():
-		# we need this to make the class picklable
-		return defaultdict(int)
 
 	def __init__(self, adapter):
 		self.where = adapter.where
@@ -207,7 +209,7 @@ class EndStatistics(object):
 		self.sequence = adapter.sequence
 		self.has_wildcards = adapter.adapter_wildcards
 		# self.errors[l][e] == n iff n times a sequence of length l matching at e errors was removed
-		self.errors = defaultdict(self.returns_defaultdict_int)
+		self.errors = defaultdict(returns_defaultdict_int)
 		self._remove_before = adapter.remove_before
 		self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
 
