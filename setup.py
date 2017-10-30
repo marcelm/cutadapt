@@ -12,8 +12,8 @@ import versioneer
 
 MIN_CYTHON_VERSION = '0.24'
 
-if sys.version_info < (2, 6):
-	sys.stdout.write("At least Python 2.6 is required.\n")
+if sys.version_info < (2, 7):
+	sys.stdout.write("At least Python 2.7 is required.\n")
 	sys.exit(1)
 
 
