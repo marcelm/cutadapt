@@ -433,8 +433,8 @@ class WorkerProcess(Process):
 	The worker repeatedly reads chunks of data from the read_pipe, runs the pipeline on it
 	and sends the processed chunks to the write_pipe.
 
-	To notify the reader process that it wants data, it puts its own identifier into the queue
-	before attempting to read data from the read_pipe.
+	To notify the reader process that it wants data, it puts its own identifier into the
+	need_work_queue before attempting to read data from the read_pipe.
 	"""
 	def __init__(self, id_, pipeline, filtering_options, orig_outfiles, read_pipe, write_pipe,
 			need_work_queue):
