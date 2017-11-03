@@ -38,6 +38,8 @@ Then install cutadapt like this::
 If neither `pip` nor `conda` installation works, keep reading.
 
 
+.. _dependencies:
+
 Dependencies
 ------------
 
@@ -131,3 +133,33 @@ like this::
 Please note that there is no need to “activate” the virtual environment:
 Activation merely adds the ``bin/`` directory to the ``$PATH``, so the
 ``prepend_path`` directive is equivalent to activating the virtual environment.
+
+
+Installing the development version
+----------------------------------
+
+We recommend that you install cutadapt into a so-called virtual environment if
+you decide to use the development version. The virtual environment is a single
+directory that contains everything needed to run the software. Nothing else on
+your system is changed, so you can simply uninstall this particular version of
+cutadapt by removing the directory with the virtual environment.
+
+The following instructions work on Linux using Python 3. Make sure you have
+installed the :ref:`dependencies <dependencies>` (``python3-dev`` and
+``build-essential`` on Ubuntu)!
+
+First, choose where you want to place the directory with the virtual
+environment and what you want to call it. Let us assume you chose the path
+``~/cutadapt-venv``. Then use these commands for the installation::
+
+    python3 -m venv ~/cutadapt-venv
+    ~/cutadapt-venv/bin/pip install Cython
+    ~/cutadapt-venv/bin/pip install git+https://github.com/marcelm/cutadapt.git/
+
+To run cutadapt and see the version number, type ::
+
+    ~/cutadapt-venv/bin/cutadapt --version
+
+The reported version number will be something like ``1.14+65.g5610275``. This
+means that you are now running a cutadapt version that contains 65 additional
+changes (*commits*) since version 1.14.
