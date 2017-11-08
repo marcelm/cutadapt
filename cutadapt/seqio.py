@@ -781,4 +781,64 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
 	raise UnknownFileType("File is neither FASTQ nor FASTA.")
 
 
+def find_fasta_record_end(buf, end):
+	"""
+	Search for the end of the last complete FASTA record within buf[start:end]
+	"""
+	pos = buf.rfind(b'\n>', 0, end)
+	if pos != -1:
+		return pos + 1
+	if buf[0:1] == b'>':
+		return 0
+	# TODO
+	assert False
+
+
+def find_fastq_record_end(buf, end, _newline=ord('\n')):
+	"""
+	Search for the end of the last complete FASTQ record in buf[:end]
+	"""
+	linebreaks = buf.count(_newline, 0, end)
+	right = end
+	for _ in range(linebreaks % 4 + 1):
+		right = buf.rfind(_newline, 0, right)
+		assert right != -1  # TODO
+	return right + 1
+
+
+def read_chunks_from_file(f, buffer_size=4000000):
+	"""
+	f needs to be a file opened in binary mode
+	"""
+	# This buffer is re-used in each iteration.
+	buf = bytearray(buffer_size)
+
+	# Read one byte to determine file format
+	# TODO if there is a comment char, we assume FASTA
+	start = f.readinto(memoryview(buf)[0:1])
+	if start == 1 and buf[0:1] == b'@':
+		find_record_end = fastq_head
+	elif start == 1 and buf[0:1] == b'#' or buf[0:1] == b'>':
+		find_record_end = find_fasta_record_end
+	elif start > 0:
+		raise ValueError('input file format unknown')
+
+	while True:
+		bufend = f.readinto(memoryview(buf)[start:]) + start
+		if start == bufend:
+			# End of file
+			break
+		end = find_record_end(buf, bufend)
+		assert end <= bufend
+		if end > 0:
+			yield memoryview(buf)[0:end]
+		start = bufend - end
+		assert start >= 0
+		buf[0:start] = buf[end:bufend]
+
+	if start > 0:
+		yield memoryview(buf)[0:start]
+
+
+
 from ._seqio import head, fastq_head, two_fastq_heads  # re-exported
