@@ -10,7 +10,7 @@ from tempfile import mkdtemp
 from cutadapt.seqio import (Sequence, ColorspaceSequence, FormatError,
 	FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
 	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq,
-	sequence_names_match)
+	sequence_names_match, head, fastq_head, two_fastq_heads)
 from cutadapt.compat import StringIO
 
 
@@ -350,3 +350,39 @@ class TestPairedSequenceReader:
 		assert match('abc1', 'abc2')
 		assert not match('abc', 'xyz')
 
+
+def test_head():
+	# no line break at end on purpose
+	buf = b'first\nsecond\nthird\nfourth\nfifth'
+	assert head(buf, 0) == 0
+	assert head(buf, 1) == len('first\n')
+	assert head(buf, 2) == len('first\n') + len('second\n')
+	assert head(buf, 3) == len('first\n') + len('second\n') + len('third\n')
+	assert head(buf, 4) == len('first\n') + len('second\n') + len('third\n') + len('fourth\n')
+	assert head(buf, 5) == len(buf)
+	assert head(buf, 6) == len(buf)
+	assert head(buf, 100) == len(buf)
+
+
+def test_two_fastq_heads():
+	buf1 = b'first\nsecond\nthird\nfourth\nfifth'
+	buf2 = b'a\nb\nc\nd\ne\nf\ng'
+	assert two_fastq_heads(buf1, buf2) == (
+		len(b'first\nsecond\nthird\nfourth\n'), len(b'a\nb\nc\nd\n'))
+
+	assert two_fastq_heads(b'abc', b'def') == (0, 0)
+	assert two_fastq_heads(b'abc\n', b'def') == (0, 0)
+	assert two_fastq_heads(b'abc', b'def\n') == (0, 0)
+	assert two_fastq_heads(b'\n\n\n\n', b'\n\n\n\n') == (4, 4)
+
+
+def test_fastq_head():
+	assert fastq_head(b'') == 0
+	assert fastq_head(b'A\n') == 0
+	assert fastq_head(b'A\nB') == 0
+	assert fastq_head(b'A\nB\n') == 0
+	assert fastq_head(b'A\nB\nC') == 0
+	assert fastq_head(b'A\nB\nC\n') == 0
+	assert fastq_head(b'A\nB\nC\nD') == 0
+	assert fastq_head(b'A\nB\nC\nD\n') == 8
+	assert fastq_head(b'A\nB\nC\nD\nE') == 8

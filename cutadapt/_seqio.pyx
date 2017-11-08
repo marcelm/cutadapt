@@ -4,6 +4,106 @@ from __future__ import print_function, division, absolute_import
 from xopen import xopen
 from .seqio import _shorten, FormatError, SequenceReader
 
+cimport cython
+
+# It would be nice to be able to have the first parameter be a
+# unsigned char[:] (memory view), but this fails with a BufferError
+# when a bytes object is passed in.
+# See <https://stackoverflow.com/questions/28203670/>
+
+ctypedef fused bytes_or_bytearray:
+	bytes
+	bytearray
+
+
+#@cython.boundscheck(False)
+def head(bytes_or_bytearray buf, Py_ssize_t lines):
+	"""
+	Skip forward by a number of lines in the given buffer and return
+	how many bytes this corresponds to.
+	"""
+	cdef:
+		Py_ssize_t pos = 0
+		Py_ssize_t linebreaks_seen = 0
+		Py_ssize_t length = len(buf)
+		unsigned char* data = buf
+
+	while linebreaks_seen < lines and pos < length:
+		if data[pos] == '\n':
+			linebreaks_seen += 1
+		pos += 1
+	return pos
+
+
+def fastq_head(bytes_or_bytearray buf, Py_ssize_t end=-1):
+	"""
+	Return an integer length such that buf[:length] contains the highest
+	possible number of complete four-line records.
+
+	If end is -1, the full buffer is searched. Otherwise only buf[:end].
+	"""
+	cdef:
+		Py_ssize_t pos = 0
+		Py_ssize_t linebreaks = 0
+		Py_ssize_t length = len(buf)
+		unsigned char* data = buf
+		Py_ssize_t record_start = 0
+
+	if end != -1:
+		length = min(length, end)
+	while True:
+		while pos < length and data[pos] != '\n':
+			pos += 1
+		if pos == length:
+			break
+		pos += 1
+		linebreaks += 1
+		if linebreaks == 4:
+			linebreaks = 0
+			record_start = pos
+
+	# Reached the end of the data block
+	return record_start
+
+
+def two_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2):
+	"""
+	Skip forward in the two buffers by multiples of four lines.
+
+	Return a tuple (length1, length2) such that buf1[:length1] and
+	buf2[:length2] contain the same number of lines (where the
+	line number is divisible by four).
+	"""
+	cdef:
+		Py_ssize_t pos1 = 0, pos2 = 0
+		Py_ssize_t linebreaks = 0
+		Py_ssize_t length1 = len(buf1)
+		Py_ssize_t length2 = len(buf2)
+		unsigned char* data1 = buf1
+		unsigned char* data2 = buf2
+		Py_ssize_t record_start1 = 0
+		Py_ssize_t record_start2 = 0
+
+	while True:
+		while pos1 < length1 and data1[pos1] != '\n':
+			pos1 += 1
+		if pos1 == length1:
+			break
+		pos1 += 1
+		while data2[pos2] != '\n':
+			pos2 += 1
+		if pos2 == length2:
+			break
+		pos2 += 1
+		linebreaks += 1
+		if linebreaks == 4:
+			linebreaks = 0
+			record_start1 = pos1
+			record_start2 = pos2
+
+	# Hit the end of the data block
+	return record_start1, record_start2
+
 
 cdef class Sequence(object):
 	"""

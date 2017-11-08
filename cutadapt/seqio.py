@@ -779,3 +779,6 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
 		if line.startswith('@'):
 			return fastq_handler(FileWithPrependedLine(file, line))
 	raise UnknownFileType("File is neither FASTQ nor FASTA.")
+
+
+from ._seqio import head, fastq_head, two_fastq_heads  # re-exported
