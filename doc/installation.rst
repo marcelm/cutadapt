@@ -154,7 +154,7 @@ environment and what you want to call it. Let us assume you chose the path
 
     python3 -m venv ~/cutadapt-venv
     ~/cutadapt-venv/bin/pip install Cython
-    ~/cutadapt-venv/bin/pip install git+https://github.com/marcelm/cutadapt.git/
+    ~/cutadapt-venv/bin/pip install https://github.com/marcelm/cutadapt/archive/master.zip
 
 To run cutadapt and see the version number, type ::
 
