@@ -10,7 +10,7 @@ from tempfile import mkdtemp
 from cutadapt.seqio import (Sequence, ColorspaceSequence, FormatError,
 	FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
 	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq,
-	sequence_names_match, head, fastq_head, two_fastq_heads)
+	sequence_names_match, head, fastq_head, two_fastq_heads, find_fastq_record_end)
 from cutadapt.compat import StringIO
 
 
@@ -386,3 +386,15 @@ def test_fastq_head():
 	assert fastq_head(b'A\nB\nC\nD') == 0
 	assert fastq_head(b'A\nB\nC\nD\n') == 8
 	assert fastq_head(b'A\nB\nC\nD\nE') == 8
+
+
+def test_fastq_record_end():
+	assert find_fastq_record_end(b'') == 0
+	assert find_fastq_record_end(b'A\n') == 0
+	assert find_fastq_record_end(b'A\nB') == 0
+	assert find_fastq_record_end(b'A\nB\n') == 0
+	assert find_fastq_record_end(b'A\nB\nC') == 0
+	assert find_fastq_record_end(b'A\nB\nC\n') == 0
+	assert find_fastq_record_end(b'A\nB\nC\nD') == 0
+	assert find_fastq_record_end(b'A\nB\nC\nD\n') == 8
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE') == 8

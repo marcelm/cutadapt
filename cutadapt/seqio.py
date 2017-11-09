@@ -783,7 +783,7 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
 
 def find_fasta_record_end(buf, end):
 	"""
-	Search for the end of the last complete FASTA record within buf[start:end]
+	Search for the end of the last complete FASTA record within buf[:end]
 	"""
 	pos = buf.rfind(b'\n>', 0, end)
 	if pos != -1:
@@ -794,15 +794,17 @@ def find_fasta_record_end(buf, end):
 	assert False
 
 
-def find_fastq_record_end(buf, end, _newline=ord('\n')):
+def find_fastq_record_end(buf, end=None):
 	"""
 	Search for the end of the last complete FASTQ record in buf[:end]
 	"""
-	linebreaks = buf.count(_newline, 0, end)
+	linebreaks = buf.count(b'\n', 0, end)
 	right = end
 	for _ in range(linebreaks % 4 + 1):
-		right = buf.rfind(_newline, 0, right)
-		assert right != -1  # TODO
+		right = buf.rfind(b'\n', 0, right)
+	# Note that this works even if linebreaks == 0:
+	# rfind() returns -1 and adding 1 gives index 0,
+	# which is correct.
 	return right + 1
 
 
