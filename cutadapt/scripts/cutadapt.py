@@ -113,8 +113,8 @@ def get_option_parser():
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
 			"from file name extension.")
-	parser.add_option('-j', '--threads', type=int, default=None,
-		help='Number of threads. Default: no. of available CPUs, but at most 8')
+	parser.add_option('-j', '--cores', type=int, default=None,
+		help='Number of CPU cores to use. Default: no. of available CPUs, but at most 8')
 
 	# Hidden options
 	parser.add_option("--gc-content", type=float, default=50,  # it's a percentage
@@ -679,10 +679,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error(e)
 		return  # avoid IDE warnings below
 
-	if options.threads is None:
+	if options.cores is None:
 		cores = min(8, available_cpu_count())
 	else:
-		cores = max(1, options.threads)
+		cores = max(1, options.cores)
 	if (
 		PY3
 		and ParallelPipelineRunner.can_output_to(outfiles)
@@ -711,7 +711,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	logger.info("This is cutadapt %s with Python %s%s", __version__,
 		platform.python_version(), opt)
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-	if options.threads is not None and options.threads > cores:
+	if options.cores is not None and options.cores > cores:
 		if not PY3:
 			logger.warning('WARNING: Running in parallel is not supported on Python 2')
 		else:
