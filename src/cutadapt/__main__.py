@@ -91,6 +91,19 @@ class CommandlineError(Exception):
 	pass
 
 
+class NiceFormatter(logging.Formatter):
+	"""
+	Do not prefix "INFO:" to info-level log messages (but do it for all other
+	levels).
+
+	Based on http://stackoverflow.com/a/9218261/715090 .
+	"""
+	def format(self, record):
+		if record.levelno != logging.INFO:
+			record.msg = '{}: {}'.format(record.levelname, record.msg)
+		return super().format(record)
+
+
 def setup_logging(stdout=False, quiet=False):
 	"""
 	Attach handler to the global logger object
@@ -98,7 +111,7 @@ def setup_logging(stdout=False, quiet=False):
 	# Due to backwards compatibility, logging output is sent to standard output
 	# instead of standard error if the -o option is used.
 	stream_handler = logging.StreamHandler(sys.stdout if stdout else sys.stderr)
-	stream_handler.setFormatter(logging.Formatter('%(message)s'))
+	stream_handler.setFormatter(NiceFormatter())
 	stream_handler.setLevel(logging.ERROR if quiet else logging.INFO)
 	logger.setLevel(logging.INFO)
 	logger.addHandler(stream_handler)
@@ -713,9 +726,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
 	if options.cores is not None and options.cores > cores:
 		if not PY3:
-			logger.error('ERROR: Running in parallel is not supported on Python 2')
+			logger.error('Running in parallel is not supported on Python 2')
 		else:
-			logger.error('ERROR: Running in parallel is currently not supported for '
+			logger.error('Running in parallel is currently not supported for '
 				'the given combination of command-line parameters.')
 		sys.exit(1)
 	logger.info('Running on %d core%s', cores, 's' if cores > 1 else '')
@@ -725,7 +738,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		{False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end'}[pipeline.paired])
 
 	if pipeline.should_warn_legacy:
-		logger.warning('\n'.join(textwrap.wrap('WARNING: Legacy mode is '
+		logger.warning('\n'.join(textwrap.wrap('Legacy mode is '
 			'enabled. Read modification and filtering options *ignore* '
 			'the second read. To switch to regular paired-end mode, '
 			'provide the --pair-filter=any option or use any of the '
