@@ -842,5 +842,4 @@ def read_chunks_from_file(f, buffer_size=4000000):
 		yield memoryview(buf)[0:start]
 
 
-
 from ._seqio import head, fastq_head, two_fastq_heads  # re-exported

@@ -5,11 +5,14 @@
 from __future__ import print_function, division, absolute_import
 
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
-import shutil
+
 from nose.tools import raises
-from cutadapt.scripts import cutadapt
+
+from cutadapt.__main__ import main
 from cutadapt.compat import StringIO
 from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
@@ -313,19 +316,19 @@ except ImportError:
 @raises(SystemExit)
 def test_qualfile_only():
 	with redirect_stderr():
-		cutadapt.main(['file.qual'])
+		main(['file.qual'])
 
 
 @raises(SystemExit)
 def test_no_args():
 	with redirect_stderr():
-		cutadapt.main([])
+		main([])
 
 
 @raises(SystemExit)
 def test_two_fastqs():
 	with redirect_stderr():
-		cutadapt.main([datapath('paired.1.fastq'), datapath('paired.2.fastq')])
+		main([datapath('paired.1.fastq'), datapath('paired.2.fastq')])
 
 
 def test_anchored_no_indels():
@@ -346,7 +349,7 @@ def test_anchored_no_indels_wildcard_adapt():
 @raises(SystemExit)
 def test_non_iupac_characters():
 	with redirect_stderr():
-		cutadapt.main(['-a', 'ZACGT', datapath('small.fastq')])
+		main(['-a', 'ZACGT', datapath('small.fastq')])
 
 
 def test_unconditional_cut_front():
@@ -391,7 +394,7 @@ def test_demultiplex():
 	tempdir = tempfile.mkdtemp(prefix='cutadapt-tests.')
 	multiout = os.path.join(tempdir, 'tmp-demulti.{name}.fasta')
 	params = ['-a', 'first=AATTTCAGGAATT', '-a', 'second=GTTCTCTAGTTCT', '-o', multiout, datapath('twoadapters.fasta')]
-	assert cutadapt.main(params) is None
+	assert main(params) is None
 	assert_files_equal(cutpath('twoadapters.first.fasta'), multiout.format(name='first'))
 	assert_files_equal(cutpath('twoadapters.second.fasta'), multiout.format(name='second'))
 	assert_files_equal(cutpath('twoadapters.unknown.fasta'), multiout.format(name='unknown'))
@@ -414,7 +417,7 @@ def test_quiet_is_quiet():
 	try:
 		sys.stdout = captured_standard_output
 		sys.stderr = captured_standard_error
-		cutadapt.main(['-o', '/dev/null', '--quiet', '-a', 'XXXX', datapath('illumina.fastq.gz')])
+		main(['-o', '/dev/null', '--quiet', '-a', 'XXXX', datapath('illumina.fastq.gz')])
 	finally:
 		sys.stdout = old_stdout
 		sys.stderr = old_stderr
@@ -449,19 +452,19 @@ def test_linked_5p_not_anchored():
 @raises(SystemExit)
 def test_linked_anywhere():
 	with redirect_stderr():
-		cutadapt.main(['-b', 'AAA...TTT', datapath('linked.fasta')])
+		main(['-b', 'AAA...TTT', datapath('linked.fasta')])
 
 
 @raises(SystemExit)
 def test_anywhere_anchored_5p():
 	with redirect_stderr():
-		cutadapt.main(['-b', '^AAA', datapath('small.fastq')])
+		main(['-b', '^AAA', datapath('small.fastq')])
 
 
 @raises(SystemExit)
 def test_anywhere_anchored_3p():
 	with redirect_stderr():
-		cutadapt.main(['-b', 'TTT$', datapath('small.fastq')])
+		main(['-b', 'TTT$', datapath('small.fastq')])
 
 
 def test_fasta():
@@ -479,3 +482,7 @@ def test_issue_202():
 
 def test_length():
 	run('--length 5', 'shortened.fastq', 'small.fastq')
+
+
+def test_run_cutadapt_process():
+	subprocess.check_call(['cutadapt', '--version'])

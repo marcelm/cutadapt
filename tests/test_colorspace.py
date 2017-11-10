@@ -2,7 +2,7 @@
 from __future__ import print_function, division, absolute_import
 
 from cutadapt.colorspace import encode, decode
-from cutadapt.scripts.cutadapt import main
+from cutadapt.__main__ import main
 from utils import run, datapath
 
 # If there are any unknown characters in the test sequence,

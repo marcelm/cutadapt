@@ -1,13 +1,14 @@
 # coding: utf-8
 from __future__ import print_function, division, absolute_import
 
-import sys
 import os.path
 import subprocess
-from tempfile import mkdtemp
-from shutil import rmtree
+import sys
 from contextlib import contextmanager
-from cutadapt.scripts import cutadapt
+from shutil import rmtree
+from tempfile import mkdtemp
+
+from cutadapt.__main__ import main
 
 
 @contextmanager
@@ -58,7 +59,7 @@ def run(params, expected, inpath, inpath2=None):
 		params += [datapath(inpath)]
 		if inpath2:
 			params += [datapath(inpath2)]
-		assert cutadapt.main(params) is None
+		assert main(params) is None
 		# TODO redirect standard output
 		assert_files_equal(cutpath(expected), tmp_fastaq)
 	# TODO diff log files

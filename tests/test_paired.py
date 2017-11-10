@@ -1,11 +1,13 @@
 # coding: utf-8
 from __future__ import print_function, division, absolute_import
 
+import os.path
 import shutil
 import tempfile
-import os.path
+
 from nose.tools import raises
-from cutadapt.scripts import cutadapt
+
+from cutadapt.__main__ import main
 from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
 
@@ -16,7 +18,7 @@ def run_paired(params, in1, in2, expected1, expected2):
 		with temporary_path('tmp2-' + expected2) as p2:
 			params += ['-o', p1, '-p', p2]
 			params += [datapath(in1), datapath(in2)]
-			assert cutadapt.main(params) is None
+			assert main(params) is None
 			assert_files_equal(cutpath(expected1), p1)
 			assert_files_equal(cutpath(expected2), p2)
 
@@ -39,10 +41,10 @@ def run_interleaved(params, inpath1, inpath2=None, expected1=None, expected2=Non
 		if expected2:
 			with temporary_path('tmp2-' + expected2) as tmp2:
 				params += ['-p', tmp2]
-				assert cutadapt.main(params + paths) is None
+				assert main(params + paths) is None
 				assert_files_equal(cutpath(expected2), tmp2)
 		else:
-			assert cutadapt.main(params + paths) is None
+			assert main(params + paths) is None
 		assert_files_equal(cutpath(expected1), tmp1)
 
 
@@ -94,14 +96,14 @@ def test_explicit_format_with_paired():
 
 def test_no_trimming_legacy():
 	# make sure that this doesn't divide by zero
-	cutadapt.main([
+	main([
 		'-a', 'XXXXX', '-o', '/dev/null', '-p', '/dev/null',
 		datapath('paired.1.fastq'), datapath('paired.2.fastq')])
 
 
 def test_no_trimming():
 	# make sure that this doesn't divide by zero
-	cutadapt.main([
+	main([
 		'-a', 'XXXXX', '-A', 'XXXXX', '-o', '/dev/null', '-p', '/dev/null',
 		datapath('paired.1.fastq'), datapath('paired.2.fastq')])
 
@@ -109,7 +111,7 @@ def test_no_trimming():
 @raises(SystemExit)
 def test_missing_file():
 	with redirect_stderr():
-		cutadapt.main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
+		main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
 
 
 @raises(SystemExit)
@@ -122,7 +124,7 @@ def test_first_too_short():
 		with open(trunc1, 'w') as f:
 			f.writelines(lines)
 		with redirect_stderr():
-			cutadapt.main(
+			main(
 				'-a XX -o /dev/null --paired-output out.fastq'.split() +
 				[trunc1, datapath('paired.2.fastq')]
 			)
@@ -138,8 +140,8 @@ def test_second_too_short():
 		with open(trunc2, 'w') as f:
 			f.writelines(lines)
 		with redirect_stderr():
-			cutadapt.main('-a XX -o /dev/null --paired-output out.fastq'.split() +
-				[datapath('paired.1.fastq'), trunc2])
+			main('-a XX -o /dev/null --paired-output out.fastq'.split() +
+			              [datapath('paired.1.fastq'), trunc2])
 
 
 @raises(SystemExit)
@@ -152,21 +154,21 @@ def test_unmatched_read_names():
 		with open(swapped, 'w') as f:
 			f.writelines(lines)
 		with redirect_stderr():
-			cutadapt.main('-a XX -o out1.fastq --paired-output out2.fastq'.split() +
-				[swapped, datapath('paired.2.fastq')])
+			main('-a XX -o out1.fastq --paired-output out2.fastq'.split() +
+			              [swapped, datapath('paired.2.fastq')])
 
 
 @raises(SystemExit)
 def test_p_without_o():
 	"""Option -p given but -o missing"""
-	cutadapt.main('-a XX -p /dev/null'.split() +
-		[datapath('paired.1.fastq'), datapath('paired.2.fastq')])
+	main('-a XX -p /dev/null'.split() +
+	              [datapath('paired.1.fastq'), datapath('paired.2.fastq')])
 
 
 @raises(SystemExit)
 def test_paired_but_only_one_input_file():
 	"""Option -p given but only one input file"""
-	cutadapt.main('-a XX -o /dev/null -p /dev/null'.split() + [datapath('paired.1.fastq')])
+	main('-a XX -o /dev/null -p /dev/null'.split() + [datapath('paired.1.fastq')])
 
 
 def test_legacy_minlength():
@@ -281,7 +283,7 @@ def test_interleaved_neither_nor():
 			params = '-a XX --interleaved'.split()
 			with redirect_stderr():
 				params += ['-o', p1, '-p1', p2, 'paired.1.fastq', 'paired.2.fastq']
-				cutadapt.main(params)
+				main(params)
 
 
 def test_pair_filter():
@@ -343,7 +345,7 @@ def test_paired_demultiplex():
 		'-A', 'ignored=CAGTGGAGTA', '-A', 'alsoignored=AATAACAGTGGAGTA',
 		'-o', multiout1, '-p', multiout2,
 		datapath('paired.1.fastq'), datapath('paired.2.fastq')]
-	assert cutadapt.main(params) is None
+	assert main(params) is None
 	assert_files_equal(cutpath('demultiplexed.first.1.fastq'), multiout1.format(name='first'))
 	assert_files_equal(cutpath('demultiplexed.second.1.fastq'), multiout1.format(name='second'))
 	assert_files_equal(cutpath('demultiplexed.unknown.1.fastq'), multiout1.format(name='unknown'))
