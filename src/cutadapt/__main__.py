@@ -114,7 +114,7 @@ def get_option_parser():
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
 			"from file name extension.")
 	parser.add_option('-j', '--cores', type=int, default=None,
-		help='Number of CPU cores to use. Default: no. of available CPUs, but at most 8')
+		help='Number of CPU cores to use. Default: No. of available cores, but at most 8')
 
 	# Hidden options
 	parser.add_option("--gc-content", type=float, default=50,  # it's a percentage
@@ -713,14 +713,13 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
 	if options.cores is not None and options.cores > cores:
 		if not PY3:
-			logger.warning('WARNING: Running in parallel is not supported on Python 2')
+			logger.error('ERROR: Running in parallel is not supported on Python 2')
 		else:
-			logger.warning('WARNING: Running in parallel is currently not supported for '
+			logger.error('ERROR: Running in parallel is currently not supported for '
 				'the given combination of command-line parameters.')
+		sys.exit(1)
 	elif cores > 1:
 		logger.info('Running in parallel using %d cores.', cores)
-	elif cores == 1 and PY3:
-		logger.info('Running on a single core only. Consider using option -j for speedups.')
 	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
 		pipeline.n_adapters, 's' if pipeline.n_adapters != 1 else '',
 		options.error_rate * 100,
