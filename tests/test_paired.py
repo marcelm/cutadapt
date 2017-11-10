@@ -5,10 +5,22 @@ import os.path
 import shutil
 import tempfile
 
+import pytest
 from nose.tools import raises
 
+from cutadapt.compat import PY3
 from cutadapt.__main__ import main
 from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
+
+
+if PY3:
+	@pytest.fixture(params=[1, 2])
+	def cores(request):
+		return request.param
+else:
+	@pytest.fixture
+	def cores():
+		return 1
 
 
 def run_paired(params, in1, in2, expected1, expected2):
@@ -23,7 +35,7 @@ def run_paired(params, in1, in2, expected1, expected2):
 			assert_files_equal(cutpath(expected2), p2)
 
 
-def run_interleaved(params, inpath1, inpath2=None, expected1=None, expected2=None):
+def run_interleaved(params, inpath1, inpath2=None, expected1=None, expected2=None, cores=1):
 	"""
 	Interleaved input or output (or both)
 	"""
@@ -32,7 +44,7 @@ def run_interleaved(params, inpath1, inpath2=None, expected1=None, expected2=Non
 	assert not (inpath2 and not inpath1)
 	if type(params) is str:
 		params = params.split()
-	params += ['--interleaved']
+	params += ['--interleaved', '--cores', str(cores), '--buffer-size=512']
 	with temporary_path('tmp1-' + expected1) as tmp1:
 		params += ['-o', tmp1]
 		paths = [datapath(inpath1)]
@@ -249,11 +261,12 @@ def test_discard_trimmed():
 	)
 
 
-def test_interleaved_in_and_out():
+def test_interleaved_in_and_out(cores):
 	"""Single-pass interleaved paired-end with -q and -m"""
 	run_interleaved(
 		'-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
-		inpath1='interleaved.fastq', expected1='interleaved.fastq'
+		inpath1='interleaved.fastq', expected1='interleaved.fastq',
+		cores=cores
 	)
 
 

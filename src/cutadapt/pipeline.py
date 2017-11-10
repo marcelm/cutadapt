@@ -345,7 +345,7 @@ def reader_process(file, connections, queue, buffer_size):
 	Read chunks of FASTA or FASTQ data from *file* and send to a worker.
 
 	queue -- a Queue of worker indices. A worker writes its own index into this
-		queue to notify us that it is ready to receive more data.
+		queue to notify the reader that it is ready to receive more data.
 	connections -- a list of Connection objects, one for each worker.
 
 	The function repeatedly
@@ -378,12 +378,13 @@ class WorkerProcess(Process):
 	To notify the reader process that it wants data, it puts its own identifier into the
 	need_work_queue before attempting to read data from the read_pipe.
 	"""
-	def __init__(self, id_, pipeline, filtering_options, orig_outfiles, read_pipe, write_pipe,
-			need_work_queue):
+	def __init__(self, id_, pipeline, filtering_options, interleaved_input, orig_outfiles, read_pipe,
+			write_pipe, need_work_queue):
 		super(WorkerProcess, self).__init__()
 		self._id = id_
 		self._pipeline = pipeline
 		self._filtering_options = filtering_options
+		self._interleaved_input = interleaved_input
 		self._orig_outfiles = orig_outfiles
 		self._read_pipe = read_pipe
 		self._write_pipe = write_pipe
@@ -407,8 +408,8 @@ class WorkerProcess(Process):
 				# Output format depends on file name, so make output file name available
 				output.buffer.name = self._orig_outfiles.out.name
 
-				outfiles = OutputFiles(out=output)
-				self._pipeline.set_input(input)
+				outfiles = OutputFiles(out=output, interleaved=self._orig_outfiles.interleaved)
+				self._pipeline.set_input(input, interleaved=self._interleaved_input)
 				self._pipeline.set_output(outfiles, *self._filtering_options[0], **self._filtering_options[1])
 				(n, bp1, bp2) = self._pipeline.process_reads()
 				cur_stats = Statistics()
@@ -456,12 +457,13 @@ class ParallelPipelineRunner(object):
 	processed by that worker.
 	"""
 
-	def __init__(self, pipeline, n_workers, buffer_size=4000000):
+	def __init__(self, pipeline, n_workers, buffer_size=4*1024**2):
 		self._pipeline = pipeline
 		self._pipes = []  # the workers read from these
 		self._reader_process = None
 		self._filtering_options = None
 		self._outfiles = None
+		self._interleaved_input = None
 		self._n_workers = n_workers
 		self._need_work_queue = Queue()
 		self._buffer_size = buffer_size
@@ -470,7 +472,8 @@ class ParallelPipelineRunner(object):
 			interleaved=False):
 		if self._reader_process is not None:
 			raise RuntimeError('Do not call set_input more than once')
-		assert file2 is None and qualfile is None and colorspace is False and fileformat is None and interleaved is False
+		assert file2 is None and qualfile is None and colorspace is False and fileformat is None
+		self._interleaved_input = interleaved
 		connections = [Pipe(duplex=False) for _ in range(self._n_workers)]
 		self._pipes, connw = zip(*connections)
 		p = Process(target=reader_process, args=(file1, connw, self._need_work_queue, self._buffer_size))
@@ -493,7 +496,6 @@ class ParallelPipelineRunner(object):
 			and outfiles.untrimmed is None
 			and outfiles.untrimmed2 is None
 			and not outfiles.demultiplex
-			and not outfiles.interleaved
 		)
 
 	def set_output(self, outfiles, *args, **kwargs):
@@ -509,7 +511,7 @@ class ParallelPipelineRunner(object):
 			conn_r, conn_w = Pipe(duplex=False)
 			connections.append(conn_r)
 			worker = WorkerProcess(index, self._pipeline,
-				self._filtering_options, self._outfiles, self._pipes[index], conn_w,
+				self._filtering_options, self._interleaved_input, self._outfiles, self._pipes[index], conn_w,
 				self._need_work_queue)
 			worker.daemon = True
 			worker.start()

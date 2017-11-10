@@ -396,5 +396,14 @@ def test_fastq_record_end():
 	assert find_fastq_record_end(b'A\nB\nC') == 0
 	assert find_fastq_record_end(b'A\nB\nC\n') == 0
 	assert find_fastq_record_end(b'A\nB\nC\nD') == 0
-	assert find_fastq_record_end(b'A\nB\nC\nD\n') == 8
-	assert find_fastq_record_end(b'A\nB\nC\nD\nE') == 8
+	assert find_fastq_record_end(b'A\nB\nC\nD\n') == 0
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE') == 0
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE\n') == 0
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF') == 0
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\n') == 0
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG') == 0
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\n') == 0
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH') == 0
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH\n') == 16
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH\nI') == 16
+	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH\nI\n') == 16

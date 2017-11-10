@@ -702,7 +702,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		and input_paired_filename is None
 		and quality_filename is None
 		and not options.colorspace
-		and not is_interleaved_input
 		and options.format is None
 		and cores > 1
 	):

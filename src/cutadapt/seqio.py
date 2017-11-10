@@ -448,7 +448,8 @@ class InterleavedSequenceReader(object):
 			try:
 				r2 = next(it)
 			except StopIteration:
-				raise FormatError("Interleaved input file incomplete: Last record has no partner.")
+				raise FormatError("Interleaved input file incomplete: Last record "
+					"{!r} has no partner.".format(r1.name))
 			if not sequence_names_match(r1, r2):
 				raise FormatError("Reads are improperly paired. Name {0!r} "
 					"(first) does not match {1!r} (second).".format(r1.name, r2.name))
@@ -796,11 +797,14 @@ def find_fasta_record_end(buf, end):
 
 def find_fastq_record_end(buf, end=None):
 	"""
-	Search for the end of the last complete FASTQ record in buf[:end]
+	Search for the end of the last complete *two* FASTQ records in buf[:end].
+
+	Two FASTQ records are required to ensure that read pairs in interleaved
+	paired-end data are not split.
 	"""
 	linebreaks = buf.count(b'\n', 0, end)
 	right = end
-	for _ in range(linebreaks % 4 + 1):
+	for _ in range(linebreaks % 8 + 1):
 		right = buf.rfind(b'\n', 0, right)
 	# Note that this works even if linebreaks == 0:
 	# rfind() returns -1 and adding 1 gives index 0,
@@ -819,7 +823,7 @@ def read_chunks_from_file(f, buffer_size=4000000):
 	# TODO if there is a comment char, we assume FASTA
 	start = f.readinto(memoryview(buf)[0:1])
 	if start == 1 and buf[0:1] == b'@':
-		find_record_end = fastq_head
+		find_record_end = find_fastq_record_end
 	elif start == 1 and buf[0:1] == b'#' or buf[0:1] == b'>':
 		find_record_end = find_fasta_record_end
 	elif start > 0:
