@@ -718,8 +718,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			logger.error('ERROR: Running in parallel is currently not supported for '
 				'the given combination of command-line parameters.')
 		sys.exit(1)
-	elif cores > 1:
-		logger.info('Running in parallel using %d cores.', cores)
+	logger.info('Running on %d core%s', cores, 's' if cores > 1 else '')
 	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
 		pipeline.n_adapters, 's' if pipeline.n_adapters != 1 else '',
 		options.error_rate * 100,
