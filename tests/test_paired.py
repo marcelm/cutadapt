@@ -6,7 +6,7 @@ import tempfile
 import os.path
 from nose.tools import raises
 from cutadapt.scripts import cutadapt
-from .utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
+from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
 
 def run_paired(params, in1, in2, expected1, expected2):

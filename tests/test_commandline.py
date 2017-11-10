@@ -11,7 +11,7 @@ import shutil
 from nose.tools import raises
 from cutadapt.scripts import cutadapt
 from cutadapt.compat import StringIO
-from .utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
+from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
 
 def test_example():
