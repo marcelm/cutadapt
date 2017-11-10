@@ -4,7 +4,7 @@ Build cutadapt.
 import sys
 import os.path
 
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 from distutils.version import LooseVersion
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_ext import build_ext as _build_ext
@@ -54,9 +54,9 @@ def check_cython_version():
 
 
 extensions = [
-	Extension('cutadapt._align', sources=['cutadapt/_align.pyx']),
-	Extension('cutadapt._qualtrim', sources=['cutadapt/_qualtrim.pyx']),
-	Extension('cutadapt._seqio', sources=['cutadapt/_seqio.pyx']),
+	Extension('cutadapt._align', sources=['src/cutadapt/_align.pyx']),
+	Extension('cutadapt._qualtrim', sources=['src/cutadapt/_qualtrim.pyx']),
+	Extension('cutadapt._seqio', sources=['src/cutadapt/_seqio.pyx']),
 ]
 
 cmdclass = versioneer.get_cmdclass()
@@ -108,7 +108,8 @@ setup(
 	license = 'MIT',
 	cmdclass = cmdclass,
 	ext_modules = extensions,
-	packages = ['cutadapt', 'cutadapt.scripts'],
+	package_dir = {'': 'src'},
+	packages = find_packages('src'),
 	install_requires = ['xopen>=0.1.1'],
 	entry_points = {'console_scripts': ['cutadapt = cutadapt.scripts.cutadapt:main']},
 	classifiers = [

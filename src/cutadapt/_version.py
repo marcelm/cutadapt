@@ -42,7 +42,7 @@ def get_config():
     cfg.style = "pep440"
     cfg.tag_prefix = "v"
     cfg.parentdir_prefix = "cutadapt-"
-    cfg.versionfile_source = "cutadapt/_version.py"
+    cfg.versionfile_source = "src/cutadapt/_version.py"
     cfg.verbose = False
     return cfg
 
