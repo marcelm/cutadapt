@@ -22,9 +22,8 @@ matrix:
 
 install:
   - pip install --upgrade pip wheel
-  - pip install Cython
+  - pip install --upgrade Cython pytest
   - pip install .
 
 script:
   - pytest
-
