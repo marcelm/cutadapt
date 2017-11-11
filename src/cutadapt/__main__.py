@@ -101,7 +101,7 @@ class NiceFormatter(logging.Formatter):
 	def format(self, record):
 		if record.levelno != logging.INFO:
 			record.msg = '{}: {}'.format(record.levelname, record.msg)
-		return super().format(record)
+		return super(NiceFormatter, self).format(record)
 
 
 def setup_logging(stdout=False, quiet=False):
