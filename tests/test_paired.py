@@ -270,12 +270,13 @@ def test_interleaved_in_and_out(cores):
 	)
 
 
-def test_interleaved_in():
+def test_interleaved_in(cores):
 	"""Interleaved input, two files output"""
 	run_interleaved(
 		'-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
 		inpath1='interleaved.fastq',
-		expected1='pairedq.1.fastq', expected2='pairedq.2.fastq'
+		expected1='pairedq.1.fastq', expected2='pairedq.2.fastq',
+		cores=cores
 	)
 
 

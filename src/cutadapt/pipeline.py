@@ -408,7 +408,12 @@ class WorkerProcess(Process):
 				# Output format depends on file name, so make output file name available
 				output.buffer.name = self._orig_outfiles.out.name
 
-				outfiles = OutputFiles(out=output, interleaved=self._orig_outfiles.interleaved)
+				if self._orig_outfiles.out2 is not None:
+					output2 = io.TextIOWrapper(io.BytesIO(), encoding='ascii')
+				else:
+					output2 = None
+
+				outfiles = OutputFiles(out=output, out2=output2, interleaved=self._orig_outfiles.interleaved)
 				self._pipeline.set_input(input, interleaved=self._interleaved_input)
 				self._pipeline.set_output(outfiles, *self._filtering_options[0], **self._filtering_options[1])
 				(n, bp1, bp2) = self._pipeline.process_reads()
@@ -421,6 +426,10 @@ class WorkerProcess(Process):
 
 				self._write_pipe.send(chunk_index)
 				self._write_pipe.send_bytes(processed_chunk)
+				if self._orig_outfiles.out2 is not None:
+					output2.flush()
+					processed_chunk2 = output2.buffer.getvalue()
+					self._write_pipe.send_bytes(processed_chunk2)
 
 			m = self._pipeline._modifiers
 			m2 = getattr(self._pipeline, '_modifiers2', [])
@@ -432,6 +441,31 @@ class WorkerProcess(Process):
 		except Exception as e:
 			self._write_pipe.send(-2)
 			self._write_pipe.send((e, traceback.format_exc()))
+
+
+class OrderedChunkWriter(object):
+	"""
+	We may receive chunks of processed data from worker processes
+	in any order. This class writes them to an output file in
+	the correct order.
+	"""
+	def __init__(self, outfile):
+		self._chunks = dict()
+		self._current_index = 0
+		self._outfile = outfile
+
+	def write(self, data, chunk_index):
+		"""
+		"""
+		self._chunks[chunk_index] = data
+		while self._current_index in self._chunks:
+			# TODO do not decode and use .buffer.write
+			self._outfile.write(self._chunks[self._current_index].decode('utf-8'))
+			del self._chunks[self._current_index]
+			self._current_index += 1
+
+	def wrote_everything(self):
+		return not self._chunks
 
 
 class ParallelPipelineRunner(object):
@@ -485,7 +519,6 @@ class ParallelPipelineRunner(object):
 	def can_output_to(outfiles):
 		return (
 			outfiles.out is not None
-			and outfiles.out2 is None
 			and outfiles.rest is None
 			and outfiles.info is None
 			and outfiles.wildcard is None
@@ -520,8 +553,11 @@ class ParallelPipelineRunner(object):
 
 	def run(self):
 		workers, connections = self._start_workers()
-		chunks = dict()
-		current_chunk = 0
+		writers = []
+		for outfile in [self._outfiles.out, self._outfiles.out2]:
+			if outfile is None:
+				continue
+			writers.append(OrderedChunkWriter(outfile))
 		stats = None
 		while connections:
 			ready_connections = multiprocessing.connection.wait(connections)
@@ -550,13 +586,12 @@ class ParallelPipelineRunner(object):
 					# We should use the worker's actual traceback object
 					# here, but traceback objects are not picklable.
 					raise e
-				data = connection.recv_bytes()
-				chunks[chunk_index] = data
-				while current_chunk in chunks:
-					self._outfiles.out.write(chunks[current_chunk].decode('utf-8'))  # TODO could be written as binary
-					del chunks[current_chunk]
-					current_chunk += 1
 
+				for writer in writers:
+					data = connection.recv_bytes()
+					writer.write(data, chunk_index)
+		for writer in writers:
+			assert writer.wrote_everything()
 		for w in workers:
 			w.join()
 		self._reader_process.join()
