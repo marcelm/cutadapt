@@ -617,7 +617,6 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 	if options.quality_cutoff is not None:
 		cutoffs = parse_cutoffs(options.quality_cutoff)
 		pipeline.add(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
-		pipeline.should_warn_legacy = True
 
 	if adapters:
 		adapter_cutter = AdapterCutter(adapters, options.times, options.action)

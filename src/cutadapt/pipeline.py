@@ -294,7 +294,7 @@ class PairedEndPipeline(Pipeline):
 
 	@property
 	def should_warn_legacy(self):
-		return self._should_warn_legacy or self._modify_first_read_only and len(self._filters) > 1
+		return self._should_warn_legacy
 
 	@should_warn_legacy.setter
 	def should_warn_legacy(self, value):
