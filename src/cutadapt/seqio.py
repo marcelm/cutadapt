@@ -791,8 +791,7 @@ def find_fasta_record_end(buf, end):
 		return pos + 1
 	if buf[0:1] == b'>':
 		return 0
-	# TODO
-	assert False
+	raise FormatError('FASTA does not start with ">"')
 
 
 def find_fastq_record_end(buf, end=None):
@@ -812,22 +811,22 @@ def find_fastq_record_end(buf, end=None):
 	return right + 1
 
 
-def read_chunks_from_file(f, buffer_size=4000000):
+def read_chunks_from_file(f, buffer_size=4*1024**2):
 	"""
 	f needs to be a file opened in binary mode
 	"""
 	# This buffer is re-used in each iteration.
 	buf = bytearray(buffer_size)
 
-	# Read one byte to determine file format
-	# TODO if there is a comment char, we assume FASTA
+	# Read one byte to determine file format.
+	# If there is a comment char, we assume FASTA!
 	start = f.readinto(memoryview(buf)[0:1])
 	if start == 1 and buf[0:1] == b'@':
 		find_record_end = find_fastq_record_end
 	elif start == 1 and buf[0:1] == b'#' or buf[0:1] == b'>':
 		find_record_end = find_fasta_record_end
 	elif start > 0:
-		raise ValueError('input file format unknown')
+		raise UnknownFileType('Input file format unknown')
 
 	while True:
 		bufend = f.readinto(memoryview(buf)[start:]) + start
@@ -844,6 +843,41 @@ def read_chunks_from_file(f, buffer_size=4000000):
 
 	if start > 0:
 		yield memoryview(buf)[0:start]
+
+
+def read_paired_chunks(f, f2, buffer_size=4*1024**2):
+	buf1 = bytearray(buffer_size)
+	buf2 = bytearray(buffer_size)
+
+	# Read one byte to make sure are processing FASTQ
+	start1 = f.readinto(memoryview(buf1)[0:1])
+	start2 = f2.readinto(memoryview(buf2)[0:1])
+	if (start1 == 1 and buf1[0:1] != b'@') or (start2 == 1 and buf2[0:1] != b'@'):
+		raise FormatError('Paired-end data must be in FASTQ format when using multiple cores')
+
+	while True:
+		bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1
+		if start1 == bufend1:
+			break
+		bufend2 = f2.readinto(memoryview(buf2)[start2:]) + start2
+		if start2 == bufend2:
+			break
+
+		end1, end2 = two_fastq_heads(buf1, buf2, bufend1, bufend2)
+		assert end1 <= bufend1
+		assert end2 <= bufend2
+
+		if end1 > 0 or end2 > 0:
+			yield (memoryview(buf1)[0:end1], memoryview(buf2)[0:end2])
+		start1 = bufend1 - end1
+		assert start1 >= 0
+		buf1[0:start1] = buf1[end1:bufend1]
+		start2 = bufend2 - end2
+		assert start2 >= 0
+		buf2[0:start2] = buf2[end2:bufend2]
+
+	if start1 > 0 or start2 > 0:
+		yield (memoryview(buf1)[0:start1], memoryview(buf2)[0:start2])
 
 
 from ._seqio import head, fastq_head, two_fastq_heads  # re-exported

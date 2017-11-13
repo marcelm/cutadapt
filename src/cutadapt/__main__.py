@@ -698,7 +698,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if (
 		PY3
 		and ParallelPipelineRunner.can_output_to(outfiles)
-		and input_paired_filename is None
 		and quality_filename is None
 		and not options.colorspace
 		and options.format is None
@@ -753,7 +752,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		if e.errno == errno.EPIPE:
 			sys.exit(1)
 		raise
-	except (seqio.FormatError, EOFError) as e:
+	except (seqio.FormatError, seqio.UnknownFileType, EOFError) as e:
 		sys.exit("cutadapt: error: {0}".format(e))
 
 	elapsed = time.time() - start_time

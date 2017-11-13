@@ -23,9 +23,10 @@ else:
 		return 1
 
 
-def run_paired(params, in1, in2, expected1, expected2):
+def run_paired(params, in1, in2, expected1, expected2, cores):
 	if type(params) is str:
 		params = params.split()
+	params += ['--cores', str(cores), '--buffer-size=512']
 	with temporary_path('tmp1-' + expected1) as p1:
 		with temporary_path('tmp2-' + expected2) as p2:
 			params += ['-o', p1, '-p', p2]
@@ -66,7 +67,7 @@ def test_paired_separate():
 	run('-a CAGTGGAGTA', 'paired-separate.2.fastq', 'paired.2.fastq')
 
 
-def test_paired_end_legacy():
+def test_paired_end_legacy(cores):
 	"""--paired-output, not using -A/-B/-G"""
 	# the -m 14 filters out one read, which should then also be filtered out in the second output file
 	# -q 10 should not change anything: qualities in file 1 are high enough,
@@ -74,7 +75,8 @@ def test_paired_end_legacy():
 	run_paired(
 		'-a TTAGACATAT -m 14 -q 10',
 		in1='paired.1.fastq', in2='paired.2.fastq',
-		expected1='paired.m14.1.fastq', expected2='paired.m14.2.fastq'
+		expected1='paired.m14.1.fastq', expected2='paired.m14.2.fastq',
+		cores=cores
 	)
 
 
@@ -86,7 +88,8 @@ def test_untrimmed_paired_output():
 					'--untrimmed-output', untrimmed1,
 					'--untrimmed-paired-output', untrimmed2],
 				in1='paired.1.fastq', in2='paired.2.fastq',
-				expected1='paired-trimmed.1.fastq', expected2='paired-trimmed.2.fastq'
+				expected1='paired-trimmed.1.fastq', expected2='paired-trimmed.2.fastq',
+				cores=1
 			)
 			assert_files_equal(cutpath('paired-untrimmed.1.fastq'), untrimmed1)
 			assert_files_equal(cutpath('paired-untrimmed.2.fastq'), untrimmed2)
@@ -102,7 +105,8 @@ def test_explicit_format_with_paired():
 				'--format=fastq -a TTAGACATAT -m 14',
 				in1=txt1, in2=txt2,
 				expected1='paired.m14.1.fastq',
-				expected2='paired.m14.2.fastq'
+				expected2='paired.m14.2.fastq',
+				cores=1
 			)
 
 
@@ -126,78 +130,86 @@ def test_missing_file():
 		main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
 
 
-@raises(SystemExit)
-def test_first_too_short():
-	with temporary_path("truncated.1.fastq") as trunc1:
-		# Create a truncated file in which the last read is missing
-		with open(datapath('paired.1.fastq')) as f:
-			lines = f.readlines()
-			lines = lines[:-4]
-		with open(trunc1, 'w') as f:
-			f.writelines(lines)
-		with redirect_stderr():
-			main(
-				'-a XX -o /dev/null --paired-output out.fastq'.split() +
-				[trunc1, datapath('paired.2.fastq')]
-			)
+def test_first_too_short(cores):
+	with pytest.raises(SystemExit):
+		with temporary_path("truncated.1.fastq") as trunc1:
+			# Create a truncated file in which the last read is missing
+			with open(datapath('paired.1.fastq')) as f:
+				lines = f.readlines()
+				lines = lines[:-4]
+			with open(trunc1, 'w') as f:
+				f.writelines(lines)
+			with redirect_stderr():
+				main(
+					'-a XX -o /dev/null --paired-output out.fastq'.split()
+					+ ['--cores', str(cores)]
+					+ [trunc1, datapath('paired.2.fastq')]
+				)
 
 
-@raises(SystemExit)
-def test_second_too_short():
-	with temporary_path("truncated.2.fastq") as trunc2:
-		# Create a truncated file in which the last read is missing
-		with open(datapath('paired.2.fastq')) as f:
-			lines = f.readlines()
-			lines = lines[:-4]
-		with open(trunc2, 'w') as f:
-			f.writelines(lines)
-		with redirect_stderr():
-			main('-a XX -o /dev/null --paired-output out.fastq'.split() +
-			              [datapath('paired.1.fastq'), trunc2])
+def test_second_too_short(cores):
+	with pytest.raises(SystemExit):
+		with temporary_path("truncated.2.fastq") as trunc2:
+			# Create a truncated file in which the last read is missing
+			with open(datapath('paired.2.fastq')) as f:
+				lines = f.readlines()
+				lines = lines[:-4]
+			with open(trunc2, 'w') as f:
+				f.writelines(lines)
+			with redirect_stderr():
+				main('-a XX -o /dev/null --paired-output out.fastq'.split()
+					+ ['--cores', str(cores)]
+					+ [datapath('paired.1.fastq'), trunc2])
 
 
-@raises(SystemExit)
-def test_unmatched_read_names():
-	with temporary_path("swapped.1.fastq") as swapped:
-		# Create a file in which reads 2 and 1 are swapped
-		with open(datapath('paired.1.fastq')) as f:
-			lines = f.readlines()
-			lines = lines[0:4] + lines[8:12] + lines[4:8] + lines[12:]
-		with open(swapped, 'w') as f:
-			f.writelines(lines)
-		with redirect_stderr():
-			main('-a XX -o out1.fastq --paired-output out2.fastq'.split() +
-			              [swapped, datapath('paired.2.fastq')])
+def test_unmatched_read_names(cores):
+	with pytest.raises(SystemExit):
+		with temporary_path("swapped.1.fastq") as swapped:
+			# Create a file in which reads 2 and 1 are swapped
+			with open(datapath('paired.1.fastq')) as f:
+				lines = f.readlines()
+				lines = lines[0:4] + lines[8:12] + lines[4:8] + lines[12:]
+			with open(swapped, 'w') as f:
+				f.writelines(lines)
+			with redirect_stderr():
+				main('-a XX -o out1.fastq --paired-output out2.fastq'.split()
+					+ ['--cores', str(cores)]
+					+ [swapped, datapath('paired.2.fastq')])
 
 
-@raises(SystemExit)
-def test_p_without_o():
+def test_p_without_o(cores):
 	"""Option -p given but -o missing"""
-	main('-a XX -p /dev/null'.split() +
-	              [datapath('paired.1.fastq'), datapath('paired.2.fastq')])
+	with pytest.raises(SystemExit):
+		main('-a XX -p /dev/null'.split()
+			+ ['--cores', str(cores)]
+			+ [datapath('paired.1.fastq'), datapath('paired.2.fastq')])
 
 
-@raises(SystemExit)
-def test_paired_but_only_one_input_file():
+def test_paired_but_only_one_input_file(cores):
 	"""Option -p given but only one input file"""
-	main('-a XX -o /dev/null -p /dev/null'.split() + [datapath('paired.1.fastq')])
+	with pytest.raises(SystemExit):
+		main('-a XX -o /dev/null -p /dev/null'.split()
+			+ ['--cores', str(cores)]
+			+ [datapath('paired.1.fastq')])
 
 
-def test_legacy_minlength():
+def test_legacy_minlength(cores):
 	"""Ensure -m is not applied to second read in a pair in legacy mode"""
 	run_paired(
 		'-a XXX -m 27',
 		in1='paired.1.fastq', in2='paired.2.fastq',
-		expected1='paired-m27.1.fastq', expected2='paired-m27.2.fastq'
+		expected1='paired-m27.1.fastq', expected2='paired-m27.2.fastq',
+		cores=cores
 	)
 
 
-def test_paired_end():
+def test_paired_end(cores):
 	"""single-pass paired-end with -m"""
 	run_paired(
 		'-a TTAGACATAT -A CAGTGGAGTA -m 14',
 		in1='paired.1.fastq', in2='paired.2.fastq',
-		expected1='paired.1.fastq', expected2='paired.2.fastq'
+		expected1='paired.1.fastq', expected2='paired.2.fastq',
+		cores=cores
 	)
 
 
@@ -205,59 +217,66 @@ def test_paired_anchored_back_no_indels():
 	run_paired(
 		'-a BACKADAPTER$ -A BACKADAPTER$ -N --no-indels',
 		in1='anchored-back.fasta', in2='anchored-back.fasta',
-		expected1='anchored-back.fasta', expected2="anchored-back.fasta"
+		expected1='anchored-back.fasta', expected2="anchored-back.fasta",
+		cores=1
 	)
 
 
-def test_paired_end_qualtrim():
+def test_paired_end_qualtrim(cores):
 	"""single-pass paired-end with -q and -m"""
 	run_paired(
 		'-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
 		in1='paired.1.fastq', in2='paired.2.fastq',
-		expected1='pairedq.1.fastq', expected2='pairedq.2.fastq'
+		expected1='pairedq.1.fastq', expected2='pairedq.2.fastq',
+		cores=cores
 	)
 
 
-def test_paired_end_qualtrim_swapped():
+def test_paired_end_qualtrim_swapped(cores):
 	"""single-pass paired-end with -q and -m, but files swapped"""
 	run_paired(
 		'-q 20 -a CAGTGGAGTA -A TTAGACATAT -m 14',
 		in1='paired.2.fastq', in2='paired.1.fastq',
-		expected1='pairedq.2.fastq', expected2='pairedq.1.fastq'
+		expected1='pairedq.2.fastq', expected2='pairedq.1.fastq',
+		cores=cores
 	)
 
 
-def test_paired_end_cut():
+def test_paired_end_cut(cores):
 	run_paired(
 		'-u 3 -u -1 -U 4 -U -2',
 		in1='paired.1.fastq', in2='paired.2.fastq',
-		expected1='pairedu.1.fastq', expected2='pairedu.2.fastq'
+		expected1='pairedu.1.fastq', expected2='pairedu.2.fastq',
+		cores=cores
 	)
 
 
-def test_paired_end_upper_a_only():
+def test_paired_end_upper_a_only(cores):
 	run_paired(
 		'-A CAGTGGAGTA',
 		in1='paired.1.fastq', in2='paired.2.fastq',
-		expected1='paired-onlyA.1.fastq', expected2='paired-onlyA.2.fastq'
+		expected1='paired-onlyA.1.fastq', expected2='paired-onlyA.2.fastq',
+		cores=cores
 	)
 
 
-def test_discard_untrimmed():
+def test_discard_untrimmed(cores):
 	# issue #146
 	# the first adapter is a sequence cut out from the first read
 	run_paired(
 		'-a CTCCAGCTTAGACATATC -A XXXXXXXX --discard-untrimmed',
 		in1='paired.1.fastq', in2='paired.2.fastq',
-		expected1='empty.fastq', expected2='empty.fastq'
+		expected1='empty.fastq', expected2='empty.fastq',
+		cores=cores
 	)
 
 
-def test_discard_trimmed():
+def test_discard_trimmed(cores):
 	run_paired(
 		'-A C -O 1 --discard-trimmed',  # applies everywhere
 		in1='paired.1.fastq', in2='paired.2.fastq',
-		expected1='empty.fastq', expected2='empty.fastq'
+		expected1='empty.fastq', expected2='empty.fastq',
+		cores=cores
 	)
 
 
@@ -280,12 +299,13 @@ def test_interleaved_in(cores):
 	)
 
 
-def test_interleaved_out():
+def test_interleaved_out(cores):
 	"""Two files input, interleaved output"""
 	run_interleaved(
 		'-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90',
 		inpath1='paired.1.fastq', inpath2='paired.2.fastq',
-		expected1='interleaved.fastq'
+		expected1='interleaved.fastq',
+		cores=cores
 	)
 
 
@@ -300,11 +320,12 @@ def test_interleaved_neither_nor():
 				main(params)
 
 
-def test_pair_filter():
+def test_pair_filter(cores):
 	run_paired(
 		'--pair-filter=both -a TTAGACATAT -A GGAGTA -m 14',
 		in1='paired.1.fastq', in2='paired.2.fastq',
-		expected1='paired-filterboth.1.fastq', expected2='paired-filterboth.2.fastq'
+		expected1='paired-filterboth.1.fastq', expected2='paired-filterboth.2.fastq',
+		cores=cores
 	)
 
 
@@ -315,7 +336,8 @@ def test_too_short_paired_output():
 				'-a TTAGACATAT -A CAGTGGAGTA -m 14 --too-short-output '
 				'{0} --too-short-paired-output {1}'.format(p1, p2),
 				in1='paired.1.fastq', in2='paired.2.fastq',
-				expected1='paired.1.fastq', expected2='paired.2.fastq'
+				expected1='paired.1.fastq', expected2='paired.2.fastq',
+				cores=1
 			)
 			assert_files_equal(cutpath('paired-too-short.1.fastq'), p1)
 			assert_files_equal(cutpath('paired-too-short.2.fastq'), p2)
@@ -328,7 +350,8 @@ def test_too_long_output():
 				'-a TTAGACATAT -A CAGTGGAGTA -M 14 --too-long-output '
 				'{0} --too-long-paired-output {1}'.format(p1, p2),
 				in1='paired.1.fastq', in2='paired.2.fastq',
-				expected1='paired-too-short.1.fastq', expected2='paired-too-short.2.fastq'
+				expected1='paired-too-short.1.fastq', expected2='paired-too-short.2.fastq',
+				cores=1
 			)
 			assert_files_equal(cutpath('paired.1.fastq'), p1)
 			assert_files_equal(cutpath('paired.2.fastq'), p2)
@@ -341,13 +364,15 @@ def test_too_short_output_paired_option_missing():
 			'-a TTAGACATAT -A CAGTGGAGTA -m 14 --too-short-output '
 			'{0}'.format(p1),
 			in1='paired.1.fastq', in2='paired.2.fastq',
-			expected1='paired.1.fastq', expected2='paired.2.fastq'
+			expected1='paired.1.fastq', expected2='paired.2.fastq',
+			cores=1
 		)
 
 
-def test_nextseq_paired():
+def test_nextseq_paired(cores):
 	run_paired('--nextseq-trim 22', in1='nextseq.fastq', in2='nextseq.fastq',
-		expected1='nextseq.fastq', expected2='nextseq.fastq')
+		expected1='nextseq.fastq', expected2='nextseq.fastq',
+		cores=cores)
 
 
 def test_paired_demultiplex():

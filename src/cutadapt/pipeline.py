@@ -17,7 +17,7 @@ from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
 	RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
 	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, PairedEndDemultiplexer)
-from .seqio import read_chunks_from_file
+from .seqio import read_chunks_from_file, read_paired_chunks
 
 logger = logging.getLogger()
 
@@ -340,7 +340,7 @@ def available_cpu_count():
 	return multiprocessing.cpu_count()
 
 
-def reader_process(file, connections, queue, buffer_size):
+def reader_process(file, file2, connections, queue, buffer_size):
 	"""
 	Read chunks of FASTA or FASTQ data from *file* and send to a worker.
 
@@ -356,18 +356,34 @@ def reader_process(file, connections, queue, buffer_size):
 
 	and finally sends "poison pills" (the value -1) to all connections.
 	"""
-	with xopen(file, 'rb') as f:
-		for chunk_index, chunk in enumerate(read_chunks_from_file(f, buffer_size)):
-			# Determine the worker that should get this chunk
-			worker_index = queue.get()
-			pipe = connections[worker_index]
-			pipe.send(chunk_index)
-			pipe.send_bytes(chunk)
+	try:
+		with xopen(file, 'rb') as f:
+			if file2:
+				with xopen(file2, 'rb') as f2:
+					for chunk_index, (chunk1, chunk2) in enumerate(read_paired_chunks(f, f2, buffer_size)):
+						# Determine the worker that should get this chunk
+						worker_index = queue.get()
+						pipe = connections[worker_index]
+						pipe.send(chunk_index)
+						pipe.send_bytes(chunk1)
+						pipe.send_bytes(chunk2)
+			else:
+				for chunk_index, chunk in enumerate(read_chunks_from_file(f, buffer_size)):
+					# Determine the worker that should get this chunk
+					worker_index = queue.get()
+					pipe = connections[worker_index]
+					pipe.send(chunk_index)
+					pipe.send_bytes(chunk)
 
-	# Send poison pills to all workers
-	for _ in range(len(connections)):
-		worker_index = queue.get()
-		connections[worker_index].send(-1)
+		# Send poison pills to all workers
+		for _ in range(len(connections)):
+			worker_index = queue.get()
+			connections[worker_index].send(-1)
+	except Exception as e:
+		# TODO better send this to a common "something went wrong" Queue
+		for worker_index in range(len(connections)):
+			connections[worker_index].send(-2)
+			connections[worker_index].send((e, traceback.format_exc()))
 
 
 class WorkerProcess(Process):
@@ -378,12 +394,14 @@ class WorkerProcess(Process):
 	To notify the reader process that it wants data, it puts its own identifier into the
 	need_work_queue before attempting to read data from the read_pipe.
 	"""
-	def __init__(self, id_, pipeline, filtering_options, interleaved_input, orig_outfiles, read_pipe,
-			write_pipe, need_work_queue):
+	def __init__(self, id_, pipeline, filtering_options, input_path1, input_path2,
+			interleaved_input, orig_outfiles, read_pipe, write_pipe, need_work_queue):
 		super(WorkerProcess, self).__init__()
 		self._id = id_
 		self._pipeline = pipeline
 		self._filtering_options = filtering_options
+		self._input_path1 = input_path1
+		self._input_path2 = input_path2
 		self._interleaved_input = interleaved_input
 		self._orig_outfiles = orig_outfiles
 		self._read_pipe = read_pipe
@@ -400,21 +418,35 @@ class WorkerProcess(Process):
 				if chunk_index == -1:
 					# reader is done
 					break
-				data = self._read_pipe.recv_bytes()
+				elif chunk_index == -2:
+					# An exception has occurred in the reader
+					e, tb_str = self._read_pipe.recv()
+					logger.error('%s', tb_str)
+					raise e
 
-				# logger.info('WORKER: Read %d bytes', len(data))
+				# Setting the .buffer.name attributess below is necessary because
+				# file format detection uses the file name
+				data = self._read_pipe.recv_bytes()
 				input = io.TextIOWrapper(io.BytesIO(data), encoding='ascii')
+				input.buffer.name = self._input_path1
+
+				if self._input_path2:
+					data = self._read_pipe.recv_bytes()
+					input2 = io.TextIOWrapper(io.BytesIO(data), encoding='ascii')
+					input2.buffer.name = self._input_path2
+				else:
+					input2 = None
 				output = io.TextIOWrapper(io.BytesIO(), encoding='ascii')
-				# Output format depends on file name, so make output file name available
 				output.buffer.name = self._orig_outfiles.out.name
 
 				if self._orig_outfiles.out2 is not None:
 					output2 = io.TextIOWrapper(io.BytesIO(), encoding='ascii')
+					output2.buffer.name = self._orig_outfiles.out2.name
 				else:
 					output2 = None
 
 				outfiles = OutputFiles(out=output, out2=output2, interleaved=self._orig_outfiles.interleaved)
-				self._pipeline.set_input(input, interleaved=self._interleaved_input)
+				self._pipeline.set_input(input, input2, interleaved=self._interleaved_input)
 				self._pipeline.set_output(outfiles, *self._filtering_options[0], **self._filtering_options[1])
 				(n, bp1, bp2) = self._pipeline.process_reads()
 				cur_stats = Statistics()
@@ -459,7 +491,7 @@ class OrderedChunkWriter(object):
 		"""
 		self._chunks[chunk_index] = data
 		while self._current_index in self._chunks:
-			# TODO do not decode and use .buffer.write
+			# TODO 1) do not decode 2) use .buffer.write
 			self._outfile.write(self._chunks[self._current_index].decode('utf-8'))
 			del self._chunks[self._current_index]
 			self._current_index += 1
@@ -497,6 +529,8 @@ class ParallelPipelineRunner(object):
 		self._reader_process = None
 		self._filtering_options = None
 		self._outfiles = None
+		self._input_path1 = None
+		self._input_path2 = None
 		self._interleaved_input = None
 		self._n_workers = n_workers
 		self._need_work_queue = Queue()
@@ -506,14 +540,16 @@ class ParallelPipelineRunner(object):
 			interleaved=False):
 		if self._reader_process is not None:
 			raise RuntimeError('Do not call set_input more than once')
-		assert file2 is None and qualfile is None and colorspace is False and fileformat is None
+		assert qualfile is None and colorspace is False and fileformat is None
+		self._input_path1 = file1 if type(file1) is str else file1.name
+		self._input_path2 = file2 if type(file2) is str or file2 is None else file2.name
 		self._interleaved_input = interleaved
 		connections = [Pipe(duplex=False) for _ in range(self._n_workers)]
 		self._pipes, connw = zip(*connections)
-		p = Process(target=reader_process, args=(file1, connw, self._need_work_queue, self._buffer_size))
-		p.daemon = True
-		p.start()
-		self._reader_process = p
+		self._reader_process = Process(target=reader_process, args=(file1, file2, connw,
+			self._need_work_queue, self._buffer_size))
+		self._reader_process.daemon = True
+		self._reader_process.start()
 
 	@staticmethod
 	def can_output_to(outfiles):
@@ -544,8 +580,9 @@ class ParallelPipelineRunner(object):
 			conn_r, conn_w = Pipe(duplex=False)
 			connections.append(conn_r)
 			worker = WorkerProcess(index, self._pipeline,
-				self._filtering_options, self._interleaved_input, self._outfiles, self._pipes[index], conn_w,
-				self._need_work_queue)
+				self._filtering_options, self._input_path1, self._input_path2,
+				self._interleaved_input, self._outfiles,
+				self._pipes[index], conn_w, self._need_work_queue)
 			worker.daemon = True
 			worker.start()
 			workers.append(worker)
@@ -571,6 +608,7 @@ class ParallelPipelineRunner(object):
 						# this happens only when there is an exception sending
 						# the statistics)
 						e, tb_str = connection.recv()
+						# TODO traceback should only be printed in development
 						logger.error('%s', tb_str)
 						raise e
 					if stats is None:

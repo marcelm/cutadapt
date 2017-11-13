@@ -10,7 +10,8 @@ from tempfile import mkdtemp
 from cutadapt.seqio import (Sequence, ColorspaceSequence, FormatError,
 	FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
 	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq,
-	sequence_names_match, head, fastq_head, two_fastq_heads, find_fastq_record_end)
+	sequence_names_match, head, fastq_head, two_fastq_heads, find_fastq_record_end,
+	read_paired_chunks)
 from cutadapt.compat import StringIO
 
 
@@ -20,7 +21,7 @@ simple_fastq = [
 	Sequence("second_sequence", "SEQUENCE2", "83<??:(61")
 	]
 
-simple_fasta = [ Sequence(x.name, x.sequence, None) for x in simple_fastq ]
+simple_fasta = [Sequence(x.name, x.sequence, None) for x in simple_fastq]
 
 
 class TestSequence:
@@ -367,13 +368,13 @@ def test_head():
 def test_two_fastq_heads():
 	buf1 = b'first\nsecond\nthird\nfourth\nfifth'
 	buf2 = b'a\nb\nc\nd\ne\nf\ng'
-	assert two_fastq_heads(buf1, buf2) == (
+	assert two_fastq_heads(buf1, buf2, len(buf1), len(buf2)) == (
 		len(b'first\nsecond\nthird\nfourth\n'), len(b'a\nb\nc\nd\n'))
 
-	assert two_fastq_heads(b'abc', b'def') == (0, 0)
-	assert two_fastq_heads(b'abc\n', b'def') == (0, 0)
-	assert two_fastq_heads(b'abc', b'def\n') == (0, 0)
-	assert two_fastq_heads(b'\n\n\n\n', b'\n\n\n\n') == (4, 4)
+	assert two_fastq_heads(b'abc', b'def', 3, 3) == (0, 0)
+	assert two_fastq_heads(b'abc\n', b'def', 4, 3) == (0, 0)
+	assert two_fastq_heads(b'abc', b'def\n', 3, 4) == (0, 0)
+	assert two_fastq_heads(b'\n\n\n\n', b'\n\n\n\n', 4, 4) == (4, 4)
 
 
 def test_fastq_head():
@@ -407,3 +408,10 @@ def test_fastq_record_end():
 	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH\n') == 16
 	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH\nI') == 16
 	assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH\nI\n') == 16
+
+
+def test_read_paired_chunks():
+	with open('tests/data/paired.1.fastq', 'rb') as f1:
+		with open('tests/data/paired.2.fastq', 'rb') as f2:
+			for c1, c2 in read_paired_chunks(f1, f2, buffer_size=128):
+				print(c1, c2)

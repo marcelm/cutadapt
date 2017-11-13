@@ -66,7 +66,7 @@ def fastq_head(bytes_or_bytearray buf, Py_ssize_t end=-1):
 	return record_start
 
 
-def two_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2):
+def two_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssize_t end1, Py_ssize_t end2):
 	"""
 	Skip forward in the two buffers by multiples of four lines.
 
@@ -77,22 +77,20 @@ def two_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2):
 	cdef:
 		Py_ssize_t pos1 = 0, pos2 = 0
 		Py_ssize_t linebreaks = 0
-		Py_ssize_t length1 = len(buf1)
-		Py_ssize_t length2 = len(buf2)
 		unsigned char* data1 = buf1
 		unsigned char* data2 = buf2
 		Py_ssize_t record_start1 = 0
 		Py_ssize_t record_start2 = 0
 
 	while True:
-		while pos1 < length1 and data1[pos1] != '\n':
+		while pos1 < end1 and data1[pos1] != '\n':
 			pos1 += 1
-		if pos1 == length1:
+		if pos1 == end1:
 			break
 		pos1 += 1
-		while data2[pos2] != '\n':
+		while pos2 < end2 and data2[pos2] != '\n':
 			pos2 += 1
-		if pos2 == length2:
+		if pos2 == end2:
 			break
 		pos2 += 1
 		linebreaks += 1
