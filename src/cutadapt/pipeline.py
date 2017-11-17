@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import io
+import os
 import re
 import sys
 import logging
@@ -340,7 +341,7 @@ def available_cpu_count():
 	return multiprocessing.cpu_count()
 
 
-def reader_process(file, file2, connections, queue, buffer_size):
+def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
 	"""
 	Read chunks of FASTA or FASTQ data from *file* and send to a worker.
 
@@ -356,6 +357,8 @@ def reader_process(file, file2, connections, queue, buffer_size):
 
 	and finally sends "poison pills" (the value -1) to all connections.
 	"""
+	if stdin_fd != -1:
+		sys.stdin = os.fdopen(stdin_fd)
 	try:
 		with xopen(file, 'rb') as f:
 			if file2:
@@ -546,8 +549,14 @@ class ParallelPipelineRunner(object):
 		self._interleaved_input = interleaved
 		connections = [Pipe(duplex=False) for _ in range(self._n_workers)]
 		self._pipes, connw = zip(*connections)
+		try:
+			fileno = sys.stdin.fileno()
+		except io.UnsupportedOperation:
+			# This happens during tests: pytest sets sys.stdin to an object
+			# that does not have a file descriptor.
+			fileno = -1
 		self._reader_process = Process(target=reader_process, args=(file1, file2, connw,
-			self._need_work_queue, self._buffer_size))
+			self._need_work_queue, self._buffer_size, fileno))
 		self._reader_process.daemon = True
 		self._reader_process.start()
 
