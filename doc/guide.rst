@@ -109,6 +109,51 @@ you could use something like this::
     cutadapt -a AACCGGTT -o /dev/null input.fastq
 
 
+.. _multicore:
+
+Multi-core support
+------------------
+
+Cutadapt supports parallel processing, that is, it can use multiple CPU cores.
+Multi-core is currently not enabled by default. To enable it, use the
+option ``-j N`` (or the spelled-out version ``--cores=N``), where ``N`` is the
+number of cores to use.
+
+.. note::
+    In a future release, cutadapt will automatically use as many CPU cores as
+    are available, even when no ``--cores`` option was given. Please help to
+    ensure that multi-core support is as stable as possible by `reporting any
+    problems <https://github.com/marcelm/cutadapt/issues>`_ you may find!
+
+When choosing an appropriate number of cores to use, keep in mind that adding
+more cores will make the process go faster only up to a certain point.
+
+There are some limitations:
+
+* Multi-core is *only* available when you run cutadapt with Python 3.3 or later.
+* Multi-core cutadapt can only write to output files given by ``-o`` and ``-p``.
+  This implies that the following command-line arguments are not compatible with
+  multi-core:
+
+      - ``--info-file``
+      - ``--rest-file``
+      - ``--wildcard-file``
+      - ``--untrimmed-output``, ``--untrimmed-paired-output``
+      - ``--too-short-output``, ``--too-short-paired-output``
+      - ``--too-long-output``, ``--too-long-paired-output``
+      - ``--format``
+      - ``--colorspace``
+
+* Multi-core is also not available when you use cutadapt for demultiplexing.
+
+If you try to use multiple cores with an incompatible commandline option, you
+will get an error message.
+
+Some of these limitations will be lifted in the future, as time allows.
+
+.. versionadded:: 1.15
+
+
 Read processing
 ===============
 
@@ -899,7 +944,6 @@ The following limitations still exist:
 
 * The ``--info-file``, ``--rest-file`` and ``--wildcard-file`` options write out
   information only from the first read.
-
 
 
 .. _filtering-paired:
