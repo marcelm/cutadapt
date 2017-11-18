@@ -1,17 +1,18 @@
 # coding: utf-8
 from __future__ import print_function, division, absolute_import
 
-import sys
+from io import BytesIO
 import os
 import shutil
 from textwrap import dedent
+import pytest
 from nose.tools import raises
 from tempfile import mkdtemp
 from cutadapt.seqio import (Sequence, ColorspaceSequence, FormatError,
 	FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
 	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq,
 	sequence_names_match, head, fastq_head, two_fastq_heads, find_fastq_record_end,
-	read_paired_chunks)
+	read_paired_chunks, read_chunks_from_file)
 from cutadapt.compat import StringIO
 
 
@@ -415,3 +416,12 @@ def test_read_paired_chunks():
 		with open('tests/data/paired.2.fastq', 'rb') as f2:
 			for c1, c2 in read_paired_chunks(f1, f2, buffer_size=128):
 				print(c1, c2)
+
+
+def test_read_chunks_from_file():
+	for data in [b'@r1\nACG\n+\nHHH\n', b'>r1\nACGACGACG\n']:
+		assert [m.tobytes() for m in read_chunks_from_file(BytesIO(data))] == [data]
+
+		# Buffer too small
+		with pytest.raises(OverflowError):
+			list(read_chunks_from_file(BytesIO(data), buffer_size=4))

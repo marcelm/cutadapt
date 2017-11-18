@@ -843,6 +843,8 @@ def read_chunks_from_file(f, buffer_size=4*1024**2):
 		raise UnknownFileType('Input file format unknown')
 
 	while True:
+		if start == len(buf):
+			raise OverflowError('FASTA/FASTQ record does not fit into buffer')
 		bufend = f.readinto(memoryview(buf)[start:]) + start
 		if start == bufend:
 			# End of file
