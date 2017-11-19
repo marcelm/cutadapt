@@ -126,8 +126,8 @@ def get_option_parser():
 		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
 			"from file name extension.")
-	parser.add_option('-j', '--cores', type=int, default=None,
-		help='Number of CPU cores to use. Default: No. of available cores, but at most 8')
+	parser.add_option('-j', '--cores', type=int, default=1,
+		help='Number of CPU cores to use. Default: %default')
 
 	# Hidden options
 	parser.add_option("--gc-content", type=float, default=50,  # it's a percentage
@@ -691,21 +691,25 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error(e)
 		return  # avoid IDE warnings below
 
-	if options.cores is None:
-		cores = min(8, available_cpu_count())
+	cores = max(1, options.cores)
+	if cores > 1:
+		if (
+			PY3
+			and ParallelPipelineRunner.can_output_to(outfiles)
+			and quality_filename is None
+			and not options.colorspace
+			and options.format is None
+			and cores > 1
+		):
+			runner = ParallelPipelineRunner(pipeline, cores, options.buffer_size)
+		else:
+			if not PY3:
+				logger.error('Running in parallel is not supported on Python 2')
+			else:
+				logger.error('Running in parallel is currently not supported for '
+					'the given combination of command-line parameters.')
+			sys.exit(1)
 	else:
-		cores = max(1, options.cores)
-	if (
-		PY3
-		and ParallelPipelineRunner.can_output_to(outfiles)
-		and quality_filename is None
-		and not options.colorspace
-		and options.format is None
-		and cores > 1
-	):
-		runner = ParallelPipelineRunner(pipeline, cores, options.buffer_size)
-	else:
-		cores = 1
 		runner = pipeline
 	try:
 		runner.set_input(input_filename, file2=input_paired_filename,
@@ -721,13 +725,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	logger.info("This is cutadapt %s with Python %s%s", __version__,
 		platform.python_version(), opt)
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-	if options.cores is not None and options.cores > cores:
-		if not PY3:
-			logger.error('Running in parallel is not supported on Python 2')
-		else:
-			logger.error('Running in parallel is currently not supported for '
-				'the given combination of command-line parameters.')
-		sys.exit(1)
 	logger.info('Running on %d core%s', cores, 's' if cores > 1 else '')
 	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
 		pipeline.n_adapters, 's' if pipeline.n_adapters != 1 else '',
