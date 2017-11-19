@@ -5,13 +5,14 @@ Changes
 development version
 -------------------
 
-* Cutadapt now supports parallel processing!
-* Parallel processing is enabled automatically and uses up to eight
-  available processor cores. The number of cores can be set explicitly
-  with ``-j`` (also to values higher than eight).
-* Multi-core support is not available for some combinations of command-line
-  arguments, yet, and cutadapt will automatically revert to single-core
-  processing if necessary.
+* Cutadapt can now run on multiple CPU cores in parallel! To enable
+  it, use the option ``-j N`` (or the long form ``--cores=N``), where ``N`` is
+  the number of cores to use. Multi-core support is not available
+  with some command-line arguments, yet. See :ref:`the new section about multi-core in the
+  documentation <multicore>` for details.
+* The plan is to make multi-core the default (automatically using as many cores as
+  are available) in future releases, so please test it and `report an
+  issue <https://github.com/marcelm/cutadapt/issues>`_ if you find problems!
 * `Issue #118 <https://github.com/marcelm/cutadapt/issues/118>`_:
   Added support for demultiplexing of paired-end data.
 
@@ -147,7 +148,7 @@ v1.8 (2015-03-14)
   such as ``-q`` (quality trimming) are applied to *both* reads. For backwards
   compatibility, read modifications are applied to the first read only if
   neither of ``-A``/``-G``/``-B``/``-U`` is used. See `the
-  documentation <http://cutadapt.readthedocs.org/en/latest/guide.html#paired-end>`_
+  documentation <http://cutadapt.readthedocs.io/en/latest/guide.html#paired-end>`_
   for details.
 
   This feature has not been extensively tested, so please give feedback if
