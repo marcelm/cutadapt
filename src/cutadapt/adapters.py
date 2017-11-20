@@ -131,8 +131,10 @@ class AdapterParser(object):
 				if where == BACK:
 					front_anchored = True
 
+				require_both = True if not front_anchored and not back_anchored else None
 				return LinkedAdapter(sequence1, sequence2, name=name,
 					front_anchored=front_anchored, back_anchored=back_anchored,
+					require_both=require_both,
 					**self.constructor_args)
 		if front_anchored and back_anchored:
 			raise ValueError('Trying to use both "^" and "$" in adapter specification {!r}'.format(orig_spec))
@@ -647,8 +649,6 @@ class LinkedMatch(object):
 		self.front_match = front_match
 		self.back_match = back_match
 		self.adapter = adapter
-		assert not adapter.front_anchored or front_match is not None
-		assert not adapter.back_anchored or back_match is not None
 
 	def __repr__(self):
 		return '<LinkedMatch(front_match={0!r}, back_match={1}, adapter={2})>'.format(
@@ -687,14 +687,20 @@ class LinkedAdapter(object):
 	"""
 	"""
 	def __init__(self, front_sequence, back_sequence,
-			front_anchored=True, back_anchored=False, name=None, **kwargs):
+			front_anchored=True, back_anchored=False, require_both=None, name=None, **kwargs):
 		"""
+		require_both -- require both adapters to match. If not specified, the default is to
+			require only anchored adapters to match.
 		kwargs are passed on to individual Adapter constructors
 		"""
 		where1 = PREFIX if front_anchored else FRONT
 		where2 = SUFFIX if back_anchored else BACK
-		self.front_anchored = front_anchored
-		self.back_anchored = back_anchored
+		if require_both:
+			self._require_back_match = True
+			self._require_front_match = True
+		else:
+			self._require_front_match = front_anchored
+			self._require_back_match = back_anchored
 
 		# The following attributes are needed for the report
 		self.where = LINKED
@@ -709,17 +715,18 @@ class LinkedAdapter(object):
 	def match_to(self, read):
 		"""
 		Match the linked adapters against the given read. Any anchored adapters are
-		required to exist for a successful match.
+		required to exist for a successful match. If both adapters are unanchored,
+		both need to match.
 		"""
 		front_match = self.front_adapter.match_to(read)
-		if self.front_anchored and front_match is None:
+		if self._require_front_match and front_match is None:
 			return None
 
 		if front_match is not None:
 			# TODO statistics
 			read = front_match.trimmed()
 		back_match = self.back_adapter.match_to(read)
-		if back_match is None and (self.back_anchored or front_match is None):
+		if back_match is None and (self._require_back_match or front_match is None):
 			return None
 		return LinkedMatch(front_match, back_match, self)
 

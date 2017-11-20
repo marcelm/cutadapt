@@ -416,14 +416,27 @@ such as ``--info-file``, ``--mask-adapter``.
 Linked adapters without anchoring
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+This adapter type is especially suited for trimming CRISR screening reads.
+
 Sometimes, the 5' adapter of a linked adapter pair should not be anchored. It is possible to
 specify linked adapters also with ``-g ADAPTER1...ADAPTER2`` (note that ``-g`` is used instead
-of ``-a``). These work just like the linked adapters described in the previous section,
-*except that the 5' adapter is not anchored by default*.
+of ``-a``). These work like the linked adapters described in the previous section, but with
+these two differences:
+
+* The 5' adapter is not anchored by default. (So neither the 5' nor 3' adapter are anchored.)
+* *Both* adapters are required. If one of them is not found, the read is not trimmed.
+
+That is, when you use the `--discard-untrimmed`` option (or ``--trimmed-only``) with a
+linked adapter specified with ``-g``, then a read is considered to be trimmed if *both*
+adapter parts (5' and 3') are present in the read. This is different from linked adapters
+specified with ``-a``, where a non-anchored 3' adapter is optional.
 
 This feature has been added on a tentative basis. It may change in the next program version.
 
 .. versionadded:: 1.13
+
+.. versionchanged:: 1.15
+    Require both adapters for a read to be trimmed.
 
 
 Linked adapter statistics

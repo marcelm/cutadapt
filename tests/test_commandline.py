@@ -449,6 +449,14 @@ def test_linked_5p_not_anchored():
 	run('-g AAAAAAAAAA...TTTTTTTTTT', 'linked-not-anchored.fasta', 'linked.fasta')
 
 
+def test_linked_discard_untrimmed():
+	run('-a AAAAAAAAAA...TTTTTTTTTT --discard-untrimmed', 'linked-discard.fasta', 'linked.fasta')
+
+
+def test_linked_discard_untrimmed_g():
+	run('-g AAAAAAAAAA...TTTTTTTTTT --discard-untrimmed', 'linked-discard-g.fasta', 'linked.fasta')
+
+
 @raises(SystemExit)
 def test_linked_anywhere():
 	with redirect_stderr():

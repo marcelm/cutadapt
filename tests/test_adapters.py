@@ -185,7 +185,7 @@ def test_add_adapter_statistics():
 
 
 def test_issue_265():
-	"Crash when accessing the matches property of non-anchored linked adapters"
+	"""Crash when accessing the matches property of non-anchored linked adapters"""
 	s = Sequence('name', 'AAAATTTT')
 	la = LinkedAdapter('GGG', 'TTT', front_anchored=False, back_anchored=False)
 	assert la.match_to(s).matches == 3
