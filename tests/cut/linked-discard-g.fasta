@@ -1,0 +1,8 @@
+>r1 5' adapter and 3' adapter
+CCCCCCCCCC
+>r3 5' adapter, partial 3' adapter
+CCCGGCCCCC
+>r6 partial 5' adapter
+CCCCCCCCCC
+>r7 5' adapter plus preceding bases
+CCCCCCCCCC
