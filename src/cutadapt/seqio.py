@@ -827,7 +827,11 @@ def find_fastq_record_end(buf, end=None):
 
 def read_chunks_from_file(f, buffer_size=4*1024**2):
 	"""
-	f needs to be a file opened in binary mode
+	Read a chunk of complete FASTA or FASTQ records from a file.
+	The size of a chunk is at most buffer_size.
+	f needs to be a file opened in binary mode.
+
+	The yielded memoryview objects become invalid on the next iteration.
 	"""
 	# This buffer is re-used in each iteration.
 	buf = bytearray(buffer_size)
@@ -841,6 +845,19 @@ def read_chunks_from_file(f, buffer_size=4*1024**2):
 		find_record_end = find_fasta_record_end
 	elif start > 0:
 		raise UnknownFileType('Input file format unknown')
+
+	# Layout of buf
+	#
+	# |-- complete records --|
+	# +---+------------------+---------+-------+
+	# |   |                  |         |       |
+	# +---+------------------+---------+-------+
+	# ^   ^                   ^         ^       ^
+	# 0   start               end       bufend  len(buf)
+	#
+	# buf[0:start] is the 'leftover' data that could not be processed
+	# in the previous iteration because it contained an incomplete
+	# FASTA or FASTQ record.
 
 	while True:
 		if start == len(buf):
