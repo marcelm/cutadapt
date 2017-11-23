@@ -119,14 +119,16 @@ Multi-core is currently not enabled by default. To enable it, use the
 option ``-j N`` (or the spelled-out version ``--cores=N``), where ``N`` is the
 number of cores to use.
 
-.. note::
-    In a future release, cutadapt will automatically use as many CPU cores as
-    are available, even when no ``--cores`` option was given. Please help to
-    ensure that multi-core support is as stable as possible by `reporting any
-    problems <https://github.com/marcelm/cutadapt/issues>`_ you may find!
+Make also sure that you have ``pigz`` (parallel gzip) installed if you use
+multiple cores and write to a ``.gz`` output file. Otherwise, compression of
+the output will be done in a single thread and therefore be the main bottleneck.
 
-When choosing an appropriate number of cores to use, keep in mind that adding
-more cores will make the process go faster only up to a certain point.
+.. note::
+    In a future release, the plan is to make cutadapt automatically use as many
+    CPU cores as are available, even when no ``--cores`` option was given.
+    Please help to ensure that multi-core support is as stable as possible by
+    `reporting any problems <https://github.com/marcelm/cutadapt/issues>`_ you
+    may find!
 
 There are some limitations:
 

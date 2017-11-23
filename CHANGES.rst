@@ -2,14 +2,16 @@
 Changes
 =======
 
-development version
--------------------
+v1.15 (2017-11-23)
+------------------
 
 * Cutadapt can now run on multiple CPU cores in parallel! To enable
   it, use the option ``-j N`` (or the long form ``--cores=N``), where ``N`` is
-  the number of cores to use. Multi-core support is not available with some
-  command-line arguments, yet. See :ref:`the new section about multi-core in the
-  documentation <multicore>` for details.
+  the number of cores to use. Multi-core support is only available on Python 3,
+  and not yet with some command-line arguments. See
+  :ref:`the new section about multi-core in the documentation <multicore>`
+  for details. When writing ``.gz`` files, make sure you have ``pigz`` installed
+  to get the best speedup.
 * The plan is to make multi-core the default (automatically using as many cores as
   are available) in future releases, so please test it and `report an
   issue <https://github.com/marcelm/cutadapt/issues/>`_ if you find problems!
