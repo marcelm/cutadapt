@@ -110,7 +110,7 @@ setup(
 	ext_modules=extensions,
 	package_dir={'': 'src'},
 	packages=find_packages('src'),
-	install_requires=['xopen>=0.3.0'],
+	install_requires=['xopen>=0.3.2'],
 	entry_points={'console_scripts': ['cutadapt = cutadapt.__main__:main']},
 	classifiers=[
 		"Development Status :: 5 - Production/Stable",
