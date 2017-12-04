@@ -707,7 +707,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 				logger.error('Running in parallel is not supported on Python 2')
 			else:
 				logger.error('Running in parallel is currently not supported for '
-					'the given combination of command-line parameters.')
+					'the given combination of command-line parameters.\nThese '
+					'options are not supported: --info-file, --rest-file, '
+					'--wildcard-file, --untrimmed-output, '
+					'--untrimmed-paired-output, --too-short-output, '
+					'--too-short-paired-output, --too-long-output, '
+					'--too-long-paired-output, --format, --colorspace')
 			sys.exit(1)
 	else:
 		runner = pipeline
