@@ -143,6 +143,10 @@ There are some limitations:
       - ``--untrimmed-output``, ``--untrimmed-paired-output``
       - ``--too-short-output``, ``--too-short-paired-output``
       - ``--too-long-output``, ``--too-long-paired-output``
+
+* Additionally, the following command-line arguments are not compatible with
+  multi-core:
+
       - ``--format``
       - ``--colorspace``
 
