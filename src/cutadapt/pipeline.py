@@ -4,6 +4,7 @@ import io
 import os
 import re
 import sys
+import copy
 import logging
 import functools
 from multiprocessing import Process, Pipe, Queue
@@ -262,7 +263,8 @@ class PairedEndPipeline(Pipeline):
 		"""
 		self._modifiers.append(modifier)
 		if not self._modify_first_read_only:
-			self._modifiers2.append(modifier)
+			modifier2 = copy.copy(modifier)
+			self._modifiers2.append(modifier2)
 		else:
 			self._should_warn_legacy = True
 
