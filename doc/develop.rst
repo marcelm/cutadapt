@@ -17,7 +17,7 @@ using a virtualenv. This sequence of commands should work::
 	git clone https://github.com/marcelm/cutadapt.git  # or clone your own fork
 	cd cutadapt
 	virtualenv -p python3 venv  # or omit the "-p python3" for Python 2
-	venv/bin/pip3 install Cython nose tox  # pip3 becomes just pip for Python 2
+	venv/bin/pip3 install Cython pytest nose tox  # pip3 becomes just pip for Python 2
 	venv/bin/pip3 install -e .
 
 Then you can run Cutadapt like this (or activate the virtualenv and omit the
@@ -27,7 +27,7 @@ Then you can run Cutadapt like this (or activate the virtualenv and omit the
 
 The tests can then be run like this::
 
-	venv/bin/nosetests
+	venv/bin/pytest
 
 Or with tox (but then you will need to have binaries for all tested Python
 versions installed)::
@@ -38,13 +38,14 @@ versions installed)::
 Development installation (without virtualenv)
 ---------------------------------------------
 
-Alternatively, if you do not want to use virtualenv, you can do the following
-from within the cloned repository::
+Alternatively, if you do not want to use virtualenv, running the following may
+work from within the cloned repository::
 
 	python3 setup.py build_ext -i  # omit the "3" for Python 2
-	nosetests
+	pytest
 
-This requires Cython and nose to be installed.
+This requires Cython and pytest to be installed. Avoid this method and use a
+virtualenv instead if you can.
 
 
 Code style
