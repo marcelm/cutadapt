@@ -882,7 +882,7 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
 	buf1 = bytearray(buffer_size)
 	buf2 = bytearray(buffer_size)
 
-	# Read one byte to make sure are processing FASTQ
+	# Read one byte to make sure we are processing FASTQ
 	start1 = f.readinto(memoryview(buf1)[0:1])
 	start2 = f2.readinto(memoryview(buf2)[0:1])
 	if (start1 == 1 and buf1[0:1] != b'@') or (start2 == 1 and buf2[0:1] != b'@'):
@@ -890,10 +890,8 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
 
 	while True:
 		bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1
-		if start1 == bufend1:
-			break
 		bufend2 = f2.readinto(memoryview(buf2)[start2:]) + start2
-		if start2 == bufend2:
+		if start1 == bufend1 and start2 == bufend2:
 			break
 
 		end1, end2 = two_fastq_heads(buf1, buf2, bufend1, bufend2)
