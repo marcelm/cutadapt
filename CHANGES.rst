@@ -2,6 +2,14 @@
 Changes
 =======
 
+development version
+-------------------
+
+* Fix :issue:`291`: When processing paired-end reads with multiple cores, there
+  could be errors about incomplete FASTQs although the files are intact.
+* Fix :issue:`280`: Quality trimming statistics incorrectly show the same
+  values for R1 and R2.
+
 v1.15 (2017-11-23)
 ------------------
 
