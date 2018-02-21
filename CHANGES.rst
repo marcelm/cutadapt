@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v1.16 (2018-02-21)
+------------------
 
 * Fix :issue:`291`: When processing paired-end reads with multiple cores, there
   could be errors about incomplete FASTQs although the files are intact.
