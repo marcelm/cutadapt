@@ -15,10 +15,9 @@ v1.15 (2017-11-23)
 * The plan is to make multi-core the default (automatically using as many cores as
   are available) in future releases, so please test it and `report an
   issue <https://github.com/marcelm/cutadapt/issues/>`_ if you find problems!
-* `Issue #256 <https://github.com/marcelm/cutadapt/issues/256>`_: ``--discard-untrimmed`` did not
+* Issue :issue:`256`: ``--discard-untrimmed`` did not
   have an effect on non-anchored linked adapters.
-* `Issue #118 <https://github.com/marcelm/cutadapt/issues/118>`_:
-  Added support for demultiplexing of paired-end data.
+* Issue :issue:`118`: Added support for demultiplexing of paired-end data.
 
 
 v1.14 (2017-06-16)

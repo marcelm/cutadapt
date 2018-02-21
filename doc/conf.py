@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.pardir, 'src')))
 # ones.
 extensions = [
 	'sphinx.ext.autodoc',
+	'sphinx_issues',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -65,6 +66,8 @@ if version.endswith('.dirty') and os.environ.get('READTHEDOCS') == 'True':
 
 # The full version, including alpha/beta/rc tags.
 release = version
+
+issues_uri = 'https://github.com/marcelm/cutadapt/issues/{issue}'
 
 suppress_warnings = ['image.nonlocal_uri']
 
