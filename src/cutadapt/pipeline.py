@@ -360,6 +360,7 @@ def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
 	and finally sends "poison pills" (the value -1) to all connections.
 	"""
 	if stdin_fd != -1:
+		sys.stdin.close()
 		sys.stdin = os.fdopen(stdin_fd)
 	try:
 		with xopen(file, 'rb') as f:
