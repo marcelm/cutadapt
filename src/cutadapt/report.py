@@ -8,7 +8,7 @@ import sys
 from contextlib import contextmanager
 import textwrap
 from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE, LINKED
-from .modifiers import QualityTrimmer, AdapterCutter
+from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
 	DiscardTrimmedFilter, DiscardUntrimmedFilter, PairedEndDemultiplexer, Demultiplexer,
 	NContentFilter, InfoFileWriter, WildcardFileWriter, RestFileWriter)
@@ -109,7 +109,7 @@ class Statistics:
 		# Collect statistics from modifiers
 		for i, modifiers_list in [(0, modifiers), (1, modifiers2)]:
 			for modifier in modifiers_list:
-				if isinstance(modifier, QualityTrimmer):
+				if isinstance(modifier, (QualityTrimmer, NextseqQualityTrimmer)):
 					self.quality_trimmed_bp[i] = modifier.trimmed_bases
 					self.did_quality_trimming = True
 				elif isinstance(modifier, AdapterCutter):
