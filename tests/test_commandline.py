@@ -11,10 +11,14 @@ import sys
 import tempfile
 
 from nose.tools import raises
+import pytest
 
 from cutadapt.__main__ import main
 from cutadapt.compat import StringIO
 from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
+
+import pytest_timeout as _unused
+del _unused
 
 
 def test_example():
@@ -494,3 +498,16 @@ def test_length():
 
 def test_run_cutadapt_process():
 	subprocess.check_call(['cutadapt', '--version'])
+
+
+@pytest.mark.timeout(0.5)
+def test_issue_296(tmpdir):
+	# Hang when using both --no-trim and --info-file together
+	info_path = str(tmpdir.join('info.txt'))
+	reads_path = str(tmpdir.join('reads.fasta'))
+	out_path = str(tmpdir.join('out.fasta'))
+	with open(reads_path, 'w') as f:
+		f.write('>read\nCACAAA\n')
+	main(['--info-file', info_path, '--no-trim', '-g', 'TTTCAC', '-o', out_path, reads_path])
+	# Output should be unchanged because of --no-trim
+	assert_files_equal(reads_path, out_path)
