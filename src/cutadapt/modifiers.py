@@ -103,8 +103,8 @@ class AdapterCutter(object):
 			trimmed_read.sequence = masked_sequence
 			trimmed_read.qualities = matches[0].read.qualities
 			assert len(trimmed_read.sequence) == len(read)
-		elif self.action is None:
-			trimmed_read = read
+		elif self.action is None:  # --no-trim
+			trimmed_read = read[:]
 			trimmed_read.match = matches[-1]
 
 		self.with_adapters += 1
