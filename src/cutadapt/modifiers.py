@@ -233,12 +233,19 @@ class QualityTrimmer(object):
 
 
 class Shortener(object):
-	"""Unconditionally shorten a read to the given length"""
+	"""Unconditionally shorten a read to the given length
+
+	If the length is positive, the bases are removed from the end of the read.
+	If the length is negative, the bases are removed from the beginning of the read.
+	"""
 	def __init__(self, length):
 		self.length = length
 
 	def __call__(self, read):
-		return read[:self.length]
+		if self.length >= 0:
+			return read[:self.length]
+		elif self.length < 0:
+			return read[self.length:]
 
 
 class NEndTrimmer(object):

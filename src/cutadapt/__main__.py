@@ -206,7 +206,8 @@ def get_option_parser():
 			"+ QUALITY_BASE). This needs to be set to 64 for some old Illumina "
 			"FASTQ files. Default: %default")
 	group.add_option("--length", "-l", type=int, default=None, metavar="LENGTH",
-			help="Shorten reads to LENGTH. This and the following modifications "
+			help="Shorten reads to LENGTH. Positive values remove bases at the end "
+			"while negative ones remove bases at the beginning. This and the following modifications "
 			"are applied after adapter trimming.")
 	group.add_option("--trim-n", action='store_true', default=False,
 		help="Trim N's on ends of reads.")
