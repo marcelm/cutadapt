@@ -244,7 +244,7 @@ class Shortener(object):
 	def __call__(self, read):
 		if self.length >= 0:
 			return read[:self.length]
-		elif self.length < 0:
+		else:
 			return read[self.length:]
 
 
