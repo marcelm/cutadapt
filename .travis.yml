@@ -6,7 +6,6 @@ cache:
 
 python:
   - "2.7"
-  - "3.3"
   - "3.4"
   - "3.5"
   - "3.6"
@@ -22,7 +21,7 @@ matrix:
 
 install:
   - pip install --upgrade pip wheel
-  - pip install --upgrade Cython 'pytest<3.3' pytest-timeout  # pytest 3.3 dropped support for Python 3.3
+  - pip install --upgrade Cython pytest pytest-timeout
   - pip install .
 
 script:

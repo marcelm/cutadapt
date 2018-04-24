@@ -2,6 +2,11 @@
 Changes
 =======
 
+development version
+-------------------
+* Running cutadapt under Python 3.3 is no longer supported (Python 2.7 or
+  3.4+ are needed)
+
 v1.16 (2018-02-21)
 ------------------
 
