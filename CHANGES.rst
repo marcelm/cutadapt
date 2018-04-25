@@ -5,6 +5,12 @@ Changes
 development version
 -------------------
 
+* Close :issue:`53`: Implement adapters that disallow internal matches.
+  This is a bit like anchoring, but less strict: The adapter sequence
+  can appear at different lengths, but must always be at one of the ends.
+  Use ``-a ADAPTERX`` (with a literal ``X``) to disallow internal matches
+  for a 3' adapter. Use ``-g XADAPTER`` to disallow for a 5' adapter.
+  Mnemonic: The ``X`` is not allowed to “shift into” the read.
 * :user:`klugem` contributed PR :issue:`299`: The ``--length`` option (and its
   alias ``-l``) can now be used with negative lengths, which will remove bases
   from the beginning of the read instead of from the end.

@@ -12,13 +12,16 @@ from cutadapt import align, colorspace
 from cutadapt.seqio import FastaReader
 
 
-# Constants for the find_best_alignment function.
+# Constants for the Aligner.locate() function.
 # The function is called with SEQ1 as the adapter, SEQ2 as the read.
 # TODO get rid of those constants, use strings instead
 BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
 FRONT = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.START_WITHIN_SEQ1
 PREFIX = align.STOP_WITHIN_SEQ2
 SUFFIX = align.START_WITHIN_SEQ2
+# Just like FRONT/BACK, but without internal matches
+FRONT_NOT_INTERNAL = align.START_WITHIN_SEQ1 | align.STOP_WITHIN_SEQ2
+BACK_NOT_INTERNAL = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
 ANYWHERE = align.SEMIGLOBAL
 LINKED = 'linked'
 
@@ -73,6 +76,67 @@ class AdapterParser(object):
 		self.constructor_args = kwargs
 		self.adapter_class = ColorspaceAdapter if colorspace else Adapter
 
+	@staticmethod
+	def _parse_not_linked(spec, cmdline_type):
+		"""
+		Parse an adapter specification for a non-linked adapter (without '...')
+
+		Allow:
+		'back' and ADAPTER
+		'back' and ADAPTERX
+		'back' and ADAPTER$
+		'front' and ADAPTER
+		'front' and XADAPTER
+		'front' and ^ADAPTER
+		'anywhere' and ADAPTER
+		"""
+		error = ValueError(
+				"You cannot use multiple placement restrictions for an adapter at the same time. "
+				"Choose one of ^ADAPTER, ADAPTER$, XADAPTER or ADAPTERX")
+
+		# TODO
+		# Special case for adapter consisting of only X characters:
+		# This needs to be supported for backwards-compatibilitity
+		if len(spec.strip('X')) == 0:
+			return None, spec, None
+
+		front_restriction = None
+		if spec.startswith('^'):
+			front_restriction = 'anchored'
+			spec = spec[1:]
+		if spec.upper().startswith('X'):
+			if front_restriction is not None:
+				raise error
+			front_restriction = 'noninternal'
+			spec = spec.lstrip('xX')
+
+		back_restriction = None
+		if spec.endswith('$'):
+			back_restriction = 'anchored'
+			spec = spec[:-1]
+		if spec.upper().endswith('X'):
+			if back_restriction is not None:
+				raise error
+			back_restriction = 'noninternal'
+			spec = spec.rstrip('xX')
+
+		n_placement_restrictions = int(bool(front_restriction)) + int(bool(back_restriction))
+		if n_placement_restrictions > 1:
+			raise error
+
+		if cmdline_type == 'front' and back_restriction:
+			raise ValueError(
+				"Allowed placement restrictions for a 5' adapter are XADAPTER and ^ADAPTER")
+		if cmdline_type == 'back' and front_restriction:
+			raise ValueError(
+				"Allowed placement restrictions for a 3' adapter are ADAPTERX and ADAPTER$")
+
+		if cmdline_type == 'anywhere' and n_placement_restrictions > 0:
+			raise ValueError(
+				"Placement restrictions (with X, ^, $) not supported for 'anywhere' (-b) adapters")
+		assert front_restriction is None or back_restriction is None
+		return front_restriction, spec, back_restriction
+
 	def _parse_no_file(self, spec, name=None, cmdline_type='back'):
 		"""
 		Parse an adapter specification not using ``file:`` notation and return
@@ -86,68 +150,72 @@ class AdapterParser(object):
 		"""
 		if name is None:
 			name, spec = self._extract_name(spec)
-		orig_spec = spec
-		types = dict(back=BACK, front=FRONT, anywhere=ANYWHERE)
-		if cmdline_type not in types:
+		if cmdline_type not in ('front', 'back', 'anywhere'):
 			raise ValueError('cmdline_type cannot be {0!r}'.format(cmdline_type))
-		where = types[cmdline_type]
 
-		front_anchored, back_anchored = False, False
-		if spec.startswith('^'):
-			spec = spec[1:]
-			front_anchored = True
-		if spec.endswith('$'):
-			spec = spec[:-1]
-			back_anchored = True
+		spec1, middle, spec2 = spec.partition('...')
+		del spec
 
-		sequence1, middle, sequence2 = spec.partition('...')
-		if where == ANYWHERE:
-			if front_anchored or back_anchored:
-				raise ValueError("'anywhere' (-b) adapters may not be anchored")
-			if middle == '...':
+		# Handle linked adapter
+		if middle == '...' and spec1 and spec2:
+			if cmdline_type == 'anywhere':
 				raise ValueError("'anywhere' (-b) adapters may not be linked")
-			return self.adapter_class(sequence=spec, where=where, name=name, **self.constructor_args)
+			if self.colorspace:
+				raise NotImplementedError(
+					'Using linked adapters in colorspace is not supported')
+			front1, sequence1, back1 = self._parse_not_linked(spec1, 'front')
+			front2, sequence2, back2 = self._parse_not_linked(spec2, 'back')
 
-		assert where == FRONT or where == BACK
+			# Automatically anchor the 5' adapter if -a is used
+			if cmdline_type == 'back' and front1 is None:
+				front1 = 'anchored'
+
+			front_anchored = front1 == 'anchored'
+			back_anchored = back2 == 'anchored'
+			require_both = True if not front_anchored and not back_anchored else None
+			return LinkedAdapter(
+				sequence1, sequence2, name=name,
+				front_restriction=front1,
+				back_restriction=back2,
+				require_both=require_both,
+				**self.constructor_args)
+
 		if middle == '...':
-			if not sequence1:
-				if where == BACK:  # -a ...ADAPTER
-					spec = sequence2
+			if not spec1:
+				if cmdline_type == 'back':  # -a ...ADAPTER
+					spec = spec2
 				else:  # -g ...ADAPTER
 					raise ValueError('Invalid adapter specification')
-			elif not sequence2:
-				if where == BACK:  # -a ADAPTER...
-					spec = sequence1
-					where = FRONT
-					front_anchored = True
+			elif not spec2:
+				if cmdline_type == 'back':  # -a ADAPTER...
+					cmdline_type = 'front'
+					spec = '^' + spec1
 				else:  # -g ADAPTER...
-					spec = sequence1
+					spec = spec1
 			else:
-				# linked adapter
-				if self.colorspace:
-					raise NotImplementedError(
-						'Using linked adapters in colorspace is not supported')
-				# automatically anchor 5' adapter if -a is used
-				if where == BACK:
-					front_anchored = True
+				assert False, 'This should not happen'
+		else:
+			spec = spec1
 
-				require_both = True if not front_anchored and not back_anchored else None
-				return LinkedAdapter(sequence1, sequence2, name=name,
-					front_anchored=front_anchored, back_anchored=back_anchored,
-					require_both=require_both,
-					**self.constructor_args)
-		if front_anchored and back_anchored:
-			raise ValueError('Trying to use both "^" and "$" in adapter specification {!r}'.format(orig_spec))
-		if front_anchored:
-			if where == BACK:
-				raise ValueError("Cannot anchor the 3' adapter at its 5' end")
+		front_restriction, sequence, back_restriction = self._parse_not_linked(spec, cmdline_type)
+		del spec
+		if front_restriction == 'anchored':
 			where = PREFIX
-		elif back_anchored:
-			if where == FRONT:
-				raise ValueError("Cannot anchor 5' adapter at 3' end")
+		elif front_restriction == 'noninternal':
+			where = FRONT_NOT_INTERNAL
+		elif back_restriction == 'anchored':
 			where = SUFFIX
+		elif back_restriction == 'noninternal':
+			where = BACK_NOT_INTERNAL
+		elif cmdline_type == 'front':
+			where = FRONT
+		elif cmdline_type == 'back':
+			where = BACK
+		else:
+			assert cmdline_type == 'anywhere'
+			where = ANYWHERE
 
-		return self.adapter_class(sequence=spec, where=where, name=name, **self.constructor_args)
+		return self.adapter_class(sequence=sequence, where=where, name=name, **self.constructor_args)
 
 	def parse(self, spec, cmdline_type='back'):
 		"""
@@ -483,7 +551,7 @@ class Adapter(object):
 		# Optimization: Use non-wildcard matching if only ACGT is used
 		self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set('ACGT')
 		self.read_wildcards = read_wildcards
-		self.remove_before = where not in (BACK, SUFFIX)
+		self.remove_before = where not in (BACK, SUFFIX, BACK_NOT_INTERNAL)
 
 		self.aligner = align.Aligner(self.sequence, self.max_error_rate,
 			flags=self.where, wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
@@ -526,8 +594,9 @@ class Adapter(object):
 				pos = 0 if read_seq.startswith(self.sequence) else -1
 			elif self.where == SUFFIX:
 				pos = (len(read_seq) - len(self.sequence)) if read_seq.endswith(self.sequence) else -1
-			else:
+			elif self.where == BACK or self.where == FRONT:
 				pos = read_seq.find(self.sequence)
+			# TODO BACK_NOT_INTERNAL, FRONT_NOT_INTERNAL
 		if pos >= 0:
 			if self.where == ANYWHERE:
 				# guess: if alignment starts at pos 0, it’s a 5' adapter
@@ -686,21 +755,37 @@ class LinkedMatch(object):
 class LinkedAdapter(object):
 	"""
 	"""
-	def __init__(self, front_sequence, back_sequence,
-			front_anchored=True, back_anchored=False, require_both=None, name=None, **kwargs):
+	def __init__(self, front_sequence, back_sequence, front_restriction='anchored',
+			back_restriction=None, require_both=None, name=None, **kwargs):
 		"""
 		require_both -- require both adapters to match. If not specified, the default is to
 			require only anchored adapters to match.
 		kwargs are passed on to individual Adapter constructors
 		"""
-		where1 = PREFIX if front_anchored else FRONT
-		where2 = SUFFIX if back_anchored else BACK
+		if front_restriction is None:
+			where1 = FRONT
+		elif front_restriction == 'anchored':
+			where1 = PREFIX
+		elif front_restriction == 'noninternal':
+			where1 = FRONT_NOT_INTERNAL
+		else:
+			raise ValueError('Value {0} for front_restriction not allowed'.format(front_restriction))
+
+		if back_restriction is None:
+			where2 = BACK
+		elif back_restriction == 'anchored':
+			where2 = SUFFIX
+		elif back_restriction == 'noninternal':
+			where2 = BACK_NOT_INTERNAL
+		else:
+			raise ValueError(
+				'Value {0} for back_restriction not allowed'.format(back_restriction))
 		if require_both:
 			self._require_back_match = True
 			self._require_front_match = True
 		else:
-			self._require_front_match = front_anchored
-			self._require_back_match = back_anchored
+			self._require_front_match = front_restriction == 'anchored'
+			self._require_back_match = back_restriction == 'anchored'
 
 		# The following attributes are needed for the report
 		self.where = LINKED

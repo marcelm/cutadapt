@@ -4,7 +4,7 @@ from nose.tools import raises, assert_raises
 
 from cutadapt.seqio import Sequence
 from cutadapt.adapters import (Adapter, Match, ColorspaceAdapter, FRONT, BACK,
-	parse_braces, LinkedAdapter, AdapterStatistics)
+	parse_braces, LinkedAdapter, AdapterStatistics, AdapterParser)
 
 
 def test_issue_52():
@@ -187,5 +187,16 @@ def test_add_adapter_statistics():
 def test_issue_265():
 	"""Crash when accessing the matches property of non-anchored linked adapters"""
 	s = Sequence('name', 'AAAATTTT')
-	la = LinkedAdapter('GGG', 'TTT', front_anchored=False, back_anchored=False)
+	la = LinkedAdapter('GGG', 'TTT', front_restriction=None, back_restriction=None)
 	assert la.match_to(s).matches == 3
+
+
+def test_parse_not_linked():
+	p = AdapterParser._parse_not_linked
+	assert p('A', 'front') == (None, 'A', None)
+	assert p('A', 'back') == (None, 'A', None)
+	assert p('A', 'anywhere') == (None, 'A', None)
+	assert p('^A', 'front') == ('anchored', 'A', None)
+	assert p('XXXA', 'front') == ('noninternal', 'A', None)
+	assert p('A$', 'back') == (None, 'A', 'anchored')
+	assert p('AXXXX', 'back') == (None, 'A', 'noninternal')

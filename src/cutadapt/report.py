@@ -7,7 +7,7 @@ from __future__ import print_function, division, absolute_import
 import sys
 from contextlib import contextmanager
 import textwrap
-from .adapters import BACK, FRONT, PREFIX, SUFFIX, ANYWHERE, LINKED
+from .adapters import BACK, BACK_NOT_INTERNAL, FRONT, FRONT_NOT_INTERNAL, PREFIX, SUFFIX, ANYWHERE, LINKED
 from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
 	DiscardTrimmedFilter, DiscardUntrimmedFilter, PairedEndDemultiplexer, Demultiplexer,
@@ -159,7 +159,9 @@ class Statistics:
 
 ADAPTER_TYPES = {
 	BACK: "regular 3'",
+	BACK_NOT_INTERNAL: "non-internal 3'",
 	FRONT: "regular 5'",
+	FRONT_NOT_INTERNAL: "non-internal 5'",
 	PREFIX: "anchored 5'",
 	SUFFIX: "anchored 3'",
 	ANYWHERE: "variable 5'/3'",
@@ -310,7 +312,9 @@ def print_report(stats, time, gc_content):
 			total_back = sum(adapter_statistics.back.lengths.values())
 			total = total_front + total_back
 			where = adapter_statistics.where
-			assert where in (ANYWHERE, LINKED) or (where in (BACK, SUFFIX) and total_front == 0) or (where in (FRONT, PREFIX) and total_back == 0)
+			assert (where in (ANYWHERE, LINKED)
+			    or (where in (BACK, BACK_NOT_INTERNAL, SUFFIX) and total_front == 0)
+			    or (where in (FRONT, FRONT_NOT_INTERNAL, PREFIX) and total_back == 0)), (where, total_front)
 
 			if stats.paired:
 				extra = 'First read: ' if which_in_pair == 0 else 'Second read: '
@@ -354,13 +358,13 @@ def print_report(stats, time, gc_content):
 				print()
 				print("Overview of removed sequences at 3' end")
 				print_histogram(adapter_statistics.back, stats.n, gc_content)
-			elif where in (FRONT, PREFIX):
+			elif where in (FRONT, PREFIX, FRONT_NOT_INTERNAL):
 				print()
 				print_error_ranges(len(adapter_statistics.front.sequence), adapter_statistics.front.max_error_rate)
 				print("Overview of removed sequences")
 				print_histogram(adapter_statistics.front, stats.n, gc_content)
 			else:
-				assert where in (BACK, SUFFIX)
+				assert where in (BACK, SUFFIX, BACK_NOT_INTERNAL)
 				print()
 				print_error_ranges(len(adapter_statistics.back.sequence), adapter_statistics.back.max_error_rate)
 				warning = warning or print_adjacent_bases(adapter_statistics.back.adjacent_bases)

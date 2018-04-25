@@ -515,3 +515,11 @@ def test_issue_296(tmpdir):
 	main(['--info-file', info_path, '--no-trim', '-g', 'TTTCAC', '-o', out_path, reads_path])
 	# Output should be unchanged because of --no-trim
 	assert_files_equal(reads_path, out_path)
+
+
+def test_xadapter():
+	run('-g XTCCGAATAGA', 'xadapter.fasta', 'xadapterx.fasta')
+
+
+def test_adapterx():
+	run('-a TCCGAATAGAX', 'adapterx.fasta', 'xadapterx.fasta')
