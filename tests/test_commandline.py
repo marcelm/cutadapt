@@ -496,6 +496,10 @@ def test_length():
 	run('--length 5', 'shortened.fastq', 'small.fastq')
 
 
+def test_negative_length():
+	run('--length -5', 'shortened-negative.fastq', 'small.fastq')
+
+
 def test_run_cutadapt_process():
 	subprocess.check_call(['cutadapt', '--version'])
 
