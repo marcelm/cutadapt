@@ -201,9 +201,9 @@ def get_option_parser():
 			"value is given, only the 3' end is trimmed. If two "
 			"comma-separated cutoffs are given, the 5' end is trimmed with "
 			"the first cutoff, the 3' end with the second.")
-	group.add_option("--quality-base", type=int, default=33,
+	group.add_option("--quality-base", type=int, default=33, metavar='N',
 		help="Assume that quality values in FASTQ are encoded as ascii(quality "
-			"+ QUALITY_BASE). This needs to be set to 64 for some old Illumina "
+			"+ N). This needs to be set to 64 for some old Illumina "
 			"FASTQ files. Default: %default")
 	group.add_option("--length", "-l", type=int, default=None, metavar="LENGTH",
 			help="Shorten reads to LENGTH. Positive values remove bases at the end "
@@ -303,7 +303,7 @@ def get_option_parser():
 	group.add_option("-B", dest='anywhere2', action='append', default=[], metavar='ADAPTER',
 		help="5'/3 adapter to be removed from second read in a pair.")
 	group.add_option("-U", dest='cut2', action='append', default=[], type=int, metavar="LENGTH",
-		help="Remove LENGTH bases from second read in a pair (see --cut).")
+		help="Remove LENGTH bases from second read in a pair.")
 	group.add_option("-p", "--paired-output", metavar="FILE",
 		help="Write second read in a pair to FILE.")
 	# Setting the default for pair_filter to None allows us to find out whether
@@ -317,15 +317,14 @@ def get_option_parser():
 		help="Read and write interleaved paired-end reads.")
 	group.add_option("--untrimmed-paired-output", metavar="FILE",
 		help="Write second read in a pair to this FILE when no adapter "
-			"was found in the first read. Use this option together with "
-			"--untrimmed-output when trimming paired-end reads. Default: output "
+			"was found. Use with --untrimmed-output. Default: output "
 			"to same file as trimmed reads")
 	group.add_option("--too-short-paired-output", metavar="FILE", default=None,
 		help="Write second read in a pair to this file if pair is too short. "
-			"Use together with --too-short-output.")
+			"Use also --too-short-output.")
 	group.add_option("--too-long-paired-output", metavar="FILE", default=None,
 		help="Write second read in a pair to this file if pair is too long. "
-			"Use together with --too-long-output.")
+			"Use also --too-long-output.")
 	parser.add_option_group(group)
 
 	return parser
