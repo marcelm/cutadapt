@@ -14,6 +14,9 @@ development version
 * :user:`klugem` contributed PR :issue:`299`: The ``--length`` option (and its
   alias ``-l``) can now be used with negative lengths, which will remove bases
   from the beginning of the read instead of from the end.
+* Close :issue:`107`: Add a ``--discard-casava`` option to remove reads
+  that did not pass CASAVA filtering (this is possibly relevant only for
+  older datasets).
 * Running cutadapt under Python 3.3 is no longer supported (Python 2.7 or
   3.4+ are needed)
 

@@ -885,6 +885,20 @@ whether it was trimmed or not.
 The options ``--untrimmed-output``, ``--discard-trimmed`` and ``-discard-untrimmed``
 are mutually exclusive.
 
+The following filtering options do not have a corresponding option for redirecting
+reads. They always discard reads for which the filtering criterion applies.
+
+``--max-n COUNT_or_FRACTION``
+    Discard reads with more than COUNT ``N`` bases. If ``COUNT_or_FRACTION`` is an
+    number between 0 and 1, it is interpreted as a fraction of the read length
+
+``--discard-casava``
+    Discard reads that did not pass CASAVA filtering. Illumina’s CASAVA pipeline in
+    version 1.8 adds an *is_filtered* header field to each read. Specifying this
+    option, the reads that did not pass filtering (these are the reads that have
+    a ``Y`` for *is_filtered*) will be discarded. Reads for which the header cannot
+    be recognized are kept.
+
 
 .. _paired-end:
 
@@ -990,7 +1004,7 @@ if discarded if one of the reads is shorter than 20 nt.
 
 To require that filtering criteria must apply to *both* reads in order for a
 read pair to be discarded, use the option ``--pair-filter=both``. The following
-table describes the effect for each filtering option.
+table describes the effect for some filtering options.
 
 +----------------------------+------------------------------------------------+-----------------------------------------+
 | Filtering option           | With ``--pair-filter=any``, the pair           | With ``-pair-filter=both``, the pair    |

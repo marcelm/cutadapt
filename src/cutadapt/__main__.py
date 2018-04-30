@@ -240,6 +240,8 @@ def get_option_parser():
 			"discarding too many randomly matching reads!")
 	group.add_option("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
 		help="Discard reads that do not contain an adapter.")
+	group.add_option("--discard-casava", action='store_true', default=False,
+		help="Discard reads that did not pass CASAVA filtering (header has :Y:).")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Output")
@@ -722,7 +724,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			qualfile=quality_filename, colorspace=options.colorspace,
 			fileformat=options.format, interleaved=is_interleaved_input)
 		runner.set_output(outfiles, options.minimum_length, options.maximum_length, options.max_n,
-			options.discard_trimmed, options.discard_untrimmed)
+			options.discard_casava,	options.discard_trimmed, options.discard_untrimmed)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
 

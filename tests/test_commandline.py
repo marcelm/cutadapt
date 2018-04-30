@@ -523,3 +523,7 @@ def test_xadapter():
 
 def test_adapterx():
 	run('-a TCCGAATAGAX', 'adapterx.fasta', 'xadapterx.fasta')
+
+
+def test_discard_casava():
+	run('--discard-casava', 'casava.fastq', 'casava.fastq')

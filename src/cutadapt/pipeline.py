@@ -18,7 +18,8 @@ from .modifiers import ZeroCapper
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
 	RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
-	DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer, PairedEndDemultiplexer)
+	CasavaFilter, DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer,
+	PairedEndDemultiplexer)
 from .seqio import read_chunks_from_file, read_paired_chunks
 
 logger = logging.getLogger()
@@ -109,7 +110,7 @@ class Pipeline(object):
 
 	# TODO set max_n default to None
 	def set_output(self, outfiles, minimum_length=0, maximum_length=sys.maxsize,
-			max_n=-1, discard_trimmed=False, discard_untrimmed=False):
+			max_n=-1, discard_casava=False, discard_trimmed=False, discard_untrimmed=False):
 		self._filters = []
 		self._outfiles = outfiles
 		filter_wrapper = self._filter_wrapper()
@@ -137,6 +138,9 @@ class Pipeline(object):
 
 		if max_n != -1:
 			self._filters.append(filter_wrapper(None, NContentFilter(max_n)))
+
+		if discard_casava:
+			self._filters.append(filter_wrapper(None, CasavaFilter()))
 
 		if int(discard_trimmed) + int(discard_untrimmed) + int(outfiles.untrimmed is not None) > 1:
 			raise ValueError('discard_trimmed, discard_untrimmed and outfiles.untrimmed must not '

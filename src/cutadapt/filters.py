@@ -181,6 +181,19 @@ class DiscardTrimmedFilter(object):
 		return read.match is not None
 
 
+class CasavaFilter(object):
+	"""
+	Remove reads that fail the CASAVA filter. These have header lines that
+	look like ``xxxx x:Y:x:x`` (with a ``Y``). Reads that pass the filter
+	have an ``N`` instead of ``Y``.
+
+	Reads with unrecognized headers are kept.
+	"""
+	def __call__(self, read):
+		left, _, right = read.name.partition(' ')
+		return right[1:4] == ':Y:'  # discard if :Y: found
+
+
 class Demultiplexer(object):
 	"""
 	Demultiplex trimmed reads. Reads are written to different output files
