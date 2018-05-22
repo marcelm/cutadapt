@@ -1146,7 +1146,7 @@ It is possible to specify more than one adapter sequence by using the options
 five ``-a`` adapters and two ``-g`` adapters. Each read will be searched for
 all given adapters, but **only the best matching adapter is removed**. (But it
 is possible to :ref:`trim more than one adapter from each
-read <more-than-one>`). This is how a command may look like to trim one of two
+read <more-than-one>`). This is how a command may look to trim one of two
 possible 3' adapters::
 
     cutadapt -a TGAGACACGCA -a AGGCACACAGGG -o output.fastq input.fastq
@@ -1158,8 +1158,10 @@ the FASTA file::
     cutadapt -a file:adapters.fasta -o output.fastq input.fastq
 
 All of the sequences in the file ``adapters.fasta`` will be used as 3'
-adapters. The other adapter options ``-b`` and ``-g`` also support this. Again,
-only the best matching adapter is trimmed from each read.
+adapters. The other adapter options ``-b`` and ``-g`` also support this.
+The ``file:`` syntax can be combined with the regular way of specifying an
+adapter. But no matter how you specify multiple adapter sequences, remember
+that only the best matching adapter is trimmed from each read.
 
 When cutadapt has multiple adapter sequences to work with, either specified
 explicitly on the command line or via a FASTA file, it decides in the
