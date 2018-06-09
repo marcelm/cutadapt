@@ -52,7 +52,7 @@ def encode(s):
 	Given a sequence of nucleotides, convert them to
 	colorspace. Only uppercase characters are allowed.
 	>>> encode("ACGGTC")
-	"A13012"
+	'A13012'
 	"""
 	if not s:
 		return s
@@ -68,7 +68,7 @@ def decode(s):
 	The first character in s must be a nucleotide.
 	Only uppercase characters are allowed.
 	>>> decode("A13012")
-	"ACGGTC"
+	'ACGGTC'
 	"""
 	if len(s) < 2:
 		return s

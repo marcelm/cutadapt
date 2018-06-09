@@ -32,7 +32,7 @@ def parse_braces(sequence):
 	occurrences of x. Raise ValueError if the expression cannot be parsed.
 
 	>>> parse_braces('TGA{5}CT')
-	TGAAAAACT
+	'TGAAAAACT'
 	"""
 	# Simple DFA with four states, encoded in prev
 	result = ''
