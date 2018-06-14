@@ -228,8 +228,8 @@ def get_option_parser():
 		description="Filters are applied after above read modifications. "
 			"Paired-end reads are always discarded pairwise (see also "
 			"--pair-filter).")
-	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
-		help="Discard reads shorter than LENGTH. Default: 0")
+	group.add_option("-m", "--minimum-length", type=int, default=1, metavar="LENGTH",
+		help="Discard reads shorter than LENGTH. Default: 1")
 	group.add_option("-M", "--maximum-length", type=int, default=sys.maxsize, metavar="LENGTH",
 		help="Discard reads longer than LENGTH. Default: no limit")
 	group.add_option("--max-n", type=float, default=-1.0, metavar="COUNT",
