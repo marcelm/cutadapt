@@ -911,4 +911,4 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
 		yield (memoryview(buf1)[0:start1], memoryview(buf2)[0:start2])
 
 
-from ._seqio import head, fastq_head, two_fastq_heads  # re-exported
+from ._seqio import two_fastq_heads  # re-exported

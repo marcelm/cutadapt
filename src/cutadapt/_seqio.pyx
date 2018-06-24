@@ -16,56 +16,6 @@ ctypedef fused bytes_or_bytearray:
 	bytearray
 
 
-#@cython.boundscheck(False)
-def head(bytes_or_bytearray buf, Py_ssize_t lines):
-	"""
-	Skip forward by a number of lines in the given buffer and return
-	how many bytes this corresponds to.
-	"""
-	cdef:
-		Py_ssize_t pos = 0
-		Py_ssize_t linebreaks_seen = 0
-		Py_ssize_t length = len(buf)
-		unsigned char* data = buf
-
-	while linebreaks_seen < lines and pos < length:
-		if data[pos] == '\n':
-			linebreaks_seen += 1
-		pos += 1
-	return pos
-
-
-def fastq_head(bytes_or_bytearray buf, Py_ssize_t end=-1):
-	"""
-	Return an integer length such that buf[:length] contains the highest
-	possible number of complete four-line records.
-
-	If end is -1, the full buffer is searched. Otherwise only buf[:end].
-	"""
-	cdef:
-		Py_ssize_t pos = 0
-		Py_ssize_t linebreaks = 0
-		Py_ssize_t length = len(buf)
-		unsigned char* data = buf
-		Py_ssize_t record_start = 0
-
-	if end != -1:
-		length = min(length, end)
-	while True:
-		while pos < length and data[pos] != '\n':
-			pos += 1
-		if pos == length:
-			break
-		pos += 1
-		linebreaks += 1
-		if linebreaks == 4:
-			linebreaks = 0
-			record_start = pos
-
-	# Reached the end of the data block
-	return record_start
-
-
 def two_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssize_t end1, Py_ssize_t end2):
 	"""
 	Skip forward in the two buffers by multiples of four lines.
