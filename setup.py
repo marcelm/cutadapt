@@ -6,8 +6,8 @@ import os.path
 
 from setuptools import setup, Extension, find_packages
 from distutils.version import LooseVersion
-from distutils.command.sdist import sdist as _sdist
-from distutils.command.build_ext import build_ext as _build_ext
+from setuptools.command.sdist import sdist as _sdist
+from setuptools.command.build_ext import build_ext as _build_ext
 import versioneer
 
 MIN_CYTHON_VERSION = '0.24'
