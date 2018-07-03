@@ -1,6 +1,6 @@
 # coding: utf-8
 from __future__ import print_function, division, absolute_import
-from nose.tools import raises, assert_raises
+import pytest
 
 from cutadapt.seqio import Sequence
 from cutadapt.adapters import (Adapter, Match, ColorspaceAdapter, FRONT, BACK,
@@ -66,9 +66,9 @@ def test_str():
 	str(ca)
 
 
-@raises(ValueError)
 def test_color():
-	ColorspaceAdapter('0123', where=FRONT, max_error_rate=0.1)
+	with pytest.raises(ValueError):
+		ColorspaceAdapter('0123', where=FRONT, max_error_rate=0.1)
 
 
 def test_parse_braces():
@@ -87,7 +87,8 @@ def test_parse_braces():
 def test_parse_braces_fail():
 	for expression in ['{', '}', '{}', '{5', '{1}', 'A{-7}', 'A{', 'A{1', 'N{7', 'AN{7', 'A{4{}',
 			'A{4}{3}', 'A{b}', 'A{6X}', 'A{X6}']:
-		assert_raises(ValueError, lambda: parse_braces(expression))
+		with pytest.raises(ValueError):
+			parse_braces(expression)
 
 
 def test_linked_adapter():

@@ -10,7 +10,6 @@ import subprocess
 import sys
 import tempfile
 
-from nose.tools import raises
 import pytest
 
 from cutadapt.__main__ import main
@@ -317,22 +316,22 @@ except ImportError:
 	pass
 
 
-@raises(SystemExit)
 def test_qualfile_only():
-	with redirect_stderr():
-		main(['file.qual'])
+	with pytest.raises(SystemExit):
+		with redirect_stderr():
+			main(['file.qual'])
 
 
-@raises(SystemExit)
 def test_no_args():
-	with redirect_stderr():
-		main([])
+	with pytest.raises(SystemExit):
+		with redirect_stderr():
+			main([])
 
 
-@raises(SystemExit)
 def test_two_fastqs():
-	with redirect_stderr():
-		main([datapath('paired.1.fastq'), datapath('paired.2.fastq')])
+	with pytest.raises(SystemExit):
+		with redirect_stderr():
+			main([datapath('paired.1.fastq'), datapath('paired.2.fastq')])
 
 
 def test_anchored_no_indels():
@@ -350,10 +349,10 @@ def test_anchored_no_indels_wildcard_adapt():
 	run('-g ^TTAGACANAT --no-indels -e 0.1', 'anchored_no_indels.fasta', 'anchored_no_indels.fasta')
 
 
-@raises(SystemExit)
 def test_non_iupac_characters():
-	with redirect_stderr():
-		main(['-a', 'ZACGT', datapath('small.fastq')])
+	with pytest.raises(SystemExit):
+		with redirect_stderr():
+			main(['-a', 'ZACGT', datapath('small.fastq')])
 
 
 def test_unconditional_cut_front():
@@ -461,22 +460,22 @@ def test_linked_discard_untrimmed_g():
 	run('-g AAAAAAAAAA...TTTTTTTTTT --discard-untrimmed', 'linked-discard-g.fasta', 'linked.fasta')
 
 
-@raises(SystemExit)
 def test_linked_anywhere():
-	with redirect_stderr():
-		main(['-b', 'AAA...TTT', datapath('linked.fasta')])
+	with pytest.raises(SystemExit):
+		with redirect_stderr():
+			main(['-b', 'AAA...TTT', datapath('linked.fasta')])
 
 
-@raises(SystemExit)
 def test_anywhere_anchored_5p():
-	with redirect_stderr():
-		main(['-b', '^AAA', datapath('small.fastq')])
+	with pytest.raises(SystemExit):
+		with redirect_stderr():
+			main(['-b', '^AAA', datapath('small.fastq')])
 
 
-@raises(SystemExit)
 def test_anywhere_anchored_3p():
-	with redirect_stderr():
-		main(['-b', 'TTT$', datapath('small.fastq')])
+	with pytest.raises(SystemExit):
+		with redirect_stderr():
+			main(['-b', 'TTT$', datapath('small.fastq')])
 
 
 def test_fasta():

@@ -1,3 +1,6 @@
+# Editor-specific ignore patterns such as "*~" should be added to
+# ~/.config/git/ignore, not here.
+
 *.pyc
 __pycache__/
 /MANIFEST
@@ -5,11 +8,9 @@ __pycache__/
 /dist/
 /.coverage
 /.tox
+/.cache
+/.pytest_cache
 /src/cutadapt/_*.c
 /src/cutadapt/*.so
 /doc/_build
 /src/cutadapt.egg-info/
-/.cache/
-
-# Editor-specific ignore patterns such as "*~" should be added to
-# ~/.config/git/ignore, not here.

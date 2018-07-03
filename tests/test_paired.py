@@ -6,7 +6,6 @@ import shutil
 import tempfile
 
 import pytest
-from nose.tools import raises
 
 from cutadapt.compat import PY3
 from cutadapt.__main__ import main
@@ -124,10 +123,10 @@ def test_no_trimming():
 		datapath('paired.1.fastq'), datapath('paired.2.fastq')])
 
 
-@raises(SystemExit)
 def test_missing_file():
-	with redirect_stderr():
-		main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
+	with pytest.raises(SystemExit):
+		with redirect_stderr():
+			main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
 
 
 def test_first_too_short(cores):
@@ -309,7 +308,6 @@ def test_interleaved_out(cores):
 	)
 
 
-@raises(SystemExit)
 def test_interleaved_neither_nor():
 	"""Option --interleaved used, but pairs of files given for input and output"""
 	with temporary_path("temp-paired.1.fastq") as p1:
@@ -317,7 +315,8 @@ def test_interleaved_neither_nor():
 			params = '-a XX --interleaved'.split()
 			with redirect_stderr():
 				params += ['-o', p1, '-p1', p2, 'paired.1.fastq', 'paired.2.fastq']
-				main(params)
+				with pytest.raises(SystemExit):
+					main(params)
 
 
 def test_pair_filter(cores):
@@ -357,16 +356,16 @@ def test_too_long_output():
 			assert_files_equal(cutpath('paired.2.fastq'), p2)
 
 
-@raises(SystemExit)
 def test_too_short_output_paired_option_missing():
 	with temporary_path('temp-too-short.1.fastq') as p1:
-		run_paired(
-			'-a TTAGACATAT -A CAGTGGAGTA -m 14 --too-short-output '
-			'{0}'.format(p1),
-			in1='paired.1.fastq', in2='paired.2.fastq',
-			expected1='paired.1.fastq', expected2='paired.2.fastq',
-			cores=1
-		)
+		with pytest.raises(SystemExit):
+			run_paired(
+				'-a TTAGACATAT -A CAGTGGAGTA -m 14 --too-short-output '
+				'{0}'.format(p1),
+				in1='paired.1.fastq', in2='paired.2.fastq',
+				expected1='paired.1.fastq', expected2='paired.2.fastq',
+				cores=1
+			)
 
 
 def test_nextseq_paired(cores):
