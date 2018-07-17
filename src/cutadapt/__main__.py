@@ -162,9 +162,9 @@ def get_option_parser():
 			"as with -a. This option is mostly for rescuing failed library "
 			"preparations - do not use if you know which end your adapter was "
 			"ligated to!")
-	group.add_option("-e", "--error-rate", type=float, default=0.1,
-		help="Maximum allowed error rate (no. of errors divided by the length "
-			"of the matching region). Default: %default")
+	group.add_option("-e", "--error-rate", type=float, default=0.1, metavar="RATE",
+		help="Maximum allowed error rate as value between 0 and 1 (no. of "
+			"errors divided by length of matching region). Default: %default (=10%)")
 	group.add_option("--no-indels", action='store_false', dest='indels', default=True,
 		help="Allow only mismatches in alignments. "
 			"Default: allow both mismatches and indels")
