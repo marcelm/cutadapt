@@ -4,8 +4,7 @@ Developing
 The `Cutadapt source code is on GitHub <https://github.com/marcelm/cutadapt/>`_.
 Cutadapt is written in Python with some extension modules that are written
 in Cython. Cutadapt uses a single code base that is compatible with both
-Python 2 and 3. Python 2.7 is the minimum supported Python version. With
-relatively little effort, compatibility with Python 2.6 could be restored.
+Python 2 and 3. Python 2.7 is the minimum supported Python version.
 
 
 Development installation
