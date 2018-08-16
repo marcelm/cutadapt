@@ -20,9 +20,7 @@ matrix:
     - python: "nightly"
 
 install:
-  - pip install --upgrade pip wheel
-  - pip install --upgrade Cython pytest pytest-timeout
-  - pip install .
+  - pip install Cython tox-travis
 
 script:
-  - pytest
+  - tox
