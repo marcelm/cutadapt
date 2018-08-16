@@ -19,11 +19,9 @@ set -xeuo pipefail
 # it starts a container and runs itself inside of it.
 if ! grep -q docker /proc/1/cgroup; then
   # We are not inside a container
+  docker pull quay.io/pypa/manylinux1_x86_64
   exec docker run --rm -v $(pwd):/io quay.io/pypa/manylinux1_x86_64 /io/$0
 fi
-
-# Python 2.6 is not supported
-rm -r /opt/python/cp26*
 
 PYBINS="/opt/python/*/bin"
 HAS_CYTHON=0
@@ -35,11 +33,12 @@ done
 
 # Bundle external shared libraries into the wheels
 for whl in wheelhouse/cutadapt-*.whl; do
-    auditwheel repair "$whl" -w /io/wheelhouse/
+    auditwheel repair "$whl" -w repaired/
 done
 
 # Created files are owned by root, so fix permissions.
-chown -R --reference=/io/setup.py /io/wheelhouse/
+chown -R --reference=/io/setup.py repaired/
+mv repaired/*.whl /io/dist/
 
 # TODO Install packages and test them
 #for PYBIN in ${PYBINS}; do
