@@ -24,3 +24,20 @@ install:
 
 script:
   - tox
+
+jobs:
+  include:
+    - stage: deploy
+      sudo: required
+      services:
+        - docker
+      python: "3.6"
+      install: python3 -m pip install Cython twine
+      if: tag IS present
+      script:
+        - |
+          python3 setup.py sdist
+          ./buildwheels.sh
+          ls -l dist/
+          # Note: TWINE_PASSWORD is set in Travis settings
+          python3 -m twine upload --repository-url https://test.pypi.org/legacy/ -u mmartin dist/*
