@@ -182,7 +182,7 @@ def get_option_parser():
 		help="Match and redirect reads to output/untrimmed-output as usual, "
 			"but do not remove adapters.")
 	group.add_option("--mask-adapter", dest='action', action='store_const', const='mask',
-		help="Mask adapters with 'N' characters instead of trimming them.")
+		help="Mask adapters with 'N's instead of trimming them.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional read modifications")
