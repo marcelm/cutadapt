@@ -5,18 +5,6 @@ Recipes (FAQ)
 This section gives answers to frequently asked questions. It shows you how to
 get cutadapt to do what you want it to do!
 
-.. _avoid-internal-adapter-matches:
-
-Avoid internal adapter matches
-------------------------------
-
-To force matches to be at the end of the read and thus avoiding internal
-adapter matches, append a few ``X`` characters to the adapter sequence, like
-this: ``-a TACGGCATXXX``. The ``X`` is counted as a mismatch and will force the
-match to be at the end. Just make sure that there are more ``X`` characters than
-the length of the adapter times the error rate. This is not the same as an
-anchored 3' adapter since partial matches are still allowed.
-
 
 Remove more than one adapter
 ----------------------------

@@ -189,7 +189,7 @@ way:
 Removing adapters
 =================
 
-Cutadapt supports trimming of multiple types of adapters:
+Cutadapt supports trimming of multiple types of adapters. The basic types are ... TODO
 
 ======================================================= ===========================
 Adapter type                                            Command-line option
@@ -198,6 +198,8 @@ Adapter type                                            Command-line option
 :ref:`5' adapter <five-prime-adapters>`                 ``-g ADAPTER``
 :ref:`Anchored 3' adapter <anchored-3adapters>`         ``-a ADAPTER$``
 :ref:`Anchored 5' adapter <anchored-5adapters>`         ``-g ^ADAPTER``
+:ref:`3' adapter without internal matches <no-internal-matches>`  ``-a ADAPTERX``
+:ref:`5' adapter without internal matches <no-internal-matches>`  ``-g XADAPTER``
 :ref:`5' or 3' (both possible) <anywhere-adapters>`     ``-b ADAPTER``
 :ref:`Linked adapter <linked-adapters>`                 ``-a ADAPTER1...ADAPTER2``
 :ref:`Non-anchored linked adapter <linked-nonanchored>` ``-g ADAPTER1...ADAPTER2``
@@ -356,6 +358,43 @@ Using ``-a ADAPTER$`` will result in::
 
 That is, only the middle read is trimmed at all.
 
+
+.. _non-internal:
+
+Non-internal 5' and 3' adapters
+-------------------------------
+
+The non-internal 5' and 3' adapter types disallow internal occurrences of the
+adapter sequence. This is like a less strict version of anchoring: The
+adapter must always be at one of the ends of the read, but - unlike anchored
+adapters - partial occurrences are also ok.
+
+Use ``-a ADAPTERX`` (replace ``ADAPTER`` with your actual adapter sequence, but
+use a literal ``X``) to disallow internal matches for a 3' adapter. Use
+``-g XADAPTER`` to disallow them for a 5' adapter.
+Mnemonic: The ``X`` is not allowed to “shift into” the read.
+
+Here are some examples for trimming reads with ``-a ADAPTERX``:
+
+================================== ==================================
+Input read                         Processed read
+================================== ==================================
+``mysequenceADAP``                 ``mysequence``
+``mysequenceADAPTER``              ``mysequence``
+``mysequenceADAPTERsomethingelse`` ``mysequenceADAPTERsomethingelse``
+================================== ==================================
+
+Here are some examples for trimming reads with ``-g XADAPTER``:
+
+================================== ===================================
+Input read                         Processed read
+================================== ===================================
+``APTERmysequence``                ``mysequence``
+``ADAPTERmysequence``              ``mysequence``
+``somethingelseADAPTERmysequence`` ``somethingelseADAPTERmysequence``
+================================== ===================================
+
+.. versionadded:: 1.17
 
 .. _linked-adapters:
 
@@ -615,9 +654,9 @@ useful for trimming adapters with an embedded variable barcode::
 
     cutadapt -a ACGTAANNNNTTAGC -o output.fastq input.fastq
 
-Even the ``X`` wildcard that does not match any nucleotide is supported. It is
-useful, for example, :ref:`as a trick for avoiding internal adapter
-matches <avoid-internal-adapter-matches>`.
+Even the ``X`` wildcard that does not match any nucleotide is supported. If
+used as in ``-a ADAPTERX`` or ``-g XADAPTER``, it acquires a special meaning for
+:ref:`and disallows internal adapter matches <avoid-internal-adapter-matches>`.
 
 Wildcard characters are by default only allowed in adapter sequences and
 are not recognized when they occur in a read. This is to avoid matches in reads
