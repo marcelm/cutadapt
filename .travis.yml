@@ -33,7 +33,7 @@ jobs:
         - docker
       python: "3.6"
       install: python3 -m pip install Cython twine
-      if: (branch = master) AND (tag IS present)
+      if: tag = true
       script:
         - |
           python3 setup.py sdist
