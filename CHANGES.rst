@@ -5,20 +5,22 @@ Changes
 development version
 -------------------
 
-* Close :issue:`53`: Implement adapters that disallow internal matches.
+* Close :issue:`53`: Implement adapters :ref:`that disallow internal matches <non-internal>`.
   This is a bit like anchoring, but less strict: The adapter sequence
   can appear at different lengths, but must always be at one of the ends.
   Use ``-a ADAPTERX`` (with a literal ``X``) to disallow internal matches
   for a 3' adapter. Use ``-g XADAPTER`` to disallow for a 5' adapter.
-  Mnemonic: The ``X`` is not allowed to “shift into” the read.
 * :user:`klugem` contributed PR :issue:`299`: The ``--length`` option (and its
   alias ``-l``) can now be used with negative lengths, which will remove bases
   from the beginning of the read instead of from the end.
 * Close :issue:`107`: Add a ``--discard-casava`` option to remove reads
   that did not pass CASAVA filtering (this is possibly relevant only for
   older datasets).
-* Running cutadapt under Python 3.3 is no longer supported (Python 2.7 or
+* Fix :issue:`318`: Cutadapt should now be installable with Python 3.7.
+* Running Cutadapt under Python 3.3 is no longer supported (Python 2.7 or
   3.4+ are needed)
+* Planned change: One of the next Cutadapt versions will drop support for
+  Python 2 entirely, requiring Python 3.
 
 v1.16 (2018-02-21)
 ------------------
