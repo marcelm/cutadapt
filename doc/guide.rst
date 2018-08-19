@@ -223,6 +223,47 @@ bases <cut-bases>` from the beginning or end of each read, and to :ref:`remove
 low-quality bases (quality trimming) <quality-trimming>` from the 3' and 5' ends.
 
 
+Overview of the adapter types
+-----------------------------
+
+3' adapter types
+~~~~~~~~~~~~~~~~
+
+A 3' adapter is assumed to be ligated to the 3' end of your sequence of interest.
+When such an adapter is found, the adapter sequence itself and the sequence
+following it (if there is any) are trimmed. This table shows in which ways
+the different 3' adapter types are allowed to occur in a read in order to be
+recognized by the program.
+
+================================== =================== ======================== ============================= =========================
+Adapter location in read           Read layout         Found by regular 3’      Found by non-internal 3’      Found by anchored 3’
+                                                       (``-a ADAPTER``)         (``-a ADAPTERX``)             (``-a ADAPTER$``)
+================================== =================== ======================== ============================= =========================
+Full adapter sequence anywhere     acgtacgtADAPTERacgt                      yes                           no                         no
+Partial adapter sequence at 3’ end acgtacgtacgtADAP                         yes                           yes                        no
+Full adapter sequence at 3’ end    acgtacgtacgtADAPTER                      yes                           yes                       yes
+================================== =================== ======================== ============================= =========================
+
+
+5' adapter types
+~~~~~~~~~~~~~~~~
+
+A 5' adapter is assumed to be ligated to the 5' end of your sequence of interest.
+When such an adapter is found, the adapter sequence itself and the sequence
+preceding it (if there is any) are trimmed. This table shows in which ways
+the different 5' adapter types are allowed to occur in a read in order to be
+recognized by the program.
+
+================================== =================== ======================== ============================= =========================
+Adapter location in read           Read layout         Found by regular 5’      Found by non-internal 5’      Found by anchored 5’
+                                                       (``-g ADAPTER``)         (``-g XADAPTER``)             ``-g ^ADAPTER``
+================================== =================== ======================== ============================= =========================
+Full adapter sequence anywhere     acgtADAPTERacgtacgt                      yes                           no                         no
+Partial adapter sequence at 5’ end PTERacgtacgtacgt                         yes                           yes                        no
+Full adapter sequence at 5’ end    ADAPTERacgtacgtacgt                      yes                           yes                       yes
+================================== =================== ======================== ============================= =========================
+
+
 .. _three-prime-adapters:
 
 3' adapters
