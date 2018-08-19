@@ -160,16 +160,16 @@ Some of these limitations will be lifted in the future, as time allows.
 .. versionadded:: 1.15
 
 
-Read processing
-===============
+Read processing stages
+======================
 
 Cutadapt can do a lot more in addition to removing adapters. There are various
 command-line options that make it possible to modify and filter reads and to
 redirect them to various output files. Each read is processed in the following
-way:
+order:
 
 1. :ref:`Read modification options <modifying-reads>` are applied. This includes
-   :ref:`adapter removal <removing-adapters>`,
+   :ref:`adapter removal <adapter-types>`,
    :ref:`quality trimming <quality-trimming>`, read name modifications etc. The
    order in which they are applied is the order in which they are listed in the
    help shown by ``cutadapt --help`` under the “Additional read modifications”
@@ -184,35 +184,29 @@ way:
 3. If the read has passed all the filters, it is written to the output file.
 
 
-.. _removing-adapters:
+.. _adapter-types:
 
-Removing adapters
-=================
+Adapter types
+=============
 
-Cutadapt supports trimming of multiple types of adapters. The basic types are ... TODO
+Cutadapt can detect multiple adapter types. 5' adapters preceed the sequence of
+interest and 3' adapters follow it. Further distinctions are made according to
+where in the read the adapter sequence is allowed to occur to be found by the
+program.
 
-======================================================= ===========================
-Adapter type                                            Command-line option
-======================================================= ===========================
-:ref:`3' adapter <three-prime-adapters>`                ``-a ADAPTER``
-:ref:`5' adapter <five-prime-adapters>`                 ``-g ADAPTER``
-:ref:`Anchored 3' adapter <anchored-3adapters>`         ``-a ADAPTER$``
-:ref:`Anchored 5' adapter <anchored-5adapters>`         ``-g ^ADAPTER``
-:ref:`3' adapter without internal matches <no-internal-matches>`  ``-a ADAPTERX``
-:ref:`5' adapter without internal matches <no-internal-matches>`  ``-g XADAPTER``
-:ref:`5' or 3' (both possible) <anywhere-adapters>`     ``-b ADAPTER``
-:ref:`Linked adapter <linked-adapters>`                 ``-a ADAPTER1...ADAPTER2``
-:ref:`Non-anchored linked adapter <linked-nonanchored>` ``-g ADAPTER1...ADAPTER2``
-======================================================= ===========================
-
-Here is an illustration of the allowed adapter locations relative to the read
-and depending on the adapter type:
-
-|
-
-.. image:: _static/adapters.svg
-
-|
+========================================================= ===========================
+Adapter type                                              Command-line option
+========================================================= ===========================
+:ref:`Regular 3' adapter <three-prime-adapters>`          ``-a ADAPTER``
+:ref:`Regular 5' adapter <five-prime-adapters>`           ``-g ADAPTER``
+:ref:`Non-internal 3' adapter <non-internal>`             ``-a ADAPTERX``
+:ref:`Non-internal 5' adapter <non-internal>`             ``-g XADAPTER``
+:ref:`Anchored 3' adapter <anchored-3adapters>`           ``-a ADAPTER$``
+:ref:`Anchored 5' adapter <anchored-5adapters>`           ``-g ^ADAPTER``
+:ref:`5' or 3' (both possible) <anywhere-adapters>`       ``-b ADAPTER``
+:ref:`Linked adapter <linked-adapters>`                   ``-a ADAPTER1...ADAPTER2``
+:ref:`Non-anchored linked adapter <linked-nonanchored>`   ``-g ADAPTER1...ADAPTER2``
+========================================================= ===========================
 
 By default, all adapters :ref:`are searched error-tolerantly <error-tolerance>`.
 Adapter sequences :ref:`may also contain any IUPAC wildcard
@@ -266,8 +260,8 @@ Full adapter sequence at 5’ end    ADAPTERacgtacgtacgt                      ye
 
 .. _three-prime-adapters:
 
-3' adapters
------------
+Regular 3' adapters
+-------------------
 
 A 3' adapter is a piece of DNA ligated to the 3' end of the DNA fragment you
 are interested in. The sequencer starts the sequencing process at the 5' end of
@@ -305,12 +299,12 @@ and will appear in the output.
 
 .. _five-prime-adapters:
 
-5' adapters
------------
+Regular 5' adapters
+-------------------
 
 .. note::
     Unless your adapter may also occur in a degraded form, you probably
-    want to use an anchored 5' adapter, described in the next section.
+    want to use an :ref:`anchored 5' adapter <anchored-3adapters>`.
 
 A 5' adapter is a piece of DNA ligated to the 5' end of the DNA fragment of
 interest. The adapter sequence is expected to appear at the start of the read,
@@ -318,7 +312,7 @@ but may be partially degraded. The sequence may also appear somewhere within
 the read. In all cases, the adapter itself and the sequence preceding it is
 removed.
 
-Again, assume your fragment of interest is *MYSEQUENCE* and the adapter is
+Assume your fragment of interest is *MYSEQUENCE* and the adapter is
 *ADAPTER*. The reads may look like this::
 
     ADAPTERMYSEQUENCE
@@ -575,6 +569,8 @@ Read before trimming           Read after trimming Detected adapter type
 The ``-b`` option cannot be used with colorspace data.
 
 
+
+
 .. _error-tolerance:
 
 Error tolerance
@@ -697,7 +693,7 @@ useful for trimming adapters with an embedded variable barcode::
 
 Even the ``X`` wildcard that does not match any nucleotide is supported. If
 used as in ``-a ADAPTERX`` or ``-g XADAPTER``, it acquires a special meaning for
-:ref:`and disallows internal adapter matches <avoid-internal-adapter-matches>`.
+:ref:`and disallows internal adapter matches <non-internal>`.
 
 Wildcard characters are by default only allowed in adapter sequences and
 are not recognized when they occur in a read. This is to avoid matches in reads
@@ -1140,7 +1136,7 @@ Legacy paired-end read trimming
 .. note::
     This section describes the way paired-end trimming was done
     in cutadapt before 1.8, where the ``-A``, ``-G``, ``-B`` options were not
-    available. It is less safe and more complicated, but you can still use it.
+    available. It is more complicated, but you can still use it.
 
 If you do not use any of the filtering options that discard reads, such
 as ``--discard``, ``--minimum-length`` or ``--maximum-length``, you can run
@@ -1274,7 +1270,8 @@ Demultiplexing
 
 Cutadapt supports demultiplexing, which means that reads are written to different
 output files depending on which adapter was found in them. To use this, include
-the string ``{name}`` in the name of the output file and give each adapter a name.
+the string ``{name}`` in the name of the output file and :ref:`give each adapter
+a name <named-adapters>`.
 The path is then interpreted as a template and each trimmed read is written
 to the path in which ``{name}`` is replaced with the name of the adapter that
 was found in the read. Reads in which no adapter was found will be written to a
@@ -1325,6 +1322,7 @@ untrimmed second reads.
 
 .. versionadded:: 1.15
    Demultiplexing of paired-end data.
+
 
 .. _more-than-one:
 
@@ -1408,7 +1406,7 @@ De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understand
 Under some circumstances you may want to consider not trimming adapters at all.
 If you have whole-exome or whole-genome reads, there will be very few reads
 with adapters anyway. And if you use BWA-MEM, the trailing (5') bases of
-a read that do not match the reference are soft-clipped, which  covers those
+a read that do not match the reference are soft-clipped, which covers those
 cases in which an adapter does occur.
 
 
