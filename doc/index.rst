@@ -10,6 +10,7 @@ Table of contents
    installation
    guide
    colorspace
+   algorithms
    recipes
    ideas
    develop
