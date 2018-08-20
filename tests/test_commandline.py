@@ -526,3 +526,9 @@ def test_adapterx():
 
 def test_discard_casava():
 	run('--discard-casava', 'casava.fastq', 'casava.fastq')
+
+
+@pytest.mark.xfail  # FIXME
+def test_underscore():
+	"""File name ending in _fastq.gz (issue #275)"""
+	run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'underscore_fastq.gz')
