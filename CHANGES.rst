@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v1.17 (2018-08-20)
+------------------
 
 * Close :issue:`53`: Implement adapters :ref:`that disallow internal matches <non-internal>`.
   This is a bit like anchoring, but less strict: The adapter sequence
