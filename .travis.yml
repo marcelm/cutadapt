@@ -11,14 +11,6 @@ python:
   - "3.6"
   - "nightly"
 
-matrix:
-  include:
-    - python: "3.7"
-      sudo: true  # This may possibly be removed in the future
-      dist: xenial
-  allow_failures:
-    - python: "nightly"
-
 install:
   - pip install Cython tox-travis
 
@@ -27,12 +19,17 @@ script:
 
 env:
   global:
-    - TWINE_REPOSITORY=https://test.pypi.org/legacy/
+    - TWINE_REPOSITORY_URL=https://test.pypi.org/legacy/
     - TWINE_USERNAME=mmartin
     # TWINE_PASSWORD is set in Travis settings
 
 jobs:
   include:
+    - stage: test
+      python: "3.7"
+      sudo: true  # This may possibly be removed in the future
+      dist: xenial
+
     - stage: deploy
       sudo: required
       services:
@@ -46,3 +43,6 @@ jobs:
           ./buildwheels.sh
           ls -l dist/
           python3 -m twine upload dist/*
+
+  allow_failures:
+    - python: "nightly"
