@@ -19,8 +19,8 @@ script:
 
 env:
   global:
-    - TWINE_REPOSITORY_URL=https://test.pypi.org/legacy/
-    - TWINE_USERNAME=mmartin
+    #- TWINE_REPOSITORY_URL=https://test.pypi.org/legacy/
+    - TWINE_USERNAME=marcelm
     # TWINE_PASSWORD is set in Travis settings
 
 jobs:
