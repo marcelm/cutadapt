@@ -22,7 +22,6 @@ improvements.
 - allow to remove not the adapter itself, but the sequence before or after it
 - instead of trimming, convert adapter to lowercase
 - warn when given adapter sequence contains non-IUPAC characters
-- try multithreading again, this time use os.pipe() or 0mq
 - extensible file type detection
 - the --times setting should be an attribute of Adapter
 
@@ -34,7 +33,6 @@ Backwards-incompatible changes
 - Possibly drop wildcard-file support, extend info-file instead
 - Drop "legacy mode"
 - For non-anchored 5' adapters, find rightmost match
-- Move ``scripts/cutadapt.py`` to ``__main__.py``
 
 
 Specifying adapters

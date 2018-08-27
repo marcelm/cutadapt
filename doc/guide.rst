@@ -230,8 +230,8 @@ the different 3' adapter types are allowed to occur in a read in order to be
 recognized by the program.
 
 ================================== =================== ======================== ============================= =========================
-Adapter location in read           Read layout         Found by regular 3’      Found by non-internal 3’      Found by anchored 3’
-                                                       (``-a ADAPTER``)         (``-a ADAPTERX``)             (``-a ADAPTER$``)
+Adapter location in read           Read layout         | Found by regular 3’    | Found by non-internal 3’    | Found by anchored 3’
+                                                       | ``-a ADAPTER``         | ``-a ADAPTERX``             | ``-a ADAPTER$``
 ================================== =================== ======================== ============================= =========================
 Full adapter sequence anywhere     acgtacgtADAPTERacgt                      yes                           no                         no
 Partial adapter sequence at 3’ end acgtacgtacgtADAP                         yes                           yes                        no
@@ -249,8 +249,8 @@ the different 5' adapter types are allowed to occur in a read in order to be
 recognized by the program.
 
 ================================== =================== ======================== ============================= =========================
-Adapter location in read           Read layout         Found by regular 5’      Found by non-internal 5’      Found by anchored 5’
-                                                       (``-g ADAPTER``)         (``-g XADAPTER``)             ``-g ^ADAPTER``
+Adapter location in read           Read layout         | Found by regular 5’    | Found by non-internal 5’    | Found by anchored 5’
+                                                       | ``-g ADAPTER``         | ``-g XADAPTER``             | ``-g ^ADAPTER``
 ================================== =================== ======================== ============================= =========================
 Full adapter sequence anywhere     acgtADAPTERacgtacgt                      yes                           no                         no
 Partial adapter sequence at 5’ end PTERacgtacgtacgt                         yes                           yes                        no
