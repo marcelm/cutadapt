@@ -178,19 +178,20 @@ cdef class Aligner:
 	If any of the flags is set, all non-IUPAC characters in the sequences
 	compare as 'not equal'.
 	"""
-	cdef int m
-	cdef _Entry* column  # one column of the DP matrix
-	cdef double max_error_rate
-	cdef int flags
-	cdef int _insertion_cost
-	cdef int _deletion_cost
-	cdef int _min_overlap
-	cdef bint wildcard_ref
-	cdef bint wildcard_query
-	cdef bint debug
-	cdef object _dpmatrix
-	cdef bytes _reference  # TODO rename to translated_reference or so
-	cdef str str_reference
+	cdef:
+		int m
+		_Entry* column  # one column of the DP matrix
+		double max_error_rate
+		int flags
+		int _insertion_cost
+		int _deletion_cost
+		int _min_overlap
+		bint wildcard_ref
+		bint wildcard_query
+		bint debug
+		object _dpmatrix
+		bytes _reference  # TODO rename to translated_reference or so
+		str str_reference
 
 	START_WITHIN_REFERENCE = 1
 	START_WITHIN_QUERY = 2
@@ -276,17 +277,18 @@ cdef class Aligner:
 
 		The alignment itself is not returned.
 		"""
-		cdef char* s1 = self._reference
-		cdef bytes query_bytes = query.encode('ascii')
-		cdef char* s2 = query_bytes
-		cdef int m = self.m
-		cdef int n = len(query)
-		cdef _Entry* column = self.column
-		cdef double max_error_rate = self.max_error_rate
-		cdef bint start_in_ref = self.flags & START_WITHIN_SEQ1
-		cdef bint start_in_query = self.flags & START_WITHIN_SEQ2
-		cdef bint stop_in_ref = self.flags & STOP_WITHIN_SEQ1
-		cdef bint stop_in_query = self.flags & STOP_WITHIN_SEQ2
+		cdef:
+			char* s1 = self._reference
+			bytes query_bytes = query.encode('ascii')
+			char* s2 = query_bytes
+			int m = self.m
+			int n = len(query)
+			_Entry* column = self.column
+			double max_error_rate = self.max_error_rate
+			bint start_in_ref = self.flags & START_WITHIN_SEQ1
+			bint start_in_query = self.flags & START_WITHIN_SEQ2
+			bint stop_in_ref = self.flags & STOP_WITHIN_SEQ1
+			bint stop_in_query = self.flags & STOP_WITHIN_SEQ2
 
 		if self.wildcard_query:
 			query_bytes = query_bytes.translate(IUPAC_TABLE)
@@ -366,13 +368,14 @@ cdef class Aligner:
 		if start_in_ref:
 			last = m
 
-		cdef int cost_diag
-		cdef int cost_deletion
-		cdef int cost_insertion
-		cdef int origin, cost, matches
-		cdef int length
-		cdef bint characters_equal
-		cdef _Entry tmp_entry
+		cdef:
+			int cost_diag
+			int cost_deletion
+			int cost_insertion
+			int origin, cost, matches
+			int length
+			bint characters_equal
+			_Entry tmp_entry
 
 		with nogil:
 			# iterate over columns
@@ -502,15 +505,16 @@ def compare_prefixes(str ref, str query, bint wildcard_ref=False, bint wildcard_
 
 	This function returns a tuple compatible with what Aligner.locate outputs.
 	"""
-	cdef int m = len(ref)
-	cdef int n = len(query)
-	cdef bytes query_bytes = query.encode('ascii')
-	cdef bytes ref_bytes = ref.encode('ascii')
-	cdef char* r_ptr
-	cdef char* q_ptr
-	cdef int length = min(m, n)
-	cdef int i, matches = 0
-	cdef bint compare_ascii = False
+	cdef:
+		int m = len(ref)
+		int n = len(query)
+		bytes query_bytes = query.encode('ascii')
+		bytes ref_bytes = ref.encode('ascii')
+		char* r_ptr
+		char* q_ptr
+		int length = min(m, n)
+		int i, matches = 0
+		bint compare_ascii = False
 
 	if wildcard_ref:
 		ref_bytes = ref_bytes.translate(IUPAC_TABLE)
