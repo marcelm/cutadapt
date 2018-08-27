@@ -33,7 +33,7 @@ class NoFilter(object):
 		self.written = 0  # no of written reads  TODO move to writer
 		self.written_bp = [0, 0]
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		self.writer.write(read)
 		self.written += 1
 		self.written_bp[0] += len(read)
@@ -50,7 +50,7 @@ class PairedNoFilter(object):
 		self.written = 0  # no of written reads or read pairs  TODO move to writer
 		self.written_bp = [0, 0]
 
-	def __call__(self, read1, read2):
+	def __call__(self, read1, read2, matches1, matches2):
 		self.writer.write(read1, read2)
 		self.written += 1
 		self.written_bp[0] += len(read1)
@@ -69,8 +69,8 @@ class Redirector(object):
 		self.written = 0  # no of written reads  TODO move to writer
 		self.written_bp = [0, 0]
 
-	def __call__(self, read):
-		if self.filter(read):
+	def __call__(self, read, matches):
+		if self.filter(read, matches):
 			self.filtered += 1
 			if self.writer is not None:
 				self.writer.write(read)
@@ -103,15 +103,23 @@ class PairedRedirector(object):
 		self.written = 0  # no of written reads or read pairs  TODO move to writer
 		self.written_bp = [0, 0]
 		if pair_filter_mode == 'any':
-			self._is_filtered = lambda r1, r2: self.filter(r1) or self.filter(r2)
+			self._is_filtered = self._is_filtered_any
 		elif pair_filter_mode == 'both':
-			self._is_filtered = lambda r1, r2: self.filter(r1) and self.filter(r2)
+			self._is_filtered = self._is_filtered_both
 		else:
-			assert pair_filter_mode == 'first'
-			self._is_filtered = lambda r1, r2: self.filter(r1)
+			self._is_filtered = self._is_filtered_first
 
-	def __call__(self, read1, read2):
-		if self._is_filtered(read1, read2):
+	def _is_filtered_any(self, read1, read2, matches1, matches2):
+		return self.filter(read1, matches1) or self.filter(read2, matches2)
+
+	def _is_filtered_both(self, read1, read2, matches1, matches2):
+		return self.filter(read1, matches1) and self.filter(read2, matches2)
+
+	def _is_filtered_first(self, read1, read2, matches1, matches2):
+		return self.filter(read1, matches1)
+
+	def __call__(self, read1, read2, matches1, matches2):
+		if self._is_filtered(read1, read2, matches1, matches2):
 			self.filtered += 1
 			# discard read
 			if self.writer is not None:
@@ -127,7 +135,7 @@ class TooShortReadFilter(object):
 	def __init__(self, minimum_length):
 		self.minimum_length = minimum_length
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		return len(read) < self.minimum_length
 
 
@@ -135,7 +143,7 @@ class TooLongReadFilter(object):
 	def __init__(self, maximum_length):
 		self.maximum_length = maximum_length
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		return len(read) > self.maximum_length
 
 
@@ -154,7 +162,7 @@ class NContentFilter(object):
 		self.is_proportion = count < 1.0
 		self.cutoff = count
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		"""Return True when the read should be discarded"""
 		n_count = read.sequence.lower().count('n')
 		if self.is_proportion:
@@ -169,16 +177,16 @@ class DiscardUntrimmedFilter(object):
 	"""
 	Return True if read is untrimmed.
 	"""
-	def __call__(self, read):
-		return read.match is None
+	def __call__(self, read, matches):
+		return not matches
 
 
 class DiscardTrimmedFilter(object):
 	"""
 	Return True if read is trimmed.
 	"""
-	def __call__(self, read):
-		return read.match is not None
+	def __call__(self, read, matches):
+		return bool(matches)
 
 
 class CasavaFilter(object):
@@ -189,7 +197,7 @@ class CasavaFilter(object):
 
 	Reads with unrecognized headers are kept.
 	"""
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		left, _, right = read.name.partition(' ')
 		return right[1:4] == ':Y:'  # discard if :Y: found
 
@@ -217,11 +225,19 @@ class Demultiplexer(object):
 		self.colorspace = colorspace
 		self.qualities = qualities
 
-	def write(self, read, match):
+	def __call__(self, read, matches):
 		"""
-		Write the read to the proper output file according to the match
+		Write the read to the proper output file according to the most recent match
 		"""
-		if match is None:
+		if matches:
+			name = matches[-1].adapter.name
+			if name not in self.writers:
+				self.writers[name] = seqio.open(self.template.replace('{name}', name),
+					mode='w', colorspace=self.colorspace, qualities=self.qualities)
+			self.written += 1
+			self.written_bp[0] += len(read)
+			self.writers[name].write(read)
+		else:
 			if self.untrimmed_writer is None and self.untrimmed_path is not None:
 				self.untrimmed_writer = seqio.open(self.untrimmed_path,
 					mode='w', colorspace=self.colorspace, qualities=self.qualities)
@@ -229,18 +245,6 @@ class Demultiplexer(object):
 				self.written += 1
 				self.written_bp[0] += len(read)
 				self.untrimmed_writer.write(read)
-		else:
-			name = match.adapter.name
-			if name not in self.writers:
-				self.writers[name] = seqio.open(self.template.replace('{name}', name),
-					mode='w', colorspace=self.colorspace, qualities=self.qualities)
-			self.written += 1
-			self.written_bp[0] += len(read)
-			self.writers[name].write(read)
-
-	def __call__(self, read1, read2=None):
-		assert read2 is None
-		self.write(read1, read1.match)
 		return DISCARD
 
 	def close(self):
@@ -275,10 +279,10 @@ class PairedEndDemultiplexer(object):
 	def written_bp(self):
 		return [self._demultiplexer1.written_bp[0], self._demultiplexer2.written_bp[0]]
 
-	def __call__(self, read1, read2):
+	def __call__(self, read1, read2, matches1, matches2):
 		assert read2 is not None
-		self._demultiplexer1.write(read1, read1.match)
-		self._demultiplexer2.write(read2, read1.match)
+		self._demultiplexer1(read1, matches1)
+		self._demultiplexer2(read2, matches1)
 
 	def close(self):
 		self._demultiplexer1.close()
@@ -289,9 +293,9 @@ class RestFileWriter(object):
 	def __init__(self, file):
 		self.file = file
 
-	def __call__(self, read, read2=None):
-		if read.match:
-			rest = read.match.rest()
+	def __call__(self, read, matches):
+		if matches:
+			rest = matches[-1].rest()
 			if len(rest) > 0:
 				print(rest, read.name, file=self.file)
 		return KEEP
@@ -301,9 +305,9 @@ class WildcardFileWriter(object):
 	def __init__(self, file):
 		self.file = file
 
-	def __call__(self, read, read2=None):
-		if read.match:
-			print(read.match.wildcards(), read.name, file=self.file)
+	def __call__(self, read, matches):
+		if matches:
+			print(matches[-1].wildcards(), read.name, file=self.file)
 		return KEEP
 
 
@@ -311,13 +315,7 @@ class InfoFileWriter(object):
 	def __init__(self, file):
 		self.file = file
 
-	def __call__(self, read, read2=None):
-		matches = []
-		r = read
-		while r.match is not None:
-			matches.append(r.match)
-			r = r.match.read
-		matches = matches[::-1]
+	def __call__(self, read, matches):
 		if matches:
 			for match in matches:
 				info_record = match.get_info_record()

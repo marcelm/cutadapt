@@ -36,13 +36,12 @@ def _shorten(s, n=100):
 class Sequence(object):
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
-	def __init__(self, name, sequence, qualities=None, second_header=False, match=None):
+	def __init__(self, name, sequence, qualities=None, second_header=False):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
 		self.second_header = second_header
-		self.match = match
 		self.original_length = len(sequence)
 		if qualities is not None:
 			if len(qualities) != len(sequence):
@@ -56,8 +55,7 @@ class Sequence(object):
 			self.name,
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
-			self.second_header,
-			self.match)
+			self.second_header)
 
 	def __repr__(self):
 		qstr = ''
@@ -114,7 +112,7 @@ except ImportError:
 
 
 class ColorspaceSequence(Sequence):
-	def __init__(self, name, sequence, qualities, primer=None, second_header=False, match=None):
+	def __init__(self, name, sequence, qualities, primer=None, second_header=False):
 		# In colorspace, the first character is the last nucleotide of the primer base
 		# and the second character encodes the transition from the primer base to the
 		# first real base of the read.
@@ -128,8 +126,8 @@ class ColorspaceSequence(Sequence):
 			raise FormatError("In read named {0!r}: length of colorspace quality "
 				"sequence ({1}) and length of read ({2}) do not match (primer "
 				"is: {3!r})".format(rname, len(qualities), len(sequence), self.primer))
-		super(ColorspaceSequence, self).__init__(name, sequence, qualities, second_header, match)
-		if not self.primer in ('A', 'C', 'G', 'T'):
+		super(ColorspaceSequence, self).__init__(name, sequence, qualities, second_header)
+		if self.primer not in ('A', 'C', 'G', 'T'):
 			raise FormatError("Primer base is {0!r} in read {1!r}, but it "
 				"should be one of A, C, G, T.".format(
 					self.primer, _shorten(name)))
@@ -147,12 +145,11 @@ class ColorspaceSequence(Sequence):
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
 			self.primer,
-			self.second_header,
-			self.match)
+			self.second_header)
 
 	def __reduce__(self):
 		return (ColorspaceSequence, (self.name, self.sequence, self.qualities, self.primer,
-			self.second_header, self.match))
+			self.second_header))
 
 
 def sra_colorspace_sequence(name, sequence, qualities, second_header):

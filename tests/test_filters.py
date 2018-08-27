@@ -20,9 +20,9 @@ def test_ncontentfilter():
 		('ANAAAA', 0, DISCARD)
 	]
 	for seq, count, expected in params:
-		filter = NContentFilter(count=count)
+		filter_ = NContentFilter(count=count)
 		_seq = Sequence('read1', seq, qualities='#'*len(seq))
-		assert filter(_seq) == expected
+		assert filter_(_seq, []) == expected
 
 
 def test_ncontentfilter_paired():
@@ -38,6 +38,6 @@ def test_ncontentfilter_paired():
 		filter_any = PairedRedirector(None, filter, pair_filter_mode='any')
 		read1 = Sequence('read1', seq1, qualities='#'*len(seq1))
 		read2 = Sequence('read1', seq2, qualities='#'*len(seq2))
-		assert filter_legacy(read1, read2) == filter(read1)
+		assert filter_legacy(read1, read2, [], []) == filter(read1, [])
 		# discard entire pair if one of the reads fulfills criteria
-		assert filter_any(read1, read2) == expected
+		assert filter_any(read1, read2, [], []) == expected

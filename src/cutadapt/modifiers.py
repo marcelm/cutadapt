@@ -27,6 +27,7 @@ class AdapterCutter(object):
 		"""
 		self.adapters = adapters
 		self.times = times
+		assert action in ('trim', 'mask', None)
 		self.action = action
 		self.with_adapters = 0
 		self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
@@ -40,46 +41,44 @@ class AdapterCutter(object):
 		# TODO
 		# try to sort adapters by length, longest first, break when current best
 		# match is longer than length of next adapter to try
-		best = None
+		best_match = None
 		for adapter in self.adapters:
 			match = adapter.match_to(read)
 			if match is None:
 				continue
 
 			# the no. of matches determines which adapter fits best
-			if best is None or match.matches > best.matches:
-				best = match
-		return best
+			if best_match is None or match.matches > best_match.matches:
+				best_match = match
+		return best_match
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		"""
-		Cut found adapters from a single read. Return modified read.
+		Search for the best-matching adapter in a read, perform the requested action
+		('trim', 'mask', or None as determined by self.action) it and return the
+		(possibly) modified read.
 
-		Determine the adapter that best matches the given read.
-		Since the best adapter is searched repeatedly, a list
-		of Match instances is returned, which
-		need to be applied consecutively to the read.
-		The list is empty if there are no adapter matches.
+		*self.times* adapter removal rounds are done. During each round,
+		only the best-matching adapter is trimmed. If no adapter was found in a round,
+		no further rounds are attempted.
+
+		The 'matches' parameter needs to be a list. Every time an adapter is found,
+		a Match object describing the match will be appended to it.
 
 		The read is converted to uppercase before it is compared to the adapter
 		sequences.
 		"""
-		matches = []
-
-		# try at most self.times times to remove an adapter
 		trimmed_read = read
 		for t in range(self.times):
 			match = self._best_match(trimmed_read)
 			if match is None:
-				# nothing found
+				# if nothing found, attempt no further rounds
 				break
 			matches.append(match)
 			trimmed_read = match.trimmed()
-			trimmed_read.match = match
 			match.update_statistics(self.adapter_statistics[match.adapter])
 
 		if not matches:
-			trimmed_read.match = None
 			return trimmed_read
 
 		if __debug__:
@@ -105,7 +104,6 @@ class AdapterCutter(object):
 			assert len(trimmed_read.sequence) == len(read)
 		elif self.action is None:  # --no-trim
 			trimmed_read = read[:]
-			trimmed_read.match = matches[-1]
 
 		self.with_adapters += 1
 		return trimmed_read
@@ -121,7 +119,7 @@ class UnconditionalCutter(object):
 	def __init__(self, length):
 		self.length = length
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		if self.length > 0:
 			return read[self.length:]
 		elif self.length < 0:
@@ -136,7 +134,7 @@ class LengthTagModifier(object):
 		self.regex = re.compile(r"\b" + length_tag + r"[0-9]*\b")
 		self.length_tag = length_tag
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		read = read[:]
 		if read.name.find(self.length_tag) >= 0:
 			read.name = self.regex.sub(self.length_tag + str(len(read.sequence)), read.name)
@@ -150,7 +148,7 @@ class SuffixRemover(object):
 	def __init__(self, suffix):
 		self.suffix = suffix
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		read = read[:]
 		if read.name.endswith(self.suffix):
 			read.name = read.name[:-len(self.suffix)]
@@ -165,9 +163,9 @@ class PrefixSuffixAdder(object):
 		self.prefix = prefix
 		self.suffix = suffix
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		read = read[:]
-		adapter_name = 'no_adapter' if read.match is None else read.match.adapter.name
+		adapter_name = matches[-1].adapter.name if matches else 'no_adapter'
 		read.name = self.prefix.replace('{name}', adapter_name) + read.name + \
 			self.suffix.replace('{name}', adapter_name)
 		return read
@@ -180,7 +178,7 @@ class DoubleEncoder(object):
 	def __init__(self):
 		self.double_encode_trans = maketrans('0123.', 'ACGTN')
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		read = read[:]
 		read.sequence = read.sequence.translate(self.double_encode_trans)
 		return read
@@ -194,7 +192,7 @@ class ZeroCapper(object):
 		qb = quality_base
 		self.zero_cap_trans = maketrans(''.join(map(chr, range(qb))), chr(qb) * qb)
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		read = read[:]
 		read.qualities = read.qualities.translate(self.zero_cap_trans)
 		return read
@@ -202,7 +200,7 @@ class ZeroCapper(object):
 
 class PrimerTrimmer(object):
 	"""Trim primer base from colorspace reads"""
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		read = read[1:]
 		read.primer = ''
 		return read
@@ -214,7 +212,7 @@ class NextseqQualityTrimmer(object):
 		self.base = base
 		self.trimmed_bases = 0
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		stop = nextseq_trim_index(read, self.cutoff, self.base)
 		self.trimmed_bases += len(read) - stop
 		return read[:stop]
@@ -227,7 +225,7 @@ class QualityTrimmer(object):
 		self.base = base
 		self.trimmed_bases = 0
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		start, stop = quality_trim_index(read.qualities, self.cutoff_front, self.cutoff_back, self.base)
 		self.trimmed_bases += len(read) - (stop - start)
 		return read[start:stop]
@@ -242,7 +240,7 @@ class Shortener(object):
 	def __init__(self, length):
 		self.length = length
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		if self.length >= 0:
 			return read[:self.length]
 		else:
@@ -255,7 +253,7 @@ class NEndTrimmer(object):
 		self.start_trim = re.compile(r'^N+')
 		self.end_trim = re.compile(r'N+$')
 
-	def __call__(self, read):
+	def __call__(self, read, matches):
 		sequence = read.sequence
 		start_cut = self.start_trim.match(sequence)
 		end_cut = self.end_trim.search(sequence)

@@ -10,7 +10,7 @@ def test_cs_5p():
 	read = ColorspaceSequence("name", "0123", "DEFG", "T")
 	adapter = ColorspaceAdapter("CG", PREFIX, 0.1)
 	cutter = AdapterCutter([adapter])
-	trimmed_read = cutter(read)
+	trimmed_read = cutter(read, [])
 	# no assertion here, just make sure the above code runs without
 	# an exception
 
@@ -19,7 +19,7 @@ def test_statistics():
 	read = Sequence('name', 'AAAACCCCAAAA')
 	adapters = [Adapter('CCCC', BACK, 0.1)]
 	cutter = AdapterCutter(adapters, times=3)
-	trimmed_read = cutter(read)
+	trimmed_read = cutter(read, [])
 	# TODO make this a lot simpler
 	trimmed_bp = 0
 	for adapter in adapters:
@@ -41,7 +41,7 @@ def test_end_trim_with_mismatch():
 
 	read = Sequence('foo1', 'AAAAAAAAAAATCGTCGATC')
 	cutter = AdapterCutter([adapter], times=1)
-	trimmed_read = cutter(read)
+	trimmed_read = cutter(read, [])
 
 	assert trimmed_read.sequence == 'AAAAAAAAAAA'
 	assert cutter.adapter_statistics[adapter].back.lengths == {9: 1}
@@ -51,7 +51,7 @@ def test_end_trim_with_mismatch():
 
 	read = Sequence('foo2', 'AAAAAAAAAAATCGAACGA')
 	cutter = AdapterCutter([adapter], times=1)
-	trimmed_read = cutter(read)
+	trimmed_read = cutter(read, [])
 
 	assert trimmed_read.sequence == read.sequence
 	assert cutter.adapter_statistics[adapter].back.lengths == {}

@@ -220,10 +220,11 @@ class SingleEndPipeline(Pipeline):
 		for read in self._reader:
 			n += 1
 			total_bp += len(read.sequence)
+			matches = []
 			for modifier in self._modifiers:
-				read = modifier(read)
-			for filter in self._filters:
-				if filter(read):
+				read = modifier(read, matches)
+			for filter_ in self._filters:
+				if filter_(read, matches):
 					break
 		return (n, total_bp, None)
 
@@ -289,13 +290,15 @@ class PairedEndPipeline(Pipeline):
 			n += 1
 			total1_bp += len(read1.sequence)
 			total2_bp += len(read2.sequence)
+			matches1 = []
+			matches2 = []
 			for modifier in self._modifiers:
-				read1 = modifier(read1)
+				read1 = modifier(read1, matches1)
 			for modifier in self._modifiers2:
-				read2 = modifier(read2)
+				read2 = modifier(read2, matches2)
 			for filter in self._filters:
 				# Stop writing as soon as one of the filters was successful.
-				if filter(read1, read2):
+				if filter(read1, read2, matches1, matches2):
 					break
 		return (n, total1_bp, total2_bp)
 

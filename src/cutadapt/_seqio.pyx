@@ -58,25 +58,19 @@ cdef class Sequence(object):
 	A record in a FASTQ file. Also used for FASTA (then the qualities attribute
 	is None). qualities is a string and it contains the qualities encoded as
 	ascii(qual+33).
-
-	If an adapter has been matched to the sequence, the 'match' attribute is
-	set to the corresponding Match instance.
 	"""
 	cdef:
 		public str name
 		public str sequence
 		public str qualities
 		public bint second_header
-		public object match
 
-	def __init__(self, str name, str sequence, str qualities=None, bint second_header=False,
-	        match=None):
+	def __init__(self, str name, str sequence, str qualities=None, bint second_header=False):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
 		self.second_header = second_header
-		self.match = match
 		if qualities is not None and len(qualities) != len(sequence):
 			rname = _shorten(name)
 			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length "
@@ -89,8 +83,7 @@ cdef class Sequence(object):
 			self.name,
 			self.sequence[key],
 			self.qualities[key] if self.qualities is not None else None,
-			self.second_header,
-			self.match)
+			self.second_header)
 
 	def __repr__(self):
 		qstr = ''
@@ -114,8 +107,7 @@ cdef class Sequence(object):
 			raise NotImplementedError()
 
 	def __reduce__(self):
-		return (Sequence, (self.name, self.sequence, self.qualities, self.second_header,
-		    self.match))
+		return (Sequence, (self.name, self.sequence, self.qualities, self.second_header))
 
 
 class FastqReader(SequenceReader):
