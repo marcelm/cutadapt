@@ -93,8 +93,7 @@ class Statistics:
 		for w in writers:
 			if isinstance(w, (InfoFileWriter, RestFileWriter, WildcardFileWriter)):
 				pass
-			elif isinstance(w, (NoFilter, PairedNoFilter, PairedEndDemultiplexer, Demultiplexer)) or \
-					isinstance(w.filter, (DiscardTrimmedFilter, DiscardUntrimmedFilter)):
+			elif isinstance(w, (NoFilter, PairedNoFilter, PairedEndDemultiplexer, Demultiplexer)):
 				self.written += w.written
 				self.written_bp[0] += w.written_bp[0]
 				self.written_bp[1] += w.written_bp[1]

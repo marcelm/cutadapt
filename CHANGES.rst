@@ -11,7 +11,8 @@ Development version
 * Close :issue:`112`: Implement a ``--report=minimal`` option for printing
   a succinct two-line report in tab-separated value (tsv) format. Thanks
   to :user:`jvolkening` for coming up with an initial patch!
-
+* Fix :issue:`128`: The “Reads written” figure in the report incorrectly
+  included both trimmed and untrimmed reads if ``--untrimmed-output`` was used.
 
 v1.17 (2018-08-20)
 ------------------
