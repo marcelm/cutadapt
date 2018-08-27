@@ -28,10 +28,13 @@ class NoFilter(object):
 	No filtering, just send each read to the given writer.
 	"""
 	def __init__(self, writer):
-		self.filtered = 0
 		self.writer = writer
 		self.written = 0  # no of written reads  TODO move to writer
 		self.written_bp = [0, 0]
+
+	@property
+	def filtered(self):
+		return 0
 
 	def __call__(self, read, matches):
 		self.writer.write(read)
@@ -45,10 +48,13 @@ class PairedNoFilter(object):
 	No filtering, just send each paired-end read to the given writer.
 	"""
 	def __init__(self, writer):
-		self.filtered = 0
 		self.writer = writer
 		self.written = 0  # no of written reads or read pairs  TODO move to writer
 		self.written_bp = [0, 0]
+
+	@property
+	def filtered(self):
+		return 0
 
 	def __call__(self, read1, read2, matches1, matches2):
 		self.writer.write(read1, read2)
