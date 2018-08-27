@@ -200,11 +200,12 @@ class ZeroCapper(object):
 		return read
 
 
-def PrimerTrimmer(read):
+class PrimerTrimmer(object):
 	"""Trim primer base from colorspace reads"""
-	read = read[1:]
-	read.primer = ''
-	return read
+	def __call__(self, read):
+		read = read[1:]
+		read.primer = ''
+		return read
 
 
 class NextseqQualityTrimmer(object):
