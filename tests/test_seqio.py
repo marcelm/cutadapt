@@ -221,7 +221,9 @@ class TestInterleavedReader:
 			(Sequence('read1/1 some text', 'TTATTTGTCTCCAGC', '##HHHHHHHHHHHHH'),
 			Sequence('read1/2 other text', 'GCTGGAGACAAATAA', 'HHHHHHHHHHHHHHH')),
 			(Sequence('read3/1', 'CCAACTTGATATTAATAACA', 'HHHHHHHHHHHHHHHHHHHH'),
-			Sequence('read3/2', 'TGTTATTAATATCAAGTTGG', '#HHHHHHHHHHHHHHHHHHH'))
+			Sequence('read3/2', 'TGTTATTAATATCAAGTTGG', '#HHHHHHHHHHHHHHHHHHH')),
+			(Sequence('read5', 'TTATTTGTCTCCAGC', '#####HHHHHHHHHH'),
+			Sequence('read5', 'CAACAGGCCACATTAGACATATCGGATGGT', 'HHHHHHHH##HHHHHHHHHHHHHHHHHHHH')),
 		]
 		reads = list(InterleavedSequenceReader("tests/cut/interleaved.fastq"))
 		for (r1, r2), (e1, e2) in zip(reads, expected):

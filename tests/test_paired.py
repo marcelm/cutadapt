@@ -319,7 +319,7 @@ def test_interleaved_neither_nor():
 					main(params)
 
 
-def test_pair_filter(cores):
+def test_pair_filter_both(cores):
 	run_paired(
 		'--pair-filter=both -a TTAGACATAT -A GGAGTA -m 14',
 		in1='paired.1.fastq', in2='paired.2.fastq',
