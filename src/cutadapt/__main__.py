@@ -75,7 +75,7 @@ from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer, Shortener)
-from cutadapt.report import Statistics, print_report, redirect_standard_output
+from cutadapt.report import Statistics, print_report, print_minimal_report, redirect_standard_output
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles, ParallelPipelineRunner, available_cpu_count
 from cutadapt.compat import PY3
 
@@ -247,6 +247,8 @@ def get_option_parser():
 	group = OptionGroup(parser, "Output")
 	group.add_option("--quiet", default=False, action='store_true',
 		help="Print only error messages.")
+	group.add_option("--report", choices=('full', 'minimal'), default=None,
+		help="Which type of report to print. Default: full")
 	group.add_option("-o", "--output", metavar="FILE",
 		help="Write trimmed reads to FILE. FASTQ or FASTA format is chosen "
 			"depending on input. The summary report is sent to standard output. "
@@ -667,7 +669,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	# Setup logging only if there are not already any handlers (can happen when
 	# this function is being called externally such as from unit tests)
 	if not logging.root.handlers:
-		setup_logging(stdout=bool(options.output), quiet=options.quiet)
+		setup_logging(stdout=bool(options.output), quiet=options.quiet or options.report == 'minimal')
+	if options.quiet and options.report:
+		parser.error("Options --quiet and --report cannot be used at the same time")
 
 	paired = determine_paired_mode(options)
 	assert paired in (False, 'first', 'both')
@@ -764,7 +768,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		# send statistics to stderr if result was sent to stdout
 		stat_file = sys.stderr if options.output is None else None
 		with redirect_standard_output(stat_file):
-			print_report(stats, elapsed, options.gc_content / 100)
+			if options.report == 'minimal':
+				print_minimal_report(stats, elapsed, options.gc_content / 100)
+			else:
+				print_report(stats, elapsed, options.gc_content / 100)
 
 
 if __name__ == '__main__':

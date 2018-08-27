@@ -5,7 +5,12 @@ Changes
 Development version
 -------------------
 
-* Allow ``--pair-filter=first`` in addition to ``both`` and ``any``. If used a read pair is discarded if the filtering criterion applies to R1, and R2 is ignored.
+* Allow ``--pair-filter=first`` in addition to ``both`` and ``any``. If
+  used, a read pair is discarded if the filtering criterion applies to R1;
+  and R2 is ignored.
+* Close :issue:`112`: Implement a ``--report=minimal`` option for printing
+  a succinct two-line report in tab-separated value (tsv) format. Thanks
+  to :user:`jvolkening` for coming up with an initial patch!
 
 
 v1.17 (2018-08-20)

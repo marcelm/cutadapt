@@ -1517,6 +1517,45 @@ stripped during adapter trimming.
 Cutadapt's output
 =================
 
+Reporting
+---------
+
+Cutadapt will by default print a full report after it has finished processing
+the reads. To suppress all output except error messages, use the option
+``--quiet``.
+
+The report type can be changed to a one-line summary with the option
+``--report=minimal``. The output will be a tab-separated table (tsv) with one
+header row and one row of content. Here is an example::
+
+    $ cutadapt --report=minimal -a ... -m 20 -q 10 -o ... -p ... in.[12].fastq.gz
+    status in_reads in_bp     too_short too_long too_many_n out_reads w/adapters qualtrim_bp out_bp w/adapters2 qualtrim2_bp out2_bp
+    OK     1000000  202000000 24827     0        0          975173    28968      1674222     97441426 0 0 98492473
+
+This is the meaning of each column:
+
+=============== ==========================================================
+Column heading  Explanation
+=============== ==========================================================
+status          Incomplete adapter warning (``OK`` or ``WARN``)
+in_reads        Number of processed reads (read pairs for paired-end)
+in_bp           Number of processed basepairs
+too_short       Number of reads/read pairs that were too short
+too_long        Number of reads/read pairs that were too long
+too_many_n      Number of reads/read pairs that contained too many ``N``
+out_reads       Number of reads written
+w/adapters      Number of reads containing at least one adapter
+qualtrim_bp     Number of bases removed from R1 reads by quality trimming
+out_bp          Number of bases written to R1 reads
+w/adapters2     Number of R2 reads containing at least one adapter
+qualtrim2_bp    Number of bases removed from R3 reads by quality trimming
+out2_bp         Number of bases written
+=============== ==========================================================
+
+The last three fields are omitted for single-end data.
+
+.. versionadded: 1.18
+
 
 How to read the report
 ----------------------

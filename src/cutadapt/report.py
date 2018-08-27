@@ -214,7 +214,47 @@ def print_histogram(end_statistics, n, gc_content):
 	print()
 
 
-def print_adjacent_bases(bases):
+class AdjacentBaseStatistics(object):
+	def __init__(self, bases):
+		"""
+		"""
+		self.bases = bases
+		self._warnbase = None
+		total = sum(self.bases.values())
+		if total == 0:
+			self._fractions = None
+		else:
+			self._fractions = []
+			for base in ['A', 'C', 'G', 'T', '']:
+				text = base if base != '' else 'none/other'
+				fraction = 1.0 * self.bases[base] / total
+				self._fractions.append((text, 1.0 * self.bases[base] / total))
+				if fraction > 0.8 and base != '':
+					self._warnbase = text
+			if total < 20:
+				self._warnbase = None
+
+	@property
+	def should_warn(self):
+		return self._warnbase is not None
+
+	def print(self):
+		if not self._fractions:
+			return False
+		print('Bases preceding removed adapters:')
+		for text, fraction in self._fractions:
+			print('  {0}: {1:.1%}'.format(text, fraction))
+		if self.should_warn:
+			print('WARNING:')
+			print('    The adapter is preceded by "{0}" extremely often.'.format(self._warnbase))
+			print("    The provided adapter sequence could be incomplete at its 3' end.")
+			print()
+			return True
+		print()
+		return False
+
+
+def xxxprint_adjacent_bases(bases):
 	"""
 	Print a summary of the bases preceding removed adapter sequences.
 	Print a warning if one of the bases is overrepresented and there are
@@ -367,7 +407,8 @@ def print_report(stats, time, gc_content):
 				assert where in (BACK, SUFFIX, BACK_NOT_INTERNAL)
 				print()
 				print_error_ranges(len(adapter_statistics.back.sequence), adapter_statistics.back.max_error_rate)
-				warning = warning or print_adjacent_bases(adapter_statistics.back.adjacent_bases)
+				base_stats = AdjacentBaseStatistics(adapter_statistics.back.adjacent_bases)
+				warning = warning or base_stats.print()
 				print("Overview of removed sequences")
 				print_histogram(adapter_statistics.back, stats.n, gc_content)
 
@@ -375,3 +416,46 @@ def print_report(stats, time, gc_content):
 		print('WARNING:')
 		print('    One or more of your adapter sequences may be incomplete.')
 		print('    Please see the detailed output above.')
+
+
+def print_minimal_report(stats, time, gc_content):
+	"""Print a minimal tabular report suitable for concatenation"""
+
+	def none(value):
+		return 0 if value is None else value
+
+	fields = [
+		"OK",
+		stats.n,  # reads/pairs in
+		stats.total,  # bases in
+		none(stats.too_short),  # reads/pairs
+		none(stats.too_long),  # reads/pairs
+		none(stats.too_many_n),  # reads/pairs
+		stats.written,  # reads/pairs out
+		stats.with_adapters[0],  # reads
+		stats.quality_trimmed_bp[0],  # bases
+		stats.written_bp[0],  # bases out
+	]
+	if stats.paired:
+		fields += [
+			stats.with_adapters[1],  # reads/pairs
+			stats.quality_trimmed_bp[1],  # bases
+			stats.written_bp[1],  # bases
+		]
+
+	warning = False
+	for which_in_pair in (0, 1):
+		for adapter_statistics in stats.adapter_stats[which_in_pair]:
+			if adapter_statistics.where in (BACK, SUFFIX, BACK_NOT_INTERNAL):
+				if AdjacentBaseStatistics(adapter_statistics.back.adjacent_bases).should_warn:
+					warning = True
+					break
+	if warning:
+		fields[0] = "WARN"
+	header = [
+		'status', 'in_reads', 'in_bp', 'too_short', 'too_long', 'too_many_n', 'out_reads',
+		'w/adapters', 'qualtrim_bp', 'out_bp']
+	if stats.paired:
+		header += ['w/adapters2', 'qualtrim2_bp', 'out2_bp']
+	print(*header, sep='\t')
+	print(*fields, sep='\t')
