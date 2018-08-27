@@ -92,7 +92,7 @@ class PairedRedirector(object):
 	Different filtering styles are supported, differing by which of the
 	two reads in a pair have to fulfill the filtering criterion.
 	"""
-	def __init__(self, writer, filter, pair_filter_mode='any'):
+	def __init__(self, writer, filter_, pair_filter_mode='any'):
 		"""
 		pair_filter_mode -- these values are allowed:
 			'any': The pair is discarded if any read matches.
@@ -105,7 +105,7 @@ class PairedRedirector(object):
 			raise ValueError("pair_filter_mode must be 'any', 'both' or 'first'")
 		self.filtered = 0
 		self.writer = writer
-		self.filter = filter
+		self.filter = filter_
 		self.written = 0  # no of written reads or read pairs  TODO move to writer
 		self.written_bp = [0, 0]
 		if pair_filter_mode == 'any':
@@ -127,7 +127,6 @@ class PairedRedirector(object):
 	def __call__(self, read1, read2, matches1, matches2):
 		if self._is_filtered(read1, read2, matches1, matches2):
 			self.filtered += 1
-			# discard read
 			if self.writer is not None:
 				self.writer.write(read1, read2)
 				self.written += 1

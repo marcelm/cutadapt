@@ -308,8 +308,8 @@ def get_option_parser():
 		help="Write second read in a pair to FILE.")
 	# Setting the default for pair_filter to None allows us to find out whether
 	# the option was used at all.
-	group.add_option("--pair-filter", metavar='(any|both)', default=None,
-		choices=("any", "both"),
+	group.add_option("--pair-filter", metavar='(any|both|first)', default=None,
+		choices=("any", "both", "first"),
 		help="Which of the reads in a paired-end read have to match the "
 			"filtering criterion in order for the pair to be filtered. "
 			"Default: any")

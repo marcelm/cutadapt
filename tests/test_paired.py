@@ -328,6 +328,15 @@ def test_pair_filter_both(cores):
 	)
 
 
+def test_pair_filter_first(cores):
+	run_paired(
+		'--pair-filter=first -a TTAGACATAT -A GGAGTA -m 14',
+		in1='paired.1.fastq', in2='paired.2.fastq',
+		expected1='paired-filterfirst.1.fastq', expected2='paired-filterfirst.2.fastq',
+		cores=cores
+	)
+
+
 def test_too_short_paired_output():
 	with temporary_path("temp-too-short.1.fastq") as p1:
 		with temporary_path("temp-too-short.2.fastq") as p2:

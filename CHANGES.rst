@@ -2,6 +2,12 @@
 Changes
 =======
 
+Development version
+-------------------
+
+* Allow ``--pair-filter=first`` in addition to ``both`` and ``any``. If used a read pair is discarded if the filtering criterion applies to R1, and R2 is ignored.
+
+
 v1.17 (2018-08-20)
 ------------------
 
