@@ -17,11 +17,12 @@ def quality_trim_index(str qualities, int cutoff_front, int cutoff_back, int bas
 	- Compute partial sums from all indices to the end of the sequence.
 	- Trim sequence at the index at which the sum is minimal.
 	"""
-	cdef int s
-	cdef int max_qual
-	cdef int stop = len(qualities)
-	cdef int start = 0
-	cdef int i
+	cdef:
+		int s
+		int max_qual
+		int stop = len(qualities)
+		int start = 0
+		int i
 
 	# find trim position for 5' end
 	s = 0
