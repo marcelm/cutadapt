@@ -647,7 +647,7 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 	if options.zero_cap:
 		pipeline.add(ZeroCapper(quality_base=options.quality_base))
 	if options.trim_primer:
-		pipeline.add(PrimerTrimmer)
+		pipeline.add(PrimerTrimmer())
 
 	return pipeline
 
