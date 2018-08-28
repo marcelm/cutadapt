@@ -93,9 +93,10 @@ def test_parse_braces_fail():
 
 
 def test_linked_adapter():
-	linked_adapter = LinkedAdapter('AAAA', 'TTTT', min_overlap=4)
+	linked_adapter = LinkedAdapter('AAAA', 'TTTT',
+		front_parameters={'min_overlap': 4}, back_parameters={'min_overlap': 3})
 	assert linked_adapter.front_adapter.min_overlap == 4
-	assert linked_adapter.back_adapter.min_overlap == 4
+	assert linked_adapter.back_adapter.min_overlap == 3
 
 	sequence = Sequence(name='seq', sequence='AAAACCCCCTTTT')
 	trimmed = linked_adapter.match_to(sequence).trimmed()
@@ -221,10 +222,44 @@ def test_parse_file_notation(tmpdir):
 
 def test_parse_not_linked():
 	p = AdapterParser._parse_not_linked
-	assert p('A', 'front') == (None, 'A', None)
-	assert p('A', 'back') == (None, 'A', None)
-	assert p('A', 'anywhere') == (None, 'A', None)
-	assert p('^A', 'front') == ('anchored', 'A', None)
-	assert p('XXXA', 'front') == ('noninternal', 'A', None)
-	assert p('A$', 'back') == (None, 'A', 'anchored')
-	assert p('AXXXX', 'back') == (None, 'A', 'noninternal')
+	assert p('A', 'front') == (None, None, 'A', None, {})
+	assert p('A', 'back') == (None, None, 'A', None, {})
+	assert p('A', 'anywhere') == (None, None, 'A', None, {})
+	assert p('^A', 'front') == (None, 'anchored', 'A', None, {})
+	assert p('XXXA', 'front') == (None, 'noninternal', 'A', None, {})
+	assert p('A$', 'back') == (None, None, 'A', 'anchored', {})
+	assert p('AXXXX', 'back') == (None, None, 'A', 'noninternal', {})
+	assert p('a_name=ADAPT', 'front') == ('a_name', None, 'ADAPT', None, {})
+
+
+def test_parse_parameters():
+	p = AdapterParser._parse_parameters
+	assert p('e=0.1') == {'max_error_rate': 0.1}
+	assert p('error_rate=0.1') == {'max_error_rate': 0.1}
+	assert p('o=5') == {'min_overlap': 5}
+	assert p('min_overlap=5') == {'min_overlap': 5}
+	assert p('o=7; e=0.4') == {'min_overlap': 7, 'max_error_rate': 0.4}
+
+	with pytest.raises(ValueError):
+		p('e=hallo')
+	with pytest.raises(KeyError):
+		p('bla=0.1')
+
+
+def test_parse_with_parameters():
+	parser = AdapterParser(
+		colorspace=False, max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+		adapter_wildcards=False, indels=False)
+	a = parser._parse('ACGTACGT; e=0.15', 'front')
+	assert a.max_error_rate == 0.15
+	assert a.min_overlap == 4
+
+	a = parser._parse('ACGTAAAA; o=5; e=0.11', 'back')
+	assert a.max_error_rate == 0.11
+	assert a.min_overlap == 5
+
+	for spec in ('thename=ACG;e=0.15 ... TGT;e=0.17', 'thename=ACG;e=0.15...TGT;e=0.17'):
+		a = parser._parse(spec, 'back')
+		assert isinstance(a, LinkedAdapter)
+		assert a.front_adapter.max_error_rate == 0.15
+		assert a.back_adapter.max_error_rate == 0.17

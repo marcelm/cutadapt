@@ -625,11 +625,9 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 	if adapters:
 		adapter_cutter = AdapterCutter(adapters, options.times, options.action)
 		pipeline.add1(adapter_cutter)
-		pipeline.n_adapters += len(adapters)
 	if adapters2:
 		adapter_cutter2 = AdapterCutter(adapters2, options.times, options.action)
 		pipeline.add2(adapter_cutter2)
-		pipeline.n_adapters += len(adapters2)
 
 	# Modifiers that apply to both reads of paired-end reads unless in legacy mode
 	if options.length is not None:
@@ -736,10 +734,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	logger.info("This is cutadapt %s with Python %s%s", __version__,
 		platform.python_version(), opt)
 	logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-	logger.info('Running on %d core%s', cores, 's' if cores > 1 else '')
-	logger.info("Trimming %s adapter%s with at most %.1f%% errors in %s mode ...",
-		pipeline.n_adapters, 's' if pipeline.n_adapters != 1 else '',
-		options.error_rate * 100,
+	logger.info("Processing reads on %d core%s in %s mode ...",
+		cores, 's' if cores > 1 else '',
 		{False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end'}[pipeline.paired])
 
 	if pipeline.should_warn_legacy:

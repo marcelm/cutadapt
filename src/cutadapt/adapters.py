@@ -73,8 +73,64 @@ class AdapterParser(object):
 	"""
 	def __init__(self, colorspace=False, **kwargs):
 		self.colorspace = colorspace
-		self.constructor_args = kwargs
+		# kwargs: max_error_rate, min_overlap, read_wildcards, adapter_wildcards, indels
+		self.default_parameters = kwargs
 		self.adapter_class = ColorspaceAdapter if colorspace else Adapter
+
+	@staticmethod
+	def _extract_name(spec):
+		"""
+		Parse an adapter specification given as 'name=adapt' into 'name' and 'adapt'.
+		"""
+		fields = spec.split('=', 1)
+		if len(fields) > 1:
+			name, spec = fields
+			name = name.strip()
+		else:
+			name = None
+		spec = spec.strip()
+		return name, spec
+
+	parameters = {
+		# abbreviations
+		'e': 'max_error_rate',
+		'error_rate': 'max_error_rate',
+		'o': 'min_overlap',
+
+		# allowed parameters
+		'max_error_rate': None,
+		'min_overlap': None,
+	}
+
+	@staticmethod
+	def _parse_parameters(spec):
+		"""Parse key=value;key=value;key=value into a dict"""
+
+		fields = spec.split(';')
+		result = dict()
+		for field in fields:
+			field = field.strip()
+			if not field:
+				continue
+			key, _, value = field.partition('=')
+			key = key.strip()
+			if key not in AdapterParser.parameters:
+				raise KeyError('Unknown parameter {}'.format(key))
+			# unabbreviate
+			while AdapterParser.parameters[key] is not None:
+				key = AdapterParser.parameters[key]
+			value = value.strip()
+			if value == '':
+				value = None
+			else:
+				try:
+					value = int(value)
+				except ValueError:
+					value = float(value)
+			if key in result:
+				raise KeyError('Key {} specified twice'.format(key))
+			result[key] = value
+		return result
 
 	@staticmethod
 	def _parse_not_linked(spec, cmdline_type):
@@ -93,12 +149,16 @@ class AdapterParser(object):
 		error = ValueError(
 				"You cannot use multiple placement restrictions for an adapter at the same time. "
 				"Choose one of ^ADAPTER, ADAPTER$, XADAPTER or ADAPTERX")
+		spec, middle, parameters_spec = spec.partition(';')
+		name, spec = AdapterParser._extract_name(spec)
+		spec = spec.strip()
 
-		# TODO
-		# Special case for adapter consisting of only X characters:
+		parameters = AdapterParser._parse_parameters(parameters_spec)
+
+		# Special case for adapters consisting of only X characters:
 		# This needs to be supported for backwards-compatibilitity
 		if len(spec.strip('X')) == 0:
-			return None, spec, None
+			return name, None, spec, None, {}
 
 		front_restriction = None
 		if spec.startswith('^'):
@@ -135,24 +195,21 @@ class AdapterParser(object):
 			raise ValueError(
 				"Placement restrictions (with X, ^, $) not supported for 'anywhere' (-b) adapters")
 		assert front_restriction is None or back_restriction is None
-		return front_restriction, spec, back_restriction
+		return name, front_restriction, spec, back_restriction, parameters
 
-	def _parse_no_file(self, spec, name=None, cmdline_type='back'):
+	def _parse(self, spec, cmdline_type='back', name=None):
 		"""
 		Parse an adapter specification not using ``file:`` notation and return
-		an object of an appropriate Adapter class. The notation for anchored
-		5' and 3' adapters is supported. If the name parameter is None, then
-		an attempt is made to extract the name from the specification
-		(If spec is 'name=ADAPTER', name will be 'name'.)
+		an object of an appropriate Adapter class.
+
+		name -- Adapter name if not included as part of the spec. (If spec is
+		'name=ADAPTER', name will be 'name'.)
 
 		cmdline_type -- describes which commandline parameter was used (``-a``
 		is 'back', ``-b`` is 'anywhere', and ``-g`` is 'front').
 		"""
-		if name is None:
-			name, spec = self._extract_name(spec)
 		if cmdline_type not in ('front', 'back', 'anywhere'):
-			raise ValueError('cmdline_type cannot be {0!r}'.format(cmdline_type))
-
+			raise ValueError('cmdline_type cannot be {!r}'.format(cmdline_type))
 		spec1, middle, spec2 = spec.partition('...')
 		del spec
 
@@ -163,8 +220,10 @@ class AdapterParser(object):
 			if self.colorspace:
 				raise NotImplementedError(
 					'Using linked adapters in colorspace is not supported')
-			front1, sequence1, back1 = self._parse_not_linked(spec1, 'front')
-			front2, sequence2, back2 = self._parse_not_linked(spec2, 'back')
+			name1, front1, sequence1, back1, parameters1 = self._parse_not_linked(spec1, 'front')
+			name2, front2, sequence2, back2, parameters2 = self._parse_not_linked(spec2, 'back')
+			if not name:
+				name = name1
 
 			# Automatically anchor the 5' adapter if -a is used
 			if cmdline_type == 'back' and front1 is None:
@@ -173,12 +232,17 @@ class AdapterParser(object):
 			front_anchored = front1 == 'anchored'
 			back_anchored = back2 == 'anchored'
 			require_both = True if not front_anchored and not back_anchored else None
+			front_parameters = self.default_parameters.copy()
+			front_parameters.update(parameters1)
+			back_parameters = self.default_parameters.copy()
+			back_parameters.update(parameters2)
 			return LinkedAdapter(
 				sequence1, sequence2, name=name,
 				front_restriction=front1,
 				back_restriction=back2,
 				require_both=require_both,
-				**self.constructor_args)
+				front_parameters=front_parameters,
+				back_parameters=back_parameters)
 
 		if middle == '...':
 			if not spec1:
@@ -197,7 +261,8 @@ class AdapterParser(object):
 		else:
 			spec = spec1
 
-		front_restriction, sequence, back_restriction = self._parse_not_linked(spec, cmdline_type)
+		specname, front_restriction, sequence, back_restriction, parameters = self._parse_not_linked(
+			spec, cmdline_type)
 		del spec
 		if front_restriction == 'anchored':
 			where = PREFIX
@@ -215,7 +280,11 @@ class AdapterParser(object):
 			assert cmdline_type == 'anywhere'
 			where = ANYWHERE
 
-		return self.adapter_class(sequence=sequence, where=where, name=name, **self.constructor_args)
+		if not name:
+			name = specname
+		params = self.default_parameters.copy()
+		params.update(parameters)
+		return self.adapter_class(sequence=sequence, where=where, name=name, **params)
 
 	def parse(self, spec, cmdline_type='back'):
 		"""
@@ -230,23 +299,9 @@ class AdapterParser(object):
 			with FastaReader(spec[5:]) as fasta:
 				for record in fasta:
 					name = record.name.split(None, 1)[0]
-					yield self._parse_no_file(record.sequence, name, cmdline_type)
+					yield self._parse(record.sequence, cmdline_type, name=name)
 		else:
-			name, spec = self._extract_name(spec)
-			yield self._parse_no_file(spec, name, cmdline_type)
-
-	def _extract_name(self, spec):
-		"""
-		Parse an adapter specification given as 'name=adapt' into 'name' and 'adapt'.
-		"""
-		fields = spec.split('=', 1)
-		if len(fields) > 1:
-			name, spec = fields
-			name = name.strip()
-		else:
-			name = None
-		spec = spec.strip()
-		return name, spec
+			yield self._parse(spec, cmdline_type, name=None)
 
 	def parse_multi(self, back, anywhere, front):
 		"""
@@ -756,7 +811,8 @@ class LinkedAdapter(object):
 	"""
 	"""
 	def __init__(self, front_sequence, back_sequence, front_restriction='anchored',
-			back_restriction=None, require_both=None, name=None, **kwargs):
+			back_restriction=None, require_both=None, name=None,
+			front_parameters=dict(), back_parameters=dict()):
 		"""
 		require_both -- require both adapters to match. If not specified, the default is to
 			require only anchored adapters to match.
@@ -790,8 +846,8 @@ class LinkedAdapter(object):
 		# The following attributes are needed for the report
 		self.where = LINKED
 		self.name = _generate_adapter_name() if name is None else name
-		self.front_adapter = Adapter(front_sequence, where=where1, name=None, **kwargs)
-		self.back_adapter = Adapter(back_sequence, where=where2, name=None, **kwargs)
+		self.front_adapter = Adapter(front_sequence, where=where1, name=None, **front_parameters)
+		self.back_adapter = Adapter(back_sequence, where=where2, name=None, **back_parameters)
 
 	def enable_debug(self):
 		self.front_adapter.enable_debug()

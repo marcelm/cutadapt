@@ -5,6 +5,11 @@ Changes
 Development version
 -------------------
 
+* Close :issue:`225`: Allow setting the maximum error rate and
+  minimum overlap length per adapter. A new
+  :ref:`syntax for adapter-specific
+  parameters <trimming-parameters>` was added for this.
+  Example: ``-a "ADAPTER;min_overlap=5"``.
 * Allow ``--pair-filter=first`` in addition to ``both`` and ``any``. If
   used, a read pair is discarded if the filtering criterion applies to R1;
   and R2 is ignored.

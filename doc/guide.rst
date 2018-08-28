@@ -570,6 +570,64 @@ The ``-b`` option cannot be used with colorspace data.
 
 
 
+Multiple adapter occurrences within a single read
+-------------------------------------------------
+
+If a single read contains multiple copies of the same adapter, the basic rule is
+that the leftmost match is used for both 5' and 3' adapters. For example, when
+searching for a 3' adapter in ::
+
+    cccccADAPTERgggggADAPTERttttt
+
+the read will be trimmed to ::
+
+    ccccc
+
+When the adapter is a 5' adapter instead, the read will be trimmed to ::
+
+    gggggADAPTERttttt
+
+The above applies when both occurrences of the adapter are *exact* matches, and
+it also applies when both occurrences of the adapter are *inexact* matches (that
+is, it has at least one indel or mismatch). However, if one match is exact, but
+the other is inexact, then the exact match wins, even if it is not the leftmost
+one! The reason for this behavior is that cutadapt searches for exact matches
+first and, to improve performance, skips the error-tolerant matching step if an
+exact match was found.
+
+
+.. _trimming-parameters:
+
+Adapter-trimming parameters
+===========================
+
+The adapter-trimming algorithm has a few parameters specific to each adapter
+that steer how the adapter sequence is found. The command-line options ``-e``
+and ``-O`` set the maximum error rate and minimum overlap parameters (see
+details in the following sections) for all
+adapters listed via the ``-a``/``-b``/``-g`` etc. options. When trimming more
+than one adapter, it may be necessary to change parameters for each
+adapter individually. You can do so by adding a semicolon and ``parameter=value`` to the end
+of the adapter sequence, as in ``-a "ADAPTER;max_error_rate=0.2"``.
+Multiple parameters can also be set, as in ``-a "ADAPTER;max_error_rate=0.2;min_overlap=5"``.
+Remember to add the quotation marks; otherwise the shell will interpret the semicolon as a
+separator between two commands.
+
+The following parameters are supported at the moment:
+
+===================== ============= ================================
+Parameter             Global option Adapter-specific parameter
+===================== ============= ================================
+Maximum error rate    ``-e 0.2``    | ``ADAPTER;e=0.2`` or
+                                    | ``ADAPTER;max_error_rate=0.2``
+Minimum overlap       ``-O 5``      | ``ADAPTER;o=5`` or
+                                    | ``ADAPTER;min_overlap=5``
+===================== ============= ================================
+
+Adapter-specific parameters override the global option.
+
+.. versionadded: 1.18
+    Adapter-specific parameters
 
 .. _error-tolerance:
 
@@ -584,10 +642,13 @@ as well as ``ADAPTR`` (with 1 deletion), and also ``ADAPPTER`` (with 1
 insertion).
 
 The level of error tolerance is adjusted by specifying a *maximum error rate*,
-which is 0.1 (=10%) by default. Use the ``-e`` option to set a different value.
+which is 0.1 (=10%) by default. Use the ``-e`` option to set a different value
+globally or the ``max_error_rate`` adapter-specific parameter to change it for
+a single adapter only. Example: ``-a "ADAPTER;max_error_rate=0.15"``
+(the quotation marks are necessary).
+
 To determine the number of allowed errors, the maximum error rate is multiplied
 by the length of the match (and then rounded off).
-
 What does that mean?
 Assume you have a long adapter ``LONGADAPTER`` and it appears in full somewhere
 within the read. The length of the match is 11 characters since the full adapter
@@ -629,43 +690,23 @@ Insertions and deletions can be disallowed by using the option
 See also the :ref:`section on details of the alignment algorithm <adapter-alignment-algorithm>`.
 
 
-Multiple adapter occurrences within a single read
--------------------------------------------------
-
-If a single read contains multiple copies of the same adapter, the basic rule is
-that the leftmost match is used for both 5' and 3' adapters. For example, when
-searching for a 3' adapter in ::
-
-    cccccADAPTERgggggADAPTERttttt
-
-the read will be trimmed to ::
-
-    ccccc
-
-When the adapter is a 5' adapter instead, the read will be trimmed to ::
-
-    gggggADAPTERttttt
-
-The above applies when both occurrences of the adapter are *exact* matches, and
-it also applies when both occurrences of the adapter are *inexact* matches (that
-is, it has at least one indel or mismatch). However, if one match is exact, but
-the other is inexact, then the exact match wins, even if it is not the leftmost
-one! The reason for this behavior is that cutadapt searches for exact matches
-first and, to improve performance, skips the error-tolerant matching step if an
-exact match was found.
-
-
-Reducing random matches
------------------------
+Minimum overlap (reducing random matches)
+-----------------------------------------
 
 Since cutadapt allows partial matches between the read and the adapter sequence,
 short matches can occur by chance, leading to erroneously trimmed bases. For
 example, roughly 25% of all reads end with a base that is identical to the
 first base of the adapter. To reduce the number of falsely trimmed bases,
-the alignment algorithm requires that at least *three bases* match between
-adapter and read. The minimum overlap length can be changed with the parameter
-``--overlap`` (or its short version ``-O``). Shorter matches are simply
-ignored, and the bases are not trimmed.
+the alignment algorithm requires that, by default, at least *three bases* match between
+adapter and read.
+
+This minimum overlap length can be changed globally (for all adapters) with the parameter
+``--overlap`` (or its short version ``-O``). Alternatively, use the adapter-specific
+parameter ``min_overlap`` to change it for a single adapter only. Example:
+``-a "ADAPTER;min_overlap=5"`` (the quotation marks are necessary).
+
+If a read contains a partial adapter sequence shorter than the minimum overlap length,
+no match will be found (and therefore no bases are trimmed).
 
 Requiring at least three bases to match is quite conservative. Even if no
 minimum overlap was required, we can compute that we lose only about 0.44 bases
@@ -677,6 +718,9 @@ When choosing an appropriate minimum overlap length, take into account that
 true adapter matches are also lost when the overlap length is higher than
 zero, reducing cutadapt's sensitivity.
 
+
+Specifying adapter sequences
+============================
 
 .. _wildcards:
 
@@ -709,8 +753,8 @@ by their ASCII value. Thus, both the read and adapter can be arbitrary strings
 Wildcards do not work in colorspace.
 
 
-Repeated bases in the adapter sequence
---------------------------------------
+Repeated bases
+--------------
 
 If you have many repeated bases in the adapter sequence, such as many ``N`` s or
 many ``A`` s, you do not have to spell them out. For example, instead of writing
