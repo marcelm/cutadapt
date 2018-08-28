@@ -1,5 +1,6 @@
 # coding: utf-8
 from __future__ import print_function, division, absolute_import
+from textwrap import dedent
 import pytest
 
 from cutadapt.seqio import Sequence
@@ -190,6 +191,32 @@ def test_issue_265():
 	s = Sequence('name', 'AAAATTTT')
 	la = LinkedAdapter('GGG', 'TTT', front_restriction=None, back_restriction=None)
 	assert la.match_to(s).matches == 3
+
+
+def test_parse_file_notation(tmpdir):
+	tmp_path = str(tmpdir.join('adapters.fasta'))
+	with open(tmp_path, 'w') as f:
+		f.write(dedent(""">first_name
+			ADAPTER1
+			>second_name
+			ADAPTER2
+			"""))
+	parser = AdapterParser(
+		colorspace=False, max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+		adapter_wildcards=False, indels=False)
+
+	adapters = list(parser.parse('file:' + tmp_path, cmdline_type='back'))
+	assert len(adapters) == 2
+	assert adapters[0].name == 'first_name'
+	assert adapters[0].sequence == 'ADAPTER1'
+	assert adapters[1].name == 'second_name'
+	assert adapters[1].sequence == 'ADAPTER2'
+	for a in adapters:
+		assert a.max_error_rate == 0.2
+		assert a.min_overlap == 4
+		assert not a.read_wildcards
+		assert not a.adapter_wildcards
+		assert not a.indels
 
 
 def test_parse_not_linked():
