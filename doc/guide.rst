@@ -217,8 +217,8 @@ bases <cut-bases>` from the beginning or end of each read, and to :ref:`remove
 low-quality bases (quality trimming) <quality-trimming>` from the 3' and 5' ends.
 
 
-Overview of the adapter types
------------------------------
+Overview of adapter types
+-------------------------
 
 3' adapter types
 ~~~~~~~~~~~~~~~~
@@ -268,7 +268,7 @@ are interested in. The sequencer starts the sequencing process at the 5' end of
 the fragment and sequences into the adapter if the read is long enough.
 The read that it outputs will then have a part of the adapter in the
 end. Or, if the adapter was short and the read length quite long, then the
-adapter will be somewhere within the read (followed by other bases).
+adapter will be somewhere within the read, followed by some other bases.
 
 For example, assume your fragment of interest is *MYSEQUENCE* and the adapter is
 *ADAPTER*. Depending on the read length, you will get reads that look like this::
@@ -286,15 +286,16 @@ be the result::
     MYSEQUENCE
     MYSEQUENCE
 
-As can be seen, cutadapt correctly deals with partial adapter matches, and also
-with any trailing sequences after the adapter. Cutadapt deals with 3' adapters
-by removing the adapter itself and any sequence that may follow. If the sequence
-starts with an adapter, like this::
+As this example shows, Cutadapt allows regular 3' adapters to occur in full
+anywhere within the read (preceeded and/or succeeded by zero or more bases), and
+also partially degraded at the 3' end. Cutadapt deals with 3' adapters
+by removing the adapter itself and any sequence that may follow. As a consequence,
+a sequence that starts with an adapter, like this, will be trimmed to an empty read::
 
     ADAPTERSOMETHING
 
-Then the sequence will be empty after trimming. By default, empty reads are kept
-and will appear in the output.
+By default, empty reads are kept and will appear in the output. If you do not
+want this, use the ``--minimum-length``/``-m`` :ref:`filtering option <filtering>`.
 
 
 .. _five-prime-adapters:
@@ -307,9 +308,10 @@ Regular 5' adapters
     want to use an :ref:`anchored 5' adapter <anchored-3adapters>`.
 
 A 5' adapter is a piece of DNA ligated to the 5' end of the DNA fragment of
-interest. The adapter sequence is expected to appear at the start of the read,
-but may be partially degraded. The sequence may also appear somewhere within
-the read. In all cases, the adapter itself and the sequence preceding it is
+interest. For this type of adapter to be found, the adapter sequence needs to
+either appear in full somewhere within the read (internal match) or at the
+start (5' end) of it, where in the latter case also partial occurrences are
+allowed. In all cases, the adapter itself and the sequence preceding it is
 removed.
 
 Assume your fragment of interest is *MYSEQUENCE* and the adapter is
