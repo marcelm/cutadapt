@@ -655,12 +655,9 @@ class Adapter(object):
 				pos = read_seq.find(self.sequence)
 			# TODO BACK_NOT_INTERNAL, FRONT_NOT_INTERNAL
 		if pos >= 0:
-			if self.where == ANYWHERE:
-				# guess: if alignment starts at pos 0, it’s a 5' adapter
-				remove_before = pos == 0
-			match = match_class(
+			match_args = (
 				0, len(self.sequence), pos, pos + len(self.sequence),
-				len(self.sequence), 0, remove_before, self, read)
+				len(self.sequence), 0)
 		else:
 			# try approximate matching
 			if not self.indels and self.where in (PREFIX, SUFFIX):
@@ -672,24 +669,27 @@ class Adapter(object):
 						wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
 				astart, astop, rstart, rstop, matches, errors = alignment
 				if astop - astart >= self.min_overlap and errors / (astop - astart) <= self.max_error_rate:
-					match = match_class(*(alignment + (remove_before, self, read)))
+					match_args = alignment
 				else:
-					match = None
+					match_args = None
 			else:
 				alignment = self.aligner.locate(read_seq)
 				if self._debug:
 					print(self.aligner.dpmatrix)  # pragma: no cover
 				if alignment is None:
-					match = None
+					match_args = None
 				else:
 					astart, astop, rstart, rstop, matches, errors = alignment
-					if self.where == ANYWHERE:
-						# guess: if alignment starts at pos 0, it’s a 5' adapter
-						remove_before = rstart == 0
-					match = match_class(astart, astop, rstart, rstop, matches, errors, remove_before, self, read)
+					match_args = (astart, astop, rstart, rstop, matches, errors)
 
-		if match is None:
+		if match_args is None:
 			return None
+		remove_before = self.remove_before
+		if self.where == ANYWHERE:
+			# guess: if alignment starts at pos 0, it’s a 5' adapter
+			remove_before = match_args[2] == 0  # index 2 is rstart
+		match = match_class(*match_args, remove_before=remove_before, adapter=self, read=read)
+
 		assert match.length > 0 and match.errors / match.length <= self.max_error_rate, match
 		assert match.length >= self.min_overlap
 		return match
