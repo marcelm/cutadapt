@@ -589,7 +589,7 @@ class Adapter(object):
 
 	def __init__(self, sequence, where, max_error_rate=0.1, min_overlap=3,
 			read_wildcards=False, adapter_wildcards=True, name=None, indels=True):
-		self.debug = False
+		self._debug = False
 		self.name = _generate_adapter_name() if name is None else name
 		self.sequence = parse_braces(sequence.upper().replace('U', 'T'))  # TODO move away
 		if not self.sequence:
@@ -631,7 +631,7 @@ class Adapter(object):
 		Print out the dynamic programming matrix after matching a read to an
 		adapter.
 		"""
-		self.debug = True
+		self._debug = True
 		self.aligner.enable_debug()
 
 	def match_to(self, read, match_class=Match):
@@ -677,7 +677,7 @@ class Adapter(object):
 					match = None
 			else:
 				alignment = self.aligner.locate(read_seq)
-				if self.debug:
+				if self._debug:
 					print(self.aligner.dpmatrix)  # pragma: no cover
 				if alignment is None:
 					match = None
@@ -750,7 +750,7 @@ class ColorspaceAdapter(Adapter):
 			# try approximate matching
 			self.aligner.reference = asequence
 			alignment = self.aligner.locate(read.sequence)
-			if self.debug:
+			if self._debug:
 				print(self.aligner.dpmatrix)  # pragma: no cover
 			if alignment is not None:
 				match = ColorspaceMatch(*(alignment + (self.remove_before, self, read)))
