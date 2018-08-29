@@ -123,7 +123,7 @@ class AdapterParser(object):
 				key = AdapterParser.parameters[key]
 			value = value.strip()
 			if value == '':
-				value = None
+				value = True
 			else:
 				try:
 					value = int(value)
