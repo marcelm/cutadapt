@@ -112,7 +112,9 @@ class AdapterParser(object):
 			field = field.strip()
 			if not field:
 				continue
-			key, _, value = field.partition('=')
+			key, equals, value = field.partition('=')
+			if equals == '=' and value == '':
+				raise ValueError('No value given')
 			key = key.strip()
 			if key not in AdapterParser.parameters:
 				raise KeyError('Unknown parameter {}'.format(key))

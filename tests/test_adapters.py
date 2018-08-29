@@ -244,6 +244,8 @@ def test_parse_parameters():
 		p('e=hallo')
 	with pytest.raises(KeyError):
 		p('bla=0.1')
+	with pytest.raises(ValueError):
+		p('e=')
 
 
 def test_parse_with_parameters():
