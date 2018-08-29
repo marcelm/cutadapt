@@ -454,9 +454,9 @@ class Match(object):
 		If there are indels, this is not reliable as the full alignment
 		is not available.
 		"""
-		wildcards = [ self.read.sequence[self.rstart + i] for i in range(self.length)
+		wildcards = [self.read.sequence[self.rstart + i] for i in range(self.length)
 			if self.adapter.sequence[self.astart + i] == wildcard_char and
-				self.rstart + i < len(self.read.sequence) ]
+				self.rstart + i < len(self.read.sequence)]
 		return ''.join(wildcards)
 
 	def rest(self):
