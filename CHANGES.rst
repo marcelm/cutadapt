@@ -10,6 +10,10 @@ Development version
   :ref:`syntax for adapter-specific
   parameters <trimming-parameters>` was added for this.
   Example: ``-a "ADAPTER;min_overlap=5"``.
+* Close :issue:`152`: Using the new syntax for adapter-specific parameters,
+  it is now possible to allow partial matches of a 3' adapter at the 5' end
+  (and partial matches of a 5' adapter at the 3' end) by specifying the
+  ``anywhere`` parameter (as in ``-a "ADAPTER;anywhere"``).
 * Allow ``--pair-filter=first`` in addition to ``both`` and ``any``. If
   used, a read pair is discarded if the filtering criterion applies to R1;
   and R2 is ignored.

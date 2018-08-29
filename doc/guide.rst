@@ -615,19 +615,20 @@ separator between two commands.
 
 The following parameters are supported at the moment:
 
-===================== ============= ================================
-Parameter             Global option Adapter-specific parameter
-===================== ============= ================================
-Maximum error rate    ``-e 0.2``    | ``ADAPTER;e=0.2`` or
-                                    | ``ADAPTER;max_error_rate=0.2``
-Minimum overlap       ``-O 5``      | ``ADAPTER;o=5`` or
-                                    | ``ADAPTER;min_overlap=5``
-===================== ============= ================================
+====================== ============= ================================
+Parameter              Global option Adapter-specific parameter
+====================== ============= ================================
+Maximum error rate     ``-e 0.2``    | ``ADAPTER;e=0.2`` or
+                                     | ``ADAPTER;max_error_rate=0.2``
+Minimum overlap        ``-O 5``      | ``ADAPTER;o=5`` or
+                                     | ``ADAPTER;min_overlap=5``
+Allow matches anywhere               ``ADAPTER;anywhere``
+====================== ============= ================================
 
 Adapter-specific parameters override the global option.
 
 .. versionadded: 1.18
-    Adapter-specific parameters
+    Syntax for setting adapter-specific parameters
 
 .. _error-tolerance:
 
@@ -689,6 +690,7 @@ Insertions and deletions can be disallowed by using the option
 
 See also the :ref:`section on details of the alignment algorithm <adapter-alignment-algorithm>`.
 
+.. _random-matches:
 
 Minimum overlap (reducing random matches)
 -----------------------------------------
@@ -717,6 +719,30 @@ overlap length of 3, only about 0.07 bases are lost per read.
 When choosing an appropriate minimum overlap length, take into account that
 true adapter matches are also lost when the overlap length is higher than
 zero, reducing cutadapt's sensitivity.
+
+
+Allowing partial matches at both ends
+-------------------------------------
+
+The regular 5' and 3' adapter types allow partial adapter occurrences only
+at the 5' and 3' end, respectively. To allow partial matches at both ends,
+you can use the ``anywhere`` adapter-specific parameter.
+
+A 3' adapter specified via ``-a ADAPTER`` will be found even
+when it occurs partially at the 3' end, as in ``mysequenceADAPT``. However,
+it will by default not be found if it occurs partially at the 5' end, as in
+``APTERmysequence``. To find the adapter in both cases, specify
+the adapter as ``-a "ADAPTER;anywhere"``.
+
+Similarly, for a 5' adapter specified via ``-g ADAPTER``, partial matches at
+the 3' end are not found, as in ``mysequenceADAPT``. To allow partial matches
+at both ends, use ``-g "ADAPTER;anywhere"``.
+
+.. note::
+    With ``anywhere``, partial matches at the end that is usually not allowed
+    to be matched will result in empty reads! This means that short random
+    matches have a much greater detrimental effect and you should
+    :ref:`increase the minimum overlap length <random-matches>`.
 
 
 Specifying adapter sequences

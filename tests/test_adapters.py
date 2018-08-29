@@ -241,6 +241,7 @@ def test_parse_parameters():
 	assert p('o=5') == {'min_overlap': 5}
 	assert p('min_overlap=5') == {'min_overlap': 5}
 	assert p('o=7; e=0.4') == {'min_overlap': 7, 'max_error_rate': 0.4}
+	assert p('anywhere') == {'anywhere': True}
 
 	with pytest.raises(ValueError):
 		p('e=hallo')
@@ -267,3 +268,16 @@ def test_parse_with_parameters():
 		assert isinstance(a, LinkedAdapter)
 		assert a.front_adapter.max_error_rate == 0.15
 		assert a.back_adapter.max_error_rate == 0.17
+
+
+def test_anywhere_parameter():
+	parser = AdapterParser(colorspace=False, max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+		adapter_wildcards=False, indels=True)
+	adapter = list(parser.parse('CTGAAGTGAAGTACACGGTT;anywhere', 'back'))[0]
+	assert adapter.remove == 'suffix'
+	assert adapter.where == ANYWHERE
+	read = Sequence('foo1', 'TGAAGTACACGGTTAAAAAAAAAA')
+	from cutadapt.modifiers import AdapterCutter
+	cutter = AdapterCutter([adapter])
+	trimmed_read = cutter(read, [])
+	assert trimmed_read.sequence == ''

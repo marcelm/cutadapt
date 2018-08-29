@@ -111,6 +111,7 @@ class AdapterParser(object):
 		# allowed parameters
 		'max_error_rate': None,
 		'min_overlap': None,
+		'anywhere': None,
 	}
 
 	@staticmethod
@@ -295,6 +296,10 @@ class AdapterParser(object):
 
 		if not name:
 			name = specname
+		if parameters.get('anywhere', False):
+			parameters['remove'] = WHERE_TO_REMOVE_MAP[where]
+			where = ANYWHERE
+			del parameters['anywhere']
 		params = self.default_parameters.copy()
 		params.update(parameters)
 		return self.adapter_class(sequence=sequence, where=where, name=name, **params)
@@ -620,7 +625,6 @@ class Adapter(object):
 		self.remove = WHERE_TO_REMOVE_MAP[where] if remove is None else remove
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min(min_overlap, len(self.sequence))
-		self.indels = indels
 		iupac = frozenset('XACGTURYSWKMBDHVN')
 		if adapter_wildcards and not set(self.sequence) <= iupac:
 			for c in self.sequence:
@@ -635,6 +639,7 @@ class Adapter(object):
 		self.aligner = align.Aligner(self.sequence, self.max_error_rate,
 			flags=self.where, wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
 		self.aligner.min_overlap = self.min_overlap
+		self.indels = indels
 		if not self.indels:
 			# TODO
 			# When indels are disallowed, an entirely different algorithm
