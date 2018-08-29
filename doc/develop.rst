@@ -62,6 +62,54 @@ Yes, there are inconsistencies in the current code base since it’s a few years
 Making a release
 ----------------
 
+Since version 1.17, Travis CI is used to automatically deploy a new Cutadapt release
+(both as an sdist and as wheels) whenever a new tag is pushed to the Git repository.
+
+Cutadapt uses `versioneer <https://github.com/warner/python-versioneer>`_ to automatically manage
+version numbers. This means that the version is not stored in the source code but derived from
+the most recent Git tag. The following procedure can be used to bump the version and make a new
+release.
+
+#. Update ``CHANGES.rst`` (version number and list of changes)
+
+#. Ensure you have no uncommitted changes in the working copy.
+
+#. Run a ``git pull``.
+
+#. Run ``tox``, ensuring all tests pass.
+
+#. Tag the current commit with the version number (there must be a ``v`` prefix)::
+
+       git tag v0.1
+
+   To release a development version, use a ``dev`` version number such as ``v1.17.dev1``.
+   Users will not automatically get these unless they use ``pip install --pre``.
+
+#. Push the tag::
+
+       git push --tags
+
+#. Wait for Travis to finish and to deploy to PyPI.
+
+#. Update the `bioconda recipe <https://github.com/bioconda/bioconda-recipes/blob/master/recipes/cutadapt/meta.yaml>`_.
+   It is probly easiest to edit the recipe via the web interface and send in a
+   pull request. Ensure that the list of dependencies (the ``requirements:``
+   section in the recipe) is in sync with the ``setup.py`` file.
+
+   Since this is just a version bump, the pull request does not need a
+   review by other bioconda developers. As soon as the tests pass and if you
+   have the proper permissions, it can be merged directly.
+
+
+Releases to bioconda still need to be made manually.
+
+
+Making a release manually
+-------------------------
+
+.. note:
+    This section is outdated, see the previous section!
+
 If this is the first time you attempt to upload a distribution to PyPI, create a
 configuration file named ``.pypirc`` in your home directory with the following
 contents::
