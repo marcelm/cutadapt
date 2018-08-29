@@ -2,7 +2,7 @@
 from __future__ import print_function, division, absolute_import
 
 from cutadapt.seqio import ColorspaceSequence, Sequence
-from cutadapt.adapters import Adapter, ColorspaceAdapter, PREFIX, BACK
+from cutadapt.adapters import Adapter, ColorspaceAdapter, PREFIX, BACK, ANYWHERE
 from cutadapt.modifiers import AdapterCutter
 
 
@@ -55,3 +55,19 @@ def test_end_trim_with_mismatch():
 
 	assert trimmed_read.sequence == read.sequence
 	assert cutter.adapter_statistics[adapter].back.lengths == {}
+
+
+def test_anywhere_with_errors():
+	adapter = Adapter('CCGCATTTAG', ANYWHERE, 0.1)
+	for seq, expected_trimmed in (
+		('AACCGGTTccgcatttagGATC', 'AACCGGTT'),
+		('AACCGGTTccgcgtttagGATC', 'AACCGGTT'),  # one mismatch
+		('AACCGGTTccgcatttag', 'AACCGGTT'),
+		('ccgcatttagAACCGGTT', 'AACCGGTT'),
+		('ccgtatttagAACCGGTT', 'AACCGGTT'),  # one mismatch
+		('ccgatttagAACCGGTT', 'AACCGGTT'),  # one deletion
+	):
+		read = Sequence('foo', seq)
+		cutter = AdapterCutter([adapter], times=1)
+		trimmed_read = cutter(read, [])
+		assert trimmed_read.sequence == expected_trimmed
