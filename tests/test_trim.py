@@ -8,7 +8,7 @@ from cutadapt.modifiers import AdapterCutter
 
 def test_cs_5p():
 	read = ColorspaceSequence("name", "0123", "DEFG", "T")
-	adapter = ColorspaceAdapter("CG", PREFIX, 0.1)
+	adapter = ColorspaceAdapter("CG", PREFIX, max_error_rate=0.1)
 	cutter = AdapterCutter([adapter])
 	trimmed_read = cutter(read, [])
 	# no assertion here, just make sure the above code runs without
@@ -17,7 +17,7 @@ def test_cs_5p():
 
 def test_statistics():
 	read = Sequence('name', 'AAAACCCCAAAA')
-	adapters = [Adapter('CCCC', BACK, 0.1)]
+	adapters = [Adapter('CCCC', BACK, max_error_rate=0.1)]
 	cutter = AdapterCutter(adapters, times=3)
 	trimmed_read = cutter(read, [])
 	# TODO make this a lot simpler
@@ -37,7 +37,7 @@ def test_end_trim_with_mismatch():
 	the hit and so the match is considered good. An insertion or substitution
 	at the same spot is not a match.
 	"""
-	adapter = Adapter('TCGATCGATCGAT', BACK, 0.1)
+	adapter = Adapter('TCGATCGATCGAT', BACK, max_error_rate=0.1)
 
 	read = Sequence('foo1', 'AAAAAAAAAAATCGTCGATC')
 	cutter = AdapterCutter([adapter], times=1)
@@ -58,7 +58,7 @@ def test_end_trim_with_mismatch():
 
 
 def test_anywhere_with_errors():
-	adapter = Adapter('CCGCATTTAG', ANYWHERE, 0.1)
+	adapter = Adapter('CCGCATTTAG', ANYWHERE, max_error_rate=0.1)
 	for seq, expected_trimmed in (
 		('AACCGGTTccgcatttagGATC', 'AACCGGTT'),
 		('AACCGGTTccgcgtttagGATC', 'AACCGGTT'),  # one mismatch

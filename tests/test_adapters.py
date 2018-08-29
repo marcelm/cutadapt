@@ -5,13 +5,14 @@ import pytest
 
 from cutadapt.seqio import Sequence
 from cutadapt.adapters import (Adapter, Match, ColorspaceAdapter, FRONT, BACK,
-	parse_braces, LinkedAdapter, AdapterStatistics, AdapterParser)
+	parse_braces, LinkedAdapter, AdapterStatistics, AdapterParser, ANYWHERE)
 
 
 def test_issue_52():
 	adapter = Adapter(
 		sequence='GAACTCCAGTCACNNNNN',
 		where=BACK,
+		remove='suffix',
 		max_error_rate=0.12,
 		min_overlap=5,
 		read_wildcards=False,
@@ -48,6 +49,7 @@ def test_issue_80():
 	adapter = Adapter(
 		sequence="TCGTATGCCGTCTTC",
 		where=BACK,
+		remove='suffix',
 		max_error_rate=0.2,
 		min_overlap=3,
 		read_wildcards=False,
@@ -60,10 +62,10 @@ def test_issue_80():
 
 
 def test_str():
-	a = Adapter('ACGT', where=BACK, max_error_rate=0.1)
+	a = Adapter('ACGT', where=BACK, remove='suffix', max_error_rate=0.1)
 	str(a)
 	str(a.match_to(Sequence(name='seq', sequence='TTACGT')))
-	ca = ColorspaceAdapter('0123', where=BACK, max_error_rate=0.1)
+	ca = ColorspaceAdapter('0123', where=BACK, remove='suffix', max_error_rate=0.1)
 	str(ca)
 
 

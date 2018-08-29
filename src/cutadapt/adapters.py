@@ -25,6 +25,17 @@ BACK_NOT_INTERNAL = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
 ANYWHERE = align.SEMIGLOBAL
 LINKED = 'linked'
 
+# TODO put this in some kind of "list of pre-defined adapter types" along with the info above
+WHERE_TO_REMOVE_MAP = {
+	PREFIX: 'prefix',
+	FRONT_NOT_INTERNAL: 'prefix',
+	FRONT: 'prefix',
+	BACK: 'suffix',
+	SUFFIX: 'suffix',
+	BACK_NOT_INTERNAL: 'suffix',
+	ANYWHERE: 'auto',
+}
+
 
 def parse_braces(sequence):
 	"""
@@ -337,11 +348,12 @@ class EndStatistics(object):
 		self.has_wildcards = adapter.adapter_wildcards
 		# self.errors[l][e] == n iff n times a sequence of length l matching at e errors was removed
 		self.errors = defaultdict(returns_defaultdict_int)
-		self._remove_before = adapter.remove_before
+		self._remove = adapter.remove
 		self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
 
 	def __iadd__(self, other):
-		if self.where != other.where or self.max_error_rate != other.max_error_rate or self.sequence != other.sequence:
+		if (self.where != other.where or self._remove != other._remove or
+				self.max_error_rate != other.max_error_rate or self.sequence != other.sequence):
 			raise RuntimeError('Incompatible EndStatistics, cannot be added')
 		for base in ('A', 'C', 'G', 'T', ''):
 			self.adjacent_bases[base] += other.adjacent_bases[base]
@@ -369,7 +381,8 @@ class EndStatistics(object):
 		specify which (front or back) of the two adapters is meant.
 		"""
 		seq = self.sequence
-		if self._remove_before:
+		# FIXME this is broken for self._remove == 'auto'
+		if self._remove == 'prefix':
 			seq = seq[::-1]
 		allowed_bases = 'CGRYSKMBDHVN' if self.has_wildcards else 'GC'
 		p = 1
@@ -566,7 +579,14 @@ class Adapter(object):
 
 	where --  One of the BACK, FRONT, PREFIX, SUFFIX or ANYWHERE constants.
 		This influences where the adapter is allowed to appear within in the
-		read and also which part of the read is removed.
+		read.
+
+	remove -- describes which part of the read to remove if the adapter was found:
+		  * "prefix" (for a 3' adapter)
+		  * "suffix" (for a 5' adapter)
+		  * "auto" for a 5'/3' mixed adapter (if the match involves the first base of the read, it
+		    is assumed to be a 5' adapter and a 3' otherwise)
+		  * None: One of the above is chosen depending on the 'where' parameter
 
 	sequence -- The adapter sequence as string. Will be converted to uppercase.
 		Also, Us will be converted to Ts.
@@ -587,7 +607,7 @@ class Adapter(object):
 		unique number.
 	"""
 
-	def __init__(self, sequence, where, max_error_rate=0.1, min_overlap=3,
+	def __init__(self, sequence, where, remove=None, max_error_rate=0.1, min_overlap=3,
 			read_wildcards=False, adapter_wildcards=True, name=None, indels=True):
 		self._debug = False
 		self.name = _generate_adapter_name() if name is None else name
@@ -595,6 +615,9 @@ class Adapter(object):
 		if not self.sequence:
 			raise ValueError('Sequence is empty')
 		self.where = where
+		if remove not in (None, 'prefix', 'suffix'):
+			raise ValueError('remove parameter must be "prefix", "suffix", "auto" or None')
+		self.remove = WHERE_TO_REMOVE_MAP[where] if remove is None else remove
 		self.max_error_rate = max_error_rate
 		self.min_overlap = min(min_overlap, len(self.sequence))
 		self.indels = indels
@@ -608,7 +631,6 @@ class Adapter(object):
 		# Optimization: Use non-wildcard matching if only ACGT is used
 		self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set('ACGT')
 		self.read_wildcards = read_wildcards
-		self.remove_before = where not in (BACK, SUFFIX, BACK_NOT_INTERNAL)
 
 		self.aligner = align.Aligner(self.sequence, self.max_error_rate,
 			flags=self.where, wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
@@ -621,7 +643,7 @@ class Adapter(object):
 
 	def __repr__(self):
 		return '<Adapter(name={name!r}, sequence={sequence!r}, where={where}, '\
-			'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
+			'remove={remove}, max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
 			'read_wildcards={read_wildcards}, '\
 			'adapter_wildcards={adapter_wildcards}, '\
 			'indels={indels})>'.format(**vars(self))
@@ -643,8 +665,8 @@ class Adapter(object):
 		overlap length, maximum error rate).
 		"""
 		read_seq = read.sequence.upper()  # temporary copy
-		remove_before = self.remove_before
 		pos = -1
+
 		# try to find an exact match first unless wildcards are allowed
 		if not self.adapter_wildcards:
 			if self.where == PREFIX:
@@ -684,10 +706,11 @@ class Adapter(object):
 
 		if match_args is None:
 			return None
-		remove_before = self.remove_before
-		if self.where == ANYWHERE:
+		if self.remove == 'auto':
 			# guess: if alignment starts at pos 0, it’s a 5' adapter
 			remove_before = match_args[2] == 0  # index 2 is rstart
+		else:
+			remove_before = self.remove == 'prefix'
 		match = match_class(*match_args, remove_before=remove_before, adapter=self, read=read)
 
 		assert match.length > 0 and match.errors / match.length <= self.max_error_rate, match
@@ -745,7 +768,7 @@ class ColorspaceAdapter(Adapter):
 		if pos >= 0:
 			match = ColorspaceMatch(
 				0, len(asequence), pos, pos + len(asequence),
-				len(asequence), 0, self.remove_before, self, read)
+				len(asequence), 0, self.remove, self, read)
 		else:
 			# try approximate matching
 			self.aligner.reference = asequence
@@ -753,7 +776,7 @@ class ColorspaceAdapter(Adapter):
 			if self._debug:
 				print(self.aligner.dpmatrix)  # pragma: no cover
 			if alignment is not None:
-				match = ColorspaceMatch(*(alignment + (self.remove_before, self, read)))
+				match = ColorspaceMatch(*(alignment + (self.remove, self, read)))
 			else:
 				match = None
 
