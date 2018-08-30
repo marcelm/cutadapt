@@ -159,9 +159,24 @@ def test_polya_brace_notation():
 	run("-m 24 -O 10 -a A{35}", "polya.fasta", "polya.fasta")
 
 
+# the same as --action=none
+def test_no_trim():
+	run("--no-trim --discard-untrimmed -a CCCTAGTTAAAC", 'no-trim.fastq', 'small.fastq')
+
+
+def test_action_none():
+	run("--action=none --discard-untrimmed -a CCCTAGTTAAAC", 'no-trim.fastq', 'small.fastq')
+
+
+# the same as --action=mask
 def test_mask_adapter():
 	"""mask adapter with N (reads maintain the same length)"""
 	run("-b CAAG -n 3 --mask-adapter", "anywhere_repeat.fastq", "anywhere_repeat.fastq")
+
+
+def test_action_mask():
+	"""mask adapter with N (reads maintain the same length)"""
+	run("-b CAAG -n 3 --action=mask", "anywhere_repeat.fastq", "anywhere_repeat.fastq")
 
 
 def test_gz_multiblock():
@@ -292,10 +307,6 @@ def test_named_adapter():
 
 def test_adapter_with_u():
 	run("-a GCCGAACUUCUUAGACUGCCUUAAGGACGU", "illumina.fastq", "illumina.fastq.gz")
-
-
-def test_no_trim():
-	run("--no-trim --discard-untrimmed -a CCCTAGTTAAAC", 'no-trim.fastq', 'small.fastq')
 
 
 def test_bzip2():

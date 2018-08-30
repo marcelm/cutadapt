@@ -178,11 +178,15 @@ def get_option_parser():
 	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
 		default=True, dest='match_adapter_wildcards',
 		help="Do not interpret IUPAC wildcards in adapters.")
-	group.add_option("--no-trim", dest='action', action='store_const', const=None,
-		help="Match and redirect reads to output/untrimmed-output as usual, "
-			"but do not remove adapters.")
+	group.add_option("--action", choices=('mask', 'trim', 'none'),
+		help="What to do with found adapters. trim: remove; "
+		    "mask: replace with 'N' characters; "
+			"none: leave unchanged (useful with "
+			"--discard-untrimmed). Default: trim")
+	group.add_option("--no-trim", dest='action', action='store_const', const='none',
+		help="Deprecated synonym for --action=none")
 	group.add_option("--mask-adapter", dest='action', action='store_const', const='mask',
-		help="Mask adapters with 'N's instead of trimming them.")
+		help="Deprecated synonym for --action=mask")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional read modifications")
@@ -563,6 +567,8 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 		raise CommandlineError("The overlap must be at least 1.")
 	if not (0 <= options.gc_content <= 100):
 		raise CommandlineError("GC content must be given as percentage between 0 and 100")
+	if options.action == 'none':
+		options.action = None
 
 	if options.colorspace:
 		if options.match_read_wildcards:
