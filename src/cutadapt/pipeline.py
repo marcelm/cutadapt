@@ -108,9 +108,8 @@ class Pipeline(object):
 		return seqio.open(file, file2, mode='w', qualities=self.uses_qualities,
 			colorspace=self._colorspace, **kwargs)
 
-	# TODO set max_n default to None
-	def set_output(self, outfiles, minimum_length=0, maximum_length=sys.maxsize,
-			max_n=-1, discard_casava=False, discard_trimmed=False, discard_untrimmed=False):
+	def set_output(self, outfiles, minimum_length=None, maximum_length=None,
+			max_n=None, discard_casava=False, discard_trimmed=False, discard_untrimmed=False):
 		self._filters = []
 		self._outfiles = outfiles
 		filter_wrapper = self._filter_wrapper()
@@ -123,20 +122,20 @@ class Pipeline(object):
 			self._filters.append(WildcardFileWriter(outfiles.wildcard))
 
 		too_short_writer = None
-		if minimum_length > 0:
+		if minimum_length is not None:
 			if outfiles.too_short:
 				too_short_writer = self._open_writer(outfiles.too_short, outfiles.too_short2)
 			self._filters.append(
 				filter_wrapper(too_short_writer, TooShortReadFilter(minimum_length)))
 
 		too_long_writer = None
-		if maximum_length < sys.maxsize:
+		if maximum_length is not None:
 			if outfiles.too_long:
 				too_long_writer = self._open_writer(outfiles.too_long, outfiles.too_long2)
 			self._filters.append(
 				filter_wrapper(too_long_writer, TooLongReadFilter(maximum_length)))
 
-		if max_n != -1:
+		if max_n is not None:
 			self._filters.append(filter_wrapper(None, NContentFilter(max_n)))
 
 		if discard_casava:

@@ -232,11 +232,11 @@ def get_option_parser():
 		description="Filters are applied after above read modifications. "
 			"Paired-end reads are always discarded pairwise (see also "
 			"--pair-filter).")
-	group.add_option("-m", "--minimum-length", type=int, default=0, metavar="LENGTH",
-		help="Discard reads shorter than LENGTH. Default: 0")
-	group.add_option("-M", "--maximum-length", type=int, default=sys.maxsize, metavar="LENGTH",
-		help="Discard reads longer than LENGTH. Default: no limit")
-	group.add_option("--max-n", type=float, default=-1.0, metavar="COUNT",
+	group.add_option("-m", "--minimum-length", type=int, default=None, metavar="LEN",
+		help="Discard reads shorter than LEN. Default: 0")
+	group.add_option("-M", "--maximum-length", type=int, default=None, metavar="LEN",
+		help="Discard reads longer than LEN. Default: no limit")
+	group.add_option("--max-n", type=float, default=None, metavar="COUNT",
 		help="Discard reads with more than COUNT 'N' bases. If COUNT is a number "
 			"between 0 and 1, it is interpreted as a fraction of the read length.")
 	group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
@@ -377,11 +377,11 @@ def open_output_files(options, default_outfile, interleaved):
 		return file1, file2
 
 	too_short = too_short2 = None
-	if options.minimum_length > 0:
+	if options.minimum_length is not None:
 		too_short, too_short2 = open2(options.too_short_output, options.too_short_paired_output)
 
 	too_long = too_long2 = None
-	if options.maximum_length < sys.maxsize:
+	if options.maximum_length is not None:
 		too_long, too_long2 = open2(options.too_long_output, options.too_long_paired_output)
 
 	if int(options.discard_trimmed) + int(options.discard_untrimmed) + int(
