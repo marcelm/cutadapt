@@ -5,6 +5,10 @@ Changes
 Development version
 -------------------
 
+* Close :issue:`327`: Maximum and minimum lengths can now be specified
+  separately for R1 and R2 with ``-m LENGTH1:LENGTH2``. One of the
+  lengths can be omitted, in which case only the length of the other
+  read is checked (as in ``-m 17:`` or ``-m :17``).
 * Close :issue:`322`: Use ``-j 0`` to auto-detect how many cores to run on.
   This should even work correctly on cluster systems when Cutadapt runs as
   a batch job to which fewer cores than exist on the machine. Note that

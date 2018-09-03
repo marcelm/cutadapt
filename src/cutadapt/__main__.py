@@ -229,9 +229,9 @@ def get_option_parser():
 		description="Filters are applied after above read modifications. "
 			"Paired-end reads are always discarded pairwise (see also "
 			"--pair-filter).")
-	group.add_option("-m", "--minimum-length", type=int, default=None, metavar="LEN",
+	group.add_option("-m", "--minimum-length", default=None, metavar="LEN[:LEN2]",
 		help="Discard reads shorter than LEN. Default: 0")
-	group.add_option("-M", "--maximum-length", type=int, default=None, metavar="LEN",
+	group.add_option("-M", "--maximum-length", default=None, metavar="LEN[:LEN2]",
 		help="Discard reads longer than LEN. Default: no limit")
 	group.add_option("--max-n", type=float, default=None, metavar="COUNT",
 		help="Discard reads with more than COUNT 'N' bases. If COUNT is a number "
@@ -350,6 +350,32 @@ def parse_cutoffs(s):
 		raise CommandlineError("Expected one value or two values separated by comma for "
 			"the quality cutoff")
 	return cutoffs
+
+
+def parse_lengths(s):
+	"""Parse [INT][:[INT]] into a pair of integers. If a value is omitted, use None
+
+	>>> parse_lengths('25')
+	(25, 25)
+	>>> parse_lengths('17:25')
+	(17, 25)
+	>>> parse_lengths('25:')
+	(25, None)
+	>>> parse_lengths(':25')
+	(None, 25)
+	"""
+	fields = s.split(':')
+	if len(fields) not in (1, 2):
+		raise CommandlineError("Only at most one colon is allowed")
+	try:
+		values = tuple(int(f) if f != '' else None for f in fields)
+	except ValueError as e:
+		raise CommandlineError("Value not recognized: {0}".format(e))
+	if len(values) == 1:
+		values = (values[0], values[0])
+	if values[0] is None and values[1] is None:
+		raise CommandlineError("Cannot parse {!r}: At least one length needs to be given".format(s))
+	return tuple(values)
 
 
 def open_output_files(options, default_outfile, interleaved):
@@ -653,8 +679,10 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 		pipeline.add(PrimerTrimmer())
 
 	# Set filtering parameters
-	pipeline.minimum_length = options.minimum_length
-	pipeline.maximum_length = options.maximum_length
+	if options.minimum_length is not None:
+		pipeline.minimum_length = parse_lengths(options.minimum_length)
+	if options.maximum_length is not None:
+		pipeline.maximum_length = parse_lengths(options.maximum_length)
 	pipeline.max_n = options.max_n
 	pipeline.discard_casava = options.discard_casava
 	pipeline.discard_trimmed = options.discard_trimmed

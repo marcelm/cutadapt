@@ -94,12 +94,42 @@ class Pipeline(object):
 		self._demultiplexer = None
 
 		# Filter settings
-		self.minimum_length = None
-		self.maximum_length = None
+		self._minimum_length = None
+		self._maximum_length = None
 		self.max_n = None
 		self.discard_casava = False
 		self.discard_trimmed = False
 		self.discard_untrimmed = False
+
+	@property
+	def minimum_length(self):
+		return self._minimum_length
+
+	@minimum_length.setter
+	def minimum_length(self, value):
+		if value is None:
+			self._minimum_length = None
+		elif isinstance(value, int):
+			self._minimum_length = (value, value)
+		else:
+			assert len(value) == 2
+			assert not (value[0] is None and value[1] is None)
+			self._minimum_length = value
+
+	@property
+	def maximum_length(self):
+		return self._maximum_length
+
+	@maximum_length.setter
+	def maximum_length(self, value):
+		if value is None:
+			self._maximum_length = None
+		elif isinstance(value, int):  # TODO
+			self._maximum_length = (value, value)
+		else:
+			assert len(value) == 2
+			assert not (value[0] is None and value[1] is None)
+			self._maximum_length = value
 
 	def set_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 			interleaved=False):
@@ -128,25 +158,26 @@ class Pipeline(object):
 		if outfiles.wildcard:
 			self._filters.append(WildcardFileWriter(outfiles.wildcard))
 
-		too_short_writer = None
-		if self.minimum_length is not None:
-			if outfiles.too_short:
-				too_short_writer = self._open_writer(outfiles.too_short, outfiles.too_short2)
-			self._filters.append(
-				filter_wrapper(too_short_writer, TooShortReadFilter(self.minimum_length)))
-
-		too_long_writer = None
-		if self.maximum_length is not None:
-			if outfiles.too_long:
-				too_long_writer = self._open_writer(outfiles.too_long, outfiles.too_long2)
-			self._filters.append(
-				filter_wrapper(too_long_writer, TooLongReadFilter(self.maximum_length)))
+		# minimum length and maximum length
+		for lengths, file1, file2, filter_class in (
+				(self._minimum_length, outfiles.too_short, outfiles.too_short2, TooShortReadFilter),
+				(self._maximum_length, outfiles.too_long, outfiles.too_long2, TooLongReadFilter)
+		):
+			writer = None
+			if lengths is not None:
+				if file1:
+					writer = self._open_writer(file1, file2)
+				f1 = filter_class(lengths[0]) if lengths[0] is not None else None
+				f2 = filter_class(lengths[1]) if lengths[1] is not None else None
+				self._filters.append(filter_wrapper(writer, filter=f1, filter2=f2))
 
 		if self.max_n is not None:
-			self._filters.append(filter_wrapper(None, NContentFilter(self.max_n)))
+			f1 = f2 = NContentFilter(self.max_n)
+			self._filters.append(filter_wrapper(None, f1, f2))
 
 		if self.discard_casava:
-			self._filters.append(filter_wrapper(None, CasavaFilter()))
+			f1 = f2 = CasavaFilter()
+			self._filters.append(filter_wrapper(None, f1, f2))
 
 		if int(self.discard_trimmed) + int(self.discard_untrimmed) + int(outfiles.untrimmed is not None) > 1:
 			raise ValueError('discard_trimmed, discard_untrimmed and outfiles.untrimmed must not '
@@ -160,12 +191,12 @@ class Pipeline(object):
 			# --discard-untrimmed and --untrimmed-output. These options
 			# are mutually exclusive in order to avoid brain damage.
 			if self.discard_trimmed:
-				self._filters.append(filter_wrapper(None, DiscardTrimmedFilter()))
+				self._filters.append(filter_wrapper(None, DiscardTrimmedFilter(), DiscardTrimmedFilter()))
 			elif self.discard_untrimmed:
-				self._filters.append(filter_wrapper(None, DiscardUntrimmedFilter()))
+				self._filters.append(filter_wrapper(None, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
 			elif outfiles.untrimmed:
 				untrimmed_writer = self._open_writer(outfiles.untrimmed, outfiles.untrimmed2)
-				self._filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter()))
+				self._filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
 			self._filters.append(self._final_filter(outfiles))
 
 	def close(self):

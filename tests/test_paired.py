@@ -4,6 +4,7 @@ from __future__ import print_function, division, absolute_import
 import os.path
 import shutil
 import tempfile
+from itertools import product
 
 import pytest
 
@@ -400,3 +401,35 @@ def test_paired_demultiplex():
 	assert_files_equal(cutpath('demultiplexed.second.2.fastq'), multiout2.format(name='second'))
 	assert_files_equal(cutpath('demultiplexed.unknown.2.fastq'), multiout2.format(name='unknown'))
 	shutil.rmtree(tempdir)
+
+
+@pytest.mark.parametrize('name_op,l1,l2,m', list(product(
+	(('m', lambda x, y: x >= y), ('M', lambda x, y: x <= y)),
+	range(1, 5),
+	range(1, 5),
+	[(2, 3), (2, None), (None, 3)]
+)))
+def test_separate_minlength(tmpdir, name_op, l1, l2, m):
+	"""Separate minimum lengths for R1 and R2"""
+	m1, m2 = m
+	name, func = name_op
+	inpath = str(tmpdir.join('separate_minlength.fasta'))
+	expected = str(tmpdir.join('separate_minlength_expected.fasta'))
+	outpath = str(tmpdir.join('out.fasta'))
+	record = '>r{}:{}\n{}\n'.format(l1, l2, 'A' * l1)
+	record += '>r{}:{}\n{}'.format(l1, l2, 'A' * l2)
+	with open(inpath, 'w') as f:
+		print(record, file=f)
+	with open(expected, 'w') as f:
+		if (m1 is None or func(l1, m1)) and (m2 is None or func(l2, m2)):
+			print(record, file=f)
+
+	assert os.path.exists(inpath)
+	assert os.path.exists(expected)
+	if m1 is None:
+		m1 = ''
+	if m2 is None:
+		m2 = ''
+
+	main(['--interleaved', '-o', outpath, '-' + name, '{}:{}'.format(m1, m2), inpath])
+	assert_files_equal(expected, outpath)

@@ -68,7 +68,8 @@ class Redirector(object):
 	"""
 	Redirect discarded reads to the given writer. This is for single-end reads.
 	"""
-	def __init__(self, writer, filter):
+	def __init__(self, writer, filter, filter2=None):
+		# TODO filter2 should really not be here
 		self.filtered = 0
 		self.writer = writer
 		self.filter = filter
@@ -92,7 +93,7 @@ class PairedRedirector(object):
 	Different filtering styles are supported, differing by which of the
 	two reads in a pair have to fulfill the filtering criterion.
 	"""
-	def __init__(self, writer, filter_, pair_filter_mode='any'):
+	def __init__(self, writer, filter, filter2, pair_filter_mode='any'):
 		"""
 		pair_filter_mode -- these values are allowed:
 			'any': The pair is discarded if any read matches.
@@ -105,10 +106,15 @@ class PairedRedirector(object):
 			raise ValueError("pair_filter_mode must be 'any', 'both' or 'first'")
 		self.filtered = 0
 		self.writer = writer
-		self.filter = filter_
+		self.filter = filter
+		self.filter2 = filter2
 		self.written = 0  # no of written reads or read pairs  TODO move to writer
 		self.written_bp = [0, 0]
-		if pair_filter_mode == 'any':
+		if filter2 is None:
+			self._is_filtered = self._is_filtered_first
+		elif filter is None:
+			self._is_filtered = self._is_filtered_second
+		elif pair_filter_mode == 'any':
 			self._is_filtered = self._is_filtered_any
 		elif pair_filter_mode == 'both':
 			self._is_filtered = self._is_filtered_both
@@ -116,13 +122,16 @@ class PairedRedirector(object):
 			self._is_filtered = self._is_filtered_first
 
 	def _is_filtered_any(self, read1, read2, matches1, matches2):
-		return self.filter(read1, matches1) or self.filter(read2, matches2)
+		return self.filter(read1, matches1) or self.filter2(read2, matches2)
 
 	def _is_filtered_both(self, read1, read2, matches1, matches2):
-		return self.filter(read1, matches1) and self.filter(read2, matches2)
+		return self.filter(read1, matches1) and self.filter2(read2, matches2)
 
 	def _is_filtered_first(self, read1, read2, matches1, matches2):
 		return self.filter(read1, matches1)
+
+	def _is_filtered_second(self, read1, read2, matches1, matches2):
+		return self.filter2(read2, matches2)
 
 	def __call__(self, read1, read2, matches1, matches2):
 		if self._is_filtered(read1, read2, matches1, matches2):

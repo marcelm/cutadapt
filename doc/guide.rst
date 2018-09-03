@@ -1150,6 +1150,16 @@ results!
 
 These are the paired-end specific filtering and output options:
 
+``--minimum-length LENGTH1:LENGTH2`` or ``-m LENGTH1:LENGTH2``
+    When trimming paired-end reads, the minimum lengths for R1 and R2 can be specified
+    separately by separating them with a colon (``:``). If the colon syntax is not used,
+    the same minimum length applies to both reads, as discussed above. Also, one of the
+    values can be omitted to impose no restrictions. For example, with ``-m 17:``,
+    the length of R1 must be at least 17, but the length of R2 is ignored.
+
+``--maximum-length LENGTH1:LENGTH2`` or ``-M LENGTH1:LENGTH2``
+    Maximum lengths can also be specified separately, see the explanation of ``-m`` above.
+
 ``--paired-output FILE`` or ``-p FILE``
     Write the second read of each processed pair to *FILE* (in FASTA/FASTQ
     format).
