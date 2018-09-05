@@ -57,10 +57,6 @@ See http://cutadapt.readthedocs.io/ for full documentation.
 
 from __future__ import print_function, division, absolute_import
 
-# Print a helpful error message if the extension modules cannot be imported.
-from cutadapt import check_importability
-check_importability()
-
 import sys
 import errno
 import time
@@ -180,7 +176,7 @@ def get_option_parser():
 		help="Do not interpret IUPAC wildcards in adapters.")
 	group.add_option("--action", choices=('mask', 'trim', 'none'),
 		help="What to do with found adapters. trim: remove; "
-		    "mask: replace with 'N' characters; "
+			"mask: replace with 'N' characters; "
 			"none: leave unchanged (useful with "
 			"--discard-untrimmed). Default: trim")
 	group.add_option("--no-trim", dest='action', action='store_const', const='none',
