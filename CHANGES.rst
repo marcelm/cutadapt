@@ -5,11 +5,14 @@ Changes
 Development version
 -------------------
 
-* Close :issue:`225`: Allow setting the maximum error rate and
-  minimum overlap length per adapter. A new
-  :ref:`syntax for adapter-specific
-  parameters <trimming-parameters>` was added for this.
-  Example: ``-a "ADAPTER;min_overlap=5"``.
+* Close :issue:`322`: Use ``-j 0`` to auto-detect how many cores to run on.
+  This should even work correctly on cluster systems when Cutadapt runs as
+  a batch job to which fewer cores than exist on the machine. Note that
+  the number of threads used by ``pigz`` cannot be controlled at the moment,
+  see :issue:`290`.
+* Close :issue:`225`: Allow setting the maximum error rate and minimum overlap
+  length per adapter. A new :ref:`syntax for adapter-specific
+  parameters <trimming-parameters>` was added for this. Example: ``-a "ADAPTER;min_overlap=5"``.
 * Close :issue:`152`: Using the new syntax for adapter-specific parameters,
   it is now possible to allow partial matches of a 3' adapter at the 5' end
   (and partial matches of a 5' adapter at the 3' end) by specifying the

@@ -115,22 +115,22 @@ Multi-core support
 ------------------
 
 Cutadapt supports parallel processing, that is, it can use multiple CPU cores.
-Multi-core is currently not enabled by default. To enable it, use the
-option ``-j N`` (or the spelled-out version ``--cores=N``), where ``N`` is the
+Multi-core is not enabled by default. To enable it, use the option ``-j N``
+(or the spelled-out version ``--cores=N``), where ``N`` is the
 number of cores to use.
+
+To automatically detect the number of available cores, use ``-j 0``
+(or ``--cores=0``). The detection takes into account resource restrictions
+that may be in place. For example, if running Cutadapt as a batch job on a
+cluster system, the actual number of cores assigned to the job will be used.
+(This works if the cluster systems uses the cpuset(1) mechanism to impose
+the resource limitation.)
 
 Make also sure that you have ``pigz`` (parallel gzip) installed if you use
 multiple cores and write to a ``.gz`` output file. Otherwise, compression of
-the output will be done in a single thread and therefore be the main bottleneck.
+the output will be done in a single thread and therefore be a bottleneck.
 
-.. note::
-    In a future release, the plan is to make cutadapt automatically use as many
-    CPU cores as are available, even when no ``--cores`` option was given.
-    Please help to ensure that multi-core support is as stable as possible by
-    `reporting any problems <https://github.com/marcelm/cutadapt/issues>`_ you
-    may find!
-
-There are some limitations:
+There are some limitations at the moment:
 
 * Multi-core is *only* available when you run cutadapt with Python 3.3 or later.
 * Multi-core cutadapt can only write to output files given by ``-o`` and ``-p``.
@@ -159,6 +159,8 @@ Some of these limitations will be lifted in the future, as time allows.
 
 .. versionadded:: 1.15
 
+.. versionadded:: 1.18
+    ``--cores=0`` for autodetection
 
 Read processing stages
 ======================

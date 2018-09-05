@@ -13,7 +13,7 @@ import tempfile
 import pytest
 
 from cutadapt.__main__ import main
-from cutadapt.compat import StringIO
+from cutadapt.compat import StringIO, PY3
 from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
 import pytest_timeout as _unused
@@ -543,3 +543,9 @@ def test_discard_casava():
 def test_underscore():
 	"""File name ending in _fastq.gz (issue #275)"""
 	run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'underscore_fastq.gz')
+
+
+if PY3:
+	def test_cores_autodetect():
+		# Just make sure that it runs; functionality is not tested
+		run('--cores 0 -b TTAGACATATCTCCGTCG', 'small.fastq', 'underscore_fastq.gz')

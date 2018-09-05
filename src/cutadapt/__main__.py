@@ -71,8 +71,9 @@ from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
 	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer, Shortener)
-from cutadapt.report import Statistics, print_report, print_minimal_report, redirect_standard_output
-from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles, ParallelPipelineRunner, available_cpu_count
+from cutadapt.report import print_report, print_minimal_report, redirect_standard_output
+from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles, ParallelPipelineRunner
+from cutadapt.utils import available_cpu_count
 from cutadapt.compat import PY3
 
 logger = logging.getLogger()
@@ -123,7 +124,7 @@ def get_option_parser():
 			"Ignored when reading csfasta/qual files. Default: auto-detect "
 			"from file name extension.")
 	parser.add_option('-j', '--cores', type=int, default=1,
-		help='Number of CPU cores to use. Default: %default')
+		help='Number of CPU cores to use. Use 0 to auto-detect. Default: %default')
 
 	# Hidden options
 	parser.add_option("--gc-content", type=float, default=50,  # it's a percentage
@@ -697,7 +698,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		parser.error(e)
 		return  # avoid IDE warnings below
 
-	cores = max(1, options.cores)
+	if options.cores < 0:
+		parser.error('Value for --cores cannot be negative')
+	cores = available_cpu_count() if options.cores == 0 else options.cores
 	if cores > 1:
 		if (
 			PY3

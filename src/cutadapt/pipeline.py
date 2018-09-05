@@ -2,7 +2,6 @@ from __future__ import print_function, division, absolute_import
 
 import io
 import os
-import re
 import sys
 import copy
 import logging
@@ -326,29 +325,6 @@ class PairedEndPipeline(Pipeline):
 			colorspace=self._colorspace)
 
 
-def available_cpu_count():
-	"""
-	Return the number of available virtual or physical CPUs on this system.
-	The number of available CPUs can be smaller than the total number of CPUs
-	when the cpuset(7) mechanism is in use, as is the case on some cluster
-	systems.
-
-	Adapted from http://stackoverflow.com/a/1006301/715090
-	"""
-	try:
-		with open('/proc/self/status') as f:
-			status = f.read()
-		m = re.search(r'(?m)^Cpus_allowed:\s*(.*)$', status)
-		if m:
-			res = bin(int(m.group(1).replace(',', ''), 16)).count('1')
-			if res > 0:
-				return min(res, multiprocessing.cpu_count())
-	except IOError:
-		pass
-
-	return multiprocessing.cpu_count()
-
-
 def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
 	"""
 	Read chunks of FASTA or FASTQ data from *file* and send to a worker.
@@ -514,7 +490,7 @@ class OrderedChunkWriter(object):
 
 class ParallelPipelineRunner(object):
 	"""
-	Wrap a SingleEndPipeline, running it in parallel
+	Run a Pipeline in parallel
 
 	- When set_input() is called, a reader process is spawned.
 	- When run() is called, as many worker processes as requested are spawned.
