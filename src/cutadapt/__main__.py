@@ -652,6 +652,14 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 	if options.trim_primer:
 		pipeline.add(PrimerTrimmer())
 
+	# Set filtering parameters
+	pipeline.minimum_length = options.minimum_length
+	pipeline.maximum_length = options.maximum_length
+	pipeline.max_n = options.max_n
+	pipeline.discard_casava = options.discard_casava
+	pipeline.discard_trimmed = options.discard_trimmed
+	pipeline.discard_untrimmed = options.discard_untrimmed
+
 	return pipeline
 
 
@@ -729,8 +737,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		runner.set_input(input_filename, file2=input_paired_filename,
 			qualfile=quality_filename, colorspace=options.colorspace,
 			fileformat=options.format, interleaved=is_interleaved_input)
-		runner.set_output(outfiles, options.minimum_length, options.maximum_length, options.max_n,
-			options.discard_casava,	options.discard_trimmed, options.discard_untrimmed)
+		runner.set_output(outfiles)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
 

@@ -33,7 +33,8 @@ class OutputFiles(object):
 	Files may also be None.
 	"""
 	# TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?
-	def __init__(self,
+	def __init__(
+			self,
 			out=None,
 			out2=None,
 			untrimmed=None,
@@ -92,6 +93,14 @@ class Pipeline(object):
 		self._outfiles = None
 		self._demultiplexer = None
 
+		# Filter settings
+		self.minimum_length = None
+		self.maximum_length = None
+		self.max_n = None
+		self.discard_casava = False
+		self.discard_trimmed = False
+		self.discard_untrimmed = False
+
 	def set_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 			interleaved=False):
 		self._reader = seqio.open(file1, file2, qualfile, colorspace, fileformat,
@@ -107,8 +116,7 @@ class Pipeline(object):
 		return seqio.open(file, file2, mode='w', qualities=self.uses_qualities,
 			colorspace=self._colorspace, **kwargs)
 
-	def set_output(self, outfiles, minimum_length=None, maximum_length=None,
-			max_n=None, discard_casava=False, discard_trimmed=False, discard_untrimmed=False):
+	def set_output(self, outfiles):
 		self._filters = []
 		self._outfiles = outfiles
 		filter_wrapper = self._filter_wrapper()
@@ -121,26 +129,26 @@ class Pipeline(object):
 			self._filters.append(WildcardFileWriter(outfiles.wildcard))
 
 		too_short_writer = None
-		if minimum_length is not None:
+		if self.minimum_length is not None:
 			if outfiles.too_short:
 				too_short_writer = self._open_writer(outfiles.too_short, outfiles.too_short2)
 			self._filters.append(
-				filter_wrapper(too_short_writer, TooShortReadFilter(minimum_length)))
+				filter_wrapper(too_short_writer, TooShortReadFilter(self.minimum_length)))
 
 		too_long_writer = None
-		if maximum_length is not None:
+		if self.maximum_length is not None:
 			if outfiles.too_long:
 				too_long_writer = self._open_writer(outfiles.too_long, outfiles.too_long2)
 			self._filters.append(
-				filter_wrapper(too_long_writer, TooLongReadFilter(maximum_length)))
+				filter_wrapper(too_long_writer, TooLongReadFilter(self.maximum_length)))
 
-		if max_n is not None:
-			self._filters.append(filter_wrapper(None, NContentFilter(max_n)))
+		if self.max_n is not None:
+			self._filters.append(filter_wrapper(None, NContentFilter(self.max_n)))
 
-		if discard_casava:
+		if self.discard_casava:
 			self._filters.append(filter_wrapper(None, CasavaFilter()))
 
-		if int(discard_trimmed) + int(discard_untrimmed) + int(outfiles.untrimmed is not None) > 1:
+		if int(self.discard_trimmed) + int(self.discard_untrimmed) + int(outfiles.untrimmed is not None) > 1:
 			raise ValueError('discard_trimmed, discard_untrimmed and outfiles.untrimmed must not '
 				'be set simultaneously')
 
@@ -151,9 +159,9 @@ class Pipeline(object):
 			# Set up the remaining filters to deal with --discard-trimmed,
 			# --discard-untrimmed and --untrimmed-output. These options
 			# are mutually exclusive in order to avoid brain damage.
-			if discard_trimmed:
+			if self.discard_trimmed:
 				self._filters.append(filter_wrapper(None, DiscardTrimmedFilter()))
-			elif discard_untrimmed:
+			elif self.discard_untrimmed:
 				self._filters.append(filter_wrapper(None, DiscardUntrimmedFilter()))
 			elif outfiles.untrimmed:
 				untrimmed_writer = self._open_writer(outfiles.untrimmed, outfiles.untrimmed2)
@@ -262,7 +270,7 @@ class PairedEndPipeline(Pipeline):
 	def add(self, modifier):
 		"""
 		Add a modifier for R1 and R2. If modify_first_read_only is True,
-		the modifier is *not* added for R2.
+		the modifier is not added for R2.
 		"""
 		self._modifiers.append(modifier)
 		if not self._modify_first_read_only:
@@ -382,12 +390,11 @@ class WorkerProcess(Process):
 	To notify the reader process that it wants data, it puts its own identifier into the
 	need_work_queue before attempting to read data from the read_pipe.
 	"""
-	def __init__(self, id_, pipeline, filtering_options, input_path1, input_path2,
+	def __init__(self, id_, pipeline, input_path1, input_path2,
 			interleaved_input, orig_outfiles, read_pipe, write_pipe, need_work_queue):
 		super(WorkerProcess, self).__init__()
 		self._id = id_
 		self._pipeline = pipeline
-		self._filtering_options = filtering_options
 		self._input_path1 = input_path1
 		self._input_path2 = input_path2
 		self._interleaved_input = interleaved_input
@@ -435,7 +442,7 @@ class WorkerProcess(Process):
 
 				outfiles = OutputFiles(out=output, out2=output2, interleaved=self._orig_outfiles.interleaved)
 				self._pipeline.set_input(input, input2, interleaved=self._interleaved_input)
-				self._pipeline.set_output(outfiles, *self._filtering_options[0], **self._filtering_options[1])
+				self._pipeline.set_output(outfiles)
 				(n, bp1, bp2) = self._pipeline.process_reads()
 				cur_stats = Statistics()
 				cur_stats.collect(n, bp1, bp2, [], [], self._pipeline._filters)
@@ -515,7 +522,6 @@ class ParallelPipelineRunner(object):
 		self._pipeline = pipeline
 		self._pipes = []  # the workers read from these
 		self._reader_process = None
-		self._filtering_options = None
 		self._outfiles = None
 		self._input_path1 = None
 		self._input_path2 = None
@@ -561,10 +567,9 @@ class ParallelPipelineRunner(object):
 			and not outfiles.demultiplex
 		)
 
-	def set_output(self, outfiles, *args, **kwargs):
+	def set_output(self, outfiles):
 		if not self.can_output_to(outfiles):
 			raise ValueError()
-		self._filtering_options = args, kwargs
 		self._outfiles = outfiles
 
 	def _start_workers(self):
@@ -573,8 +578,9 @@ class ParallelPipelineRunner(object):
 		for index in range(self._n_workers):
 			conn_r, conn_w = Pipe(duplex=False)
 			connections.append(conn_r)
-			worker = WorkerProcess(index, self._pipeline,
-				self._filtering_options, self._input_path1, self._input_path2,
+			worker = WorkerProcess(
+				index, self._pipeline,
+				self._input_path1, self._input_path2,
 				self._interleaved_input, self._outfiles,
 				self._pipes[index], conn_w, self._need_work_queue)
 			worker.daemon = True
