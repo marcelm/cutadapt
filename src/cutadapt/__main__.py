@@ -744,7 +744,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			and quality_filename is None
 			and not options.colorspace
 			and options.format is None
-			and cores > 1
 		):
 			runner = ParallelPipelineRunner(pipeline, cores, options.buffer_size)
 		else:

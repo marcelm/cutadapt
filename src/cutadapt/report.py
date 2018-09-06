@@ -10,8 +10,8 @@ import textwrap
 from .adapters import BACK, BACK_NOT_INTERNAL, FRONT, FRONT_NOT_INTERNAL, PREFIX, SUFFIX, ANYWHERE, LINKED
 from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
-	DiscardTrimmedFilter, DiscardUntrimmedFilter, PairedEndDemultiplexer, Demultiplexer,
-	NContentFilter, InfoFileWriter, WildcardFileWriter, RestFileWriter)
+	PairedEndDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter, WildcardFileWriter,
+	RestFileWriter)
 
 
 def safe_divide(numerator, denominator):
@@ -21,7 +21,7 @@ def safe_divide(numerator, denominator):
 		return numerator / denominator
 
 
-class Statistics:
+class Statistics(object):
 	def __init__(self):
 		"""
 		"""
