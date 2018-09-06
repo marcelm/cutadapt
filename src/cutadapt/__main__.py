@@ -356,7 +356,7 @@ def parse_lengths(s):
 	"""Parse [INT][:[INT]] into a pair of integers. If a value is omitted, use None
 
 	>>> parse_lengths('25')
-	(25, 25)
+	(25,)
 	>>> parse_lengths('17:25')
 	(17, 25)
 	>>> parse_lengths('25:')
@@ -371,9 +371,7 @@ def parse_lengths(s):
 		values = tuple(int(f) if f != '' else None for f in fields)
 	except ValueError as e:
 		raise CommandlineError("Value not recognized: {0}".format(e))
-	if len(values) == 1:
-		values = (values[0], values[0])
-	if values[0] is None and values[1] is None:
+	if len(values) == 2 and values[0] is None and values[1] is None:
 		raise CommandlineError("Cannot parse {!r}: At least one length needs to be given".format(s))
 	return tuple(values)
 
@@ -679,10 +677,16 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 		pipeline.add(PrimerTrimmer())
 
 	# Set filtering parameters
-	if options.minimum_length is not None:
-		pipeline.minimum_length = parse_lengths(options.minimum_length)
-	if options.maximum_length is not None:
-		pipeline.maximum_length = parse_lengths(options.maximum_length)
+	# Minimum/maximum length
+	for attr in 'minimum_length', 'maximum_length':
+		param = getattr(options, attr)
+		if param is not None:
+			lengths = parse_lengths(param)
+			if not paired and len(lengths) == 2:
+				raise CommandlineError('Two minimum or maximum lengths given for single-end data')
+			if paired and len(lengths) == 1:
+				lengths = (lengths[0], lengths[0])
+			setattr(pipeline, attr, lengths)
 	pipeline.max_n = options.max_n
 	pipeline.discard_casava = options.discard_casava
 	pipeline.discard_trimmed = options.discard_trimmed

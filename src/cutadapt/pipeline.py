@@ -101,36 +101,6 @@ class Pipeline(object):
 		self.discard_trimmed = False
 		self.discard_untrimmed = False
 
-	@property
-	def minimum_length(self):
-		return self._minimum_length
-
-	@minimum_length.setter
-	def minimum_length(self, value):
-		if value is None:
-			self._minimum_length = None
-		elif isinstance(value, int):
-			self._minimum_length = (value, value)
-		else:
-			assert len(value) == 2
-			assert not (value[0] is None and value[1] is None)
-			self._minimum_length = value
-
-	@property
-	def maximum_length(self):
-		return self._maximum_length
-
-	@maximum_length.setter
-	def maximum_length(self, value):
-		if value is None:
-			self._maximum_length = None
-		elif isinstance(value, int):  # TODO
-			self._maximum_length = (value, value)
-		else:
-			assert len(value) == 2
-			assert not (value[0] is None and value[1] is None)
-			self._maximum_length = value
-
 	def set_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 			interleaved=False):
 		self._reader = seqio.open(file1, file2, qualfile, colorspace, fileformat,
@@ -168,7 +138,10 @@ class Pipeline(object):
 				if file1:
 					writer = self._open_writer(file1, file2)
 				f1 = filter_class(lengths[0]) if lengths[0] is not None else None
-				f2 = filter_class(lengths[1]) if lengths[1] is not None else None
+				if len(lengths) == 2 and lengths[1] is not None:
+					f2 = filter_class(lengths[1])
+				else:
+					f2 = None
 				self._filters.append(filter_wrapper(writer, filter=f1, filter2=f2))
 
 		if self.max_n is not None:
@@ -276,6 +249,24 @@ class SingleEndPipeline(Pipeline):
 		return Demultiplexer(outfiles.out, outfiles.untrimmed, qualities=self.uses_qualities,
 			colorspace=self._colorspace)
 
+	@property
+	def minimum_length(self):
+		return self._minimum_length
+
+	@minimum_length.setter
+	def minimum_length(self, value):
+		assert value is None or len(value) == 1
+		self._minimum_length = value
+
+	@property
+	def maximum_length(self):
+		return self._maximum_length
+
+	@maximum_length.setter
+	def maximum_length(self, value):
+		assert value is None or len(value) == 1
+		self._maximum_length = value
+
 
 class PairedEndPipeline(Pipeline):
 	"""
@@ -362,6 +353,24 @@ class PairedEndPipeline(Pipeline):
 		return PairedEndDemultiplexer(outfiles.out, outfiles.out2,
 			outfiles.untrimmed, outfiles.untrimmed2, qualities=self.uses_qualities,
 			colorspace=self._colorspace)
+
+	@property
+	def minimum_length(self):
+		return self._minimum_length
+
+	@minimum_length.setter
+	def minimum_length(self, value):
+		assert value is None or len(value) == 2
+		self._minimum_length = value
+
+	@property
+	def maximum_length(self):
+		return self._maximum_length
+
+	@maximum_length.setter
+	def maximum_length(self, value):
+		assert value is None or len(value) == 2
+		self._maximum_length = value
 
 
 def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):

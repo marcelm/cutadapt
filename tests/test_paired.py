@@ -409,7 +409,7 @@ def test_paired_demultiplex():
 	range(1, 5),
 	[(2, 3), (2, None), (None, 3)]
 )))
-def test_separate_minlength(tmpdir, name_op, l1, l2, m):
+def test_separate_minmaxlength(tmpdir, name_op, l1, l2, m):
 	"""Separate minimum lengths for R1 and R2"""
 	m1, m2 = m
 	name, func = name_op
@@ -433,3 +433,9 @@ def test_separate_minlength(tmpdir, name_op, l1, l2, m):
 
 	main(['--interleaved', '-o', outpath, '-' + name, '{}:{}'.format(m1, m2), inpath])
 	assert_files_equal(expected, outpath)
+
+
+def test_separate_minlength_single():
+	"""Using separate minlengths for single-end data"""
+	with pytest.raises(SystemExit):
+		main(['-m', '5:7', datapath('small.fastq')])
