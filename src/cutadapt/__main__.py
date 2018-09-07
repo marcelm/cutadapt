@@ -84,7 +84,7 @@ class CutadaptOptionParser(OptionParser):
 		return self.usage.lstrip().replace('%version', __version__)
 
 
-class CommandlineError(Exception):
+class CommandLineError(Exception):
 	pass
 
 
@@ -340,14 +340,14 @@ def parse_cutoffs(s):
 		try:
 			cutoffs = [0, int(cutoffs[0])]
 		except ValueError as e:
-			raise CommandlineError("Quality cutoff value not recognized: {0}".format(e))
+			raise CommandLineError("Quality cutoff value not recognized: {0}".format(e))
 	elif len(cutoffs) == 2:
 		try:
 			cutoffs = [int(cutoffs[0]), int(cutoffs[1])]
 		except ValueError as e:
-			raise CommandlineError("Quality cutoff value not recognized: {0}".format(e))
+			raise CommandLineError("Quality cutoff value not recognized: {0}".format(e))
 	else:
-		raise CommandlineError("Expected one value or two values separated by comma for "
+		raise CommandLineError("Expected one value or two values separated by comma for "
 			"the quality cutoff")
 	return cutoffs
 
@@ -366,13 +366,13 @@ def parse_lengths(s):
 	"""
 	fields = s.split(':')
 	if len(fields) not in (1, 2):
-		raise CommandlineError("Only at most one colon is allowed")
+		raise CommandLineError("Only at most one colon is allowed")
 	try:
 		values = tuple(int(f) if f != '' else None for f in fields)
 	except ValueError as e:
-		raise CommandlineError("Value not recognized: {0}".format(e))
+		raise CommandLineError("Value not recognized: {0}".format(e))
 	if len(values) == 2 and values[0] is None and values[1] is None:
-		raise CommandlineError("Cannot parse {!r}: At least one length needs to be given".format(s))
+		raise CommandLineError("Cannot parse {!r}: At least one length needs to be given".format(s))
 	return tuple(values)
 
 
@@ -407,17 +407,17 @@ def open_output_files(options, default_outfile, interleaved):
 
 	if int(options.discard_trimmed) + int(options.discard_untrimmed) + int(
 					options.untrimmed_output is not None) > 1:
-		raise CommandlineError("Only one of the --discard-trimmed, --discard-untrimmed "
+		raise CommandLineError("Only one of the --discard-trimmed, --discard-untrimmed "
 			"and --untrimmed-output options can be used at the same time.")
 
 	demultiplex = options.output is not None and '{name}' in options.output
 	if options.paired_output is not None and (demultiplex != ('{name}' in options.paired_output)):
-		raise CommandlineError('When demultiplexing paired-end data, "{name}" must appear in '
+		raise CommandLineError('When demultiplexing paired-end data, "{name}" must appear in '
 			'both output file names (-o and -p)')
 
 	if demultiplex:
 		if options.discard_trimmed:
-			raise CommandlineError("Do not use --discard-trimmed when demultiplexing.")
+			raise CommandLineError("Do not use --discard-trimmed when demultiplexing.")
 
 		out = options.output
 		untrimmed = options.output.replace('{name}', 'unknown')
@@ -495,7 +495,7 @@ def determine_interleaved(options, args):
 		is_interleaved_input = len(args) == 1
 		is_interleaved_output = not options.paired_output
 		if not is_interleaved_input and not is_interleaved_output:
-			raise CommandlineError("When --interleaved is used, you cannot provide both two "
+			raise CommandLineError("When --interleaved is used, you cannot provide both two "
 				"input files and two output files")
 	return is_interleaved_input, is_interleaved_output
 
@@ -505,14 +505,14 @@ def input_files_from_parsed_args(args, paired, interleaved):
 	Return tuple (input_filename, input_paired_filename, quality_filename)
 	"""
 	if len(args) == 0:
-		raise CommandlineError("At least one parameter needed: name of a FASTA or FASTQ file.")
+		raise CommandLineError("At least one parameter needed: name of a FASTA or FASTQ file.")
 	elif len(args) > 2:
-		raise CommandlineError("Too many parameters.")
+		raise CommandLineError("Too many parameters.")
 	input_filename = args[0]
 	if input_filename.endswith('.qual'):
-		raise CommandlineError("If a .qual file is given, it must be the second argument.")
+		raise CommandLineError("If a .qual file is given, it must be the second argument.")
 	if paired and len(args) == 1 and not interleaved:
-		raise CommandlineError("When paired-end trimming is enabled via -A/-G/-B/-U/"
+		raise CommandLineError("When paired-end trimming is enabled via -A/-G/-B/-U/"
 			"--interleaved or -p, two input files are required.")
 
 	input_paired_filename = None
@@ -530,41 +530,41 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 	"""
 	Setup a processing pipeline from parsed command-line options.
 
-	If there are any problems parsing the arguments, a CommandlineError is thrown.
+	If there are any problems parsing the arguments, a CommandLineError is thrown.
 
 	Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
 	"""
 
 	if not paired:
 		if options.untrimmed_paired_output:
-			raise CommandlineError("Option --untrimmed-paired-output can only be used when "
+			raise CommandLineError("Option --untrimmed-paired-output can only be used when "
 				"trimming paired-end reads (with option -p).")
 
 	if paired:
 		if not is_interleaved_output:
 			if not options.paired_output:
-				raise CommandlineError("When paired-end trimming is enabled via -A/-G/-B/-U, "
+				raise CommandLineError("When paired-end trimming is enabled via -A/-G/-B/-U, "
 					"a second output file needs to be specified via -p (--paired-output).")
 			if not options.output:
-				raise CommandlineError("When you use -p or --paired-output, you must also "
+				raise CommandLineError("When you use -p or --paired-output, you must also "
 					"use the -o option.")
 
 		if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
-			raise CommandlineError("When trimming paired-end reads, you must use either none "
+			raise CommandLineError("When trimming paired-end reads, you must use either none "
 				"or both of the --untrimmed-output/--untrimmed-paired-output options.")
 		if options.too_short_output and not options.too_short_paired_output:
-			raise CommandlineError("When using --too-short-output with paired-end "
+			raise CommandLineError("When using --too-short-output with paired-end "
 				"reads, you also need to use --too-short-paired-output")
 		if options.too_long_output and not options.too_long_paired_output:
-			raise CommandlineError("When using --too-long-output with paired-end "
+			raise CommandLineError("When using --too-long-output with paired-end "
 				"reads, you also need to use --too-long-paired-output")
 	elif quality_filename is not None:
 		if options.format is not None:
-			raise CommandlineError('If a pair of .fasta and .qual files is given, the -f/--format '
+			raise CommandLineError('If a pair of .fasta and .qual files is given, the -f/--format '
 				'parameter cannot be used.')
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
-		raise CommandlineError("The input file format must be either 'fasta', 'fastq' or "
+		raise CommandLineError("The input file format must be either 'fasta', 'fastq' or "
 			"'sra-fastq' (not '{0}').".format(options.format))
 
 	if options.maq:
@@ -576,24 +576,24 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 	if options.zero_cap is None:
 		options.zero_cap = options.colorspace
 	if options.trim_primer and not options.colorspace:
-		raise CommandlineError("Trimming the primer makes only sense in colorspace.")
+		raise CommandLineError("Trimming the primer makes only sense in colorspace.")
 	if options.double_encode and not options.colorspace:
-		raise CommandlineError("Double-encoding makes only sense in colorspace.")
+		raise CommandLineError("Double-encoding makes only sense in colorspace.")
 	if options.anywhere and options.colorspace:
-		raise CommandlineError("Using --anywhere with colorspace reads is currently not supported "
+		raise CommandLineError("Using --anywhere with colorspace reads is currently not supported "
 			"(if you think this may be useful, contact the author).")
 	if not (0 <= options.error_rate <= 1.):
-		raise CommandlineError("The maximum error rate must be between 0 and 1.")
+		raise CommandLineError("The maximum error rate must be between 0 and 1.")
 	if options.overlap < 1:
-		raise CommandlineError("The overlap must be at least 1.")
+		raise CommandLineError("The overlap must be at least 1.")
 	if not (0 <= options.gc_content <= 100):
-		raise CommandlineError("GC content must be given as percentage between 0 and 100")
+		raise CommandLineError("GC content must be given as percentage between 0 and 100")
 	if options.action == 'none':
 		options.action = None
 
 	if options.colorspace:
 		if options.match_read_wildcards:
-			raise CommandlineError('IUPAC wildcards not supported in colorspace')
+			raise CommandLineError('IUPAC wildcards not supported in colorspace')
 		options.match_adapter_wildcards = False
 
 	adapter_parser = AdapterParser(
@@ -609,10 +609,10 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 		adapters2 = adapter_parser.parse_multi(options.adapters2, options.anywhere2, options.front2)
 	except IOError as e:
 		if e.errno == errno.ENOENT:
-			raise CommandlineError(e)
+			raise CommandLineError(e)
 		raise
 	except ValueError as e:
-		raise CommandlineError(e)
+		raise CommandLineError(e)
 	if options.debug:
 		for adapter in adapters + adapters2:
 			adapter.enable_debug()
@@ -627,18 +627,18 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 
 	if options.cut:
 		if len(options.cut) > 2:
-			raise CommandlineError("You cannot remove bases from more than two ends.")
+			raise CommandLineError("You cannot remove bases from more than two ends.")
 		if len(options.cut) == 2 and options.cut[0] * options.cut[1] > 0:
-			raise CommandlineError("You cannot remove bases from the same end twice.")
+			raise CommandLineError("You cannot remove bases from the same end twice.")
 		for cut in options.cut:
 			if cut != 0:
 				pipeline.add1(UnconditionalCutter(cut))
 
 	if options.cut2:
 		if len(options.cut2) > 2:
-			raise CommandlineError("You cannot remove bases from more than two ends.")
+			raise CommandLineError("You cannot remove bases from more than two ends.")
 		if len(options.cut2) == 2 and options.cut2[0] * options.cut2[1] > 0:
-			raise CommandlineError("You cannot remove bases from the same end twice.")
+			raise CommandLineError("You cannot remove bases from the same end twice.")
 		for cut in options.cut2:
 			if cut != 0:
 				pipeline.add2(UnconditionalCutter(cut))
@@ -683,7 +683,7 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 		if param is not None:
 			lengths = parse_lengths(param)
 			if not paired and len(lengths) == 2:
-				raise CommandlineError('Two minimum or maximum lengths given for single-end data')
+				raise CommandLineError('Two minimum or maximum lengths given for single-end data')
 			if paired and len(lengths) == 1:
 				lengths = (lengths[0], lengths[0])
 			setattr(pipeline, attr, lengths)
@@ -734,7 +734,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			paired, is_interleaved_input)
 		pipeline = pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filename, is_interleaved_output)
 		outfiles = open_output_files(options, default_outfile, is_interleaved_output)
-	except CommandlineError as e:
+	except CommandLineError as e:
 		parser.error(e)
 		return  # avoid IDE warnings below
 
