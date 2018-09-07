@@ -24,6 +24,7 @@
 
 """
 cutadapt version %version
+
 Copyright (C) 2010-2018 Marcel Martin <marcel.martin@scilifelab.se>
 
 cutadapt removes adapter sequences from high-throughput sequencing reads.
@@ -51,8 +52,8 @@ Marcel Martin. Cutadapt removes adapter sequences from high-throughput
 sequencing reads. EMBnet.Journal, 17(1):10-12, May 2011.
 http://dx.doi.org/10.14806/ej.17.1.200
 
-Use "cutadapt --help" to see all command-line options.
-See http://cutadapt.readthedocs.io/ for full documentation.
+Run "cutadapt --help" to see all command-line options.
+See https://cutadapt.readthedocs.io/ for full documentation.
 """
 
 from __future__ import print_function, division, absolute_import
@@ -82,6 +83,11 @@ logger = logging.getLogger()
 class CutadaptOptionParser(OptionParser):
 	def get_usage(self):
 		return self.usage.lstrip().replace('%version', __version__)
+
+	def error(self, msg):
+		print('Run "cutadapt --help" to see command-line options.', file=sys.stderr)
+		print('See https://cutadapt.readthedocs.io/ for full documentation.', file=sys.stderr)
+		self.exit(2, "\n%s: error: %s\n" % (self.get_prog_name(), msg))
 
 
 class CommandLineError(Exception):
@@ -505,7 +511,7 @@ def input_files_from_parsed_args(args, paired, interleaved):
 	Return tuple (input_filename, input_paired_filename, quality_filename)
 	"""
 	if len(args) == 0:
-		raise CommandLineError("At least one parameter needed: name of a FASTA or FASTQ file.")
+		raise CommandLineError("Please give me something to do!")
 	elif len(args) > 2:
 		raise CommandLineError("Too many parameters.")
 	input_filename = args[0]
