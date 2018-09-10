@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Classes for writing and filtering of processed reads.
 
@@ -14,7 +13,6 @@ filters is created and each redirector is called in turn until one returns True.
 The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded).
 """
-from __future__ import print_function, division, absolute_import
 from . import seqio
 
 # Constants used when returning from a Filter’s __call__ method to improve

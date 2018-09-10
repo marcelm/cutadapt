@@ -1,9 +1,6 @@
-# coding: utf-8
 """
 Routines for printing a report.
 """
-from __future__ import print_function, division, absolute_import
-
 import sys
 from contextlib import contextmanager
 import textwrap

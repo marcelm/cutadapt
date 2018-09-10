@@ -1,9 +1,6 @@
-# coding: utf-8
 """
 Tests write output (should it return True or False or write)
 """
-from __future__ import print_function, division, absolute_import
-
 from cutadapt.filters import NContentFilter, DISCARD, KEEP, PairedRedirector
 from cutadapt.seqio import Sequence
 

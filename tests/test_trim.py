@@ -1,6 +1,3 @@
-# coding: utf-8
-from __future__ import print_function, division, absolute_import
-
 from cutadapt.seqio import ColorspaceSequence, Sequence
 from cutadapt.adapters import Adapter, ColorspaceAdapter, PREFIX, BACK, ANYWHERE
 from cutadapt.modifiers import AdapterCutter

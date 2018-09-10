@@ -1,9 +1,6 @@
-# coding: utf-8
 """
 Quality trimming.
 """
-from __future__ import print_function, division, absolute_import
-
 import sys
 
 if sys.version > '3':

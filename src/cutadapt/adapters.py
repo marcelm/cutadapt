@@ -1,11 +1,9 @@
-# coding: utf-8
 """
 Adapter finding and trimming classes
 
 The ...Adapter classes are responsible for finding adapters.
 The ...Match classes trim the reads.
 """
-from __future__ import print_function, division, absolute_import
 import re
 from collections import defaultdict
 from cutadapt import align, colorspace

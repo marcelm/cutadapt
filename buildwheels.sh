@@ -23,6 +23,9 @@ if ! grep -q docker /proc/1/cgroup; then
   exec docker run --rm -v $(pwd):/io quay.io/pypa/manylinux1_x86_64 /io/$0
 fi
 
+# We don’t support Python 2.7
+rm /opt/python/cp27*
+
 PYBINS="/opt/python/*/bin"
 HAS_CYTHON=0
 for PYBIN in ${PYBINS}; do

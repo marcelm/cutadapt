@@ -1,7 +1,4 @@
-# coding: utf-8
-from __future__ import print_function, division, absolute_import
-
-from io import BytesIO
+from io import BytesIO, StringIO
 import os
 import shutil
 from textwrap import dedent
@@ -13,7 +10,6 @@ from cutadapt.seqio import (Sequence, ColorspaceSequence, FormatError,
 	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq,
 	sequence_names_match, two_fastq_heads, find_fastq_record_end,
 	read_paired_chunks, read_chunks_from_file)
-from cutadapt.compat import StringIO
 
 
 # files tests/data/simple.fast{q,a}

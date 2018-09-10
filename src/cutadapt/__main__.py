@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# kate: word-wrap off; remove-trailing-spaces all;
 #
 # Copyright (c) 2010-2018 Marcel Martin <marcel.martin@scilifelab.se>
 #
@@ -56,8 +54,6 @@ Run "cutadapt --help" to see all command-line options.
 See https://cutadapt.readthedocs.io/ for full documentation.
 """
 
-from __future__ import print_function, division, absolute_import
-
 import sys
 import errno
 import time
@@ -75,7 +71,6 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 from cutadapt.report import print_report, print_minimal_report, redirect_standard_output
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles, ParallelPipelineRunner
 from cutadapt.utils import available_cpu_count
-from cutadapt.compat import PY3
 
 logger = logging.getLogger()
 
@@ -749,24 +744,20 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	cores = available_cpu_count() if options.cores == 0 else options.cores
 	if cores > 1:
 		if (
-			PY3
-			and ParallelPipelineRunner.can_output_to(outfiles)
+			ParallelPipelineRunner.can_output_to(outfiles)
 			and quality_filename is None
 			and not options.colorspace
 			and options.format is None
 		):
 			runner = ParallelPipelineRunner(pipeline, cores, options.buffer_size)
 		else:
-			if not PY3:
-				logger.error('Running in parallel is not supported on Python 2')
-			else:
-				logger.error('Running in parallel is currently not supported for '
-					'the given combination of command-line parameters.\nThese '
-					'options are not supported: --info-file, --rest-file, '
-					'--wildcard-file, --untrimmed-output, '
-					'--untrimmed-paired-output, --too-short-output, '
-					'--too-short-paired-output, --too-long-output, '
-					'--too-long-paired-output, --format, --colorspace')
+			logger.error('Running in parallel is currently not supported for '
+				'the given combination of command-line parameters.\nThese '
+				'options are not supported: --info-file, --rest-file, '
+				'--wildcard-file, --untrimmed-output, '
+				'--untrimmed-paired-output, --too-short-output, '
+				'--too-short-paired-output, --too-long-output, '
+				'--too-long-paired-output, --format, --colorspace')
 			sys.exit(1)
 	else:
 		runner = pipeline

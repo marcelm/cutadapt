@@ -1,6 +1,3 @@
-# coding: utf-8
-from __future__ import print_function, division, absolute_import
-
 import os.path
 import shutil
 import tempfile
@@ -8,19 +5,13 @@ from itertools import product
 
 import pytest
 
-from cutadapt.compat import PY3
 from cutadapt.__main__ import main
 from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
 
-if PY3:
-	@pytest.fixture(params=[1, 2])
-	def cores(request):
-		return request.param
-else:
-	@pytest.fixture
-	def cores():
-		return 1
+@pytest.fixture(params=[1, 2])
+def cores(request):
+	return request.param
 
 
 def run_paired(params, in1, in2, expected1, expected2, cores):

@@ -9,9 +9,9 @@ successfully under macOS and Windows.
 Quick installation
 ------------------
 
-The easiest way to install cutadapt is to use ``pip`` on the command line::
+The easiest way to install cutadapt is to use ``pip3`` on the command line::
 
-    pip install --user --upgrade cutadapt
+    pip3 install --user --upgrade cutadapt
 
 This will download the software from `PyPI (the Python packaging
 index) <https://pypi.python.org/pypi/cutadapt/>`_, and
@@ -45,12 +45,12 @@ Dependencies
 
 Cutadapt installation requires this software to be installed:
 
-* Python 2.7 or at least Python 3.4
+* Python 3.4 or newer
 * Possibly a C compiler. For Linux, cutadapt packages are provided as
   so-called “wheels” (``.whl`` files) which come pre-compiled.
 
 Under Ubuntu, you may need to install the packages ``build-essential`` and
-``python-dev`` (or ``python3-dev``) to get a C compiler.
+``python3-dev`` to get a C compiler.
 
 On Windows, you need `Microsoft Visual C++ Compiler for
 Python 2.7 <https://www.microsoft.com/en-us/download/details.aspx?id=44266>`_.
@@ -61,7 +61,7 @@ If you get an error message::
 
 Then check the entire error message. If it says something about a missing
 ``Python.h`` file, then the problem are missing Python development
-packages (``python-dev``/``python3-dev`` in Ubuntu).
+packages (``python3-dev`` in Ubuntu).
 
 
 System-wide installation (root required)
@@ -69,13 +69,13 @@ System-wide installation (root required)
 
 If you have root access, then you can install cutadapt system-wide by running::
 
-    sudo pip install cutadapt
+    sudo pip3 install cutadapt
 
 This installs cutadapt into `/usr/local/bin`.
 
 If you want to upgrade from an older version, use this command instead::
 
-    sudo pip install --upgrade cutadapt
+    sudo pip3 install --upgrade cutadapt
 
 
 Uninstalling
@@ -83,7 +83,7 @@ Uninstalling
 
 Type  ::
 
-    pip uninstall cutadapt
+    pip3 uninstall cutadapt
 
 and confirm with ``y`` to remove the package. Under some circumstances, multiple
 versions may be installed at the same time. Repeat the above command until you

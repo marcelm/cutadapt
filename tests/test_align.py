@@ -1,6 +1,3 @@
-# coding: utf-8
-from __future__ import print_function, division, absolute_import
-
 from cutadapt.align import (locate, compare_prefixes, compare_suffixes,
 	Aligner)
 from cutadapt.adapters import BACK

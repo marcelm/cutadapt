@@ -1,6 +1,3 @@
-# coding: utf-8
-from __future__ import print_function, division, absolute_import
-
 import os.path
 import subprocess
 import sys

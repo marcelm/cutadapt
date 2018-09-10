@@ -1,19 +1,15 @@
-# coding: utf-8
 # TODO
 # test with the --output option
 # test reading from standard input
-from __future__ import print_function, division, absolute_import
-
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
-
+from io import StringIO
 import pytest
 
 from cutadapt.__main__ import main
-from cutadapt.compat import StringIO, PY3
 from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
 import pytest_timeout as _unused
@@ -545,7 +541,6 @@ def test_underscore():
 	run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'underscore_fastq.gz')
 
 
-if PY3:
-	def test_cores_autodetect():
-		# Just make sure that it runs; functionality is not tested
-		run('--cores 0 -b TTAGACATATCTCCGTCG', 'small.fastq', 'underscore_fastq.gz')
+def test_cores_autodetect():
+	# Just make sure that it runs; functionality is not tested
+	run('--cores 0 -b TTAGACATATCTCCGTCG', 'small.fastq', 'underscore_fastq.gz')

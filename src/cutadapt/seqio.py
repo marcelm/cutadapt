@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 Sequence I/O classes: Reading and writing of FASTA and FASTQ files.
 
@@ -7,15 +6,9 @@ TODO
 - Sequence.name should be Sequence.description or so (reserve .name for the part
   before the first space)
 """
-from __future__ import print_function, division, absolute_import
-
 import sys
 from os.path import splitext
 from xopen import xopen
-
-from .compat import zip, basestring
-
-__author__ = "Marcel Martin"
 
 
 class FormatError(Exception):
@@ -86,7 +79,7 @@ class SequenceReader(object):
 		file is a path or a file-like object. In both cases, the file may
 		be compressed (.gz, .bz2, .xz).
 		"""
-		if isinstance(file, basestring):
+		if isinstance(file, str):
 			file = xopen(file)
 			self._close_on_exit = True
 		self._file = file
@@ -745,7 +738,7 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
 	name = None
 	if file == "-":
 		file = sys.stdin if mode == 'r' else sys.stdout
-	elif isinstance(file, basestring):
+	elif isinstance(file, str):
 		name = file
 	elif hasattr(file, "name"):  # seems to be an open file-like object
 		name = file.name

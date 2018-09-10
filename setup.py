@@ -10,11 +10,10 @@ from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_ext import build_ext as _build_ext
 import versioneer
 
-MIN_CYTHON_VERSION = '0.24'
+MIN_CYTHON_VERSION = '0.28'
 
-vi = sys.version_info
-if (vi[0] == 2 and vi[1] < 7) or (vi[0] == 3 and vi[1] < 4):
-	sys.stdout.write('Minimum supported Python versions are 2.7 and 3.4.\n')
+if sys.version_info[:2] < (3, 4):
+	sys.stdout.write('You need at least Python 3.4\n')
 	sys.exit(1)
 
 
@@ -123,7 +122,6 @@ setup(
 		"License :: OSI Approved :: MIT License",
 		"Natural Language :: English",
 		"Programming Language :: Cython",
-		"Programming Language :: Python :: 2.7",
 		"Programming Language :: Python :: 3",
 		"Topic :: Scientific/Engineering :: Bio-Informatics"
 	]

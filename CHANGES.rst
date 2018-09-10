@@ -2,6 +2,12 @@
 Changes
 =======
 
+development version
+-------------------
+
+* This release of Cutadapt requires at least Python 3.4 to run.
+
+
 v1.18 (2018-09-07)
 ------------------
 
