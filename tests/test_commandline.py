@@ -79,33 +79,26 @@ def test_format():
 
 def test_minimum_length():
 	"""-m/--minimum-length"""
-	run("-c -m 5 -a 330201030313112312", "minlen.fa", "lengths.fa")
+	run("-m 5 -a TTAGACATATCTCCGTCG", "minlen.fa", "lengths.fa")
 
 
-def test_too_short():
+def test_too_short(tmpdir):
 	"""--too-short-output"""
-	run("-c -m 5 -a 330201030313112312 --too-short-output tooshort.tmp.fa", "minlen.fa", "lengths.fa")
-	assert_files_equal(datapath('tooshort.fa'), "tooshort.tmp.fa")
-	os.remove('tooshort.tmp.fa')
-
-
-def test_too_short_no_primer():
-	"""--too-short-output and --trim-primer"""
-	run("-c -m 5 -a 330201030313112312 --trim-primer --too-short-output tooshort.tmp.fa", "minlen.noprimer.fa", "lengths.fa")
-	assert_files_equal(datapath('tooshort.noprimer.fa'), "tooshort.tmp.fa")
-	os.remove('tooshort.tmp.fa')
+	too_short_path = str(tmpdir.join('tooshort.fa'))
+	run("-m 5 -a TTAGACATATCTCCGTCG --too-short-output " + too_short_path, "minlen.fa", "lengths.fa")
+	assert_files_equal(datapath('tooshort.fa'), too_short_path)
 
 
 def test_maximum_length():
 	"""-M/--maximum-length"""
-	run("-c -M 5 -a 330201030313112312", "maxlen.fa", "lengths.fa")
+	run("-M 5 -a TTAGACATATCTCCGTCG", "maxlen.fa", "lengths.fa")
 
 
-def test_too_long():
+def test_too_long(tmpdir):
 	"""--too-long-output"""
-	run("-c -M 5 --too-long-output toolong.tmp.fa -a 330201030313112312", "maxlen.fa", "lengths.fa")
-	assert_files_equal(datapath('toolong.fa'), "toolong.tmp.fa")
-	os.remove('toolong.tmp.fa')
+	too_long_path = str(tmpdir.join('toolong.fa'))
+	run("-M 5 -a TTAGACATATCTCCGTCG --too-long-output " + too_long_path, "maxlen.fa", "lengths.fa")
+	assert_files_equal(datapath('toolong.fa'), too_long_path)
 
 
 def test_length_tag():
@@ -115,14 +108,25 @@ def test_length_tag():
 		"-b TCCATCTCATCCCTGCGTGTCCCATCTGTTCCCTCCCTGTCTCA", '454.fa', '454.fa')
 
 
-def test_overlap_a():
-	"""-O/--overlap with -a (-c omitted on purpose)"""
-	run("-O 10 -a 330201030313112312 -e 0.0 -N", "overlapa.fa", "overlapa.fa")
+@pytest.mark.parametrize("length", list(range(3, 11)))
+def test_overlap_a(tmpdir, length):
+	"""-O/--overlap with -a"""
+	adapter = "catatctccg"
+	record = ">read\nGAGACCATTCCAATG" + adapter[:length] + '\n'
+	input = tmpdir.join("overlap.fasta")
+	input.write(record)
+	if length < 7:
+		expected = record
+	else:
+		expected = '>read\nGAGACCATTCCAATG\n'
+	output = tmpdir.join("overlap-trimmed.fasta")
+	main(["-O", "7", "-e", "0", "-a", adapter, "-o", str(output), str(input)])
+	assert expected == output.read()
 
 
 def test_overlap_b():
 	"""-O/--overlap with -b"""
-	run("-O 10 -b TTAGACATATCTCCGTCG -N", "overlapb.fa", "overlapb.fa")
+	run("-O 10 -b TTAGACATATCTCCGTCG", "overlapb.fa", "overlapb.fa")
 
 
 def test_qualtrim():
@@ -180,9 +184,10 @@ def test_gz_multiblock():
 	run("-b TTAGACATATCTCCGTCG", "small.fastq", "multiblock.fastq.gz")
 
 
-def test_suffix():
-	"""-y/--suffix parameter, combined with _F3"""
-	run("-c -e 0.12 -a 1=330201030313112312 -y _my_suffix_{name} --strip-f3", "suffix.fastq", "solid.csfasta", 'solid.qual')
+@pytest.mark.parametrize("opt", ["-y", "--suffix"])
+def test_suffix(opt):
+	"""-y/--suffix parameter"""
+	run([opt, ' {name}', '-e', '0', '-a', 'OnlyT=TTTTTTTT', '-a', 'OnlyG=GGGGGGGG'], "suffix.fastq", "suffix.fastq")
 
 
 def test_read_wildcard():

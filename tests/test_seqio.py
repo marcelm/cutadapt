@@ -5,7 +5,7 @@ from textwrap import dedent
 import pytest
 from nose.tools import raises
 from tempfile import mkdtemp
-from cutadapt.seqio import (Sequence, ColorspaceSequence, FormatError,
+from cutadapt.seqio import (Sequence, FormatError,
 	FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
 	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq,
 	sequence_names_match, two_fastq_heads, find_fastq_record_end,
@@ -25,14 +25,6 @@ class TestSequence:
 	@raises(FormatError)
 	def test_too_many_qualities(self):
 		Sequence(name="name", sequence="ACGT", qualities="#####")
-
-	@raises(FormatError)
-	def test_too_many_qualities_colorspace(self):
-		ColorspaceSequence(name="name", sequence="T0123", qualities="#####")
-
-	@raises(FormatError)
-	def test_invalid_primer(self):
-		ColorspaceSequence(name="name", sequence="K0123", qualities="####")
 
 
 class TestFastaReader:

@@ -6,6 +6,9 @@ development version
 -------------------
 
 * This release of Cutadapt requires at least Python 3.4 to run.
+* Support for colorspace data was removed. Thus, the following command-line
+  options can no longer be used: ``-c``, ``-d``, ``-t`, ``--strip-f3``,
+  ``--maq``, ``--bwa``, ``--no-zero-cap``
 
 
 v1.18 (2018-09-07)

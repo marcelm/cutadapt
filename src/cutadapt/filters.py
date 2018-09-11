@@ -220,7 +220,7 @@ class Demultiplexer:
 	depending on which adapter matches. Files are created when the first read
 	is written to them.
 	"""
-	def __init__(self, path_template, untrimmed_path, colorspace, qualities):
+	def __init__(self, path_template, untrimmed_path, qualities):
 		"""
 		path_template must contain the string '{name}', which will be replaced
 		with the name of the adapter to form the final output path.
@@ -234,7 +234,6 @@ class Demultiplexer:
 		self.writers = dict()
 		self.written = 0
 		self.written_bp = [0, 0]
-		self.colorspace = colorspace
 		self.qualities = qualities
 
 	def __call__(self, read, matches):
@@ -245,14 +244,14 @@ class Demultiplexer:
 			name = matches[-1].adapter.name
 			if name not in self.writers:
 				self.writers[name] = seqio.open(self.template.replace('{name}', name),
-					mode='w', colorspace=self.colorspace, qualities=self.qualities)
+					mode='w', qualities=self.qualities)
 			self.written += 1
 			self.written_bp[0] += len(read)
 			self.writers[name].write(read)
 		else:
 			if self.untrimmed_writer is None and self.untrimmed_path is not None:
 				self.untrimmed_writer = seqio.open(self.untrimmed_path,
-					mode='w', colorspace=self.colorspace, qualities=self.qualities)
+					mode='w', qualities=self.qualities)
 			if self.untrimmed_writer is not None:
 				self.written += 1
 				self.written_bp[0] += len(read)
@@ -272,16 +271,16 @@ class PairedEndDemultiplexer:
 	depending on which adapter (in read 1) matches.
 	"""
 	def __init__(self, path_template, path_paired_template, untrimmed_path, untrimmed_paired_path,
-			colorspace, qualities):
+			qualities):
 		"""
 		The path templates must contain the string '{name}', which will be replaced
 		with the name of the adapter to form the final output path.
 		Read pairs without an adapter match are written to the files named by
 		untrimmed_path.
 		"""
-		self._demultiplexer1 = Demultiplexer(path_template, untrimmed_path, colorspace, qualities)
+		self._demultiplexer1 = Demultiplexer(path_template, untrimmed_path, qualities)
 		self._demultiplexer2 = Demultiplexer(path_paired_template, untrimmed_paired_path,
-			colorspace, qualities)
+			qualities)
 
 	@property
 	def written(self):

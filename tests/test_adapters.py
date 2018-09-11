@@ -2,7 +2,7 @@ from textwrap import dedent
 import pytest
 
 from cutadapt.seqio import Sequence
-from cutadapt.adapters import (Adapter, Match, ColorspaceAdapter, FRONT, BACK,
+from cutadapt.adapters import (Adapter, Match, FRONT, BACK,
 	parse_braces, LinkedAdapter, AdapterStatistics, AdapterParser, ANYWHERE)
 
 
@@ -63,13 +63,6 @@ def test_str():
 	a = Adapter('ACGT', where=BACK, remove='suffix', max_error_rate=0.1)
 	str(a)
 	str(a.match_to(Sequence(name='seq', sequence='TTACGT')))
-	ca = ColorspaceAdapter('0123', where=BACK, remove='suffix', max_error_rate=0.1)
-	str(ca)
-
-
-def test_color():
-	with pytest.raises(ValueError):
-		ColorspaceAdapter('0123', where=FRONT, max_error_rate=0.1)
 
 
 def test_parse_braces():
@@ -203,7 +196,7 @@ def test_parse_file_notation(tmpdir):
 			ADAPTER2
 			"""))
 	parser = AdapterParser(
-		colorspace=False, max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+		max_error_rate=0.2, min_overlap=4, read_wildcards=False,
 		adapter_wildcards=False, indels=False)
 
 	adapters = list(parser.parse('file:' + tmp_path, cmdline_type='back'))
@@ -251,7 +244,7 @@ def test_parse_parameters():
 
 def test_parse_with_parameters():
 	parser = AdapterParser(
-		colorspace=False, max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+		max_error_rate=0.2, min_overlap=4, read_wildcards=False,
 		adapter_wildcards=False, indels=False)
 	a = parser._parse('ACGTACGT; e=0.15', 'front')
 	assert a.max_error_rate == 0.15
@@ -269,7 +262,7 @@ def test_parse_with_parameters():
 
 
 def test_anywhere_parameter():
-	parser = AdapterParser(colorspace=False, max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+	parser = AdapterParser(max_error_rate=0.2, min_overlap=4, read_wildcards=False,
 		adapter_wildcards=False, indels=True)
 	adapter = list(parser.parse('CTGAAGTGAAGTACACGGTT;anywhere', 'back'))[0]
 	assert adapter.remove == 'suffix'

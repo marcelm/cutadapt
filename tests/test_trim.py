@@ -1,15 +1,6 @@
-from cutadapt.seqio import ColorspaceSequence, Sequence
-from cutadapt.adapters import Adapter, ColorspaceAdapter, PREFIX, BACK, ANYWHERE
+from cutadapt.seqio import Sequence
+from cutadapt.adapters import Adapter, PREFIX, BACK, ANYWHERE
 from cutadapt.modifiers import AdapterCutter
-
-
-def test_cs_5p():
-	read = ColorspaceSequence("name", "0123", "DEFG", "T")
-	adapter = ColorspaceAdapter("CG", PREFIX, max_error_rate=0.1)
-	cutter = AdapterCutter([adapter])
-	trimmed_read = cutter(read, [])
-	# no assertion here, just make sure the above code runs without
-	# an exception
 
 
 def test_statistics():

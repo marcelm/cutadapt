@@ -168,19 +168,6 @@ class PrefixSuffixAdder:
 		return read
 
 
-class DoubleEncoder:
-	"""
-	Double-encode colorspace reads, using characters ACGTN to represent colors.
-	"""
-	def __init__(self):
-		self.double_encode_trans = str.maketrans('0123.', 'ACGTN')
-
-	def __call__(self, read, matches):
-		read = read[:]
-		read.sequence = read.sequence.translate(self.double_encode_trans)
-		return read
-
-
 class ZeroCapper:
 	"""
 	Change negative quality values of a read to zero
@@ -192,14 +179,6 @@ class ZeroCapper:
 	def __call__(self, read, matches):
 		read = read[:]
 		read.qualities = read.qualities.translate(self.zero_cap_trans)
-		return read
-
-
-class PrimerTrimmer:
-	"""Trim primer base from colorspace reads"""
-	def __call__(self, read, matches):
-		read = read[1:]
-		read.primer = ''
 		return read
 
 

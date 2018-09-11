@@ -66,8 +66,8 @@ from xopen import xopen
 from cutadapt import seqio, __version__
 from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
-	DoubleEncoder, ZeroCapper, PrimerTrimmer, QualityTrimmer, UnconditionalCutter,
-	NEndTrimmer, AdapterCutter, NextseqQualityTrimmer, Shortener)
+	ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
+	NextseqQualityTrimmer, Shortener)
 from cutadapt.report import print_report, print_minimal_report, redirect_standard_output
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles, ParallelPipelineRunner
 from cutadapt.utils import available_cpu_count
@@ -176,7 +176,7 @@ def get_option_parser():
 	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
 		default=True, dest='match_adapter_wildcards',
 		help="Do not interpret IUPAC wildcards in adapters.")
-	group.add_option("--action", choices=('mask', 'trim', 'none'),
+	group.add_option("--action", choices=('mask', 'trim', 'none'), default='trim',
 		help="What to do with found adapters. trim: remove; "
 			"mask: replace with 'N' characters; "
 			"none: leave unchanged (useful with "
@@ -244,6 +244,8 @@ def get_option_parser():
 		help="Discard reads that do not contain an adapter.")
 	group.add_option("--discard-casava", action='store_true', default=False,
 		help="Discard reads that did not pass CASAVA filtering (header has :Y:).")
+	group.add_option("--zero-cap", "-z", action='store_true', default=False,
+		help="Change negative quality values to zero.")
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Output")
@@ -274,27 +276,6 @@ def get_option_parser():
 	group.add_option("--untrimmed-output", default=None, metavar="FILE",
 		help="Write reads that do not contain any adapter to FILE. Default: "
 			"output to same file as trimmed reads")
-	parser.add_option_group(group)
-
-	group = OptionGroup(parser, "Colorspace options")
-	group.add_option("-c", "--colorspace", action='store_true', default=False,
-		help="Enable colorspace mode")
-	group.add_option("-d", "--double-encode", action='store_true', default=False,
-		help="Double-encode colors (map 0,1,2,3,4 to A,C,G,T,N).")
-	group.add_option("-t", "--trim-primer", action='store_true', default=False,
-		help="Trim primer base and the first color")
-	group.add_option("--strip-f3", action='store_true', default=False,
-		help="Strip the _F3 suffix of read names")
-	group.add_option("--maq", "--bwa", action='store_true', default=False,
-		help="MAQ- and BWA-compatible colorspace output. This enables -c, -d, "
-			"-t, --strip-f3 and -y '/1'.")
-	group.add_option("--zero-cap", "-z", action='store_true',
-		help="Change negative quality values to zero. Enabled by default "
-			"in colorspace mode since many tools have problems with "
-			"negative qualities")
-	group.add_option("--no-zero-cap", dest='zero_cap', action='store_false',
-		help="Disable zero capping")
-	parser.set_defaults(zero_cap=None, action='trim')
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Paired-end options", description="The "
@@ -330,6 +311,12 @@ def get_option_parser():
 		help="Write second read in a pair to this file if pair is too long. "
 			"Use also --too-long-output.")
 	parser.add_option_group(group)
+
+	for opt in ("--colorspace", "-c", "-d", "--double-encode", "-t", "--trim-primer",
+			"--strip-f3", "--maq", "--bwa", "--no-zero-cap"):
+		parser.add_option(opt, dest='colorspace', action='store_true', default=False,
+		help=SUPPRESS_HELP)
+	parser.set_defaults(colorspace=False)
 
 	return parser
 
@@ -568,21 +555,6 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 		raise CommandLineError("The input file format must be either 'fasta', 'fastq' or "
 			"'sra-fastq' (not '{}').".format(options.format))
 
-	if options.maq:
-		options.colorspace = True
-		options.double_encode = True
-		options.trim_primer = True
-		options.strip_suffix.append('_F3')
-		options.suffix = "/1"
-	if options.zero_cap is None:
-		options.zero_cap = options.colorspace
-	if options.trim_primer and not options.colorspace:
-		raise CommandLineError("Trimming the primer makes only sense in colorspace.")
-	if options.double_encode and not options.colorspace:
-		raise CommandLineError("Double-encoding makes only sense in colorspace.")
-	if options.anywhere and options.colorspace:
-		raise CommandLineError("Using --anywhere with colorspace reads is currently not supported "
-			"(if you think this may be useful, contact the author).")
 	if not (0 <= options.error_rate <= 1.):
 		raise CommandLineError("The maximum error rate must be between 0 and 1.")
 	if options.overlap < 1:
@@ -592,13 +564,7 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 	if options.action == 'none':
 		options.action = None
 
-	if options.colorspace:
-		if options.match_read_wildcards:
-			raise CommandLineError('IUPAC wildcards not supported in colorspace')
-		options.match_adapter_wildcards = False
-
 	adapter_parser = AdapterParser(
-		colorspace=options.colorspace,
 		max_error_rate=options.error_rate,
 		min_overlap=options.overlap,
 		read_wildcards=options.match_read_wildcards,
@@ -664,18 +630,12 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 		pipeline.add(NEndTrimmer())
 	if options.length_tag:
 		pipeline.add(LengthTagModifier(options.length_tag))
-	if options.strip_f3:
-		options.strip_suffix.append('_F3')
 	for suffix in options.strip_suffix:
 		pipeline.add(SuffixRemover(suffix))
 	if options.prefix or options.suffix:
 		pipeline.add(PrefixSuffixAdder(options.prefix, options.suffix))
-	if options.double_encode:
-		pipeline.add(DoubleEncoder())
 	if options.zero_cap:
 		pipeline.add(ZeroCapper(quality_base=options.quality_base))
-	if options.trim_primer:
-		pipeline.add(PrimerTrimmer())
 
 	# Set filtering parameters
 	# Minimum/maximum length
@@ -715,6 +675,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if options.quiet and options.report:
 		parser.error("Options --quiet and --report cannot be used at the same time")
 
+	if options.colorspace:
+		parser.error(
+			"These colorspace-specific options are no longer supported: "
+			"--colorspace, -c, -d, --double-encode, -t, --trim-primer, "
+			"--strip-f3, --maq, --bwa, --no-zero-cap. "
+			"Use Cutadapt version 1.18 or earlier to work with colorspace data.")
 	paired = determine_paired_mode(options)
 	assert paired in (False, 'first', 'both')
 
@@ -746,7 +712,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		if (
 			ParallelPipelineRunner.can_output_to(outfiles)
 			and quality_filename is None
-			and not options.colorspace
 			and options.format is None
 		):
 			runner = ParallelPipelineRunner(pipeline, cores, options.buffer_size)
@@ -757,14 +722,14 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 				'--wildcard-file, --untrimmed-output, '
 				'--untrimmed-paired-output, --too-short-output, '
 				'--too-short-paired-output, --too-long-output, '
-				'--too-long-paired-output, --format, --colorspace')
+				'--too-long-paired-output, --format')
 			sys.exit(1)
 	else:
 		runner = pipeline
 	try:
 		runner.set_input(input_filename, file2=input_paired_filename,
-			qualfile=quality_filename, colorspace=options.colorspace,
-			fileformat=options.format, interleaved=is_interleaved_input)
+			qualfile=quality_filename, fileformat=options.format,
+			interleaved=is_interleaved_input)
 		runner.set_output(outfiles)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)

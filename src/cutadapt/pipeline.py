@@ -87,7 +87,6 @@ class Pipeline:
 		self._reader = None
 		self._filters = []
 		self._modifiers = []
-		self._colorspace = None
 		self._outfiles = None
 		self._demultiplexer = None
 
@@ -99,11 +98,10 @@ class Pipeline:
 		self.discard_trimmed = False
 		self.discard_untrimmed = False
 
-	def set_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
+	def set_input(self, file1, file2=None, qualfile=None, fileformat=None,
 			interleaved=False):
-		self._reader = seqio.open(file1, file2, qualfile, colorspace, fileformat,
+		self._reader = seqio.open(file1, file2, qualfile, fileformat,
 			interleaved, mode='r')
-		self._colorspace = colorspace
 		# Special treatment: Disable zero-capping if no qualities are available
 		if not self._reader.delivers_qualities:
 			self._modifiers = [m for m in self._modifiers if not isinstance(m, ZeroCapper)]
@@ -112,7 +110,7 @@ class Pipeline:
 		# TODO backwards-incompatible change (?) would be to use outfiles.interleaved
 		# for all outputs
 		return seqio.open(file, file2, mode='w', qualities=self.uses_qualities,
-			colorspace=self._colorspace, **kwargs)
+			**kwargs)
 
 	def set_output(self, outfiles):
 		self._filters = []
@@ -244,8 +242,7 @@ class SingleEndPipeline(Pipeline):
 		return NoFilter(writer)
 
 	def _create_demultiplexer(self, outfiles):
-		return Demultiplexer(outfiles.out, outfiles.untrimmed, qualities=self.uses_qualities,
-			colorspace=self._colorspace)
+		return Demultiplexer(outfiles.out, outfiles.untrimmed, qualities=self.uses_qualities)
 
 	@property
 	def minimum_length(self):
@@ -349,8 +346,7 @@ class PairedEndPipeline(Pipeline):
 
 	def _create_demultiplexer(self, outfiles):
 		return PairedEndDemultiplexer(outfiles.out, outfiles.out2,
-			outfiles.untrimmed, outfiles.untrimmed2, qualities=self.uses_qualities,
-			colorspace=self._colorspace)
+			outfiles.untrimmed, outfiles.untrimmed2, qualities=self.uses_qualities)
 
 	@property
 	def minimum_length(self):
@@ -568,11 +564,11 @@ class ParallelPipelineRunner:
 		self._need_work_queue = Queue()
 		self._buffer_size = buffer_size
 
-	def set_input(self, file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
+	def set_input(self, file1, file2=None, qualfile=None, fileformat=None,
 			interleaved=False):
 		if self._reader_process is not None:
 			raise RuntimeError('Do not call set_input more than once')
-		assert qualfile is None and colorspace is False and fileformat is None
+		assert qualfile is None and fileformat is None
 		self._input_path1 = file1 if type(file1) is str else file1.name
 		self._input_path2 = file2 if type(file2) is str or file2 is None else file2.name
 		self._interleaved_input = interleaved

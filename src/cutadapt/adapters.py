@@ -6,7 +6,7 @@ The ...Match classes trim the reads.
 """
 import re
 from collections import defaultdict
-from cutadapt import align, colorspace
+from cutadapt import align
 from cutadapt.seqio import FastaReader
 
 
@@ -80,11 +80,9 @@ class AdapterParser:
 	Factory for Adapter classes that all use the same parameters (error rate,
 	indels etc.). The given **kwargs will be passed to the Adapter constructors.
 	"""
-	def __init__(self, colorspace=False, **kwargs):
-		self.colorspace = colorspace
+	def __init__(self, **kwargs):
 		# kwargs: max_error_rate, min_overlap, read_wildcards, adapter_wildcards, indels
 		self.default_parameters = kwargs
-		self.adapter_class = ColorspaceAdapter if colorspace else Adapter
 
 	@staticmethod
 	def _extract_name(spec):
@@ -229,9 +227,6 @@ class AdapterParser:
 		if middle == '...' and spec1 and spec2:
 			if cmdline_type == 'anywhere':
 				raise ValueError("'anywhere' (-b) adapters may not be linked")
-			if self.colorspace:
-				raise NotImplementedError(
-					'Using linked adapters in colorspace is not supported')
 			name1, front1, sequence1, back1, parameters1 = self._parse_not_linked(spec1, 'front')
 			name2, front2, sequence2, back2, parameters2 = self._parse_not_linked(spec2, 'back')
 			if not name:
@@ -300,7 +295,7 @@ class AdapterParser:
 			del parameters['anywhere']
 		params = self.default_parameters.copy()
 		params.update(parameters)
-		return self.adapter_class(sequence=sequence, where=where, name=name, **params)
+		return Adapter(sequence=sequence, where=where, name=name, **params)
 
 	def parse(self, spec, cmdline_type='back'):
 		"""
@@ -536,39 +531,6 @@ class Match:
 			statistics.back.adjacent_bases[self.adjacent_base] += 1
 
 
-class ColorspaceMatch(Match):
-	adjacent_base = ''
-
-	def _trim_front(self):
-		"""Return a trimmed read"""
-		read = self.read
-		# to remove a front adapter, we need to re-encode the first color following the adapter match
-		color_after_adapter = read.sequence[self.rstop:self.rstop + 1]
-		if not color_after_adapter:
-			# the read is empty
-			new_read = read[self.rstop:]
-		else:
-			base_after_adapter = colorspace.DECODE[self.adapter.nucleotide_sequence[-1:] + color_after_adapter]
-			new_first_color = colorspace.ENCODE[read.primer + base_after_adapter]
-			new_read = read[:]
-			new_read.sequence = new_first_color + read.sequence[(self.rstop + 1):]
-			new_read.qualities = read.qualities[self.rstop:] if read.qualities else None
-		self._trimmed_read = new_read
-
-	def _trim_back(self):
-		"""Return a trimmed read"""
-		# trim one more color if long enough
-		adjusted_rstart = max(self.rstart - 1, 0)
-		self._trimmed_read = self.read[:adjusted_rstart]
-
-	def update_statistics(self, statistics):
-		"""Update AdapterStatistics in place"""
-		if self.remove_before:
-			statistics.front.errors[self.rstop][self.errors] += 1
-		else:
-			statistics.back.errors[len(self.read) - len(self._trimmed_read)][self.errors] += 1
-
-
 def _generate_adapter_name(_start=[1]):
 	name = str(_start[0])
 	_start[0] += 1
@@ -725,69 +687,6 @@ class Adapter:
 
 	def create_statistics(self):
 		return AdapterStatistics(self)
-
-
-class ColorspaceAdapter(Adapter):
-	"""
-	An Adapter, but in color space. It does not support all adapter types
-	(see the 'where' parameter).
-	"""
-
-	def __init__(self, *args, **kwargs):
-		"""
-		sequence -- the adapter sequence as a str, can be given in nucleotide space or in color space
-		where -- PREFIX, FRONT, BACK
-		"""
-		if kwargs.get('adapter_wildcards', False):
-			raise ValueError('Wildcards not supported for colorspace adapters')
-		kwargs['adapter_wildcards'] = False
-		super(ColorspaceAdapter, self).__init__(*args, **kwargs)
-		has_nucleotide_seq = False
-		if set(self.sequence) <= set('ACGT'):
-			# adapter was given in basespace
-			self.nucleotide_sequence = self.sequence
-			has_nucleotide_seq = True
-			self.sequence = colorspace.encode(self.sequence)[1:]
-		if self.where in (PREFIX, FRONT) and not has_nucleotide_seq:
-			raise ValueError("A 5' colorspace adapter needs to be given in nucleotide space")
-		self.aligner.reference = self.sequence
-
-	def __repr__(self):
-		return '<ColorspaceAdapter(sequence={!r}, where={})>'.format(self.sequence, self.where)
-
-	def match_to(self, read, match_class=ColorspaceMatch):
-		"""
-		Match the adapter to the given read
-
-		Return a ColorspaceMatch instance or None if the adapter was not found
-		"""
-		if self.where != PREFIX:
-			return super(ColorspaceAdapter, self).match_to(read, match_class=match_class)
-		# create artificial adapter that includes a first color that encodes the
-		# transition from primer base into adapter
-		asequence = colorspace.ENCODE[read.primer + self.nucleotide_sequence[0:1]] + self.sequence
-
-		pos = 0 if read.sequence.startswith(asequence) else -1
-		if pos >= 0:
-			match = ColorspaceMatch(
-				0, len(asequence), pos, pos + len(asequence),
-				len(asequence), 0, self.remove, self, read)
-		else:
-			# try approximate matching
-			self.aligner.reference = asequence
-			alignment = self.aligner.locate(read.sequence)
-			if self._debug:
-				print(self.aligner.dpmatrix)  # pragma: no cover
-			if alignment is not None:
-				match = ColorspaceMatch(*(alignment + (self.remove, self, read)))
-			else:
-				match = None
-
-		if match is None:
-			return None
-		assert match.length > 0 and match.errors / match.length <= self.max_error_rate
-		assert match.length >= self.min_overlap
-		return match
 
 
 class LinkedMatch:
