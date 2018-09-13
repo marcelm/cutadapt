@@ -73,8 +73,8 @@ cdef class Sequence:
 		self.second_header = second_header
 		if qualities is not None and len(qualities) != len(sequence):
 			rname = _shorten(name)
-			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length "
-				"of read ({2}) do not match".format(
+			raise FormatError("In read named {!r}: length of quality sequence ({}) and length "
+				"of read ({}) do not match".format(
 					rname, len(qualities), len(sequence)))
 	
 	def __getitem__(self, key):
@@ -88,8 +88,8 @@ cdef class Sequence:
 	def __repr__(self):
 		qstr = ''
 		if self.qualities is not None:
-			qstr = ', qualities={0!r}'.format(_shorten(self.qualities))
-		return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
+			qstr = ', qualities={!r}'.format(_shorten(self.qualities))
+		return '<Sequence(name={!r}, sequence={!r}{})>'.format(_shorten(self.name), _shorten(self.sequence), qstr)
 
 	def __len__(self):
 		return len(self.sequence)
@@ -135,7 +135,7 @@ class FastqReader(SequenceReader):
 		it = iter(self._file)
 		line = next(it)
 		if not (line and line[0] == '@'):
-			raise FormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
+			raise FormatError("Line {} in FASTQ file is expected to start with '@', but found {!r}".format(i+1, line[:10]))
 		strip = -2 if line.endswith('\r\n') else -1
 		name = line[1:strip]
 
@@ -143,7 +143,7 @@ class FastqReader(SequenceReader):
 		for line in it:
 			if i == 0:
 				if not (line and line[0] == '@'):
-					raise FormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
+					raise FormatError("Line {} in FASTQ file is expected to start with '@', but found {!r}".format(i+1, line[:10]))
 				name = line[1:strip]
 			elif i == 1:
 				sequence = line[:strip]
@@ -153,12 +153,12 @@ class FastqReader(SequenceReader):
 				else:
 					line = line[:strip]
 					if not (line and line[0] == '+'):
-						raise FormatError("Line {0} in FASTQ file is expected to start with '+', but found {1!r}".format(i+1, line[:10]))
+						raise FormatError("Line {} in FASTQ file is expected to start with '+', but found {!r}".format(i+1, line[:10]))
 					if len(line) > 1:
 						if not line[1:] == name:
 							raise FormatError(
-								"At line {0}: Sequence descriptions in the FASTQ file don't match "
-								"({1!r} != {2!r}).\n"
+								"At line {}: Sequence descriptions in the FASTQ file don't match "
+								"({!r} != {!r}).\n"
 								"The second sequence description must be either empty "
 								"or equal to the first description.".format(i+1,
 									name, line[1:]))

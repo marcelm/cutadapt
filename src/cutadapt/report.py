@@ -170,12 +170,12 @@ def print_error_ranges(adapter_length, error_rate):
 	prev = 0
 	for errors in range(1, int(error_rate * adapter_length) + 1):
 		r = int(errors / error_rate)
-		print("{0}-{1} bp: {2};".format(prev, r - 1, errors - 1), end=' ')
+		print("{}-{} bp: {};".format(prev, r - 1, errors - 1), end=' ')
 		prev = r
 	if prev == adapter_length:
-		print("{0} bp: {1}".format(adapter_length, int(error_rate * adapter_length)))
+		print("{} bp: {}".format(adapter_length, int(error_rate * adapter_length)))
 	else:
-		print("{0}-{1} bp: {2}".format(prev, adapter_length, int(error_rate * adapter_length)))
+		print("{}-{} bp: {}".format(prev, adapter_length, int(error_rate * adapter_length)))
 	print()
 
 
@@ -203,7 +203,7 @@ def print_histogram(end_statistics, n, gc_content):
 		print(
 			length,
 			count,
-			"{0:.1F}".format(expect),
+			"{:.1F}".format(expect),
 			int(end_statistics.max_error_rate*min(length, len(end_statistics.sequence))),
 			errs,
 			sep="\t")
@@ -239,10 +239,10 @@ class AdjacentBaseStatistics:
 			return False
 		print('Bases preceding removed adapters:')
 		for text, fraction in self._fractions:
-			print('  {0}: {1:.1%}'.format(text, fraction))
+			print('  {}: {:.1%}'.format(text, fraction))
 		if self.should_warn:
 			print('WARNING:')
-			print('    The adapter is preceded by "{0}" extremely often.'.format(self._warnbase))
+			print('    The adapter is preceded by "{}" extremely often.'.format(self._warnbase))
 			print("    The provided adapter sequence could be incomplete at its 3' end.")
 			print()
 			return True
@@ -266,14 +266,14 @@ def xxxprint_adjacent_bases(bases):
 	for base in ['A', 'C', 'G', 'T', '']:
 		b = base if base != '' else 'none/other'
 		fraction = 1.0 * bases[base] / total
-		print('  {0}: {1:.1%}'.format(b, fraction))
+		print('  {}: {:.1%}'.format(b, fraction))
 		if fraction > 0.8 and base != '':
 			warnbase = b
 	if total >= 20 and warnbase is not None:
 		print('WARNING:')
-		print('    The adapter is preceded by "{0}" extremely often.'.format(warnbase))
+		print('    The adapter is preceded by "{}" extremely often.'.format(warnbase))
 		print('    The provided adapter sequence may be incomplete.')
-		print('    To fix the problem, add "{0}" to the beginning of the adapter sequence.'.format(warnbase))
+		print('    To fix the problem, add "{}" to the beginning of the adapter sequence.'.format(warnbase))
 		print()
 		return True
 	print()
@@ -296,7 +296,7 @@ def print_report(stats, time, gc_content):
 	if stats.n == 0:
 		print("No reads processed! Either your input file is empty or you used the wrong -f/--format parameter.")
 		return
-	print("Finished in {0:.2F} s ({1:.0F} us/read; {2:.2F} M reads/minute).".format(
+	print("Finished in {:.2F} s ({:.0F} us/read; {:.2F} M reads/minute).".format(
 		time, 1E6 * time / stats.n, stats.n / time * 60 / 1E6))
 
 	report = "\n=== Summary ===\n\n"
@@ -361,15 +361,15 @@ def print_report(stats, time, gc_content):
 			print()
 
 			if where == LINKED:
-				print("Sequence: {0}...{1}; Type: linked; Length: {2}+{3}; "
-					"5' trimmed: {4} times; 3' trimmed: {5} times".format(
+				print("Sequence: {}...{}; Type: linked; Length: {}+{}; "
+					"5' trimmed: {} times; 3' trimmed: {} times".format(
 						adapter_statistics.front.sequence,
 						adapter_statistics.back.sequence,
 						len(adapter_statistics.front.sequence),
 						len(adapter_statistics.back.sequence),
 						total_front, total_back))
 			else:
-				print("Sequence: {0}; Type: {1}; Length: {2}; Trimmed: {3} times.".
+				print("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times.".
 					format(adapter_statistics.front.sequence, ADAPTER_TYPES[adapter_statistics.where],
 						len(adapter_statistics.front.sequence), total))
 			if total == 0:

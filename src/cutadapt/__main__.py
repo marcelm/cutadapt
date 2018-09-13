@@ -341,12 +341,12 @@ def parse_cutoffs(s):
 		try:
 			cutoffs = [0, int(cutoffs[0])]
 		except ValueError as e:
-			raise CommandLineError("Quality cutoff value not recognized: {0}".format(e))
+			raise CommandLineError("Quality cutoff value not recognized: {}".format(e))
 	elif len(cutoffs) == 2:
 		try:
 			cutoffs = [int(cutoffs[0]), int(cutoffs[1])]
 		except ValueError as e:
-			raise CommandLineError("Quality cutoff value not recognized: {0}".format(e))
+			raise CommandLineError("Quality cutoff value not recognized: {}".format(e))
 	else:
 		raise CommandLineError("Expected one value or two values separated by comma for "
 			"the quality cutoff")
@@ -371,7 +371,7 @@ def parse_lengths(s):
 	try:
 		values = tuple(int(f) if f != '' else None for f in fields)
 	except ValueError as e:
-		raise CommandLineError("Value not recognized: {0}".format(e))
+		raise CommandLineError("Value not recognized: {}".format(e))
 	if len(values) == 2 and values[0] is None and values[1] is None:
 		raise CommandLineError("Cannot parse {!r}: At least one length needs to be given".format(s))
 	return tuple(values)
@@ -566,7 +566,7 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
 		raise CommandLineError("The input file format must be either 'fasta', 'fastq' or "
-			"'sra-fastq' (not '{0}').".format(options.format))
+			"'sra-fastq' (not '{}').".format(options.format))
 
 	if options.maq:
 		options.colorspace = True
@@ -797,7 +797,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 			sys.exit(1)
 		raise
 	except (seqio.FormatError, seqio.UnknownFileType, EOFError) as e:
-		sys.exit("cutadapt: error: {0}".format(e))
+		sys.exit("cutadapt: error: {}".format(e))
 
 	elapsed = time.time() - start_time
 	if not options.quiet:

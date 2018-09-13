@@ -111,7 +111,7 @@ class DPMatrix:
 		"""
 		rows = ['     ' + ' '.join(c.rjust(2) for c in self.query)]
 		for c, row in zip(' ' + self.reference, self._rows):
-			r = c + ' ' + ' '.join('  ' if v is None else '{0:2d}'.format(v) for v in row)
+			r = c + ' ' + ' '.join('  ' if v is None else '{:2d}'.format(v) for v in row)
 			rows.append(r)
 		return '\n'.join(rows)
 

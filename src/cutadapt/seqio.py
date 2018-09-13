@@ -39,8 +39,8 @@ class Sequence:
 		if qualities is not None:
 			if len(qualities) != len(sequence):
 				rname = _shorten(name)
-				raise FormatError("In read named {0!r}: Length of quality sequence ({1}) and "
-					"length of read ({2}) do not match".format(rname, len(qualities), len(sequence)))
+				raise FormatError("In read named {!r}: Length of quality sequence ({}) and "
+					"length of read ({}) do not match".format(rname, len(qualities), len(sequence)))
 	
 	def __getitem__(self, key):
 		"""slicing"""
@@ -53,8 +53,8 @@ class Sequence:
 	def __repr__(self):
 		qstr = ''
 		if self.qualities is not None:
-			qstr = ', qualities={0!r}'.format(_shorten(self.qualities))
-		return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(
+			qstr = ', qualities={!r}'.format(_shorten(self.qualities))
+		return '<Sequence(name={!r}, sequence={!r}{})>'.format(
 			_shorten(self.name), _shorten(self.sequence), qstr)
 
 	def __len__(self):
@@ -116,20 +116,20 @@ class ColorspaceSequence(Sequence):
 			self.primer = primer
 		if qualities is not None and len(sequence) != len(qualities):
 			rname = _shorten(name)
-			raise FormatError("In read named {0!r}: length of colorspace quality "
-				"sequence ({1}) and length of read ({2}) do not match (primer "
-				"is: {3!r})".format(rname, len(qualities), len(sequence), self.primer))
+			raise FormatError("In read named {!r}: length of colorspace quality "
+				"sequence ({}) and length of read ({}) do not match (primer "
+				"is: {!r})".format(rname, len(qualities), len(sequence), self.primer))
 		super(ColorspaceSequence, self).__init__(name, sequence, qualities, second_header)
 		if self.primer not in ('A', 'C', 'G', 'T'):
-			raise FormatError("Primer base is {0!r} in read {1!r}, but it "
+			raise FormatError("Primer base is {!r} in read {!r}, but it "
 				"should be one of A, C, G, T.".format(
 					self.primer, _shorten(name)))
 
 	def __repr__(self):
 		qstr = ''
 		if self.qualities is not None:
-			qstr = ', qualities={0!r}'.format(_shorten(self.qualities))
-		return '<ColorspaceSequence(name={0!r}, primer={1!r}, sequence={2!r}{3})>'.format(
+			qstr = ', qualities={!r}'.format(_shorten(self.qualities))
+		return '<ColorspaceSequence(name={!r}, primer={!r}, sequence={!r}{})>'.format(
 			_shorten(self.name), self.primer, _shorten(self.sequence), qstr)
 
 	def __getitem__(self, key):
@@ -218,8 +218,8 @@ class FastaReader(SequenceReader):
 			elif name is not None:
 				seq.append(line)
 			else:
-				raise FormatError("At line {0}: Expected '>' at beginning of "
-					"FASTA record, but got {1!r}.".format(i+1, _shorten(line)))
+				raise FormatError("At line {}: Expected '>' at beginning of "
+					"FASTA record, but got {!r}.".format(i+1, _shorten(line)))
 
 		if name is not None:
 			yield self.sequence_class(name, self._delimiter.join(seq), None)
@@ -254,21 +254,21 @@ class FastqReader(SequenceReader):
 		for i, line in enumerate(self._file):
 			if i % 4 == 0:
 				if not line.startswith('@'):
-					raise FormatError("Line {0} in FASTQ file is expected to start with '@', "
-						"but found {1!r}".format(i+1, line[:10]))
+					raise FormatError("Line {} in FASTQ file is expected to start with '@', "
+						"but found {!r}".format(i+1, line[:10]))
 				name = line.strip()[1:]
 			elif i % 4 == 1:
 				sequence = line.strip()
 			elif i % 4 == 2:
 				line = line.strip()
 				if not line.startswith('+'):
-					raise FormatError("Line {0} in FASTQ file is expected to start with '+', "
-						"but found {1!r}".format(i+1, line[:10]))
+					raise FormatError("Line {} in FASTQ file is expected to start with '+', "
+						"but found {!r}".format(i+1, line[:10]))
 				if len(line) > 1:
 					if line[1:] != name:
 						raise FormatError(
-							"At line {0}: Sequence descriptions in the FASTQ file do not match "
-							"({1!r} != {2!r}).\n"
+							"At line {}: Sequence descriptions in the FASTQ file do not match "
+							"({!r} != {!r}).\n"
 							"The second sequence description must be either empty "
 							"or equal to the first description.".format(
 								i+1, name, line[1:].rstrip()))
@@ -328,12 +328,12 @@ class FastaQualReader:
 		for fastaread, qualread in zip(self.fastareader, self.qualreader):
 			if fastaread.name != qualread.name:
 				raise FormatError("The read names in the FASTA and QUAL file "
-					"do not match ({0!r} != {1!r})".format(fastaread.name, qualread.name))
+					"do not match ({!r} != {!r})".format(fastaread.name, qualread.name))
 			try:
 				qualities = ''.join([conv[value] for value in qualread.sequence.split()])
 			except KeyError as e:
-				raise FormatError("Within read named {0!r}: Found invalid quality "
-					"value {1}".format(fastaread.name, e))
+				raise FormatError("Within read named {!r}: Found invalid quality "
+					"value {}".format(fastaread.name, e))
 			assert fastaread.name == qualread.name
 			yield self.sequence_class(fastaread.name, fastaread.sequence, qualities)
 
@@ -406,8 +406,8 @@ class PairedSequenceReader:
 				raise FormatError("Reads are improperly paired. There are more reads in "
 					"file 1 than in file 2.")
 			if not sequence_names_match(r1, r2):
-				raise FormatError("Reads are improperly paired. Read name '{0}' "
-					"in file 1 does not match '{1}' in file 2.".format(r1.name, r2.name))
+				raise FormatError("Reads are improperly paired. Read name '{}' "
+					"in file 1 does not match '{}' in file 2.".format(r1.name, r2.name))
 			yield (r1, r2)
 
 	def close(self):
@@ -441,8 +441,8 @@ class InterleavedSequenceReader:
 				raise FormatError("Interleaved input file incomplete: Last record "
 					"{!r} has no partner.".format(r1.name))
 			if not sequence_names_match(r1, r2):
-				raise FormatError("Reads are improperly paired. Name {0!r} "
-					"(first) does not match {1!r} (second).".format(r1.name, r2.name))
+				raise FormatError("Reads are improperly paired. Name {!r} "
+					"(first) does not match {!r} (second).".format(r1.name, r2.name))
 			yield (r1, r2)
 
 	def close(self):
@@ -516,13 +516,13 @@ class FastaWriter(FileWriter, SingleRecordWriter):
 			name = name_or_seq
 		
 		if self.line_length is not None:
-			print('>{0}'.format(name), file=self._file)
+			print('>{}'.format(name), file=self._file)
 			for i in range(0, len(sequence), self.line_length):
 				print(sequence[i:i+self.line_length], file=self._file)
 			if len(sequence) == 0:
 				print(file=self._file)
 		else:
-			print('>{0}'.format(name), sequence, file=self._file, sep='\n')
+			print('>{}'.format(name), sequence, file=self._file, sep='\n')
 
 
 class ColorspaceFastaWriter(FastaWriter):
@@ -554,7 +554,7 @@ class FastqWriter(FileWriter, SingleRecordWriter):
 		self._file.write(s)
 
 	def writeseq(self, name, sequence, qualities):
-		print("@{0:s}\n{1:s}\n+\n{2:s}".format(
+		print("@{:s}\n{:s}\n+\n{:s}".format(
 			name, sequence, qualities), file=self._file)
 
 
@@ -731,7 +731,7 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
 				raise NotImplementedError('Writing to sra-fastq not supported')
 			return SRAColorspaceFastqReader(file)
 		else:
-			raise UnknownFileType("File format {0!r} is unknown (expected "
+			raise UnknownFileType("File format {!r} is unknown (expected "
 				"'sra-fastq' (only for colorspace), 'fasta' or 'fastq').".format(fileformat))
 
 	# Detect file format

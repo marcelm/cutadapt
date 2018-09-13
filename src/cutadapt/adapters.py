@@ -458,7 +458,7 @@ class Match:
 		assert self.length - self.errors > 0
 
 	def __repr__(self):
-		return 'Match(astart={0}, astop={1}, rstart={2}, rstop={3}, matches={4}, errors={5})'.format(
+		return 'Match(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
 			self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
 
 	def wildcards(self, wildcard_char='N'):
@@ -753,7 +753,7 @@ class ColorspaceAdapter(Adapter):
 		self.aligner.reference = self.sequence
 
 	def __repr__(self):
-		return '<ColorspaceAdapter(sequence={0!r}, where={1})>'.format(self.sequence, self.where)
+		return '<ColorspaceAdapter(sequence={!r}, where={})>'.format(self.sequence, self.where)
 
 	def match_to(self, read, match_class=ColorspaceMatch):
 		"""
@@ -803,7 +803,7 @@ class LinkedMatch:
 		self.adapter = adapter
 
 	def __repr__(self):
-		return '<LinkedMatch(front_match={0!r}, back_match={1}, adapter={2})>'.format(
+		return '<LinkedMatch(front_match={!r}, back_match={}, adapter={})>'.format(
 			self.front_match, self.back_match, self.adapter)
 
 	@property
@@ -853,7 +853,7 @@ class LinkedAdapter:
 		elif front_restriction == 'noninternal':
 			where1 = FRONT_NOT_INTERNAL
 		else:
-			raise ValueError('Value {0} for front_restriction not allowed'.format(front_restriction))
+			raise ValueError('Value {} for front_restriction not allowed'.format(front_restriction))
 
 		if back_restriction is None:
 			where2 = BACK
@@ -863,7 +863,7 @@ class LinkedAdapter:
 			where2 = BACK_NOT_INTERNAL
 		else:
 			raise ValueError(
-				'Value {0} for back_restriction not allowed'.format(back_restriction))
+				'Value {} for back_restriction not allowed'.format(back_restriction))
 		if require_both:
 			self._require_back_match = True
 			self._require_front_match = True
