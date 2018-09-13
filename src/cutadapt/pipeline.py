@@ -211,7 +211,7 @@ class SingleEndPipeline(Pipeline):
 	paired = False
 
 	def __init__(self):
-		super(SingleEndPipeline, self).__init__()
+		super().__init__()
 		self._modifiers = []
 
 	def add(self, modifier):
@@ -274,7 +274,7 @@ class PairedEndPipeline(Pipeline):
 	def __init__(self, pair_filter_mode, modify_first_read_only=False):
 		"""Setting modify_first_read_only to True enables "legacy mode"
 		"""
-		super(PairedEndPipeline, self).__init__()
+		super().__init__()
 		self._modifiers2 = []
 		self._pair_filter_mode = pair_filter_mode
 		self._modify_first_read_only = modify_first_read_only
@@ -283,7 +283,7 @@ class PairedEndPipeline(Pipeline):
 		self._reader = None
 
 	def set_input(self, *args, **kwargs):
-		super(PairedEndPipeline, self).set_input(*args, **kwargs)
+		super().set_input(*args, **kwargs)
 		if not self._reader.delivers_qualities:
 			self._modifiers2 = [m for m in self._modifiers2 if not isinstance(m, ZeroCapper)]
 
@@ -430,7 +430,7 @@ class WorkerProcess(Process):
 	"""
 	def __init__(self, id_, pipeline, input_path1, input_path2,
 			interleaved_input, orig_outfiles, read_pipe, write_pipe, need_work_queue):
-		super(WorkerProcess, self).__init__()
+		super().__init__()
 		self._id = id_
 		self._pipeline = pipeline
 		self._input_path1 = input_path1

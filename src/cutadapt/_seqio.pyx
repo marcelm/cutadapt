@@ -119,7 +119,7 @@ class FastqReader(SequenceReader):
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
 		"""
-		super(FastqReader, self).__init__(file)
+		super().__init__(file)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
