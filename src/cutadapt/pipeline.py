@@ -22,7 +22,7 @@ from .seqio import read_chunks_from_file, read_paired_chunks
 logger = logging.getLogger()
 
 
-class OutputFiles(object):
+class OutputFiles:
 	"""
 	The attributes are open file-like objects except when demultiplex is True. In that case,
 	untrimmed, untrimmed2 are file names, and out and out2 are file name templates
@@ -75,7 +75,7 @@ class OutputFiles(object):
 		yield self.wildcard
 
 
-class Pipeline(object):
+class Pipeline:
 	"""
 	Processing pipeline that loops over reads and applies modifiers and filters
 	"""
@@ -508,7 +508,7 @@ class WorkerProcess(Process):
 			self._write_pipe.send((e, traceback.format_exc()))
 
 
-class OrderedChunkWriter(object):
+class OrderedChunkWriter:
 	"""
 	We may receive chunks of processed data from worker processes
 	in any order. This class writes them to an output file in
@@ -533,7 +533,7 @@ class OrderedChunkWriter(object):
 		return not self._chunks
 
 
-class ParallelPipelineRunner(object):
+class ParallelPipelineRunner:
 	"""
 	Run a Pipeline in parallel
 

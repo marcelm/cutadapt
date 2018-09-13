@@ -75,7 +75,7 @@ def parse_braces(sequence):
 	return result
 
 
-class AdapterParser(object):
+class AdapterParser:
 	"""
 	Factory for Adapter classes that all use the same parameters (error rate,
 	indels etc.). The given **kwargs will be passed to the Adapter constructors.
@@ -341,7 +341,7 @@ def returns_defaultdict_int():
 	return defaultdict(int)
 
 
-class EndStatistics(object):
+class EndStatistics:
 	"""Statistics about the 5' or 3' end"""
 
 	def __init__(self, adapter):
@@ -399,7 +399,7 @@ class EndStatistics(object):
 		return probabilities
 
 
-class AdapterStatistics(object):
+class AdapterStatistics:
 	"""
 	Statistics about an adapter. An adapter can work on the 5' end (front)
 	or 3' end (back) of a read, and statistics for that are captured
@@ -423,7 +423,7 @@ class AdapterStatistics(object):
 		return self
 
 
-class Match(object):
+class Match:
 	"""
 	Representation of a single adapter matched to a single read.
 
@@ -575,7 +575,7 @@ def _generate_adapter_name(_start=[1]):
 	return name
 
 
-class Adapter(object):
+class Adapter:
 	"""
 	This class can find a single adapter characterized by sequence, error rate,
 	type etc. within reads.
@@ -790,7 +790,7 @@ class ColorspaceAdapter(Adapter):
 		return match
 
 
-class LinkedMatch(object):
+class LinkedMatch:
 	"""
 	Represent a match of a LinkedAdapter
 	"""
@@ -835,7 +835,7 @@ class LinkedMatch(object):
 			statistics.back.errors[len(self.back_match.read) - self.back_match.rstart][self.back_match.errors] += 1
 
 
-class LinkedAdapter(object):
+class LinkedAdapter:
 	"""
 	"""
 	def __init__(self, front_sequence, back_sequence, front_restriction='anchored',

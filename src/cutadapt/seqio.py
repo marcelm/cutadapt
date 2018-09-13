@@ -26,7 +26,7 @@ def _shorten(s, n=100):
 	return s
 
 
-class Sequence(object):
+class Sequence:
 	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
 
 	def __init__(self, name, sequence, qualities=None, second_header=False):
@@ -69,7 +69,7 @@ class Sequence(object):
 		return not self.__eq__(other)
 
 
-class SequenceReader(object):
+class SequenceReader:
 	"""Read possibly compressed files containing sequences"""
 	_close_on_exit = False
 	paired = False
@@ -150,7 +150,7 @@ def sra_colorspace_sequence(name, sequence, qualities, second_header):
 	return ColorspaceSequence(name, sequence, qualities[1:], second_header=second_header)
 
 
-class FileWithPrependedLine(object):
+class FileWithPrependedLine:
 	"""
 	A file-like object that allows to "prepend" a single
 	line to an already opened file. That is, further
@@ -298,7 +298,7 @@ class SRAColorspaceFastqReader(FastqReader):
 		super(SRAColorspaceFastqReader, self).__init__(file, sequence_class=sra_colorspace_sequence)
 
 
-class FastaQualReader(object):
+class FastaQualReader:
 	"""
 	Reader for reads that are stored in .(CS)FASTA and .QUAL files.
 	"""
@@ -368,7 +368,7 @@ def sequence_names_match(r1, r2):
 	return name1 == name2
 
 
-class PairedSequenceReader(object):
+class PairedSequenceReader:
 	"""
 	Read paired-end reads from two files.
 
@@ -421,7 +421,7 @@ class PairedSequenceReader(object):
 		self.close()
 
 
-class InterleavedSequenceReader(object):
+class InterleavedSequenceReader:
 	"""
 	Read paired-end reads from an interleaved FASTQ file.
 	"""
@@ -455,7 +455,7 @@ class InterleavedSequenceReader(object):
 		self.close()
 
 
-class FileWriter(object):
+class FileWriter:
 	def __init__(self, file):
 		if isinstance(file, str):
 			self._file = xopen(file, 'w')
@@ -477,7 +477,7 @@ class FileWriter(object):
 		self.close()
 
 
-class SingleRecordWriter(object):
+class SingleRecordWriter:
 	"""Public interface to single-record files"""
 	def write(self, record):
 		raise NotImplementedError()
@@ -566,7 +566,7 @@ class ColorspaceFastqWriter(FastqWriter):
 		super(ColorspaceFastqWriter, self).writeseq(name, sequence, qualities)
 
 
-class PairRecordWriter(object):
+class PairRecordWriter:
 	"""Public interface to paired-record files"""
 	def write(self, read1, read2):
 		raise NotImplementedError()

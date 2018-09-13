@@ -21,7 +21,7 @@ DISCARD = True
 KEEP = False
 
 
-class NoFilter(object):
+class NoFilter:
 	"""
 	No filtering, just send each read to the given writer.
 	"""
@@ -41,7 +41,7 @@ class NoFilter(object):
 		return DISCARD
 
 
-class PairedNoFilter(object):
+class PairedNoFilter:
 	"""
 	No filtering, just send each paired-end read to the given writer.
 	"""
@@ -62,7 +62,7 @@ class PairedNoFilter(object):
 		return DISCARD
 
 
-class Redirector(object):
+class Redirector:
 	"""
 	Redirect discarded reads to the given writer. This is for single-end reads.
 	"""
@@ -85,7 +85,7 @@ class Redirector(object):
 		return KEEP
 
 
-class PairedRedirector(object):
+class PairedRedirector:
 	"""
 	Redirect paired-end reads matching a filtering criterion to a writer.
 	Different filtering styles are supported, differing by which of the
@@ -143,7 +143,7 @@ class PairedRedirector(object):
 		return KEEP
 
 
-class TooShortReadFilter(object):
+class TooShortReadFilter:
 	def __init__(self, minimum_length):
 		self.minimum_length = minimum_length
 
@@ -151,7 +151,7 @@ class TooShortReadFilter(object):
 		return len(read) < self.minimum_length
 
 
-class TooLongReadFilter(object):
+class TooLongReadFilter:
 	def __init__(self, maximum_length):
 		self.maximum_length = maximum_length
 
@@ -159,7 +159,7 @@ class TooLongReadFilter(object):
 		return len(read) > self.maximum_length
 
 
-class NContentFilter(object):
+class NContentFilter:
 	"""
 	Discards a reads that has a number of 'N's over a given threshold. It handles both raw counts
 	of Ns as well as proportions. Note, for raw counts, it is a 'greater than' comparison,
@@ -185,7 +185,7 @@ class NContentFilter(object):
 			return n_count > self.cutoff
 
 
-class DiscardUntrimmedFilter(object):
+class DiscardUntrimmedFilter:
 	"""
 	Return True if read is untrimmed.
 	"""
@@ -193,7 +193,7 @@ class DiscardUntrimmedFilter(object):
 		return not matches
 
 
-class DiscardTrimmedFilter(object):
+class DiscardTrimmedFilter:
 	"""
 	Return True if read is trimmed.
 	"""
@@ -201,7 +201,7 @@ class DiscardTrimmedFilter(object):
 		return bool(matches)
 
 
-class CasavaFilter(object):
+class CasavaFilter:
 	"""
 	Remove reads that fail the CASAVA filter. These have header lines that
 	look like ``xxxx x:Y:x:x`` (with a ``Y``). Reads that pass the filter
@@ -214,7 +214,7 @@ class CasavaFilter(object):
 		return right[1:4] == ':Y:'  # discard if :Y: found
 
 
-class Demultiplexer(object):
+class Demultiplexer:
 	"""
 	Demultiplex trimmed reads. Reads are written to different output files
 	depending on which adapter matches. Files are created when the first read
@@ -266,7 +266,7 @@ class Demultiplexer(object):
 			self.untrimmed_writer.close()
 
 
-class PairedEndDemultiplexer(object):
+class PairedEndDemultiplexer:
 	"""
 	Demultiplex trimmed paired-end reads. Reads are written to different output files
 	depending on which adapter (in read 1) matches.
@@ -301,7 +301,7 @@ class PairedEndDemultiplexer(object):
 		self._demultiplexer1.close()
 
 
-class RestFileWriter(object):
+class RestFileWriter:
 	def __init__(self, file):
 		self.file = file
 
@@ -313,7 +313,7 @@ class RestFileWriter(object):
 		return KEEP
 
 
-class WildcardFileWriter(object):
+class WildcardFileWriter:
 	def __init__(self, file):
 		self.file = file
 
@@ -323,7 +323,7 @@ class WildcardFileWriter(object):
 		return KEEP
 
 
-class InfoFileWriter(object):
+class InfoFileWriter:
 	def __init__(self, file):
 		self.file = file
 

@@ -18,7 +18,7 @@ def safe_divide(numerator, denominator):
 		return numerator / denominator
 
 
-class Statistics(object):
+class Statistics:
 	def __init__(self):
 		"""
 		"""
@@ -210,7 +210,7 @@ def print_histogram(end_statistics, n, gc_content):
 	print()
 
 
-class AdjacentBaseStatistics(object):
+class AdjacentBaseStatistics:
 	def __init__(self, bases):
 		"""
 		"""

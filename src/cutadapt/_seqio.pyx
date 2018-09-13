@@ -53,7 +53,7 @@ def two_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssize_t
 	return record_start1, record_start2
 
 
-cdef class Sequence(object):
+cdef class Sequence:
 	"""
 	A record in a FASTQ file. Also used for FASTA (then the qualities attribute
 	is None). qualities is a string and it contains the qualities encoded as
