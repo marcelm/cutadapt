@@ -52,15 +52,12 @@ Cutadapt installation requires this software to be installed:
 Under Ubuntu, you may need to install the packages ``build-essential`` and
 ``python3-dev`` to get a C compiler.
 
-On Windows, you need `Microsoft Visual C++ Compiler for
-Python 2.7 <https://www.microsoft.com/en-us/download/details.aspx?id=44266>`_.
-
 If you get an error message::
 
     error: command 'gcc' failed with exit status 1
 
 Then check the entire error message. If it says something about a missing
-``Python.h`` file, then the problem are missing Python development
+``Python.h`` file, then the problem is that you are missing Python development
 packages (``python3-dev`` in Ubuntu).
 
 
