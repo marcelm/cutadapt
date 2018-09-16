@@ -1,4 +1,4 @@
-# cython: profile=False, emit_code_comments=False
+# cython: profile=False, emit_code_comments=False, language_level=3
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 
 DEF START_WITHIN_SEQ1 = 1

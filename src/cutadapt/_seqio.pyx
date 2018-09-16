@@ -1,5 +1,4 @@
-# kate: syntax Python;
-# cython: profile=False, emit_code_comments=False
+# cython: profile=False, emit_code_comments=False, language_level=3
 from __future__ import print_function, division, absolute_import
 from xopen import xopen
 from .seqio import _shorten, FormatError, SequenceReader
@@ -33,12 +32,12 @@ def two_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssize_t
 		Py_ssize_t record_start2 = 0
 
 	while True:
-		while pos1 < end1 and data1[pos1] != '\n':
+		while pos1 < end1 and data1[pos1] != b'\n':
 			pos1 += 1
 		if pos1 == end1:
 			break
 		pos1 += 1
-		while pos2 < end2 and data2[pos2] != '\n':
+		while pos2 < end2 and data2[pos2] != b'\n':
 			pos2 += 1
 		if pos2 == end2:
 			break
