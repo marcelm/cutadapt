@@ -328,12 +328,6 @@ except ImportError:
 	pass
 
 
-def test_qualfile_only():
-	with pytest.raises(SystemExit):
-		with redirect_stderr():
-			main(['file.qual'])
-
-
 def test_no_args():
 	with pytest.raises(SystemExit):
 		with redirect_stderr():

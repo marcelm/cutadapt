@@ -6,7 +6,7 @@ import pytest
 from nose.tools import raises
 from tempfile import mkdtemp
 from cutadapt.seqio import (Sequence, FormatError,
-	FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
+	FastaReader, FastqReader, InterleavedSequenceReader,
 	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq,
 	sequence_names_match, two_fastq_heads, find_fastq_record_end,
 	read_paired_chunks, read_chunks_from_file)
@@ -127,20 +127,6 @@ class TestFastqReader:
 			reads = list(sr)
 			assert not sr._file.closed
 		assert tmp_sr._file is None
-
-
-class TestFastaQualReader:
-	@raises(FormatError)
-	def test_mismatching_read_names(self):
-		fasta = StringIO(">name\nACG")
-		qual = StringIO(">nome\n3 5 7")
-		list(FastaQualReader(fasta, qual))
-
-	@raises(FormatError)
-	def test_invalid_quality_value(self):
-		fasta = StringIO(">name\nACG")
-		qual = StringIO(">name\n3 xx 7")
-		list(FastaQualReader(fasta, qual))
 
 
 class TestSeqioOpen:

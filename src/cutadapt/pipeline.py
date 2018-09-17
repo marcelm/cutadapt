@@ -98,9 +98,8 @@ class Pipeline:
 		self.discard_trimmed = False
 		self.discard_untrimmed = False
 
-	def set_input(self, file1, file2=None, qualfile=None, fileformat=None,
-			interleaved=False):
-		self._reader = seqio.open(file1, file2, qualfile, fileformat,
+	def set_input(self, file1, file2=None, fileformat=None,	interleaved=False):
+		self._reader = seqio.open(file1, file2, fileformat,
 			interleaved, mode='r')
 		# Special treatment: Disable zero-capping if no qualities are available
 		if not self._reader.delivers_qualities:
@@ -564,11 +563,10 @@ class ParallelPipelineRunner:
 		self._need_work_queue = Queue()
 		self._buffer_size = buffer_size
 
-	def set_input(self, file1, file2=None, qualfile=None, fileformat=None,
-			interleaved=False):
+	def set_input(self, file1, file2=None, fileformat=None,	interleaved=False):
 		if self._reader_process is not None:
 			raise RuntimeError('Do not call set_input more than once')
-		assert qualfile is None and fileformat is None
+		assert fileformat is None
 		self._input_path1 = file1 if type(file1) is str else file1.name
 		self._input_path2 = file2 if type(file2) is str or file2 is None else file2.name
 		self._interleaved_input = interleaved

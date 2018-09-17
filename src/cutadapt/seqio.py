@@ -236,56 +236,6 @@ except ImportError:
 	pass
 
 
-class FastaQualReader:
-	"""
-	Reader for reads that are stored in .(CS)FASTA and .QUAL files.
-	"""
-	delivers_qualities = True
-	paired = False
-
-	def __init__(self, fastafile, qualfile, sequence_class=Sequence):
-		"""
-		fastafile and qualfile are filenames or file-like objects.
-		If a filename is used, then .gz files are recognized.
-
-		The objects returned when iteritng over this file are instances of the
-		given sequence_class.
-		"""
-		self.fastareader = FastaReader(fastafile)
-		self.qualreader = FastaReader(qualfile, keep_linebreaks=True)
-		self.sequence_class = sequence_class
-
-	def __iter__(self):
-		"""
-		Yield Sequence objects.
-		"""
-		# conversion dictionary: maps strings to the appropriate ASCII-encoded character
-		conv = dict()
-		for i in range(-5, 256 - 33):
-			conv[str(i)] = chr(i + 33)
-		for fastaread, qualread in zip(self.fastareader, self.qualreader):
-			if fastaread.name != qualread.name:
-				raise FormatError("The read names in the FASTA and QUAL file "
-					"do not match ({!r} != {!r})".format(fastaread.name, qualread.name))
-			try:
-				qualities = ''.join([conv[value] for value in qualread.sequence.split()])
-			except KeyError as e:
-				raise FormatError("Within read named {!r}: Found invalid quality "
-					"value {}".format(fastaread.name, e))
-			assert fastaread.name == qualread.name
-			yield self.sequence_class(fastaread.name, fastaread.sequence, qualities)
-
-	def close(self):
-		self.fastareader.close()
-		self.qualreader.close()
-
-	def __enter__(self):
-		return self
-
-	def __exit__(self, *args):
-		self.close()
-
-
 def sequence_names_match(r1, r2):
 	"""
 	Check whether the sequences r1 and r2 have identical names, ignoring a
@@ -539,18 +489,15 @@ class UnknownFileType(Exception):
 
 
 # TODO rename
-def open(file1, file2=None, qualfile=None, fileformat=None,
-	interleaved=False, mode='r', qualities=None):
+def open(file1, file2=None, fileformat=None, interleaved=False, mode='r', qualities=None):
 	"""
 	Open sequence files in FASTA or FASTQ format for reading or writing. This is
 	a factory that returns an instance of one of the ...Reader or ...Writer
 	classes also defined in this module.
 
-	file1, file2, qualfile -- Paths to regular or compressed files or file-like
-		objects. Use file1 if data is single-end. If also file2 is provided,
-		sequences are paired. If qualfile is given, then file1 must be a FASTA
-		file and sequences are single-end. One of file2 and qualfile must always
-		be None (no paired-end data is supported when reading qualfiles).
+	file1, file2 -- Paths to regular or compressed files or file-like
+		objects. Use only file1 if data is single-end. If also file2 is provided,
+		sequences are paired.
 
 	mode -- Either 'r' for reading or 'w' for writing.
 
@@ -571,10 +518,8 @@ def open(file1, file2=None, qualfile=None, fileformat=None,
 	"""
 	if mode not in ('r', 'w'):
 		raise ValueError("Mode must be 'r' or 'w'")
-	if interleaved and (file2 is not None or qualfile is not None):
+	if interleaved and (file2 is not None):
 		raise ValueError("When interleaved is set, file2 and qualfile must be None")
-	if file2 is not None and qualfile is not None:
-		raise ValueError("Setting both file2 and qualfile is not supported")
 	if file2 is not None:
 		if mode == 'r':
 			return PairedSequenceReader(file1, file2, fileformat)
@@ -586,11 +531,6 @@ def open(file1, file2=None, qualfile=None, fileformat=None,
 			return InterleavedSequenceReader(file1, fileformat)
 		else:
 			return InterleavedSequenceWriter(file1, fileformat, qualities)
-
-	if qualfile is not None:
-		if mode == 'w':
-			raise NotImplementedError('Writing to csfasta/qual not supported')
-		return FastaQualReader(file1, qualfile)
 
 	# All the multi-file things have been dealt with, delegate rest to the
 	# single-file function.

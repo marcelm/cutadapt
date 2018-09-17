@@ -490,31 +490,30 @@ def determine_interleaved(options, args):
 
 def input_files_from_parsed_args(args, paired, interleaved):
 	"""
-	Return tuple (input_filename, input_paired_filename, quality_filename)
+	Return tuple (input_filename, input_paired_filename)
 	"""
 	if len(args) == 0:
 		raise CommandLineError("Please give me something to do!")
 	elif len(args) > 2:
-		raise CommandLineError("Too many parameters.")
+		raise CommandLineError("Too many input file names")
 	input_filename = args[0]
-	if input_filename.endswith('.qual'):
-		raise CommandLineError("If a .qual file is given, it must be the second argument.")
-	if paired and len(args) == 1 and not interleaved:
-		raise CommandLineError("When paired-end trimming is enabled via -A/-G/-B/-U/"
-			"--interleaved or -p, two input files are required.")
-
-	input_paired_filename = None
-	quality_filename = None
-	if paired:
-		if not interleaved:
+	if paired and not interleaved:
+		# Two file names required
+		if len(args) == 1:
+			raise CommandLineError("When paired-end trimming is enabled via -A/-G/-B/-U"
+				" or -p, two input files are required.")
+		else:
 			input_paired_filename = args[1]
-	elif len(args) == 2:
-		quality_filename = args[1]
+	else:
+		if len(args) == 2:
+			raise CommandLineError("When trimming single-end data, only one input file name must "
+				"be given (got two)")
+		input_paired_filename = None
 
-	return input_filename, input_paired_filename, quality_filename
+	return input_filename, input_paired_filename
 
 
-def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filename, is_interleaved_output):
+def pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_output):
 	"""
 	Setup a processing pipeline from parsed command-line options.
 
@@ -546,10 +545,6 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filenam
 		if options.too_long_output and not options.too_long_paired_output:
 			raise CommandLineError("When using --too-long-output with paired-end "
 				"reads, you also need to use --too-long-paired-output")
-	elif quality_filename is not None:
-		if options.format is not None:
-			raise CommandLineError('If a pair of .fasta and .qual files is given, the -f/--format '
-				'parameter cannot be used.')
 
 	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
 		raise CommandLineError("The input file format must be either 'fasta', 'fastq' or "
@@ -697,9 +692,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 
 	try:
 		is_interleaved_input, is_interleaved_output = determine_interleaved(options, args)
-		input_filename, input_paired_filename, quality_filename = input_files_from_parsed_args(args,
+		input_filename, input_paired_filename = input_files_from_parsed_args(args,
 			paired, is_interleaved_input)
-		pipeline = pipeline_from_parsed_args(options, paired, pair_filter_mode, quality_filename, is_interleaved_output)
+		pipeline = pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_output)
 		outfiles = open_output_files(options, default_outfile, is_interleaved_output)
 	except CommandLineError as e:
 		parser.error(e)
@@ -711,7 +706,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	if cores > 1:
 		if (
 			ParallelPipelineRunner.can_output_to(outfiles)
-			and quality_filename is None
 			and options.format is None
 		):
 			runner = ParallelPipelineRunner(pipeline, cores, options.buffer_size)
@@ -728,8 +722,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		runner = pipeline
 	try:
 		runner.set_input(input_filename, file2=input_paired_filename,
-			qualfile=quality_filename, fileformat=options.format,
-			interleaved=is_interleaved_input)
+			fileformat=options.format, interleaved=is_interleaved_input)
 		runner.set_output(outfiles)
 	except (seqio.UnknownFileType, IOError) as e:
 		parser.error(e)
