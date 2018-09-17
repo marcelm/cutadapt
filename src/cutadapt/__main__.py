@@ -121,9 +121,7 @@ def get_option_parser():
 	parser.add_option("--debug", action='store_true', default=False,
 		help="Print debugging information.")
 	parser.add_option("-f", "--format",
-		help="Input file format; can be either 'fasta', 'fastq' or 'sra-fastq'. "
-			"Ignored when reading csfasta/qual files. Default: auto-detect "
-			"from file name extension.")
+		help="Input file format ('fasta' or 'fastq'). Default: auto-detect.")
 	parser.add_option('-j', '--cores', type=int, default=1,
 		help='Number of CPU cores to use. Use 0 to auto-detect. Default: %default')
 
@@ -546,9 +544,9 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_
 			raise CommandLineError("When using --too-long-output with paired-end "
 				"reads, you also need to use --too-long-paired-output")
 
-	if options.format is not None and options.format.lower() not in ['fasta', 'fastq', 'sra-fastq']:
-		raise CommandLineError("The input file format must be either 'fasta', 'fastq' or "
-			"'sra-fastq' (not '{}').".format(options.format))
+	if options.format is not None and options.format.lower() not in ['fasta', 'fastq']:
+		raise CommandLineError("The input file format must be 'fasta' or 'fastq', "
+			"not '{}'.".format(options.format))
 
 	if not (0 <= options.error_rate <= 1.):
 		raise CommandLineError("The maximum error rate must be between 0 and 1.")

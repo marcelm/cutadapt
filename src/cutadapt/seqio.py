@@ -505,7 +505,7 @@ def open(file1, file2=None, fileformat=None, interleaved=False, mode='r', qualit
 		file2 and qualfile must be None in this case.
 
 	fileformat -- If set to None, file format is autodetected from the file name
-		extension. Set to 'fasta', 'fastq', or 'sra-fastq' to not auto-detect.
+		extension. Set to 'fasta' or 'fastq' to not auto-detect.
 
 	qualities -- When mode is 'w' and fileformat is None, this can be set to
 		True or False to specify whether the written sequences will have quality
