@@ -176,15 +176,15 @@ def get_option_parser():
 	group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
 		default=True, dest='match_adapter_wildcards',
 		help="Do not interpret IUPAC wildcards in adapters.")
-	group.add_option("--action", choices=('mask', 'trim', 'none'), default='trim',
-		help="What to do with found adapters. trim: remove; "
+	group.add_option("--action", choices=('trim', 'mask', 'none'), default='trim',
+		help="What to do with found adapters: 'trim', 'mask' or 'none'. "
 			"mask: replace with 'N' characters; "
 			"none: leave unchanged (useful with "
 			"--discard-untrimmed). Default: trim")
 	group.add_option("--no-trim", dest='action', action='store_const', const='none',
-		help="Deprecated synonym for --action=none")
+		help=SUPPRESS_HELP)  # Deprecated, use --action=none
 	group.add_option("--mask-adapter", dest='action', action='store_const', const='mask',
-		help="Deprecated synonym for --action=mask")
+		help=SUPPRESS_HELP)  # Deprecated, use --action=mask
 	parser.add_option_group(group)
 
 	group = OptionGroup(parser, "Additional read modifications")
@@ -252,7 +252,7 @@ def get_option_parser():
 	group.add_option("--quiet", default=False, action='store_true',
 		help="Print only error messages.")
 	group.add_option("--report", choices=('full', 'minimal'), default=None,
-		help="Which type of report to print. Default: full")
+		help="Which type of report to print: 'full' or 'minimal'. Default: full")
 	group.add_option("-o", "--output", metavar="FILE",
 		help="Write trimmed reads to FILE. FASTQ or FASTA format is chosen "
 			"depending on input. The summary report is sent to standard output. "
