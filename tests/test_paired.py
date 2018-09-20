@@ -115,57 +115,64 @@ def test_no_trimming():
 		datapath('paired.1.fastq'), datapath('paired.2.fastq')])
 
 
-def test_missing_file():
-	with pytest.raises(SystemExit):
-		with redirect_stderr():
-			main(['-a', 'XX', '--paired-output', 'out.fastq', datapath('paired.1.fastq')])
+def test_missing_file(tmpdir):
+	with redirect_stderr():
+		with pytest.raises(SystemExit):
+			main(['--paired-output', str(tmpdir.join('out.fastq')), datapath('paired.1.fastq')])
 
 
-def test_first_too_short(cores):
-	with pytest.raises(SystemExit):
-		with temporary_path("truncated.1.fastq") as trunc1:
-			# Create a truncated file in which the last read is missing
-			with open(datapath('paired.1.fastq')) as f:
-				lines = f.readlines()
-				lines = lines[:-4]
-			with open(trunc1, 'w') as f:
-				f.writelines(lines)
-			with redirect_stderr():
-				main(
-					'-a XX -o /dev/null --paired-output out.fastq'.split()
-					+ ['--cores', str(cores)]
-					+ [trunc1, datapath('paired.2.fastq')]
-				)
+def test_first_too_short(tmpdir, cores):
+	# Create a truncated file in which the last read is missing
+	trunc1 = tmpdir.join("truncated.1.fastq")
+	with open(datapath('paired.1.fastq')) as f:
+		lines = f.readlines()
+		lines = lines[:-4]
+	trunc1.write('\n'.join(lines) + '\n')
+
+	with redirect_stderr():
+		with pytest.raises(SystemExit):
+			main([
+				'-o', '/dev/null',
+				'--paired-output', str(tmpdir.join('out.fastq')),
+				'--cores', str(cores),
+				str(trunc1), datapath('paired.2.fastq')
+			])
 
 
-def test_second_too_short(cores):
-	with pytest.raises(SystemExit):
-		with temporary_path("truncated.2.fastq") as trunc2:
-			# Create a truncated file in which the last read is missing
-			with open(datapath('paired.2.fastq')) as f:
-				lines = f.readlines()
-				lines = lines[:-4]
-			with open(trunc2, 'w') as f:
-				f.writelines(lines)
-			with redirect_stderr():
-				main('-a XX -o /dev/null --paired-output out.fastq'.split()
-					+ ['--cores', str(cores)]
-					+ [datapath('paired.1.fastq'), trunc2])
+def test_second_too_short(tmpdir, cores):
+	# Create a truncated file in which the last read is missing
+	trunc2 = tmpdir.join("truncated.2.fastq")
+	with open(datapath('paired.2.fastq')) as f:
+		lines = f.readlines()
+		lines = lines[:-4]
+	trunc2.write('\n'.join(lines) + '\n')
+
+	with redirect_stderr():
+		with pytest.raises(SystemExit):
+			main([
+				'-o', '/dev/null',
+				'--paired-output', str(tmpdir.join('out.fastq')),
+				'--cores', str(cores),
+				datapath('paired.1.fastq'), str(trunc2)
+			])
 
 
-def test_unmatched_read_names(cores):
-	with pytest.raises(SystemExit):
-		with temporary_path("swapped.1.fastq") as swapped:
-			# Create a file in which reads 2 and 1 are swapped
-			with open(datapath('paired.1.fastq')) as f:
-				lines = f.readlines()
-				lines = lines[0:4] + lines[8:12] + lines[4:8] + lines[12:]
-			with open(swapped, 'w') as f:
-				f.writelines(lines)
-			with redirect_stderr():
-				main('-a XX -o out1.fastq --paired-output out2.fastq'.split()
-					+ ['--cores', str(cores)]
-					+ [swapped, datapath('paired.2.fastq')])
+def test_unmatched_read_names(tmpdir, cores):
+	# Create a file in which reads 2 and 1 are swapped
+	with open(datapath('paired.1.fastq')) as f:
+		lines = f.readlines()
+		lines = lines[0:4] + lines[8:12] + lines[4:8] + lines[12:]
+	swapped = tmpdir.join("swapped.1.fastq")
+	swapped.write('\n'.join(lines) + '\n')
+
+	with redirect_stderr():
+		with pytest.raises(SystemExit):
+			main([
+				'-o', str(tmpdir.join('out1.fastq')),
+				'--paired-output', str(tmpdir.join('out2.fastq')),
+				'--cores', str(cores),
+				str(swapped), datapath('paired.2.fastq')
+			])
 
 
 def test_p_without_o(cores):
