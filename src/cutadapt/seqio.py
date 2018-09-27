@@ -26,49 +26,6 @@ def _shorten(s, n=100):
 	return s
 
 
-class Sequence:
-	"""qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
-
-	def __init__(self, name, sequence, qualities=None, second_header=False):
-		"""Set qualities to None if there are no quality values"""
-		self.name = name
-		self.sequence = sequence
-		self.qualities = qualities
-		self.second_header = second_header
-		self.original_length = len(sequence)
-		if qualities is not None:
-			if len(qualities) != len(sequence):
-				rname = _shorten(name)
-				raise FormatError("In read named {!r}: Length of quality sequence ({}) and "
-					"length of read ({}) do not match".format(rname, len(qualities), len(sequence)))
-	
-	def __getitem__(self, key):
-		"""slicing"""
-		return self.__class__(
-			self.name,
-			self.sequence[key],
-			self.qualities[key] if self.qualities is not None else None,
-			self.second_header)
-
-	def __repr__(self):
-		qstr = ''
-		if self.qualities is not None:
-			qstr = ', qualities={!r}'.format(_shorten(self.qualities))
-		return '<Sequence(name={!r}, sequence={!r}{})>'.format(
-			_shorten(self.name), _shorten(self.sequence), qstr)
-
-	def __len__(self):
-		return len(self.sequence)
-
-	def __eq__(self, other):
-		return self.name == other.name and \
-			self.sequence == other.sequence and \
-			self.qualities == other.qualities
-
-	def __ne__(self, other):
-		return not self.__eq__(other)
-
-
 class SequenceReader:
 	"""Read possibly compressed files containing sequences"""
 	_close_on_exit = False
@@ -98,10 +55,8 @@ class SequenceReader:
 		self.close()
 
 
-try:
-	from ._seqio import Sequence
-except ImportError:
-	pass
+from ._seqio import Sequence
+from ._seqio import two_fastq_heads
 
 
 class FileWithPrependedLine:
@@ -745,6 +700,3 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
 
 	if start1 > 0 or start2 > 0:
 		yield (memoryview(buf1)[0:start1], memoryview(buf2)[0:start2])
-
-
-from ._seqio import two_fastq_heads  # re-exported

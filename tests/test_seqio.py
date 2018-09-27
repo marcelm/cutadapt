@@ -8,8 +8,9 @@ from tempfile import mkdtemp
 from cutadapt.seqio import (Sequence, FormatError,
 	FastaReader, FastqReader, InterleavedSequenceReader,
 	FastaWriter, FastqWriter, InterleavedSequenceWriter, open as openseq,
-	sequence_names_match, two_fastq_heads, find_fastq_record_end,
+	sequence_names_match, find_fastq_record_end,
 	read_paired_chunks, read_chunks_from_file)
+from cutadapt._seqio import two_fastq_heads  # re-exported
 
 
 # files tests/data/simple.fast{q,a}
