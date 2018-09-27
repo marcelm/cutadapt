@@ -7,7 +7,7 @@ The ...Match classes trim the reads.
 import re
 from collections import defaultdict
 from cutadapt import align
-from cutadapt.seqio import FastaReader
+from dnaio.readers import FastaReader
 
 
 # Constants for the Aligner.locate() function.

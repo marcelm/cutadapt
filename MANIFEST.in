@@ -7,7 +7,6 @@ include doc/Makefile
 include versioneer.py
 include src/cutadapt/*.c
 include src/cutadapt/*.pyx
-include tests/utils.py
-include tests/test_*.py
+include tests/*.py
 graft tests/data
 graft tests/cut

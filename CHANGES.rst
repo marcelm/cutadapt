@@ -9,7 +9,15 @@ development version
 * Support for colorspace data was removed. Thus, the following command-line
   options can no longer be used: ``-c``, ``-d``, ``-t`, ``--strip-f3``,
   ``--maq``, ``--bwa``, ``--no-zero-cap``
-
+* Reading of FASTQ files has gotten faster due to a new parser. The FASTA
+  and FASTQ reading/writing functions are now available as part of the
+  `dnaio library <https://github.com/marcelm/dnaio/>`_. This is a separate
+  Python package that can be installed independently from Cutadapt.
+  There is one regression at the moment: FASTQ files that use a second
+  header (after the "+") will have that header removed in the output.
+* The switch to ``dnaio`` also fixed :issue:`275`: Input files with
+  non-standard names now no longer lead to a crash. Instead the format
+  is now recognized from the file content.
 
 v1.18 (2018-09-07)
 ------------------

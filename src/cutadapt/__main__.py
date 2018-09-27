@@ -62,8 +62,9 @@ import logging
 import platform
 import textwrap
 from xopen import xopen
+import dnaio
 
-from cutadapt import seqio, __version__
+from cutadapt import __version__
 from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
 	ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
@@ -385,9 +386,9 @@ def open_output_files(options, default_outfile, interleaved):
 	def open2(path1, path2):
 		file1 = file2 = None
 		if path1 is not None:
-			file1 = xopen(path1, 'w')
+			file1 = xopen(path1, 'wb')
 			if path2 is not None:
-				file2 = xopen(path2, 'w')
+				file2 = xopen(path2, 'wb')
 		return file1, file2
 
 	too_short = too_short2 = None
@@ -656,7 +657,7 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_
 	return pipeline
 
 
-def main(cmdlineargs=None, default_outfile=sys.stdout):
+def main(cmdlineargs=None, default_outfile='-'):
 	"""
 	Main function that sets up a processing pipeline and runs it.
 
@@ -730,7 +731,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		runner.set_input(input_filename, file2=input_paired_filename,
 			fileformat=options.format, interleaved=is_interleaved_input)
 		runner.set_output(outfiles)
-	except (seqio.UnknownFileType, IOError) as e:
+	except (dnaio.UnknownFileFormat, IOError) as e:
 		parser.error(e)
 
 	implementation = platform.python_implementation()
@@ -760,7 +761,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 		if e.errno == errno.EPIPE:
 			sys.exit(1)
 		raise
-	except (seqio.FormatError, seqio.UnknownFileType, EOFError) as e:
+	except (dnaio.FileFormatError, dnaio.UnknownFileFormat, EOFError) as e:
 		sys.exit("cutadapt: error: {}".format(e))
 
 	elapsed = time.time() - start_time

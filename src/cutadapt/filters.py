@@ -13,7 +13,7 @@ filters is created and each redirector is called in turn until one returns True.
 The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded).
 """
-from . import seqio
+import dnaio
 
 # Constants used when returning from a Filter’s __call__ method to improve
 # readability (it is unintuitive that "return True" means "discard the read").
@@ -243,14 +243,14 @@ class Demultiplexer:
 		if matches:
 			name = matches[-1].adapter.name
 			if name not in self.writers:
-				self.writers[name] = seqio.open(self.template.replace('{name}', name),
+				self.writers[name] = dnaio.open(self.template.replace('{name}', name),
 					mode='w', qualities=self.qualities)
 			self.written += 1
 			self.written_bp[0] += len(read)
 			self.writers[name].write(read)
 		else:
 			if self.untrimmed_writer is None and self.untrimmed_path is not None:
-				self.untrimmed_writer = seqio.open(self.untrimmed_path,
+				self.untrimmed_writer = dnaio.open(self.untrimmed_path,
 					mode='w', qualities=self.qualities)
 			if self.untrimmed_writer is not None:
 				self.written += 1

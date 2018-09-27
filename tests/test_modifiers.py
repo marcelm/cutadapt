@@ -1,4 +1,4 @@
-from cutadapt.seqio import Sequence
+from dnaio import Sequence
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
 	Shortener)
 

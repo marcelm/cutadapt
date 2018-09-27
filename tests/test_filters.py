@@ -2,7 +2,7 @@
 Tests write output (should it return True or False or write)
 """
 from cutadapt.filters import NContentFilter, DISCARD, KEEP, PairedRedirector
-from cutadapt.seqio import Sequence
+from dnaio import Sequence
 
 from pytest import mark
 

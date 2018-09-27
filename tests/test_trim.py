@@ -1,4 +1,4 @@
-from cutadapt.seqio import Sequence
+from dnaio import Sequence
 from cutadapt.adapters import Adapter, PREFIX, BACK, ANYWHERE
 from cutadapt.modifiers import AdapterCutter
 

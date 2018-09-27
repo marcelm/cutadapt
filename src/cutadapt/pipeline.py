@@ -9,15 +9,14 @@ import multiprocessing.connection
 import traceback
 
 from xopen import xopen
+import dnaio
 
-from . import seqio
 from .modifiers import ZeroCapper
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
 	RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
 	CasavaFilter, DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer,
 	PairedEndDemultiplexer)
-from .seqio import read_chunks_from_file, read_paired_chunks
 
 logger = logging.getLogger()
 
@@ -99,7 +98,7 @@ class Pipeline:
 		self.discard_untrimmed = False
 
 	def set_input(self, file1, file2=None, fileformat=None,	interleaved=False):
-		self._reader = seqio.open(file1, file2, fileformat,
+		self._reader = dnaio.open(file1, file2, fileformat,
 			interleaved, mode='r')
 		# Special treatment: Disable zero-capping if no qualities are available
 		if not self._reader.delivers_qualities:
@@ -108,7 +107,7 @@ class Pipeline:
 	def _open_writer(self, file, file2, **kwargs):
 		# TODO backwards-incompatible change (?) would be to use outfiles.interleaved
 		# for all outputs
-		return seqio.open(file, file2, mode='w', qualities=self.uses_qualities,
+		return dnaio.open(file, file2, mode='w', qualities=self.uses_qualities,
 			**kwargs)
 
 	def set_output(self, outfiles):
@@ -389,7 +388,7 @@ def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
 		with xopen(file, 'rb') as f:
 			if file2:
 				with xopen(file2, 'rb') as f2:
-					for chunk_index, (chunk1, chunk2) in enumerate(read_paired_chunks(f, f2, buffer_size)):
+					for chunk_index, (chunk1, chunk2) in enumerate(dnaio.read_paired_chunks(f, f2, buffer_size)):
 						# Determine the worker that should get this chunk
 						worker_index = queue.get()
 						pipe = connections[worker_index]
@@ -397,7 +396,7 @@ def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
 						pipe.send_bytes(chunk1)
 						pipe.send_bytes(chunk2)
 			else:
-				for chunk_index, chunk in enumerate(read_chunks_from_file(f, buffer_size)):
+				for chunk_index, chunk in enumerate(dnaio.read_chunks(f, buffer_size)):
 					# Determine the worker that should get this chunk
 					worker_index = queue.get()
 					pipe = connections[worker_index]
@@ -455,21 +454,21 @@ class WorkerProcess(Process):
 				# Setting the .buffer.name attributess below is necessary because
 				# file format detection uses the file name
 				data = self._read_pipe.recv_bytes()
-				input = io.TextIOWrapper(io.BytesIO(data), encoding='ascii')
-				input.buffer.name = self._input_path1
+				input = io.BytesIO(data)
+				input.name = self._input_path1
 
 				if self._input_path2:
 					data = self._read_pipe.recv_bytes()
-					input2 = io.TextIOWrapper(io.BytesIO(data), encoding='ascii')
-					input2.buffer.name = self._input_path2
+					input2 = io.BytesIO(data)
+					input2.name = self._input_path2
 				else:
 					input2 = None
-				output = io.TextIOWrapper(io.BytesIO(), encoding='ascii')
-				output.buffer.name = self._orig_outfiles.out.name
+				output = io.BytesIO()
+				output.name = self._orig_outfiles.out.name
 
 				if self._orig_outfiles.out2 is not None:
-					output2 = io.TextIOWrapper(io.BytesIO(), encoding='ascii')
-					output2.buffer.name = self._orig_outfiles.out2.name
+					output2 = io.BytesIO()
+					output2.name = self._orig_outfiles.out2.name
 				else:
 					output2 = None
 
@@ -482,13 +481,13 @@ class WorkerProcess(Process):
 				stats += cur_stats
 
 				output.flush()
-				processed_chunk = output.buffer.getvalue()
+				processed_chunk = output.getvalue()
 
 				self._write_pipe.send(chunk_index)
 				self._write_pipe.send_bytes(processed_chunk)
 				if self._orig_outfiles.out2 is not None:
 					output2.flush()
-					processed_chunk2 = output2.buffer.getvalue()
+					processed_chunk2 = output2.getvalue()
 					self._write_pipe.send_bytes(processed_chunk2)
 
 			m = self._pipeline._modifiers
@@ -519,8 +518,7 @@ class OrderedChunkWriter:
 		"""
 		self._chunks[chunk_index] = data
 		while self._current_index in self._chunks:
-			# TODO 1) do not decode 2) use .buffer.write
-			self._outfile.write(self._chunks[self._current_index].decode('utf-8'))
+			self._outfile.write(self._chunks[self._current_index])
 			del self._chunks[self._current_index]
 			self._current_index += 1
 

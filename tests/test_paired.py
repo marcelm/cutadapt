@@ -122,7 +122,7 @@ def test_first_too_short(tmpdir, cores):
 	with open(datapath('paired.1.fastq')) as f:
 		lines = f.readlines()
 		lines = lines[:-4]
-	trunc1.write('\n'.join(lines) + '\n')
+	trunc1.write(''.join(lines))
 
 	with redirect_stderr():
 		with pytest.raises(SystemExit):
@@ -140,7 +140,7 @@ def test_second_too_short(tmpdir, cores):
 	with open(datapath('paired.2.fastq')) as f:
 		lines = f.readlines()
 		lines = lines[:-4]
-	trunc2.write('\n'.join(lines) + '\n')
+	trunc2.write(''.join(lines))
 
 	with redirect_stderr():
 		with pytest.raises(SystemExit):
@@ -158,16 +158,16 @@ def test_unmatched_read_names(tmpdir, cores):
 		lines = f.readlines()
 		lines = lines[0:4] + lines[8:12] + lines[4:8] + lines[12:]
 	swapped = tmpdir.join("swapped.1.fastq")
-	swapped.write('\n'.join(lines) + '\n')
 
-	with redirect_stderr():
-		with pytest.raises(SystemExit):
-			main([
-				'-o', str(tmpdir.join('out1.fastq')),
-				'--paired-output', str(tmpdir.join('out2.fastq')),
-				'--cores', str(cores),
-				str(swapped), datapath('paired.2.fastq')
-			])
+	swapped.write(''.join(lines))
+
+	with pytest.raises(SystemExit):
+		main([
+			'-o', str(tmpdir.join('out1.fastq')),
+			'--paired-output', str(tmpdir.join('out2.fastq')),
+			'--cores', str(cores),
+			str(swapped), datapath('paired.2.fastq')
+		])
 
 
 def test_p_without_o(cores):

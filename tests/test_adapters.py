@@ -1,7 +1,7 @@
 from textwrap import dedent
 import pytest
 
-from cutadapt.seqio import Sequence
+from dnaio import Sequence
 from cutadapt.adapters import (Adapter, Match, FRONT, BACK,
 	parse_braces, LinkedAdapter, AdapterStatistics, AdapterParser, ANYWHERE)
 

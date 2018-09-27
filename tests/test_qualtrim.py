@@ -1,4 +1,4 @@
-from cutadapt.seqio import Sequence
+from dnaio import Sequence
 from cutadapt.qualtrim import nextseq_trim_index
 
 
