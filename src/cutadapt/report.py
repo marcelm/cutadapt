@@ -250,36 +250,6 @@ class AdjacentBaseStatistics:
 		return False
 
 
-def xxxprint_adjacent_bases(bases):
-	"""
-	Print a summary of the bases preceding removed adapter sequences.
-	Print a warning if one of the bases is overrepresented and there are
-	at least 20 preceding bases available.
-
-	Return whether a warning was printed.
-	"""
-	total = sum(bases.values())
-	if total == 0:
-		return False
-	print('Bases preceding removed adapters:')
-	warnbase = None
-	for base in ['A', 'C', 'G', 'T', '']:
-		b = base if base != '' else 'none/other'
-		fraction = 1.0 * bases[base] / total
-		print('  {}: {:.1%}'.format(b, fraction))
-		if fraction > 0.8 and base != '':
-			warnbase = b
-	if total >= 20 and warnbase is not None:
-		print('WARNING:')
-		print('    The adapter is preceded by "{}" extremely often.'.format(warnbase))
-		print('    The provided adapter sequence may be incomplete.')
-		print('    To fix the problem, add "{}" to the beginning of the adapter sequence.'.format(warnbase))
-		print()
-		return True
-	print()
-	return False
-
-
 @contextmanager
 def redirect_standard_output(file):
 	if file is None:
