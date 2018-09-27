@@ -55,8 +55,8 @@ def check_cython_version():
 
 extensions = [
 	Extension('cutadapt._align', sources=['src/cutadapt/_align.pyx']),
-	Extension('cutadapt._qualtrim', sources=['src/cutadapt/_qualtrim.pyx']),
 	Extension('cutadapt._seqio', sources=['src/cutadapt/_seqio.pyx']),
+	Extension('cutadapt.qualtrim', sources=['src/cutadapt/qualtrim.pyx']),
 ]
 
 cmdclass = versioneer.get_cmdclass()
