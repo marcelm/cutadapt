@@ -228,7 +228,9 @@ class AdapterParser:
 			if cmdline_type == 'anywhere':
 				raise ValueError("'anywhere' (-b) adapters may not be linked")
 			name1, front1, sequence1, back1, parameters1 = self._parse_not_linked(spec1, 'front')
+			assert back1 is None
 			name2, front2, sequence2, back2, parameters2 = self._parse_not_linked(spec2, 'back')
+			assert front2 is None
 			if not name:
 				name = name1
 

@@ -210,7 +210,7 @@ class CasavaFilter:
 	Reads with unrecognized headers are kept.
 	"""
 	def __call__(self, read, matches):
-		left, _, right = read.name.partition(' ')
+		_, _, right = read.name.partition(' ')
 		return right[1:4] == ':Y:'  # discard if :Y: found
 
 

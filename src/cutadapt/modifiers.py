@@ -66,7 +66,7 @@ class AdapterCutter:
 		sequences.
 		"""
 		trimmed_read = read
-		for t in range(self.times):
+		for _ in range(self.times):
 			match = self._best_match(trimmed_read)
 			if match is None:
 				# if nothing found, attempt no further rounds
