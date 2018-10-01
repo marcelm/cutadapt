@@ -102,7 +102,7 @@ class NiceFormatter(logging.Formatter):
 		return super().format(record)
 
 
-def setup_logging(stdout=False, quiet=False):
+def setup_logging(stdout=False, quiet=False, debug=False):
 	"""
 	Attach handler to the global logger object
 	"""
@@ -110,8 +110,15 @@ def setup_logging(stdout=False, quiet=False):
 	# instead of standard error if the -o option is used.
 	stream_handler = logging.StreamHandler(sys.stdout if stdout else sys.stderr)
 	stream_handler.setFormatter(NiceFormatter())
-	stream_handler.setLevel(logging.ERROR if quiet else logging.INFO)
-	logger.setLevel(logging.INFO)
+	# debug overrides quiet
+	if debug:
+		level = logging.DEBUG
+	elif quiet:
+		level = logging.ERROR
+	else:
+		level = logging.INFO
+	stream_handler.setLevel(level)
+	logger.setLevel(level)
 	logger.addHandler(stream_handler)
 
 
@@ -664,7 +671,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout):
 	# Setup logging only if there are not already any handlers (can happen when
 	# this function is being called externally such as from unit tests)
 	if not logging.root.handlers:
-		setup_logging(stdout=bool(options.output), quiet=options.quiet or options.report == 'minimal')
+		setup_logging(stdout=bool(options.output),
+			quiet=options.quiet or options.report == 'minimal', debug=options.debug)
 	if options.quiet and options.report:
 		parser.error("Options --quiet and --report cannot be used at the same time")
 

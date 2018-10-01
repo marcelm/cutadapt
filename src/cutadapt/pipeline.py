@@ -641,7 +641,7 @@ class ParallelPipelineRunner:
 						# the statistics)
 						e, tb_str = connection.recv()
 						# TODO traceback should only be printed in development
-						logger.error('%s', tb_str)
+						logger.debug('%s', tb_str)
 						raise e
 					if stats is None:
 						stats = cur_stats
@@ -652,9 +652,11 @@ class ParallelPipelineRunner:
 				elif chunk_index == -2:
 					# An exception has occurred in the worker
 					e, tb_str = connection.recv()
-					logger.error('%s', tb_str)
+
+					# TODO traceback should only be printed in development
 					# We should use the worker's actual traceback object
 					# here, but traceback objects are not picklable.
+					logger.debug('%s', tb_str)
 					raise e
 
 				for writer in writers:
