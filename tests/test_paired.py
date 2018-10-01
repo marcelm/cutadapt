@@ -9,11 +9,6 @@ from cutadapt.__main__ import main
 from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
 
-@pytest.fixture(params=[1, 2])
-def cores(request):
-	return request.param
-
-
 def run_paired(params, in1, in2, expected1, expected2, cores):
 	if type(params) is str:
 		params = params.split()

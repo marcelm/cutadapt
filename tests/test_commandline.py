@@ -62,9 +62,9 @@ def test_discard_untrimmed():
 	run('-b CAAGAT --discard-untrimmed', 'discard-untrimmed.fastq', 'small.fastq')
 
 
-def test_plus():
+def test_plus(cores):
 	"""test if sequence name after the "+" is retained"""
-	run("-e 0.12 -b TTAGACATATCTCCGTCG", "plus.fastq", "plus.fastq")
+	run("--cores {} -e 0.12 -b TTAGACATATCTCCGTCG".format(cores), "plus.fastq", "plus.fastq")
 
 
 def test_extensiontxtgz():
