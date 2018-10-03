@@ -23,6 +23,11 @@ if ! grep -q docker /proc/1/cgroup; then
   exec docker run --rm -v $(pwd):/io quay.io/pypa/manylinux1_x86_64 /io/$0
 fi
 
+# Strip binaries (copied from multibuild)
+STRIP_FLAGS=${STRIP_FLAGS:-"-Wl,-strip-all"}
+export CFLAGS="${CFLAGS:-$STRIP_FLAGS}"
+export CXXFLAGS="${CXXFLAGS:-$STRIP_FLAGS}"
+
 # We don’t support Python 2.7
 rm /opt/python/cp27*
 
