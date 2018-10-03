@@ -545,3 +545,7 @@ def test_underscore():
 def test_cores_autodetect():
 	# Just make sure that it runs; functionality is not tested
 	run('--cores 0 -b TTAGACATATCTCCGTCG', 'small.fastq', 'underscore_fastq.gz')
+
+
+def test_write_compressed_fastq(cores, tmpdir):
+	main(['--cores', str(cores), '-o', str(tmpdir.join('out.fastq.gz')), datapath('small.fastq')])
