@@ -98,8 +98,8 @@ class Pipeline:
 		self.discard_untrimmed = False
 
 	def set_input(self, file1, file2=None, fileformat=None,	interleaved=False):
-		self._reader = dnaio.open(file1, file2, fileformat,
-			interleaved, mode='r')
+		self._reader = dnaio.open(file1, file2=file2, fileformat=fileformat,
+			interleaved=interleaved, mode='r')
 		# Special treatment: Disable zero-capping if no qualities are available
 		if not self._reader.delivers_qualities:
 			self._modifiers = [m for m in self._modifiers if not isinstance(m, ZeroCapper)]
@@ -107,7 +107,7 @@ class Pipeline:
 	def _open_writer(self, file, file2, **kwargs):
 		# TODO backwards-incompatible change (?) would be to use outfiles.interleaved
 		# for all outputs
-		return dnaio.open(file, file2, mode='w', qualities=self.uses_qualities,
+		return dnaio.open(file, file2=file2, mode='w', qualities=self.uses_qualities,
 			**kwargs)
 
 	def set_output(self, outfiles):
