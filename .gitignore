@@ -10,7 +10,7 @@ __pycache__/
 /.tox
 /.cache
 /.pytest_cache
-/src/cutadapt/_*.c
+/src/cutadapt/*.c
 /src/cutadapt/*.so
 /doc/_build
 /src/cutadapt.egg-info/
