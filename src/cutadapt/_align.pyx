@@ -283,12 +283,13 @@ cdef class Aligner:
 			char* s2 = query_bytes
 			int m = self.m
 			int n = len(query)
-			_Entry* column = self.column
+			_Entry* column = self.column  # Current column of the DP matrix
 			double max_error_rate = self.max_error_rate
 			bint start_in_ref = self.flags & START_WITHIN_SEQ1
 			bint start_in_query = self.flags & START_WITHIN_SEQ2
 			bint stop_in_ref = self.flags & STOP_WITHIN_SEQ1
 			bint stop_in_query = self.flags & STOP_WITHIN_SEQ2
+			bint compare_ascii = False
 
 		if self.wildcard_query:
 			query_bytes = query_bytes.translate(IUPAC_TABLE)
@@ -296,7 +297,8 @@ cdef class Aligner:
 		elif self.wildcard_ref:
 			query_bytes = query_bytes.translate(ACGT_TABLE)
 			s2 = query_bytes
-		cdef bint compare_ascii = not (self.wildcard_query or self.wildcard_ref)
+		else:
+			compare_ascii = True
 		"""
 		DP Matrix:
 		           query (j)
@@ -363,7 +365,7 @@ cdef class Aligner:
 		best.origin = 0
 		best.matches = 0
 
-		# Ukkonen's trick: index of the last cell that is less than k.
+		# Ukkonen's trick: index of the last cell that is at most k
 		cdef int last = min(m, k + 1)
 		if start_in_ref:
 			last = m
@@ -375,13 +377,16 @@ cdef class Aligner:
 			int origin, cost, matches
 			int length
 			bint characters_equal
-			_Entry tmp_entry
+			# We keep only a single column of the DP matrix in memory.
+			# To access the diagonal cell to the upper left,
+			# we store it here before overwriting it.
+			_Entry diag_entry
 
 		with nogil:
 			# iterate over columns
 			for j in range(min_n + 1, max_n + 1):
-				# remember first entry
-				tmp_entry = column[0]
+				# remember first entry before overwriting
+				diag_entry = column[0]
 
 				# fill in first entry in this column
 				if start_in_query:
@@ -394,21 +399,22 @@ cdef class Aligner:
 					else:
 						characters_equal = (s1[i-1] & s2[j-1]) != 0
 					if characters_equal:
-						# Characters match: This cannot be an indel.
-						cost = tmp_entry.cost
-						origin = tmp_entry.origin
-						matches = tmp_entry.matches + 1
+						# If the characters match, skip computing costs for
+						# insertion and deletion as they are at least as high.
+						cost = diag_entry.cost
+						origin = diag_entry.origin
+						matches = diag_entry.matches + 1
 					else:
 						# Characters do not match.
-						cost_diag = tmp_entry.cost + 1
+						cost_diag = diag_entry.cost + 1
 						cost_deletion = column[i].cost + self._deletion_cost
 						cost_insertion = column[i-1].cost + self._insertion_cost
 
 						if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
 							# MISMATCH
 							cost = cost_diag
-							origin = tmp_entry.origin
-							matches = tmp_entry.matches
+							origin = diag_entry.origin
+							matches = diag_entry.matches
 						elif cost_insertion <= cost_deletion:
 							# INSERTION
 							cost = cost_insertion
@@ -420,8 +426,8 @@ cdef class Aligner:
 							origin = column[i].origin
 							matches = column[i].matches
 
-					# remember current cell for next iteration
-					tmp_entry = column[i]
+					# Remember the current cell for next iteration
+					diag_entry = column[i]
 
 					column[i].cost = cost
 					column[i].origin = origin
