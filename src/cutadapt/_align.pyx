@@ -495,12 +495,6 @@ cdef class Aligner:
 		PyMem_Free(self.column)
 
 
-def locate(str reference, str query, double max_error_rate, int flags=SEMIGLOBAL, bint wildcard_ref=False, bint wildcard_query=False, int min_overlap=1):
-	aligner = Aligner(reference, max_error_rate, flags, wildcard_ref, wildcard_query)
-	aligner.min_overlap = min_overlap
-	return aligner.locate(query)
-
-
 def compare_prefixes(str ref, str query, bint wildcard_ref=False, bint wildcard_query=False):
 	"""
 	Find out whether one string is the prefix of the other one, allowing
