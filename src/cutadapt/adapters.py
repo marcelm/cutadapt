@@ -454,9 +454,6 @@ class Match:
 		# indels, this may be different from the number of characters
 		# in the read.
 		self.length = self.astop - self.astart
-		assert self.length > 0
-		assert self.errors / self.length <= self.adapter.max_error_rate
-		assert self.length - self.errors > 0
 
 	def __repr__(self):
 		return 'Match(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
@@ -684,7 +681,6 @@ class Adapter:
 			remove_before = self.remove == 'prefix'
 		match = Match(*match_args, remove_before=remove_before, adapter=self, read=read)
 
-		assert match.length > 0 and match.errors / match.length <= self.max_error_rate, match
 		assert match.length >= self.min_overlap
 		return match
 

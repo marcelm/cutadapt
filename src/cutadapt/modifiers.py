@@ -78,9 +78,6 @@ class AdapterCutter:
 		if not matches:
 			return trimmed_read
 
-		if __debug__:
-			assert len(trimmed_read) < len(read), "Trimmed read isn't shorter than original"
-
 		if self.action == 'trim':
 			# read is already trimmed, nothing to do
 			pass
