@@ -297,7 +297,11 @@ class AdapterParser:
 			del parameters['anywhere']
 		params = self.default_parameters.copy()
 		params.update(parameters)
-		return Adapter(sequence=sequence, where=where, name=name, **params)
+		if where in (FRONT, BACK):
+			adapter_class = BackOrFrontAdapter
+		else:
+			adapter_class = Adapter
+		return adapter_class(sequence=sequence, where=where, name=name, **params)
 
 	def parse(self, spec, cmdline_type='back'):
 		"""
@@ -545,7 +549,7 @@ class Adapter:
 	type etc. within reads.
 
 	where --  One of the BACK, FRONT, PREFIX, SUFFIX or ANYWHERE constants.
-		This influences where the adapter is allowed to appear within in the
+		This influences where the adapter is allowed to appear within the
 		read.
 
 	remove -- describes which part of the read to remove if the adapter was found:
@@ -623,7 +627,7 @@ class Adapter:
 		self._debug = True
 		self.aligner.enable_debug()
 
-	def match_to(self, read, match_class=Match):
+	def match_to(self, read):
 		"""
 		Attempt to match this adapter to the given read.
 
@@ -678,7 +682,7 @@ class Adapter:
 			remove_before = match_args[2] == 0  # index 2 is rstart
 		else:
 			remove_before = self.remove == 'prefix'
-		match = match_class(*match_args, remove_before=remove_before, adapter=self, read=read)
+		match = Match(*match_args, remove_before=remove_before, adapter=self, read=read)
 
 		assert match.length > 0 and match.errors / match.length <= self.max_error_rate, match
 		assert match.length >= self.min_overlap
@@ -689,6 +693,43 @@ class Adapter:
 
 	def create_statistics(self):
 		return AdapterStatistics(self)
+
+
+class BackOrFrontAdapter(Adapter):
+	"""A 5' or 3' adapter"""
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		assert self.where == BACK or self.where == FRONT
+		self._remove_before = self.remove == 'prefix'
+
+	def match_to(self, read):
+		"""
+		Attempt to match this adapter to the given read.
+
+		Return a Match instance if a match was found;
+		return None if no match was found given the matching criteria (minimum
+		overlap length, maximum error rate).
+		"""
+		read_seq = read.sequence.upper()  # temporary copy
+		pos = -1
+
+		# try to find an exact match first unless wildcards are allowed
+		if not self.adapter_wildcards:
+			pos = read_seq.find(self.sequence)
+		if pos >= 0:
+			alignment = (
+				0, len(self.sequence), pos, pos + len(self.sequence),
+				len(self.sequence), 0)
+		else:
+			alignment = self.aligner.locate(read_seq)
+		if self._debug:
+			print(self.aligner.dpmatrix)  # pragma: no cover
+		if alignment is None:
+			return None
+
+		match = Match(*alignment, remove_before=self._remove_before, adapter=self, read=read)
+		return match
 
 
 class LinkedMatch:
