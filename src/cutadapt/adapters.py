@@ -427,8 +427,6 @@ class AdapterStatistics:
 class Match:
 	"""
 	Representation of a single adapter matched to a single read.
-
-	TODO creating instances of this class is relatively slow and responsible for quite some runtime.
 	"""
 	__slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'remove_before',
 		'adapter', 'read', 'length', '_trimmed_read', 'adjacent_base']
@@ -446,14 +444,18 @@ class Match:
 		self.adapter = adapter
 		self.read = read
 		if remove_before:
-			self._trim_front()
+			# Compute the trimmed read, assuming it’s a 'front' adapter
+			self._trimmed_read = read[rstop:]
+			self.adjacent_base = ''
 		else:
-			self._trim_back()
+			# Compute the trimmed read, assuming it’s a 'back' adapter
+			self.adjacent_base = read.sequence[rstart - 1:rstart]
+			self._trimmed_read = read[:rstart]
 		self.remove_before = remove_before
 		# Number of aligned characters in the adapter. If there are
 		# indels, this may be different from the number of characters
 		# in the read.
-		self.length = self.astop - self.astart
+		self.length = astop - astart
 
 	def __repr__(self):
 		return 'Match(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
@@ -512,26 +514,16 @@ class Match:
 	def trimmed(self):
 		return self._trimmed_read
 
-	def _trim_front(self):
-		"""Compute the trimmed read, assuming it’s a 'front' adapter"""
-		self._trimmed_read = self.read[self.rstop:]
-		self.adjacent_base = ''
-
-	def _trim_back(self):
-		"""Compute the trimmed read, assuming it’s a 'back' adapter"""
-		adjacent_base = self.read.sequence[self.rstart-1:self.rstart]
-		if adjacent_base not in 'ACGT':
-			adjacent_base = ''
-		self.adjacent_base = adjacent_base
-		self._trimmed_read = self.read[:self.rstart]
-
 	def update_statistics(self, statistics):
 		"""Update AdapterStatistics in place"""
 		if self.remove_before:
 			statistics.front.errors[self.rstop][self.errors] += 1
 		else:
 			statistics.back.errors[len(self.read) - len(self._trimmed_read)][self.errors] += 1
-			statistics.back.adjacent_bases[self.adjacent_base] += 1
+			try:
+				statistics.back.adjacent_bases[self.adjacent_base] += 1
+			except KeyError:
+				statistics.back.adjacent_bases[''] = 1
 
 
 def _generate_adapter_name(_start=[1]):
