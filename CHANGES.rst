@@ -7,7 +7,7 @@ development version
 
 * This release of Cutadapt requires at least Python 3.4 to run.
 * Support for colorspace data was removed. Thus, the following command-line
-  options can no longer be used: ``-c``, ``-d``, ``-t`, ``--strip-f3``,
+  options can no longer be used: ``-c``, ``-d``, ``-t``, ``--strip-f3``,
   ``--maq``, ``--bwa``, ``--no-zero-cap``
 * Reading of FASTQ files has gotten faster due to a new parser. The FASTA
   and FASTQ reading/writing functions are now available as part of the
@@ -18,6 +18,8 @@ development version
 * The switch to ``dnaio`` also fixed :issue:`275`: Input files with
   non-standard names now no longer lead to a crash. Instead the format
   is now recognized from the file content.
+* Some other performance optimizations were made. Speedups of up to 15%
+  are possible.
 
 v1.18 (2018-09-07)
 ------------------
