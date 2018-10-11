@@ -2,9 +2,8 @@ Developing
 ==========
 
 The `Cutadapt source code is on GitHub <https://github.com/marcelm/cutadapt/>`_.
-Cutadapt is written in Python with some extension modules that are written
-in Cython. Cutadapt uses a single code base that is compatible with both
-Python 2 and 3. Python 2.7 is the minimum supported Python version.
+Cutadapt is written in Python 3 with some extension modules that are written
+in Cython. Support for Python 2 has been dropped.
 
 
 Development installation
@@ -15,8 +14,8 @@ using a virtualenv. This sequence of commands should work::
 
 	git clone https://github.com/marcelm/cutadapt.git  # or clone your own fork
 	cd cutadapt
-	virtualenv -p python3 venv  # or omit the "-p python3" for Python 2
-	venv/bin/pip3 install Cython pytest nose tox  # pip3 becomes just pip for Python 2
+	python3 -m venv venv
+	venv/bin/pip3 install Cython pytest nose tox
 	venv/bin/pip3 install -e .
 
 Then you can run Cutadapt like this (or activate the virtualenv and omit the
@@ -40,7 +39,7 @@ Development installation (without virtualenv)
 Alternatively, if you do not want to use virtualenv, running the following may
 work from within the cloned repository::
 
-	python3 setup.py build_ext -i  # omit the "3" for Python 2
+	python3 setup.py build_ext -i
 	pytest
 
 This requires Cython and pytest to be installed. Avoid this method and use a
