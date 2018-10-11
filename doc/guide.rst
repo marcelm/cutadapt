@@ -24,6 +24,8 @@ Even reads that were trimmed entirely (because the adapter was found in the very
 beginning) are output. All of this can be changed with command-line options,
 explained further down.
 
+:ref:`Trimming of paired-end data <paired-end>` is also supported.
+
 
 Input and output file formats
 -----------------------------
@@ -33,9 +35,6 @@ Input files for cutadapt need to be in one the these formats:
 * FASTA with extensions ``.fasta``, ``.fa`` or ``.fna``
 * FASTQ with extensions ``.fastq`` or ``.fq``
 * Any of the above, but compressed as ``.gz``, ``.bz2`` or ``.xz``
-
-:ref:`Cutadapt’s support for processing of colorspace data is described
-elsewhere <colorspace>`.
 
 Input and output file formats are recognized from the file name extension. You
 can override the input format with the ``--format`` option.
@@ -60,14 +59,8 @@ compression is assumed. This is why the example given above works::
 
 All of cutadapt's options that expect a file name support this.
 
-Files compressed with bzip2 (``.bz2``) or xz (``.xz``) are also supported, but
-only if the Python installation includes the proper modules. xz files require
-Python 3.3 or later.
-
-Concatenated bz2 input files are *not supported* on Python versions before 3.3.
-These files are created by utilities such as ``pbzip2`` (parallel bzip2).
-
-Concatenated gz input files *are* supported on all supported Python versions.
+The supported compression formats are gzip (``.gz``), bzip2 (``.bz2``)
+and xz (``.xz``).
 
 
 Standard input and output
@@ -96,6 +89,9 @@ the input file.
 
 In most cases, you should probably use ``-`` at most once for an input file and
 at most once for an output file, in order not to get mixed output.
+
+For the same reason, you should not use ``-`` for non-interleaved paired-end
+data.
 
 You cannot combine ``-`` and gzip compression since cutadapt needs to know the
 file name of the output or input file. if you want to have a gzip-compressed
@@ -144,11 +140,7 @@ There are some limitations at the moment:
       - ``--too-short-output``, ``--too-short-paired-output``
       - ``--too-long-output``, ``--too-long-paired-output``
 
-* Additionally, the following command-line arguments are not compatible with
-  multi-core:
-
-      - ``--format``
-      - ``--colorspace``
+* Multi-core is also not compatible with ``--format``
 
 * Multi-core is also not available when you use cutadapt for demultiplexing.
 
@@ -161,6 +153,7 @@ Some of these limitations will be lifted in the future, as time allows.
 
 .. versionadded:: 1.18
     ``--cores=0`` for autodetection
+
 
 Read processing stages
 ======================
@@ -1025,59 +1018,46 @@ reads. They always discard reads for which the filtering criterion applies.
 Trimming paired-end reads
 =========================
 
-Cutadapt supports trimming of paired-end reads, trimming both reads in a pair
-at the same time.
-
-Assume the input is in ``reads.1.fastq`` and ``reads.2.fastq`` and that
-``ADAPTER_FWD`` should be trimmed from the forward reads (first file)
-and ``ADAPTER_REV`` from the reverse reads (second file).
-
-The basic command-line is::
+Cutadapt supports trimming of paired-end reads. To enable this, provide two
+input files and a second output file with the ``-p`` option (this is the short
+form of ``--paired-output``). This is the basic command line syntax::
 
     cutadapt -a ADAPTER_FWD -A ADAPTER_REV -o out.1.fastq -p out.2.fastq reads.1.fastq reads.2.fastq
 
-``-p`` is the short form of ``--paired-output``. The option ``-A`` is used here
-to specify an adapter sequence that cutadapt
-should remove from the second read in each pair. There are also the options
-``-G``, ``-B``. All of them work just like their lowercase counterparts,
-except that the adapter is searched for in the second read in each paired-end
-read. There is also option ``-U``, which you can use to remove a fixed number
-of bases from the second read in a pair.
+Here, the input reads are in ``reads.1.fastq`` and ``reads.2.fastq``, and the
+result will be written to ``out.1.fastq`` and ``out.2.fastq``.
 
-While it is possible to run cutadapt on the two files separately, processing
-both files at the same time is highly recommended since the program can check
-for problems in your input files only when they are processed together.
+In paired-end mode, the options ``-a``, ``-b``, ``-g`` and ``-u`` that also
+exist in single-end mode are applied to the forward reads only. To modify
+the reverse read, these options have uppercase versions ``-A``, ``-B``,
+``-G`` and ``-U`` that work just like their counterparts.
+In the example above, ``ADAPTER_FWD`` will therefore be trimmed from the
+forward reads and ``ADAPTER_REV`` from the reverse reads.
 
-When you use ``-p``/``--paired-output``, cutadapt checks whether the files are
+====================== ===========================
+Single-end/R1 option   Corresponding option for R2
+====================== ===========================
+``--adapter``, ``-a``  ``-A``
+``--front``, ``-g``    ``-G``
+``--anywhere``, ``-b`` ``-B``
+``--cut``, ``-u``      ``-U``
+``--output``, ``-o``   ``--paired-output``, ``-p``
+====================== ===========================
+
+In paired-end mode, Cutadapt checks whether the input files are
 properly paired. An error is raised if one of the files contains more reads than
-the other or if the read names in the two files do not match. Only the part of
-the read name before the first space is considered. If the read name ends with
-``/1`` or ``/2``, then that is also ignored. For example, two FASTQ headers that
-would be considered to denote properly paired reads are::
+the other or if the read names in the two files do not match. The read name
+comparison ignores a trailing ``/1`` or ``/2`` to allow processing some old
+Illumina paired-end files.
 
-    @my_read/1 a comment
+In some cases, it works to run Cutadapt twice in single-end mode on the input
+files, but we recommend against it as the check whether the files are properly
+paired cannot be done.
 
-and::
-
-    @my_read/2 another comment
-
-This is an example for *improperly paired* read names::
-
-    @my_read/1;1
-
-and::
-
-    @my_read/2;1
-
-Since the ``/1`` and ``/2`` are ignored only if the occur at the end of the read
-name, and since the ``;1`` is considered to be part of the read name, these
-reads will not be considered to be propely paired.
-
-As soon as you start to use one of the filtering options that discard reads, it
-is mandatory you process both files at the same time to make sure that the
-output files are kept synchronized: If a read is removed from one of the files,
-cutadapt will ensure it is also removed from the other file.
-
+Also, as soon as you start to use one of the filtering options that discard
+reads, it is mandatory you process both files at the same time to make sure that the
+output files are kept synchronized. If a read is removed from one of the files,
+Cutadapt will always ensure that it is also removed from the other file.
 
 The following command-line options are applied to *both* reads:
 
@@ -1089,9 +1069,6 @@ The following command-line options are applied to *both* reads:
 * ``--length``
 * ``--length-tag``
 * ``--prefix``, ``--suffix``
-* ``--strip-f3``
-* ``--colorspace``, ``--bwa``, ``-z``, ``--no-zero-cap``, ``--double-encode``,
-  ``--trim-primer``
 
 The following limitations still exist:
 

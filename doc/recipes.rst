@@ -1,6 +1,6 @@
-=============
-Recipes (FAQ)
-=============
+===============
+Recipes and FAQ
+===============
 
 This section gives answers to frequently asked questions. It shows you how to
 get cutadapt to do what you want it to do!
@@ -173,6 +173,38 @@ principle::
 
 Note the ``-`` character in the second invocation to cutadapt.
 
+
+Support for concatenated compressed files
+-----------------------------------------
+
+Cutadapt supports concatenated gzip and bzip2 input files.
+
+
+Paired-end read name check
+--------------------------
+
+When reading paired-end files, Cutadapt checks whether the read names match.
+Only the part of the read name before the first space is considered. If the
+read name ends with ``/1`` or ``/2``, then that is also ignored. For example,
+two FASTQ headers that would be considered to denote properly paired reads are::
+
+    @my_read/1 a comment
+
+and::
+
+    @my_read/2 another comment
+
+This is an example for *improperly paired* read names::
+
+    @my_read/1;1
+
+and::
+
+    @my_read/2;1
+
+Since the ``/1`` and ``/2`` are ignored only if the occur at the end of the read
+name, and since the ``;1`` is considered to be part of the read name, these
+reads will not be considered to be propely paired.
 
 Other things (unfinished)
 -------------------------
