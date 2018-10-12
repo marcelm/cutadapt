@@ -442,6 +442,10 @@ def test_quiet_is_quiet():
 	assert captured_standard_error.getvalue() == ''
 
 
+def test_x_brace_notation():
+	main(['-o', '/dev/null', '--quiet', '-a', 'X{5}', datapath('small.fastq')])
+
+
 def test_nextseq():
 	run('--nextseq-trim 22', 'nextseq.fastq', 'nextseq.fastq')
 

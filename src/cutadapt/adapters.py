@@ -35,12 +35,12 @@ WHERE_TO_REMOVE_MAP = {
 }
 
 
-def parse_braces(sequence):
+def expand_braces(sequence):
 	"""
 	Replace all occurrences of ``x{n}`` (where x is any character) with n
 	occurrences of x. Raise ValueError if the expression cannot be parsed.
 
-	>>> parse_braces('TGA{5}CT')
+	>>> expand_braces('TGA{5}CT')
 	'TGAAAAACT'
 	"""
 	# Simple DFA with four states, encoded in prev
@@ -164,6 +164,8 @@ class AdapterParser:
 		spec = spec.strip()
 
 		parameters = AdapterParser._parse_parameters(parameters_spec)
+
+		spec = expand_braces(spec)
 
 		# Special case for adapters consisting of only X characters:
 		# This needs to be supported for backwards-compatibilitity
@@ -571,7 +573,7 @@ class Adapter:
 			read_wildcards=False, adapter_wildcards=True, name=None, indels=True):
 		self._debug = False
 		self.name = _generate_adapter_name() if name is None else name
-		self.sequence = parse_braces(sequence.upper().replace('U', 'T'))  # TODO move away
+		self.sequence = sequence.upper().replace('U', 'T')
 		if not self.sequence:
 			raise ValueError('Sequence is empty')
 		self.where = where

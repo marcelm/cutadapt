@@ -3,7 +3,7 @@ import pytest
 
 from dnaio import Sequence
 from cutadapt.adapters import (Adapter, Match, FRONT, BACK,
-	parse_braces, LinkedAdapter, AdapterStatistics, AdapterParser, ANYWHERE)
+	expand_braces, LinkedAdapter, AdapterStatistics, AdapterParser, ANYWHERE)
 
 
 def test_issue_52():
@@ -65,24 +65,24 @@ def test_str():
 	str(a.match_to(Sequence(name='seq', sequence='TTACGT')))
 
 
-def test_parse_braces():
-	assert parse_braces('') == ''
-	assert parse_braces('A') == 'A'
-	assert parse_braces('A{0}') == ''
-	assert parse_braces('A{1}') == 'A'
-	assert parse_braces('A{2}') == 'AA'
-	assert parse_braces('A{2}C') == 'AAC'
-	assert parse_braces('ACGTN{3}TGACCC') == 'ACGTNNNTGACCC'
-	assert parse_braces('ACGTN{10}TGACCC') == 'ACGTNNNNNNNNNNTGACCC'
-	assert parse_braces('ACGTN{3}TGA{4}CCC') == 'ACGTNNNTGAAAACCC'
-	assert parse_braces('ACGTN{0}TGA{4}CCC') == 'ACGTTGAAAACCC'
+def test_expand_braces():
+	assert expand_braces('') == ''
+	assert expand_braces('A') == 'A'
+	assert expand_braces('A{0}') == ''
+	assert expand_braces('A{1}') == 'A'
+	assert expand_braces('A{2}') == 'AA'
+	assert expand_braces('A{2}C') == 'AAC'
+	assert expand_braces('ACGTN{3}TGACCC') == 'ACGTNNNTGACCC'
+	assert expand_braces('ACGTN{10}TGACCC') == 'ACGTNNNNNNNNNNTGACCC'
+	assert expand_braces('ACGTN{3}TGA{4}CCC') == 'ACGTNNNTGAAAACCC'
+	assert expand_braces('ACGTN{0}TGA{4}CCC') == 'ACGTTGAAAACCC'
 
 
-def test_parse_braces_fail():
+def test_expand_braces_fail():
 	for expression in ['{', '}', '{}', '{5', '{1}', 'A{-7}', 'A{', 'A{1', 'N{7', 'AN{7', 'A{4{}',
 			'A{4}{3}', 'A{b}', 'A{6X}', 'A{X6}']:
 		with pytest.raises(ValueError):
-			parse_braces(expression)
+			expand_braces(expression)
 
 
 def test_linked_adapter():
