@@ -114,6 +114,7 @@ setup(
 	extras_require={
 		'dev': ['Cython', 'pytest', 'pytest-timeout', 'sphinx', 'sphinx_issues'],
 	},
+	python_requires='>=3',
 	classifiers=[
 		"Development Status :: 5 - Production/Stable",
 		"Environment :: Console",
@@ -123,5 +124,5 @@ setup(
 		"Programming Language :: Cython",
 		"Programming Language :: Python :: 3",
 		"Topic :: Scientific/Engineering :: Bio-Informatics"
-	]
+	],
 )
