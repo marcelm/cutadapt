@@ -5,7 +5,7 @@ User guide
 Basic usage
 ===========
 
-To trim a 3' adapter, the basic command-line for cutadapt is::
+To trim a 3' adapter, the basic command-line for Cutadapt is::
 
     cutadapt -a AACCGGTT -o output.fastq input.fastq
 
@@ -30,7 +30,7 @@ explained further down.
 Input and output file formats
 -----------------------------
 
-Input files for cutadapt need to be in one the these formats:
+Input files for Cutadapt need to be in one the these formats:
 
 * FASTA with extensions ``.fasta``, ``.fa`` or ``.fna``
 * FASTQ with extensions ``.fastq`` or ``.fq``
@@ -57,7 +57,7 @@ compression is assumed. This is why the example given above works::
 
     cutadapt -a AACCGGTT -o output.fastq.gz input.fastq.gz
 
-All of cutadapt's options that expect a file name support this.
+All of Cutadapt's options that expect a file name support this.
 
 The supported compression formats are gzip (``.gz``), bzip2 (``.bz2``)
 and xz (``.xz``).
@@ -72,19 +72,19 @@ can therefore also write::
 
     cutadapt -a AACCGGTT input.fastq > output.fastq
 
-There is one difference in behavior if you use cutadapt without ``-o``: The
+There is one difference in behavior if you use Cutadapt without ``-o``: The
 report is sent to the standard error stream instead of standard output. You
 can redirect it to a file like this::
 
     cutadapt -a AACCGGTT input.fastq > output.fastq 2> report.txt
 
-Wherever cutadapt expects a file name, you can also write a dash (``-``) in
+Wherever Cutadapt expects a file name, you can also write a dash (``-``) in
 order to specify that standard input or output should be used. For example::
 
     tail -n 4 input.fastq | cutadapt -a AACCGGTT - > output.fastq
 
 The ``tail -n 4`` prints out only the last four lines of ``input.fastq``, which
-are then piped into cutadapt. Thus, cutadapt will work only on the last read in
+are then piped into Cutadapt. Thus, Cutadapt will work only on the last read in
 the input file.
 
 In most cases, you should probably use ``-`` at most once for an input file and
@@ -93,7 +93,7 @@ at most once for an output file, in order not to get mixed output.
 For the same reason, you should not use ``-`` for non-interleaved paired-end
 data.
 
-You cannot combine ``-`` and gzip compression since cutadapt needs to know the
+You cannot combine ``-`` and gzip compression since Cutadapt needs to know the
 file name of the output or input file. if you want to have a gzip-compressed
 output file, use ``-o`` with an explicit name.
 
@@ -128,8 +128,7 @@ the output will be done in a single thread and therefore be a bottleneck.
 
 There are some limitations at the moment:
 
-* Multi-core is *only* available when you run cutadapt with Python 3.3 or later.
-* Multi-core cutadapt can only write to output files given by ``-o`` and ``-p``.
+* Multi-core Cutadapt can only write to output files given by ``-o`` and ``-p``.
   This implies that the following command-line arguments are not compatible with
   multi-core:
 
@@ -142,7 +141,7 @@ There are some limitations at the moment:
 
 * Multi-core is also not compatible with ``--format``
 
-* Multi-core is also not available when you use cutadapt for demultiplexing.
+* Multi-core is also not available when you use Cutadapt for demultiplexing.
 
 If you try to use multiple cores with an incompatible commandline option, you
 will get an error message.
@@ -273,7 +272,7 @@ For example, assume your fragment of interest is *MYSEQUENCE* and the adapter is
     MYSEQUENCEADAPTER
     MYSEQUENCEADAPTERSOMETHINGELSE
 
-Use cutadapt's ``-a ADAPTER`` option to remove this type of adapter. This will
+Use Cutadapt's ``-a ADAPTER`` option to remove this type of adapter. This will
 be the result::
 
     MYSEQUEN
@@ -349,7 +348,7 @@ cases like these are also recognized::
 
 The read will simply be empty after trimming.
 
-Be aware that cutadapt still searches for adapters error-tolerantly and, in
+Be aware that Cutadapt still searches for adapters error-tolerantly and, in
 particular, allows insertions. So if your maximum error rate is sufficiently
 high, even this read will be trimmed::
 
@@ -588,7 +587,7 @@ The above applies when both occurrences of the adapter are *exact* matches, and
 it also applies when both occurrences of the adapter are *inexact* matches (that
 is, it has at least one indel or mismatch). However, if one match is exact, but
 the other is inexact, then the exact match wins, even if it is not the leftmost
-one! The reason for this behavior is that cutadapt searches for exact matches
+one! The reason for this behavior is that Cutadapt searches for exact matches
 first and, to improve performance, skips the error-tolerant matching step if an
 exact match was found.
 
@@ -665,7 +664,7 @@ with one substitution. Therefore, only 9·0.1=0.9 errors are allowed. Since this
 is rounded off to zero allowed errors, the adapter will not be found.
 
 The number of errors allowed for a given adapter match length is also shown in
-the report that cutadapt prints::
+the report that Cutadapt prints::
 
     Sequence: 'LONGADAPTER'; Length: 11; Trimmed: 2 times.
 
@@ -692,7 +691,7 @@ See also the :ref:`section on details of the alignment algorithm <adapter-alignm
 Minimum overlap (reducing random matches)
 -----------------------------------------
 
-Since cutadapt allows partial matches between the read and the adapter sequence,
+Since Cutadapt allows partial matches between the read and the adapter sequence,
 short matches can occur by chance, leading to erroneously trimmed bases. For
 example, roughly 25% of all reads end with a base that is identical to the
 first base of the adapter. To reduce the number of falsely trimmed bases,
@@ -715,7 +714,7 @@ overlap length of 3, only about 0.07 bases are lost per read.
 
 When choosing an appropriate minimum overlap length, take into account that
 true adapter matches are also lost when the overlap length is higher than
-zero, reducing cutadapt's sensitivity.
+zero, reducing Cutadapt's sensitivity.
 
 
 Allowing partial matches at both ends
@@ -769,7 +768,7 @@ that consist of many (often low-quality) ``N`` bases. Use
 
 Use the option ``-N`` to disable interpretation of wildcard characters even in
 the adapters. If wildcards are disabled entirely, that is, when you use ``-N``
-and *do not* use ``--match-read-wildcards``, then cutadapt compares characters
+and *do not* use ``--match-read-wildcards``, then Cutadapt compares characters
 by their ASCII value. Thus, both the read and adapter can be arbitrary strings
 (such as ``SEQUENCE`` or ``ADAPTER`` as used here in the examples).
 
@@ -1084,9 +1083,9 @@ Filtering paired-end reads
 The :ref:`filtering options listed above <filtering>` can also be used when
 trimming paired-end data.
 
-Importantly, cutadapt *always discards both reads of a pair* if it determines
+Importantly, Cutadapt *always discards both reads of a pair* if it determines
 that the pair should be discarded. This ensures that the reads in the output
-files are in sync. (If you don’t want or need this, you can run cutadapt
+files are in sync. (If you don’t want or need this, you can run Cutadapt
 separately on the R1 and R2 files.)
 
 The same applies also to the options that redirect reads to other files if they
@@ -1118,7 +1117,7 @@ table describes the effect for some filtering options.
 | ``--max-n``                | one of the reads contains too many ``N`` bases | both reads contain too many ``N`` bases |
 +----------------------------+------------------------------------------------+-----------------------------------------+
 
-To further complicate matters, cutadapt switches to a backwards compatibility
+To further complicate matters, Cutadapt switches to a backwards compatibility
 mode ("legacy mode") when none of the uppercase modification options
 (``-A``/``-B``/``-G``/``-U``) are given. In that mode, filtering criteria are
 checked only for the *first* read. Cutadapt will also tell you at the top of
@@ -1196,18 +1195,18 @@ Legacy paired-end read trimming
 
 .. note::
     This section describes the way paired-end trimming was done
-    in cutadapt before 1.8, where the ``-A``, ``-G``, ``-B`` options were not
+    in Cutadapt before 1.8, where the ``-A``, ``-G``, ``-B`` options were not
     available. It is more complicated, but you can still use it.
 
 If you do not use any of the filtering options that discard reads, such
 as ``--discard``, ``--minimum-length`` or ``--maximum-length``, you can run
-cutadapt on each file separately::
+Cutadapt on each file separately::
 
     cutadapt -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
     cutadapt -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
 
 You can use the options that are listed under 'Additional modifications'
-in cutadapt's help output without problems. For example, if you want to
+in Cutadapt's help output without problems. For example, if you want to
 quality-trim the first read in each pair with a threshold of 10, and the
 second read in each pair with a threshold of 15, then the commands could
 be::
@@ -1215,7 +1214,7 @@ be::
     cutadapt -q 10 -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
     cutadapt -q 15 -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
 
-If you use any of the filtering options, you must use cutadapt in the following
+If you use any of the filtering options, you must use Cutadapt in the following
 way (with the ``-p`` option) to make sure that read pairs remain sychronized.
 
 First trim the forward read, writing output to temporary files (we also
@@ -1235,7 +1234,7 @@ Please see the previous section for a much simpler way of trimming paired-end
 reads!
 
 In legacy paired-end mode, the read-modifying options such as ``-q`` only
-apply to the first file in each call to cutadapt (first ``reads.1.fastq``, then
+apply to the first file in each call to Cutadapt (first ``reads.1.fastq``, then
 ``tmp.2.fastq`` in this example). Reads in the second file are not affected by those
 options, but by the filtering options: If a read in the first file is
 discarded, then the matching read in the second file is also filtered
@@ -1270,7 +1269,7 @@ The ``file:`` syntax can be combined with the regular way of specifying an
 adapter. But no matter how you specify multiple adapter sequences, remember
 that only the best matching adapter is trimmed from each read.
 
-When cutadapt has multiple adapter sequences to work with, either specified
+When Cutadapt has multiple adapter sequences to work with, either specified
 explicitly on the command line or via a FASTA file, it decides in the
 following way which adapter should be trimmed:
 
@@ -1413,7 +1412,7 @@ works better for that particular case because it is allows you to require that
 the 3' adapter is trimmed only when the 5' adapter also occurs, and it cannot
 happen that the same adapter is trimmed twice.
 
-Before cutadapt supported linked adapters, the ``--times`` option was the
+Before Cutadapt supported linked adapters, the ``--times`` option was the
 recommended way to search for 5'/3' linked adapters. For completeness, we
 describe how it was done. For example, when the 5' adapter is *FIRST* and the
 3' adapter is *SECOND*, then the read could look like this::
@@ -1476,7 +1475,7 @@ cases in which an adapter does occur.
 Warning about incomplete adapter sequences
 ------------------------------------------
 
-Sometimes cutadapt’s report ends with these lines::
+Sometimes Cutadapt’s report ends with these lines::
 
     WARNING:
         One or more of your adapter sequences may be incomplete.
@@ -1621,7 +1620,7 @@ The last three fields are omitted for single-end data.
 How to read the report
 ----------------------
 
-After every run, cutadapt prints out per-adapter statistics. The output
+After every run, Cutadapt prints out per-adapter statistics. The output
 starts with something like this::
 
     Sequence: 'ACGTACGTACGTTAGCTAGC'; Length: 20; Trimmed: 2402 times.

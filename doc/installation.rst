@@ -9,14 +9,14 @@ successfully under macOS and Windows.
 Quick installation
 ------------------
 
-The easiest way to install cutadapt is to use ``pip3`` on the command line::
+The easiest way to install Cutadapt is to use ``pip3`` on the command line::
 
     pip3 install --user --upgrade cutadapt
 
 This will download the software from `PyPI (the Python packaging
 index) <https://pypi.python.org/pypi/cutadapt/>`_, and
 install the cutadapt binary into ``$HOME/.local/bin``. If an old version of
-cutadapt exists on your system, the ``--upgrade`` parameter is required in order
+Cutadapt exists on your system, the ``--upgrade`` parameter is required in order
 to install a newer version. You can then run the program like this::
 
     ~/.local/bin/cutadapt --help
@@ -28,10 +28,10 @@ If you want to avoid typing the full path, add the directory
 Installation with conda
 -----------------------
 
-Alternatively, cutadapt is available as a conda package from the
+Alternatively, Cutadapt is available as a conda package from the
 `bioconda channel <https://bioconda.github.io/>`_. If you do not have conda,
 `install miniconda <http://conda.pydata.org/miniconda.html>`_ first.
-Then install cutadapt like this::
+Then install Cutadapt like this::
 
     conda install -c bioconda cutadapt
 
@@ -46,7 +46,7 @@ Dependencies
 Cutadapt installation requires this software to be installed:
 
 * Python 3.4 or newer
-* Possibly a C compiler. For Linux, cutadapt packages are provided as
+* Possibly a C compiler. For Linux, Cutadapt packages are provided as
   so-called “wheels” (``.whl`` files) which come pre-compiled.
 
 Under Ubuntu, you may need to install the packages ``build-essential`` and
@@ -64,11 +64,11 @@ packages (``python3-dev`` in Ubuntu).
 System-wide installation (root required)
 ----------------------------------------
 
-If you have root access, then you can install cutadapt system-wide by running::
+If you have root access, then you can install Cutadapt system-wide by running::
 
     sudo pip3 install cutadapt
 
-This installs cutadapt into `/usr/local/bin`.
+This installs cutadapt into ``/usr/local/bin``.
 
 If you want to upgrade from an older version, use this command instead::
 
@@ -90,7 +90,7 @@ get an error message in order to make sure that all versions are removed.
 Shared installation (on a cluster)
 ----------------------------------
 
-If you have a larger installation and want to provide cutadapt as a module
+If you have a larger installation and want to provide Cutadapt as a module
 that can be loaded and unloaded (with the Lmod system, for example), we
 recommend that you create a virtual environment and 'pip install' cutadapt into
 it. These instructions work on our SLURM cluster that uses the Lmod system
@@ -102,7 +102,7 @@ it. These instructions work on our SLURM cluster that uses the Lmod system
 
 The ``install-option`` part is important. It ensures that a second, separate
 ``bin/`` directory is created (``/software/cutadapt-1.9.1/bin/``) that *only*
-contains the ``cutadapt`` script and nothing else. To make cutadapt available to
+contains the ``cutadapt`` script and nothing else. To make Cutadapt available to
 the users, that directory (``$BASE/bin``) needs to be added to the ``$PATH``.
 
 Make sure you *do not* add the ``bin/`` directory within the ``venv`` directory
@@ -125,11 +125,11 @@ Activation merely adds the ``bin/`` directory to the ``$PATH``, so the
 Installing the development version
 ----------------------------------
 
-We recommend that you install cutadapt into a so-called virtual environment if
+We recommend that you install Cutadapt into a so-called virtual environment if
 you decide to use the development version. The virtual environment is a single
 directory that contains everything needed to run the software. Nothing else on
 your system is changed, so you can simply uninstall this particular version of
-cutadapt by removing the directory with the virtual environment.
+Cutadapt by removing the directory with the virtual environment.
 
 The following instructions work on Linux using Python 3. Make sure you have
 installed the :ref:`dependencies <dependencies>` (``python3-dev`` and
@@ -143,10 +143,10 @@ environment and what you want to call it. Let us assume you chose the path
     ~/cutadapt-venv/bin/pip install Cython
     ~/cutadapt-venv/bin/pip install https://github.com/marcelm/cutadapt/archive/master.zip
 
-To run cutadapt and see the version number, type ::
+To run Cutadapt and see the version number, type ::
 
     ~/cutadapt-venv/bin/cutadapt --version
 
 The reported version number will be something like ``1.14+65.g5610275``. This
-means that you are now running a cutadapt version that contains 65 additional
+means that you are now running a Cutadapt version that contains 65 additional
 changes (*commits*) since version 1.14.

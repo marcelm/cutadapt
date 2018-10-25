@@ -9,7 +9,7 @@ Adapter alignment algorithm
 ===========================
 
 Since the publication of the `EMBnet journal application note about
-cutadapt <http://dx.doi.org/10.14806/ej.17.1.200>`_, the alignment algorithm
+Cutadapt <http://dx.doi.org/10.14806/ej.17.1.200>`_, the alignment algorithm
 used for finding adapters has changed significantly. An overview of this new
 algorithm is given in this section. An even more detailed description is
 available in Chapter 2 of my PhD thesis `Algorithms and tools for the analysis
@@ -37,7 +37,7 @@ has the disadvantage that they are not at all intuitive: What does a total score
 of *x* mean? Is that good or bad? How should a threshold be chosen in order to
 avoid finding alignments with too many errors?
 
-For cutadapt, the adapter alignment algorithm uses *unit costs* instead.
+For Cutadapt, the adapter alignment algorithm uses *unit costs* instead.
 This means that mismatches, insertions and deletions are counted as one error, which
 is easier to understand and allows to specify a single parameter for the
 algorithm (the maximum error rate) in order to describe how many errors are
@@ -75,7 +75,7 @@ overlaps that are actually allowed by the adapter type are actually considered.
 Quality trimming algorithm
 --------------------------
 
-The trimming algorithm implemented in cutadapt is the same as the one used by
+The trimming algorithm implemented in Cutadapt is the same as the one used by
 BWA, but applied to both
 ends of the read in turn (if requested). That is: Subtract the given cutoff
 from all qualities; compute partial sums from all indices to the end of the

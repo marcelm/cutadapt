@@ -3,7 +3,7 @@ Recipes and FAQ
 ===============
 
 This section gives answers to frequently asked questions. It shows you how to
-get cutadapt to do what you want it to do!
+get Cutadapt to do what you want it to do!
 
 
 Remove more than one adapter
@@ -20,13 +20,13 @@ version ``-n 2``). For example::
 
 	cutadapt -g ^TTAAGGCC -g ^AAGCTTA -a TACGGACT -n 2 -o output.fastq input.fastq
 
-This instructs cutadapt to run two rounds of adapter finding and removal. That
+This instructs Cutadapt to run two rounds of adapter finding and removal. That
 means that, after the first round and only when an adapter was actually found,
 another round is performed. In both rounds, all given adapters are searched and
 removed. The problem is that it could happen that one adapter is found twice (so
 the 3' adapter, for example, could be removed twice).
 
-The second option is to not use the ``-n`` option, but to run cutadapt twice,
+The second option is to not use the ``-n`` option, but to run Cutadapt twice,
 first removing one adapter and then the other. It is easiest if you use a pipe
 as in this example::
 
@@ -38,7 +38,7 @@ Trim poly-A tails
 
 If you want to trim a poly-A tail from the 3' end of your reads, use the 3'
 adapter type (``-a``) with an adapter sequence of many repeated ``A``
-nucleotides. Starting with version 1.8 of cutadapt, you can use the
+nucleotides. Starting with version 1.8 of Cutadapt, you can use the
 following notation to specify a sequence that consists of 100 ``A``::
 
 	cutadapt -a "A{100}" -o output.fastq input.fastq
@@ -54,7 +54,7 @@ will be trimmed to::
 
 If for some reason you would like to use a shorter sequence of ``A``, you can
 do so: The matching algorithm always picks the leftmost match that it can find,
-so cutadapt will do the right thing even when the tail has more ``A`` than you
+so Cutadapt will do the right thing even when the tail has more ``A`` than you
 used in the adapter sequence. However, sequencing errors may result in shorter
 matches than desired. For example, using ``-a "A{10}"``, the read above (where
 the ``AAAT`` is followed by eleven ``A``) would be trimmed to::
@@ -114,7 +114,7 @@ the linked adapter option that needs to be used is therefore ::
 where ``FWDPRIMER`` needs to be replaced with the sequence of your
 forward primer and ``RCREVPRIMER`` with the reverse complement of
 the reverse primer. The three dots ``...`` need to be entered
-as they are -- they tell cutadapt that this is a linked adapter
+as they are -- they tell Cutadapt that this is a linked adapter
 with a 5' and a 3' part.
 
 Sequencing of R2 starts before the 3' sequencing primer and
@@ -127,7 +127,7 @@ swapped and reverse-complemented::
 The uppercase ``-A`` specifies that this option is
 meant to work on R2. Similar to above, ``REVPRIMER`` is
 the sequence of the reverse primer and ``RCFWDPRIMER`` is the
-reverse-complement of the forward primer. Note that cutadapt
+reverse-complement of the forward primer. Note that Cutadapt
 does not reverse-complement any sequences of its own; you
 will have to do that yourself.
 
@@ -158,7 +158,7 @@ you know must be there::
 Piping paired-end data
 ----------------------
 
-Sometimes it is necessary to run cutadapt twice on your data. For example, when
+Sometimes it is necessary to run Cutadapt twice on your data. For example, when
 you want to change the order in which read modification or filtering options are
 applied. To simplify this, you can use Unix pipes (``|``), but this is more
 difficult with paired-end data since then input and output consists of two files
@@ -171,7 +171,7 @@ principle::
     cutadapt [options] --interleaved in.1.fastq.gz in.2.fastq.gz | \
       cutadapt [options] --interleaved -o out.1.fastq.gz -p out.2.fastq.gz -
 
-Note the ``-`` character in the second invocation to cutadapt.
+Note the ``-`` character in the second invocation to Cutadapt.
 
 
 Support for concatenated compressed files
@@ -210,6 +210,6 @@ Other things (unfinished)
 -------------------------
 
 * How to detect adapters
-* Use cutadapt for quality-trimming only
+* Use Cutadapt for quality-trimming only
 * Use it for minimum/maximum length filtering
 * Use it for conversion to FASTQ

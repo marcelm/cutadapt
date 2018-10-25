@@ -1,5 +1,5 @@
 """
-Build cutadapt.
+Build Cutadapt.
 """
 import sys
 import os.path
