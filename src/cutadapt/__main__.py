@@ -499,9 +499,13 @@ def input_files_from_parsed_args(args, paired, interleaved):
 	Return tuple (input_filename, input_paired_filename)
 	"""
 	if len(args) == 0:
-		raise CommandLineError("Please give me something to do!")
+		raise CommandLineError("You did not provide any input file names. Please give me something to do!")
 	elif len(args) > 2:
-		raise CommandLineError("Too many input file names")
+		raise CommandLineError(
+			"You provided {} input file names, but either one or two are expected. ".format(len(args))
+			+ "The file names were:\n - "
+			+ "\n - ".join("{!r}".format(p) for p in args)
+			+ "\nHint: If your path contains spaces, you need to enclose it in quotes")
 	input_filename = args[0]
 	if paired and not interleaved:
 		# Two file names required
