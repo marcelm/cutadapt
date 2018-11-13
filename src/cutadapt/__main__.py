@@ -727,7 +727,8 @@ def main(cmdlineargs=None, default_outfile='-'):
 				'--wildcard-file, --untrimmed-output, '
 				'--untrimmed-paired-output, --too-short-output, '
 				'--too-short-paired-output, --too-long-output, '
-				'--too-long-paired-output, --format')
+				'--too-long-paired-output, --format\n'
+				'Omit --cores/-j to continue.')
 			sys.exit(1)
 	else:
 		runner = pipeline
