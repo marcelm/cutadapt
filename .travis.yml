@@ -1,4 +1,7 @@
 language: python
+
+dist: xenial
+
 cache:
   directories:
     - $HOME/.cache/pip
@@ -7,6 +10,7 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
+  - "3.7"
   - "nightly"
 
 install:
@@ -23,10 +27,6 @@ env:
 
 jobs:
   include:
-    - stage: test
-      python: "3.7"
-      dist: xenial
-
     - stage: deploy
       services:
         - docker
