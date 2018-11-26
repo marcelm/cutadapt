@@ -170,7 +170,7 @@ class AdapterParser:
 		# Special case for adapters consisting of only X characters:
 		# This needs to be supported for backwards-compatibilitity
 		if len(spec.strip('X')) == 0:
-			return name, None, spec, None, {}
+			return name, None, spec, {}
 
 		front_restriction = None
 		if spec.startswith('^'):
@@ -203,11 +203,46 @@ class AdapterParser:
 			raise ValueError(
 				"Allowed placement restrictions for a 3' adapter are ADAPTERX and ADAPTER$")
 
-		if cmdline_type == 'anywhere' and n_placement_restrictions > 0:
+		assert front_restriction is None or back_restriction is None
+		if front_restriction is not None:
+			restriction = front_restriction
+		else:
+			restriction = back_restriction
+
+		if cmdline_type == 'anywhere' and restriction is not None:
 			raise ValueError(
 				"Placement restrictions (with X, ^, $) not supported for 'anywhere' (-b) adapters")
-		assert front_restriction is None or back_restriction is None
-		return name, front_restriction, spec, back_restriction, parameters
+
+		return name, restriction, spec, parameters
+
+	@staticmethod
+	def _restriction_to_where(cmdline_type, restriction):
+		if cmdline_type == 'front':
+			if restriction is None:
+				return FRONT
+			elif restriction == 'anchored':
+				return PREFIX
+			elif restriction == 'noninternal':
+				return FRONT_NOT_INTERNAL
+			else:
+				raise ValueError(
+					'Value {} for a front restriction not allowed'.format(restriction))
+		elif cmdline_type == 'back':
+			if restriction is None:
+				return BACK
+			elif restriction == 'anchored':
+				return SUFFIX
+			elif restriction == 'noninternal':
+				return BACK_NOT_INTERNAL
+			else:
+				raise ValueError(
+					'Value {} for a back restriction not allowed'.format(restriction))
+		else:
+			assert cmdline_type == 'anywhere'
+			if restriction is None:
+				return ANYWHERE
+			else:
+				raise ValueError('Not placement may be specified for "anywhere" adapters')
 
 	def _parse(self, spec, cmdline_type='back', name=None):
 		"""
@@ -229,31 +264,44 @@ class AdapterParser:
 		if middle == '...' and spec1 and spec2:
 			if cmdline_type == 'anywhere':
 				raise ValueError("'anywhere' (-b) adapters may not be linked")
-			name1, front1, sequence1, back1, parameters1 = self._parse_not_linked(spec1, 'front')
-			assert back1 is None
-			name2, front2, sequence2, back2, parameters2 = self._parse_not_linked(spec2, 'back')
-			assert front2 is None
+			name1, front_restriction, sequence1, parameters1 = self._parse_not_linked(spec1, 'front')
+			name2, back_restriction, sequence2, parameters2 = self._parse_not_linked(spec2, 'back')
 			if not name:
 				name = name1
 
 			# Automatically anchor the 5' adapter if -a is used
-			if cmdline_type == 'back' and front1 is None:
-				front1 = 'anchored'
+			if cmdline_type == 'back' and front_restriction is None:
+				front_restriction = 'anchored'
 
-			front_anchored = front1 == 'anchored'
-			back_anchored = back2 == 'anchored'
-			require_both = True if not front_anchored and not back_anchored else None
+			front_anchored = front_restriction is not None
+			back_anchored = back_restriction is not None
+
 			front_parameters = self.default_parameters.copy()
 			front_parameters.update(parameters1)
 			back_parameters = self.default_parameters.copy()
 			back_parameters.update(parameters2)
+
+			if cmdline_type == 'front':
+				# -g requires both adapters to be present
+				front_required = True
+				back_required = True
+			else:
+				# -a requires only the anchored adapters to be present
+				front_required = front_anchored
+				back_required = back_anchored
+
+			front_where = self._restriction_to_where('front', front_restriction)
+			back_where = self._restriction_to_where('back', back_restriction)
+			front_adapter = Adapter(sequence1, where=front_where, name=None, **front_parameters)
+			back_adapter = Adapter(sequence2, where=back_where, name=None, **back_parameters)
+
 			return LinkedAdapter(
-				sequence1, sequence2, name=name,
-				front_restriction=front1,
-				back_restriction=back2,
-				require_both=require_both,
-				front_parameters=front_parameters,
-				back_parameters=back_parameters)
+				front_adapter=front_adapter,
+				back_adapter=back_adapter,
+				front_required=front_required,
+				back_required=back_required,
+				name=name,
+			)
 
 		if middle == '...':
 			if not spec1:
@@ -272,24 +320,11 @@ class AdapterParser:
 		else:
 			spec = spec1
 
-		specname, front_restriction, sequence, back_restriction, parameters = self._parse_not_linked(
-			spec, cmdline_type)
+		# TODO
+		specname, restriction, sequence, parameters = self._parse_not_linked(spec, cmdline_type)
 		del spec
-		if front_restriction == 'anchored':
-			where = PREFIX
-		elif front_restriction == 'noninternal':
-			where = FRONT_NOT_INTERNAL
-		elif back_restriction == 'anchored':
-			where = SUFFIX
-		elif back_restriction == 'noninternal':
-			where = BACK_NOT_INTERNAL
-		elif cmdline_type == 'front':
-			where = FRONT
-		elif cmdline_type == 'back':
-			where = BACK
-		else:
-			assert cmdline_type == 'anywhere'
-			where = ANYWHERE
+
+		where = self._restriction_to_where(cmdline_type, restriction)
 
 		if not name:
 			name = specname
@@ -577,7 +612,7 @@ class Adapter:
 		if not self.sequence:
 			raise ValueError('Sequence is empty')
 		self.where = where
-		if remove not in (None, 'prefix', 'suffix'):
+		if remove not in (None, 'prefix', 'suffix', 'auto'):
 			raise ValueError('remove parameter must be "prefix", "suffix", "auto" or None')
 		self.remove = WHERE_TO_REMOVE_MAP[where] if remove is None else remove
 		self.max_error_rate = max_error_rate
@@ -686,7 +721,14 @@ class Adapter:
 
 
 class BackOrFrontAdapter(Adapter):
-	"""A 5' or 3' adapter"""
+	"""A 5' or 3' adapter.
+
+	This is separate from the Adapter class so that a specialized match_to
+	method can be implemented that reduces some of the runtime checks.
+
+	TODO The generic Adapter class should become abstract, and the other
+	adapter types should also get their own classes.
+	"""
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -770,44 +812,27 @@ class LinkedMatch:
 class LinkedAdapter:
 	"""
 	"""
-	def __init__(self, front_sequence, back_sequence, front_restriction='anchored',
-			back_restriction=None, require_both=None, name=None,
-			front_parameters=dict(), back_parameters=dict()):
+	def __init__(
+		self,
+		front_adapter,
+		back_adapter,
+		front_required,
+		back_required,
+		name,
+	):
 		"""
 		require_both -- require both adapters to match. If not specified, the default is to
 			require only anchored adapters to match.
 		kwargs are passed on to individual Adapter constructors
 		"""
-		if front_restriction is None:
-			where1 = FRONT
-		elif front_restriction == 'anchored':
-			where1 = PREFIX
-		elif front_restriction == 'noninternal':
-			where1 = FRONT_NOT_INTERNAL
-		else:
-			raise ValueError('Value {} for front_restriction not allowed'.format(front_restriction))
-
-		if back_restriction is None:
-			where2 = BACK
-		elif back_restriction == 'anchored':
-			where2 = SUFFIX
-		elif back_restriction == 'noninternal':
-			where2 = BACK_NOT_INTERNAL
-		else:
-			raise ValueError(
-				'Value {} for back_restriction not allowed'.format(back_restriction))
-		if require_both:
-			self._require_back_match = True
-			self._require_front_match = True
-		else:
-			self._require_front_match = front_restriction == 'anchored'
-			self._require_back_match = back_restriction == 'anchored'
+		self._require_front_match = front_required
+		self._require_back_match = back_required
 
 		# The following attributes are needed for the report
 		self.where = LINKED
 		self.name = _generate_adapter_name() if name is None else name
-		self.front_adapter = Adapter(front_sequence, where=where1, name=None, **front_parameters)
-		self.back_adapter = Adapter(back_sequence, where=where2, name=None, **back_parameters)
+		self.front_adapter = front_adapter
+		self.back_adapter = back_adapter
 
 	def enable_debug(self):
 		self.front_adapter.enable_debug()

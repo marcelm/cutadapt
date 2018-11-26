@@ -2,7 +2,7 @@ from textwrap import dedent
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import (Adapter, Match, FRONT, BACK,
+from cutadapt.adapters import (Adapter, Match, FRONT, BACK, PREFIX,
 	expand_braces, LinkedAdapter, AdapterStatistics, AdapterParser, ANYWHERE)
 
 
@@ -86,8 +86,11 @@ def test_expand_braces_fail():
 
 
 def test_linked_adapter():
-	linked_adapter = LinkedAdapter('AAAA', 'TTTT',
-		front_parameters={'min_overlap': 4}, back_parameters={'min_overlap': 3})
+	front_adapter = Adapter('AAAA', where=PREFIX, min_overlap=4)
+	back_adapter = Adapter('TTTT', where=BACK, min_overlap=3)
+
+	linked_adapter = LinkedAdapter(
+		front_adapter, back_adapter, front_required=True, back_required=False, name='name')
 	assert linked_adapter.front_adapter.min_overlap == 4
 	assert linked_adapter.back_adapter.min_overlap == 3
 
@@ -183,7 +186,9 @@ def test_add_adapter_statistics():
 def test_issue_265():
 	"""Crash when accessing the matches property of non-anchored linked adapters"""
 	s = Sequence('name', 'AAAATTTT')
-	la = LinkedAdapter('GGG', 'TTT', front_restriction=None, back_restriction=None)
+	front_adapter = Adapter('GGG', where=FRONT)
+	back_adapter = Adapter('TTT', where=BACK)
+	la = LinkedAdapter(front_adapter, back_adapter, front_required=False, back_required=False, name='name')
 	assert la.match_to(s).matches == 3
 
 
@@ -215,14 +220,14 @@ def test_parse_file_notation(tmpdir):
 
 def test_parse_not_linked():
 	p = AdapterParser._parse_not_linked
-	assert p('A', 'front') == (None, None, 'A', None, {})
-	assert p('A', 'back') == (None, None, 'A', None, {})
-	assert p('A', 'anywhere') == (None, None, 'A', None, {})
-	assert p('^A', 'front') == (None, 'anchored', 'A', None, {})
-	assert p('XXXA', 'front') == (None, 'noninternal', 'A', None, {})
-	assert p('A$', 'back') == (None, None, 'A', 'anchored', {})
-	assert p('AXXXX', 'back') == (None, None, 'A', 'noninternal', {})
-	assert p('a_name=ADAPT', 'front') == ('a_name', None, 'ADAPT', None, {})
+	assert p('A', 'front') == (None, None, 'A', {})
+	assert p('A', 'back') == (None, None, 'A', {})
+	assert p('A', 'anywhere') == (None, None, 'A', {})
+	assert p('^A', 'front') == (None, 'anchored', 'A', {})
+	assert p('XXXA', 'front') == (None, 'noninternal', 'A', {})
+	assert p('A$', 'back') == (None, 'anchored', 'A', {})
+	assert p('AXXXX', 'back') == (None, 'noninternal', 'A', {})
+	assert p('a_name=ADAPT', 'front') == ('a_name', None, 'ADAPT', {})
 
 
 def test_parse_parameters():
