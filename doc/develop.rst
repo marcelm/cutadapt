@@ -12,20 +12,20 @@ Development installation
 For development, make sure that you install Cython and tox. We also recommend
 using a virtualenv. This sequence of commands should work::
 
-	git clone https://github.com/marcelm/cutadapt.git  # or clone your own fork
-	cd cutadapt
-	python3 -m venv venv
-	venv/bin/pip3 install Cython pytest nose tox
-	venv/bin/pip3 install -e .
+    git clone https://github.com/marcelm/cutadapt.git  # or clone your own fork
+    cd cutadapt
+    python3 -m venv venv
+    venv/bin/pip3 install Cython pytest nose tox
+    venv/bin/pip3 install -e .
 
 Then you can run Cutadapt like this (or activate the virtualenv and omit the
 ``venv/bin`` part)::
 
-	venv/bin/cutadapt --help
+    venv/bin/cutadapt --help
 
 The tests can then be run like this::
 
-	venv/bin/pytest
+    venv/bin/pytest
 
 Or with tox (but then you will need to have binaries for all tested Python
 versions installed)::
@@ -39,8 +39,8 @@ Development installation (without virtualenv)
 Alternatively, if you do not want to use virtualenv, running the following may
 work from within the cloned repository::
 
-	python3 setup.py build_ext -i
-	pytest
+    python3 setup.py build_ext -i
+    pytest
 
 This requires Cython and pytest to be installed. Avoid this method and use a
 virtualenv instead if you can.
@@ -113,13 +113,13 @@ If this is the first time you attempt to upload a distribution to PyPI, create a
 configuration file named ``.pypirc`` in your home directory with the following
 contents::
 
-	[distutils]
-	index-servers =
-	    pypi
+    [distutils]
+    index-servers =
+        pypi
 
-	[pypi]
-	username=my-user-name
-	password=my-password
+    [pypi]
+    username=my-user-name
+    password=my-password
 
 See also `this blog post about getting started with
 PyPI <http://peterdowns.com/posts/first-time-with-pypi.html>`_. In particular,

@@ -1443,10 +1443,10 @@ If you have paired-end data, trim also read 2 with the reverse complement of the
 “TruSeq Universal Adapter”. The full command-line looks as follows::
 
     cutadapt \
-		-a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC \
-		-A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT \
-		-o trimmed.1.fastq.gz -p trimmed.2.fastq.gz \
-		reads.1.fastq.gz reads.2.fastq.gz
+        -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC \
+        -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT \
+        -o trimmed.1.fastq.gz -p trimmed.2.fastq.gz \
+        reads.1.fastq.gz reads.2.fastq.gz
 
 See also the :ref:`section about paired-end adapter trimming above <paired-end>`.
 
@@ -1456,9 +1456,9 @@ be aware that this sequence occurs multiple times in the human genome and it
 could therefore skew your results very slightly at those loci ::
 
     cutadapt \
-		-a AGATCGGAAGAGC -A AGATCGGAAGAGC \
-		-o trimmed.1.fastq.gz -p trimmed.2.fastq.gz \
-		reads.1.fastq.gz reads.2.fastq.gz
+        -a AGATCGGAAGAGC -A AGATCGGAAGAGC \
+        -o trimmed.1.fastq.gz -p trimmed.2.fastq.gz \
+        reads.1.fastq.gz reads.2.fastq.gz
 
 The adapter sequences can be found in the document `Illumina TruSeq Adapters
 De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf>`__.

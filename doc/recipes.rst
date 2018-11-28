@@ -18,7 +18,7 @@ but only one 3' adapter, then you have two options.
 First, you can specify the adapters and also ``--times=2`` (or the short
 version ``-n 2``). For example::
 
-	cutadapt -g ^TTAAGGCC -g ^AAGCTTA -a TACGGACT -n 2 -o output.fastq input.fastq
+    cutadapt -g ^TTAAGGCC -g ^AAGCTTA -a TACGGACT -n 2 -o output.fastq input.fastq
 
 This instructs Cutadapt to run two rounds of adapter finding and removal. That
 means that, after the first round and only when an adapter was actually found,
@@ -30,7 +30,7 @@ The second option is to not use the ``-n`` option, but to run Cutadapt twice,
 first removing one adapter and then the other. It is easiest if you use a pipe
 as in this example::
 
-	cutadapt -g ^TTAAGGCC -g ^AAGCTTA input.fastq | cutadapt -a TACGGACT - > output.fastq
+    cutadapt -g ^TTAAGGCC -g ^AAGCTTA input.fastq | cutadapt -a TACGGACT - > output.fastq
 
 
 Trim poly-A tails
@@ -41,16 +41,16 @@ adapter type (``-a``) with an adapter sequence of many repeated ``A``
 nucleotides. Starting with version 1.8 of Cutadapt, you can use the
 following notation to specify a sequence that consists of 100 ``A``::
 
-	cutadapt -a "A{100}" -o output.fastq input.fastq
+    cutadapt -a "A{100}" -o output.fastq input.fastq
 
 This also works when there are sequencing errors in the poly-A tail. So this
 read ::
 
-	TACGTACGTACGTACGAAATAAAAAAAAAAA
+    TACGTACGTACGTACGAAATAAAAAAAAAAA
 
 will be trimmed to::
 
-	TACGTACGTACGTACG
+    TACGTACGTACGTACG
 
 If for some reason you would like to use a shorter sequence of ``A``, you can
 do so: The matching algorithm always picks the leftmost match that it can find,
@@ -59,7 +59,7 @@ used in the adapter sequence. However, sequencing errors may result in shorter
 matches than desired. For example, using ``-a "A{10}"``, the read above (where
 the ``AAAT`` is followed by eleven ``A``) would be trimmed to::
 
-	TACGTACGTACGTACGAAAT
+    TACGTACGTACGTACGAAAT
 
 Depending on your application, perhaps a variant of ``-a A{10}N{90}`` is an
 alternative, forcing the match to be located as much to the left as possible,
