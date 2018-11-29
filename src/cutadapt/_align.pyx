@@ -119,7 +119,7 @@ cdef class Aligner:
     By default, unit costs are used, meaning that mismatches, insertions and
     deletions are counted as one error (edit distance).
 
-    Semi-global alignments allow skipping a suffix and/or prefix of query or
+    Semi-global alignments allow skipping a suffix and/or prefix of the query or
     reference at no cost. Combining semi-global alignment with edit distance is
     a bit unusual because the trivial “optimal” solution at edit distance 0
     would be to skip all of the reference and all of the query, like this:
@@ -129,8 +129,8 @@ cdef class Aligner:
 
     Conceptually, the algorithm used here instead tests all possible overlaps
     between the two sequences and chooses the overlap which maximizes the
-    number of matches in the overlapping part, while the error rate must not
-    go above a threshold.
+    number of matches in the overlapping part and whose error rate does not exceed
+    a provided threshold.
 
     TODO working here
 
@@ -171,19 +171,6 @@ cdef class Aligner:
     - If there are still multiple candidates, choose the alignment that starts at the
       leftmost position within the read.
 
-    The alignment itself is not returned, only the tuple
-    (start1, stop1, start2, stop2, matches, errors), where the first four fields have the
-    meaning as described, matches is the number of matches and errors is the number of
-    errors in the alignment.
-
-    It is always the case that at least one of start1 and start2 is zero.
-
-    IUPAC wildcard characters can be allowed in the reference and the query
-    by setting the appropriate flags.
-
-    If neither flag is set, the full ASCII alphabet is used for comparison.
-    If any of the flags is set, all non-IUPAC characters in the sequences
-    compare as 'not equal'.
     """
     cdef:
         int m
@@ -207,20 +194,32 @@ cdef class Aligner:
         self,
         str reference,
         double max_error_rate,
-        int flags=15,
+        int min_overlap=1,
+        bint start_in_reference=True,
+        bint stop_in_reference=True,
+        bint start_in_query=True,
+        bint stop_in_query=True,
         bint wildcard_ref=False,
         bint wildcard_query=False,
     ):
+        """
+        wildcard_ref -- Interpret IUPAC wildcard character in the reference.
+        wildcard_query -- Interpret IUPAC wildcard characters in the query.
+
+        If neither flag is set, the full ASCII alphabet is used for comparison.
+        If any of the flags is set, all non-IUPAC characters in the sequences
+        compare as 'not equal'.
+        """
         self.max_error_rate = max_error_rate
-        self.start_in_reference = flags & 1
-        self.start_in_query = flags & 2
-        self.stop_in_reference = flags & 4
-        self.stop_in_query = flags & 8
+        self.start_in_reference = start_in_reference
+        self.start_in_query = start_in_query
+        self.stop_in_reference = stop_in_reference
+        self.stop_in_query = stop_in_query
         self.wildcard_ref = wildcard_ref
         self.wildcard_query = wildcard_query
         self.str_reference = reference
         self.reference = reference
-        self._min_overlap = 1
+        self._min_overlap = min_overlap
         self.debug = False
         self._dpmatrix = None
         self._insertion_cost = 1
@@ -282,13 +281,18 @@ cdef class Aligner:
         """
         locate(query) -> (refstart, refstop, querystart, querystop, matches, errors)
 
-        Find the query within the reference associated with this aligner. The
-        intervals (querystart, querystop) and (refstart, refstop) give the
+        Find an occurrence of the query within the reference. Partial occurrences
+        are allowed according to the start_in_/stop_in_ flags provided to the
+        constructor.
+
+        The intervals (querystart, querystop) and (refstart, refstop) give the
         location of the match.
 
         That is, the substrings query[querystart:querystop] and
         self.reference[refstart:refstop] were found to align best to each other,
         with the given number of matches and the given number of errors.
+
+        At least one of querystart and refstart is always zero.
 
         The alignment itself is not returned.
         """
