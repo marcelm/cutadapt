@@ -1,11 +1,6 @@
 # cython: profile=False, emit_code_comments=False, language_level=3
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 
-DEF START_WITHIN_SEQ1 = 1
-DEF START_WITHIN_SEQ2 = 2
-DEF STOP_WITHIN_SEQ1 = 4
-DEF STOP_WITHIN_SEQ2 = 8
-DEF SEMIGLOBAL = 15
 
 # structure for a DP matrix entry
 ctypedef struct _Entry:
@@ -118,22 +113,34 @@ class DPMatrix:
 
 cdef class Aligner:
     """
-    TODO documentation still uses s1 (reference) and s2 (query).
+    Find a full or partial occurrence of a query string in a reference string
+    allowing errors (mismatches, insertions, deletions).
 
-    Locate one string within another by computing an optimal semiglobal
-    alignment between string1 and string2.
+    By default, unit costs are used, meaning that mismatches, insertions and
+    deletions are counted as one error (edit distance).
 
-    The alignment uses unit costs, which means that mismatches, insertions and deletions are
-    counted as one error.
+    Semi-global alignments allow skipping a suffix and/or prefix of query or
+    reference at no cost. Combining semi-global alignment with edit distance is
+    a bit unusual because the trivial “optimal” solution at edit distance 0
+    would be to skip all of the reference and all of the query, like this:
 
-    flags is a bitwise 'or' of the allowed flags.
+        REFERENCE-----
+        ---------QUERY
+
+    Conceptually, the algorithm used here instead tests all possible overlaps
+    between the two sequences and chooses the overlap which maximizes the
+    number of matches in the overlapping part, while the error rate must not
+    go above a threshold.
+
+    TODO working here
+
     To allow skipping of a prefix of string1 at no cost, set the
-    START_WITHIN_SEQ1 flag.
+    START_IN_REFERENCE flag.
     To allow skipping of a prefix of string2 at no cost, set the
-    START_WITHIN_SEQ2 flag.
+    START_IN_QUERY flag.
     If both are set, a prefix of string1 or of string1 is skipped,
     never both.
-    Similarly, set STOP_WITHIN_SEQ1 and STOP_WITHIN_SEQ2 to
+    Similarly, set STOP_IN_REFERENCE and STOP_IN_QUERY to
     allow skipping of suffixes of string1 or string2. Again, when both
     flags are set, never suffixes in both strings are skipped.
     If all flags are set, this results in standard semiglobal alignment.
@@ -182,7 +189,10 @@ cdef class Aligner:
         int m
         _Entry* column  # one column of the DP matrix
         double max_error_rate
-        int flags
+        bint start_in_reference
+        bint start_in_query
+        bint stop_in_reference
+        bint stop_in_query
         int _insertion_cost
         int _deletion_cost
         int _min_overlap
@@ -193,14 +203,19 @@ cdef class Aligner:
         bytes _reference  # TODO rename to translated_reference or so
         str str_reference
 
-    START_WITHIN_REFERENCE = 1
-    START_WITHIN_QUERY = 2
-    STOP_WITHIN_REFERENCE = 4
-    STOP_WITHIN_QUERY = 8
-
-    def __cinit__(self, str reference, double max_error_rate, int flags=SEMIGLOBAL, bint wildcard_ref=False, bint wildcard_query=False):
+    def __cinit__(
+        self,
+        str reference,
+        double max_error_rate,
+        int flags=15,
+        bint wildcard_ref=False,
+        bint wildcard_query=False,
+    ):
         self.max_error_rate = max_error_rate
-        self.flags = flags
+        self.start_in_reference = flags & 1
+        self.start_in_query = flags & 2
+        self.stop_in_reference = flags & 4
+        self.stop_in_query = flags & 8
         self.wildcard_ref = wildcard_ref
         self.wildcard_query = wildcard_query
         self.str_reference = reference
@@ -285,10 +300,7 @@ cdef class Aligner:
             int n = len(query)
             _Entry* column = self.column  # Current column of the DP matrix
             double max_error_rate = self.max_error_rate
-            bint start_in_ref = self.flags & START_WITHIN_SEQ1
-            bint start_in_query = self.flags & START_WITHIN_SEQ2
-            bint stop_in_ref = self.flags & STOP_WITHIN_SEQ1
-            bint stop_in_query = self.flags & STOP_WITHIN_SEQ2
+            bint stop_in_query = self.stop_in_query
             bint compare_ascii = False
 
         if self.wildcard_query:
@@ -317,10 +329,10 @@ cdef class Aligner:
         # Determine largest and smallest column we need to compute
         cdef int max_n = n
         cdef int min_n = 0
-        if not start_in_query:
+        if not self.start_in_query:
             # costs can only get worse after column m
             max_n = min(n, m + k)
-        if not stop_in_query:
+        if not self.stop_in_query:
             min_n = max(0, n - m - k)
 
         # Fill column min_n.
@@ -333,17 +345,17 @@ cdef class Aligner:
 
         # TODO (later)
         # fill out columns only until 'last'
-        if not start_in_ref and not start_in_query:
+        if not self.start_in_reference and not self.start_in_query:
             for i in range(m + 1):
                 column[i].matches = 0
                 column[i].cost = max(i, min_n) * self._insertion_cost
                 column[i].origin = 0
-        elif start_in_ref and not start_in_query:
+        elif self.start_in_reference and not self.start_in_query:
             for i in range(m + 1):
                 column[i].matches = 0
                 column[i].cost = min_n * self._insertion_cost
                 column[i].origin = min(0, min_n - i)
-        elif not start_in_ref and start_in_query:
+        elif not self.start_in_reference and self.start_in_query:
             for i in range(m + 1):
                 column[i].matches = 0
                 column[i].cost = i * self._insertion_cost
@@ -367,7 +379,7 @@ cdef class Aligner:
 
         # Ukkonen's trick: index of the last cell that is at most k
         cdef int last = min(m, k + 1)
-        if start_in_ref:
+        if self.start_in_reference:
             last = m
 
         cdef:
@@ -389,7 +401,7 @@ cdef class Aligner:
                 diag_entry = column[0]
 
                 # fill in first entry in this column
-                if start_in_query:
+                if self.start_in_query:
                     column[0].origin = j
                 else:
                     column[0].cost = j * self._insertion_cost
@@ -461,7 +473,7 @@ cdef class Aligner:
                 # column finished
 
         if max_n == n:
-            first_i = 0 if stop_in_ref else m
+            first_i = 0 if self.stop_in_reference else m
             # search in last column # TODO last?
             for i in range(first_i, m+1):
                 length = i + min(column[i].origin, 0)

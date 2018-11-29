@@ -77,7 +77,7 @@ def expand_braces(sequence):
 
 class AdapterParser:
     """
-    Factory for Adapter classes that all use the same parameters (error rate,
+    Factory for Adapter classes that all use the same default parameters (error rate,
     indels etc.). The given **kwargs will be passed to the Adapter constructors.
     """
     def __init__(self, **kwargs):
@@ -242,7 +242,7 @@ class AdapterParser:
             if restriction is None:
                 return ANYWHERE
             else:
-                raise ValueError('Not placement may be specified for "anywhere" adapters')
+                raise ValueError('No placement may be specified for "anywhere" adapters')
 
     def _parse(self, spec, cmdline_type='back', name=None):
         """
