@@ -473,7 +473,7 @@ def determine_paired_mode(options):
         paired = 'first'
 
     # Switch off legacy mode if certain options given
-    if paired and options.nextseq_trim:
+    if paired and (options.nextseq_trim or options.length):
         paired = 'both'
     if (options.adapters2 or options.front2 or options.anywhere2 or
             options.cut2 or options.interleaved or options.pair_filter or
