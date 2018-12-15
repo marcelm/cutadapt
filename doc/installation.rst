@@ -66,13 +66,23 @@ System-wide installation (root required)
 
 If you have root access, then you can install Cutadapt system-wide by running::
 
-    sudo pip3 install cutadapt
+    sudo python3 -m pip install cutadapt
 
 This installs cutadapt into ``/usr/local/bin``.
 
 If you want to upgrade from an older version, use this command instead::
 
-    sudo pip3 install --upgrade cutadapt
+    sudo python3 -m pip install --upgrade cutadapt
+
+
+If the above does not work for you, then you can try to install Cutadapt
+into a virtual environment. This may lead to fewer conflicts with
+system-installed packages::
+
+    sudo python3 -m venv /usr/local/cutadapt
+    sudo /usr/local/cutadapt/bin/pip install cutadapt
+    cd /usr/local/bin/
+    sudo ln -s ../cutadapt/bin/cutadapt
 
 
 Uninstalling
