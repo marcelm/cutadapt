@@ -20,6 +20,8 @@ development version
   is now recognized from the file content.
 * Some other performance optimizations were made. Speedups of up to 15%
   are possible.
+* Fix :issue:`345`: ``--length`` now disables legacy mode.
+
 
 v1.18 (2018-09-07)
 ------------------
