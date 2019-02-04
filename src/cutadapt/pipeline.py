@@ -16,7 +16,7 @@ from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
     CasavaFilter, DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer,
-    PairedEndDemultiplexer)
+    PairedDemultiplexer)
 
 logger = logging.getLogger()
 
@@ -97,7 +97,7 @@ class Pipeline:
         self.discard_trimmed = False
         self.discard_untrimmed = False
 
-    def set_input(self, file1, file2=None, fileformat=None,    interleaved=False):
+    def set_input(self, file1, file2=None, fileformat=None, interleaved=False):
         self._reader = dnaio.open(file1, file2=file2, fileformat=fileformat,
             interleaved=interleaved, mode='r')
 
@@ -329,7 +329,7 @@ class PairedEndPipeline(Pipeline):
         return PairedNoFilter(writer)
 
     def _create_demultiplexer(self, outfiles):
-        return PairedEndDemultiplexer(outfiles.out, outfiles.out2,
+        return PairedDemultiplexer(outfiles.out, outfiles.out2,
             outfiles.untrimmed, outfiles.untrimmed2, qualities=self.uses_qualities)
 
     @property

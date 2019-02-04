@@ -265,7 +265,7 @@ class Demultiplexer:
             self.untrimmed_writer.close()
 
 
-class PairedEndDemultiplexer:
+class PairedDemultiplexer:
     """
     Demultiplex trimmed paired-end reads. Reads are written to different output files
     depending on which adapter (in read 1) matches.

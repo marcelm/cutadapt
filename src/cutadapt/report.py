@@ -7,7 +7,7 @@ import textwrap
 from .adapters import BACK, BACK_NOT_INTERNAL, FRONT, FRONT_NOT_INTERNAL, PREFIX, SUFFIX, ANYWHERE, LINKED
 from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
-    PairedEndDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter, WildcardFileWriter,
+    PairedDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter, WildcardFileWriter,
     RestFileWriter)
 
 
@@ -90,7 +90,7 @@ class Statistics:
         for w in writers:
             if isinstance(w, (InfoFileWriter, RestFileWriter, WildcardFileWriter)):
                 pass
-            elif isinstance(w, (NoFilter, PairedNoFilter, PairedEndDemultiplexer, Demultiplexer)):
+            elif isinstance(w, (NoFilter, PairedNoFilter, PairedDemultiplexer, Demultiplexer)):
                 self.written += w.written
                 self.written_bp[0] += w.written_bp[0]
                 self.written_bp[1] += w.written_bp[1]
