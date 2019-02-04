@@ -597,23 +597,16 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_
     else:
         pipeline = SingleEndPipeline()
 
-    if options.cut:
-        if len(options.cut) > 2:
+    for add, cut in (('add1', options.cut), ('add2', options.cut2)):
+        if not cut:
+            continue
+        if len(cut) > 2:
             raise CommandLineError("You cannot remove bases from more than two ends.")
-        if len(options.cut) == 2 and options.cut[0] * options.cut[1] > 0:
+        if len(cut) == 2 and cut[0] * cut[1] > 0:
             raise CommandLineError("You cannot remove bases from the same end twice.")
-        for cut in options.cut:
-            if cut != 0:
-                pipeline.add1(UnconditionalCutter(cut))
-
-    if options.cut2:
-        if len(options.cut2) > 2:
-            raise CommandLineError("You cannot remove bases from more than two ends.")
-        if len(options.cut2) == 2 and options.cut2[0] * options.cut2[1] > 0:
-            raise CommandLineError("You cannot remove bases from the same end twice.")
-        for cut in options.cut2:
-            if cut != 0:
-                pipeline.add2(UnconditionalCutter(cut))
+        for c in cut:
+            if c != 0:
+                getattr(pipeline, add)(UnconditionalCutter(c))
 
     if options.nextseq_trim is not None:
         pipeline.add(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
