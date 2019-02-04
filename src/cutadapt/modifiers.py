@@ -75,6 +75,23 @@ class AdapterCutter:
                 best_match = match
         return best_match
 
+    def masked_read(self, trimmed_read, matches):
+        # add N from last modification
+        masked_sequence = trimmed_read.sequence
+        for match in sorted(matches, reverse=True, key=lambda m: m.astart):
+            ns = 'N' * (len(match.read.sequence) -
+                        len(match.trimmed().sequence))
+            # add N depending on match position
+            if match.remove_before:
+                masked_sequence = ns + masked_sequence
+            else:
+                masked_sequence += ns
+        # set masked sequence as sequence with original quality
+        # TODO modification in place
+        trimmed_read.sequence = masked_sequence
+        trimmed_read.qualities = matches[0].read.qualities
+        return trimmed_read
+
     def __call__(self, read, matches):
         """
         Search for the best-matching adapter in a read, perform the requested action
@@ -108,19 +125,7 @@ class AdapterCutter:
             # read is already trimmed, nothing to do
             pass
         elif self.action == 'mask':
-            # add N from last modification
-            masked_sequence = trimmed_read.sequence
-            for match in sorted(matches, reverse=True, key=lambda m: m.astart):
-                ns = 'N' * (len(match.read.sequence) -
-                            len(match.trimmed().sequence))
-                # add N depending on match position
-                if match.remove_before:
-                    masked_sequence = ns + masked_sequence
-                else:
-                    masked_sequence += ns
-            # set masked sequence as sequence with original quality
-            trimmed_read.sequence = masked_sequence
-            trimmed_read.qualities = matches[0].read.qualities
+            trimmed_read = self.masked_read(trimmed_read, matches)
             assert len(trimmed_read.sequence) == len(read)
         elif self.action is None:  # --no-trim
             trimmed_read = read[:]
