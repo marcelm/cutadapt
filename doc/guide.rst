@@ -1106,8 +1106,8 @@ comparison ignores a trailing ``/1`` or ``/2`` to allow processing some old
 Illumina paired-end files.
 
 In some cases, it works to run Cutadapt twice in single-end mode on the input
-files, but we recommend against it as the check whether the files are properly
-paired cannot be done.
+files, but we recommend against it as this skips the consistency checks that
+Cutadapt can do otherwise.
 
 Also, as soon as you start to use one of the filtering options that discard
 reads, it is mandatory you process both files at the same time to make sure that the
@@ -1118,9 +1118,8 @@ The following command-line options are applied to *both* reads:
 
 * ``-q`` (along with ``--quality-base``)
 * ``--times`` applies to all the adapters given
-* ``--no-trim``
 * ``--trim-n``
-* ``--mask``
+* ``--action``
 * ``--length``
 * ``--length-tag``
 * ``--prefix``, ``--suffix``
@@ -1160,7 +1159,7 @@ processed, a read pair if discarded if one of the reads is shorter than 20 nt.
 To require that filtering criteria must apply to *both* reads in order for a
 read pair to be discarded, use the option ``--pair-filter=both``.
 
-If you want to the filter to ignore the second read, use ``--pair-filter=first``.
+If you want the filter to ignore the second read, use ``--pair-filter=first``.
 
 The following table describes the effect for some filtering options.
 
@@ -1229,6 +1228,55 @@ and ``--untrimmed-paired-output``, you can write ``--untrimmed-o`` and
 
 .. versionadded:: 1.18
     ``--pair-filter=first``
+
+
+.. _paired-adapters:
+
+Paired adapters (dual indices)
+------------------------------
+
+.. note::
+    This feature has been added on a provisional basis. It may still change.
+    For example, Cutadapt may require that the adapters from the R1 and the R2
+    sets have matching names, which would allow for better error checking.
+
+When processing paired-end data, Cutadapt has two sets of adapters to work with: The ones that
+are to be found and removed in the forward read (R1), specified with ``-a``/``-g``/``-b``,
+and the ones to be found and removed in the reverse read (R2), specified with ``-A``/``-G``/``-B``.
+
+Normally, the program looks at the R1 and R2 reads independently. That is, the best matching R1
+adapter is removed from R1 and the best matching R2 adapter is removed from R2.
+
+To change this, the option ``--pair-adapters`` can be used. It causes each R1 adapter to be
+paired up with its corresponding R2 adapters. The first R1 adapter will be paired up with the first
+R2 adapter, and so on. The adapters are then always removed in pairs from a read pair. It is an
+error if the number of provided adapters is not identical for the R1 and R2 sets.
+
+This option was added to aid in demultiplexing Illumina libraries that contain
+`unique dual indexes (UDI) <https://support.illumina.com/bulletins/2018/08/understanding-unique-dual-indexes--udi--and-associated-library-p.html>`_.
+This scheme, also called “non-redundant indexing”, uses 96 unique i5 indices and 96 unique i7
+indices, which are only used in pairs, that is, the first i5 index is always used with the first i7
+index and so on.
+
+An example::
+
+    cutadapt --pair-adapters -a AAAAA -a GGGG -A CCCCC -a TTTT -o out.1.fastq -p out.2.fastq in.1.fastq in.2.fastq
+
+Here, the adapter pairs are (``AAAAA``, ``CCCCC``) and (``GGGG``, ``TTTT``). That is, paired-end
+reads will only be trimmed if either
+
+* ``AAAAA`` is found in R1 *and* ``CCCCC`` is found in R2,
+* or ``GGGG`` is found in R1 *and* ``TTTT`` is found in R2.
+
+The ``--pair-adapters`` option can be used also when :ref:`when demultiplexing <demultiplexing>`.
+
+There is one limitation of the algorithm at the moment: The program looks for the best-matching R1 adapter
+first and then checks whether the corresponding R2 adapter can be found. If not, the read pair
+remains unchanged. However, it is in theory possible that a different R1 adapter that does not
+fit as well has a partner that *can* be found. Some read pairs may therefore remain untrimmed.
+
+.. versionadded:: 2.1
+
 
 Interleaved paired-end reads
 ----------------------------
@@ -1458,7 +1506,8 @@ index of the barcode sequences instead of checking for each barcode separately. 
 following conditions need to be met in order for index creation to be enabled:
 
 * The barcodes/adapters must be anchored 5’ adapters (``-g ^ADAPTER``) or anchored 3’ adapters
-  (``-a ADAPTER$``).
+  (``-a ADAPTER$``). If you use ``file:`` to read in the adapter sequences from a FASTA file,
+  remember to add the ``^`` or ``$`` to each sequence in the FASTA file.
 * The maximum error rate (``-e``) must be set in such a way as to allow at most 2 errors or less.
   For example, if the barcode has length 10, you can use ``-e 0.2`` (or lower).
 * The option ``--no-indels`` must be used.

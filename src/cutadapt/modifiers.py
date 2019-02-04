@@ -95,14 +95,15 @@ class AdapterCutter(Modifier):
             lst.append(a)
         return prefix, suffix, other
 
-    def _best_match(self, read):
+    @staticmethod
+    def best_match(adapters, read):
         """
         Find the best matching adapter in the given read.
 
         Return either a Match instance or None if there are no matches.
         """
         best_match = None
-        for adapter in self.adapters:
+        for adapter in adapters:
             match = adapter.match_to(read)
             if match is None:
                 continue
@@ -175,7 +176,7 @@ class AdapterCutter(Modifier):
         if self.action == 'lowercase':
             trimmed_read.sequence = trimmed_read.sequence.upper()
         for _ in range(self.times):
-            match = self._best_match(trimmed_read)
+            match = AdapterCutter.best_match(self.adapters, trimmed_read)
             if match is None:
                 # if nothing found, attempt no further rounds
                 break
@@ -191,7 +192,6 @@ class AdapterCutter(Modifier):
             pass
         elif self.action == 'mask':
             trimmed_read = self.masked_read(trimmed_read, matches)
-            assert len(trimmed_read.sequence) == len(read)
         elif self.action == 'lowercase':
             trimmed_read = self.lowercased_read(trimmed_read, matches)
             assert len(trimmed_read.sequence) == len(read)
@@ -200,6 +200,80 @@ class AdapterCutter(Modifier):
 
         self.with_adapters += 1
         return trimmed_read
+
+
+class PairedAdapterCutterError(Exception):
+    pass
+
+
+class PairedAdapterCutter:
+    """
+    A Modifier that trims adapter pairs from R1 and R2.
+    """
+
+    def __init__(self, adapters1, adapters2, action='trim'):
+        """
+        adapters1 -- list of Adapters to be removed from R1
+        adapters2 -- list of Adapters to be removed from R1
+
+        Both lists must have the same, non-zero length.
+         read pair is trimmed if adapters1[i] is found in R1 and adapters2[i] in R2.
+
+        action -- What to do with a found adapter: None, 'trim', or 'mask'
+        """
+        if len(adapters1) != len(adapters2):
+            raise PairedAdapterCutterError(
+                "The number of reads to trim from R1 and R2 must be the same. "
+                "Given: {} for R1, {} for R2".format(len(adapters1), len(adapters2)))
+        if not adapters1:
+            raise PairedAdapterCutterError("No adapters given")
+        self._adapters1 = adapters1
+        self._adapter_indices = {a: i for i, a in enumerate(adapters1)}
+        self._adapters2 = adapters2
+        self.action = action
+        self.with_adapters = 0
+        self.adapter_statistics = [None, None]
+        self.adapter_statistics[0] = OrderedDict((a, a.create_statistics()) for a in adapters1)
+        self.adapter_statistics[1] = OrderedDict((a, a.create_statistics()) for a in adapters2)
+
+    def __repr__(self):
+        return 'PairedAdapterCutter(adapters1={!r}, adapters2={!r})'.format(
+            self._adapters1, self._adapters2)
+
+    def __call__(self, read1, read2, matches1, matches2):
+        """
+        """
+        match1 = AdapterCutter.best_match(self._adapters1, read1)
+        if match1 is None:
+            return read1, read2
+        adapter1 = match1.adapter
+        adapter2 = self._adapters2[self._adapter_indices[adapter1]]
+        match2 = adapter2.match_to(read2)
+        if match2 is None:
+            return read1, read2
+
+        self.with_adapters += 1
+        result = []
+        for i, match, read in zip([0, 1], [match1, match2], [read1, read2]):
+            trimmed_read = read
+            if self.action == 'lowercase':
+                trimmed_read.sequence = trimmed_read.sequence.upper()
+
+            trimmed_read = match.trimmed()
+            match.update_statistics(self.adapter_statistics[i][match.adapter])
+
+            if self.action == 'trim':
+                # read is already trimmed, nothing to do
+                pass
+            elif self.action == 'mask':
+                trimmed_read = AdapterCutter.masked_read(trimmed_read, [match])
+            elif self.action == 'lowercase':
+                trimmed_read = AdapterCutter.lowercased_read(trimmed_read, [match])
+                assert len(trimmed_read.sequence) == len(read)
+            elif self.action is None:  # --no-trim
+                trimmed_read = read[:]
+            result.append(trimmed_read)
+        return result
 
 
 class UnconditionalCutter(Modifier):

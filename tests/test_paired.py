@@ -460,3 +460,25 @@ def test_paired_end_minimal_report(run_paired, cores):
         expected1="paired.1.fastq", expected2="paired.2.fastq",
         cores=cores,
     )
+
+
+def test_pair_adapters(run_paired, cores):
+    run_paired(
+        "--pair-adapters -a GTCTCCAGCT -A GACAAATAAC",
+        in1="paired.1.fastq", in2="paired.2.fastq",
+        expected1="pair-adapters.1.fastq", expected2="pair-adapters.2.fastq",
+        cores=cores
+    )
+
+
+def test_pair_adapters_unequal_length(tmpdir):
+    with pytest.raises(SystemExit):
+        main([
+            "--paired-adapters",
+            "-a", "GTCTCCAGCT", "-a", "ACGTACGT",  # Two R1 adapters
+            "-A", "TGCA",  # But only one R2 adapter
+            "-o", str(tmpdir.join("out.1.fastq")),
+            "-p", str(tmpdir.join("out.2.fastq")),
+            datapath("paired.1.fastq"),
+            datapath("paired.2.fastq"),
+        ])

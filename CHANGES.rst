@@ -7,6 +7,8 @@ development version
 
 * :issue:`366`: Fix some problems when combining ``--cores`` with
   reading from standard input or writing to standard output.
+* :issue:`347`: Support :ref:`“paired adapters” <paired-adapters>`. One use case is
+  demultiplexing Illumina *Unique Dual Indices* (UDI).
 
 v2.0 (2019-03-06)
 -----------------

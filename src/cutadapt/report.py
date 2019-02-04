@@ -6,7 +6,7 @@ from io import StringIO
 from contextlib import contextmanager
 import textwrap
 from .adapters import Where, EndStatistics
-from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter
+from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter, PairedAdapterCutter
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
     PairedDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter, WildcardFileWriter,
     RestFileWriter)
@@ -105,6 +105,11 @@ class Statistics:
 
         # Collect statistics from modifiers
         for m in modifiers:
+            if isinstance(m, PairedAdapterCutter):
+                for i in 0, 1:
+                    self.with_adapters[i] += m.with_adapters
+                    self.adapter_stats[i] = list(m.adapter_statistics[i].values())
+                continue
             if getattr(m, 'paired', False):
                 modifiers_list = [(0, m._modifier1), (1, m._modifier2)]
             else:

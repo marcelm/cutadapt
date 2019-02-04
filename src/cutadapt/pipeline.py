@@ -304,6 +304,10 @@ class PairedEndPipeline(Pipeline):
         assert modifier is not None
         self._modifiers.append(PairedModifier(modifier, copy.copy(modifier)))
 
+    def add_paired_modifier(self, paired_modifier):
+        """Add a Modifier without wrapping it in a PairedModifier"""
+        self._modifiers.append(paired_modifier)
+
     def process_reads(self, progress: Progress = None):
         n = 0  # no. of processed reads
         total1_bp = 0

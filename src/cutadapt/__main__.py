@@ -67,7 +67,7 @@ from cutadapt import __version__
 from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
-    NextseqQualityTrimmer, Shortener)
+    PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener)
 from cutadapt.report import full_report, minimal_report
 from cutadapt.pipeline import (SingleEndPipeline, PairedEndPipeline, InputFiles, OutputFiles,
     SerialPipelineRunner, ParallelPipelineRunner)
@@ -318,6 +318,9 @@ def get_argument_parser():
         help="Remove LENGTH bases from second read in a pair.")
     group.add_argument("-p", "--paired-output", metavar="FILE",
         help="Write second read in a pair to FILE.")
+    group.add_argument("--pair-adapters", action="store_true",
+        help="Treat adapters given with -a/-A etc. as pairs. Either both "
+             "or none are removed from each read pair.")
     # Setting the default for pair_filter to None allows us to find out whether
     # the option was used at all.
     group.add_argument("--pair-filter", metavar='(any|both|first)', default=None,
@@ -651,17 +654,29 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
         cutoffs = parse_cutoffs(args.quality_cutoff)
         pipeline_add(QualityTrimmer(cutoffs[0], cutoffs[1], args.quality_base))
 
-    adapter_cutter, adapter_cutter2 = None, None
-    if adapters:
-        adapter_cutter = AdapterCutter(adapters, args.times, args.action)
-    if adapters2:
-        adapter_cutter2 = AdapterCutter(adapters2, args.times, args.action)
-    if paired:
-        if adapter_cutter or adapter_cutter2:
-            pipeline.add(adapter_cutter, adapter_cutter2)
+    if args.pair_adapters:
+        if not paired:
+            raise CommandLineError("Option --pair-adapters can only be used when trimming "
+                "paired-end reads")
+        if args.times != 1:
+            raise CommandLineError("--pair-adapters cannot be used with --times")
+        try:
+            cutter = PairedAdapterCutter(adapters, adapters2, args.action)
+        except PairedAdapterCutterError as e:
+            raise CommandLineError("--pair-adapters: " + str(e))
+        pipeline.add_paired_modifier(cutter)
     else:
-        if adapter_cutter:
-            pipeline.add(adapter_cutter)
+        adapter_cutter, adapter_cutter2 = None, None
+        if adapters:
+            adapter_cutter = AdapterCutter(adapters, args.times, args.action)
+        if adapters2:
+            adapter_cutter2 = AdapterCutter(adapters2, args.times, args.action)
+        if paired:
+            if adapter_cutter or adapter_cutter2:
+                pipeline.add(adapter_cutter, adapter_cutter2)
+        else:
+            if adapter_cutter:
+                pipeline.add(adapter_cutter)
 
     # Remaining modifiers that apply to both reads of paired-end reads
     if args.length is not None:
