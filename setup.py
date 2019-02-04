@@ -8,7 +8,6 @@ from setuptools import setup, Extension, find_packages
 from distutils.version import LooseVersion
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_ext import build_ext as _build_ext
-import versioneer
 
 MIN_CYTHON_VERSION = '0.28'
 
@@ -58,12 +57,8 @@ extensions = [
     Extension('cutadapt.qualtrim', sources=['src/cutadapt/qualtrim.pyx']),
 ]
 
-cmdclass = versioneer.get_cmdclass()
-versioneer_build_ext = cmdclass.get('build_ext', _build_ext)
-versioneer_sdist = cmdclass.get('sdist', _sdist)
 
-
-class build_ext(versioneer_build_ext):
+class BuildExt(_build_ext):
     def run(self):
         # If we encounter a PKG-INFO file, then this is likely a .tar.gz/.zip
         # file retrieved from PyPI that already includes the pre-cythonized
@@ -76,20 +71,16 @@ class build_ext(versioneer_build_ext):
             check_cython_version()
             from Cython.Build import cythonize
             self.extensions = cythonize(self.extensions)
-        versioneer_build_ext.run(self)
+        _build_ext.run(self)
 
 
-class sdist(versioneer_sdist):
+class SDist(_sdist):
     def run(self):
         # Make sure the compiled Cython files in the distribution are up-to-date
         from Cython.Build import cythonize
         check_cython_version()
         cythonize(extensions)
-        versioneer_sdist.run(self)
-
-
-cmdclass['build_ext'] = build_ext
-cmdclass['sdist'] = sdist
+        _sdist.run(self)
 
 
 encoding_arg = {'encoding': 'utf-8'} if sys.version > '3' else dict()
@@ -98,23 +89,24 @@ with open('README.rst', **encoding_arg) as f:
 
 setup(
     name='cutadapt',
-    version=versioneer.get_version(),
+    setup_requires=['setuptools_scm'],  # Support pip versions that don't know about pyproject.toml
+    use_scm_version=True,
     author='Marcel Martin',
     author_email='marcel.martin@scilifelab.se',
     url='https://cutadapt.readthedocs.io/',
     description='trim adapters from high-throughput sequencing reads',
     long_description=long_description,
     license='MIT',
-    cmdclass=cmdclass,
+    cmdclass={'build_ext': BuildExt, 'sdist': SDist},
     ext_modules=extensions,
     package_dir={'': 'src'},
     packages=find_packages('src'),
     entry_points={'console_scripts': ['cutadapt = cutadapt.__main__:main']},
-    install_requires=['dnaio>=0.3', 'xopen>=0.3.5'],
+    install_requires=['dnaio>=0.3', 'xopen>=0.5.0'],
     extras_require={
         'dev': ['Cython', 'pytest', 'pytest-timeout', 'sphinx', 'sphinx_issues'],
     },
-    python_requires='>=3',
+    python_requires='>=3.4',
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",

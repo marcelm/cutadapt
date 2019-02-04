@@ -1,10 +1,10 @@
 include CHANGES.rst
 include CITATION
 include LICENSE
+include README.rst
 include doc/*.rst
 include doc/conf.py
 include doc/Makefile
-include versioneer.py
 include src/cutadapt/*.c
 include src/cutadapt/*.pyx
 include tests/*.py
