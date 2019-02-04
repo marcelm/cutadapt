@@ -553,3 +553,7 @@ def test_cores_autodetect():
 
 def test_write_compressed_fastq(cores, tmpdir):
     main(['--cores', str(cores), '-o', str(tmpdir.join('out.fastq.gz')), datapath('small.fastq')])
+
+
+def test_minimal_report():
+    run('-b TTAGACATATCTCCGTCG --report=minimal', 'small.fastq', 'small.fastq')

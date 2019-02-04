@@ -432,3 +432,12 @@ def test_separate_minlength_single():
     """Using separate minlengths for single-end data"""
     with pytest.raises(SystemExit):
         main(['-m', '5:7', datapath('small.fastq')])
+
+
+def test_paired_end_minimal_report(cores):
+    run_paired(
+        '-a TTAGACATAT -A CAGTGGAGTA -m 14 --report=minimal',
+        in1='paired.1.fastq', in2='paired.2.fastq',
+        expected1='paired.1.fastq', expected2='paired.2.fastq',
+        cores=cores,
+    )
