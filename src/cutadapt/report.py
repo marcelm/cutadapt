@@ -72,7 +72,7 @@ class Statistics:
                 self.adapter_stats[i] = other.adapter_stats[i]
         return self
 
-    def collect(self, n, total_bp1, total_bp2, modifiers, modifiers2, writers):
+    def collect(self, n, total_bp1, total_bp2, modifiers, writers):
         """
         n -- total number of reads
         total_bp1 -- number of bases in first reads
@@ -103,8 +103,12 @@ class Statistics:
         assert self.written is not None
 
         # Collect statistics from modifiers
-        for i, modifiers_list in [(0, modifiers), (1, modifiers2)]:
-            for modifier in modifiers_list:
+        for m in modifiers:
+            if getattr(m, 'paired', False):
+                modifiers_list = [(0, m._modifier1), (1, m._modifier2)]
+            else:
+                modifiers_list = [(0, m)]
+            for i, modifier in modifiers_list:
                 if isinstance(modifier, (QualityTrimmer, NextseqQualityTrimmer)):
                     self.quality_trimmed_bp[i] = modifier.trimmed_bases
                     self.did_quality_trimming = True

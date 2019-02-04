@@ -11,7 +11,7 @@ import traceback
 from xopen import xopen
 import dnaio
 
-from .modifiers import ZeroCapper
+from .modifiers import ZeroCapper, PairedModifier
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
@@ -100,9 +100,6 @@ class Pipeline:
     def set_input(self, file1, file2=None, fileformat=None,    interleaved=False):
         self._reader = dnaio.open(file1, file2=file2, fileformat=fileformat,
             interleaved=interleaved, mode='r')
-        # Special treatment: Disable zero-capping if no qualities are available
-        if not self._reader.delivers_qualities:
-            self._modifiers = [m for m in self._modifiers if not isinstance(m, ZeroCapper)]
 
     def _open_writer(self, file, file2, **kwargs):
         # TODO backwards-incompatible change (?) would be to use outfiles.interleaved
@@ -181,10 +178,8 @@ class Pipeline:
     def run(self):
         (n, total1_bp, total2_bp) = self.process_reads()
         # TODO
-        m = self._modifiers
-        m2 = getattr(self, '_modifiers2', [])
         stats = Statistics()
-        stats.collect(n, total1_bp, total2_bp, m, m2, self._filters)
+        stats.collect(n, total1_bp, total2_bp, self._modifiers, self._filters)
         return stats
 
     def process_reads(self):
@@ -270,38 +265,31 @@ class PairedEndPipeline(Pipeline):
         """Setting modify_first_read_only to True enables "legacy mode"
         """
         super().__init__()
-        self._modifiers2 = []
         self._pair_filter_mode = pair_filter_mode
         self._modify_first_read_only = modify_first_read_only
         self._add_both_called = False
         self._should_warn_legacy = False
         self._reader = None
 
-    def set_input(self, *args, **kwargs):
-        super().set_input(*args, **kwargs)
-        if not self._reader.delivers_qualities:
-            self._modifiers2 = [m for m in self._modifiers2 if not isinstance(m, ZeroCapper)]
-
     def add(self, modifier):
         """
         Add a modifier for R1 and R2. If modify_first_read_only is True,
         the modifier is not added for R2.
         """
-        self._modifiers.append(modifier)
         if not self._modify_first_read_only:
-            modifier2 = copy.copy(modifier)
-            self._modifiers2.append(modifier2)
+            self._modifiers.append(PairedModifier(modifier, copy.copy(modifier)))
         else:
+            self._modifiers.append(PairedModifier(modifier, None))
             self._should_warn_legacy = True
 
     def add1(self, modifier):
         """Add a modifier for R1 only"""
-        self._modifiers.append(modifier)
+        self._modifiers.append(PairedModifier(modifier, None))
 
     def add2(self, modifier):
         """Add a modifier for R2 only"""
         assert not self._modify_first_read_only
-        self._modifiers2.append(modifier)
+        self._modifiers.append(PairedModifier(None, modifier))
 
     def process_reads(self):
         n = 0  # no. of processed reads
@@ -314,12 +302,10 @@ class PairedEndPipeline(Pipeline):
             matches1 = []
             matches2 = []
             for modifier in self._modifiers:
-                read1 = modifier(read1, matches1)
-            for modifier in self._modifiers2:
-                read2 = modifier(read2, matches2)
-            for filter in self._filters:
+                read1, read2 = modifier(read1, read2, matches1, matches2)
+            for filter_ in self._filters:
                 # Stop writing as soon as one of the filters was successful.
-                if filter(read1, read2, matches1, matches2):
+                if filter_(read1, read2, matches1, matches2):
                     break
         return (n, total1_bp, total2_bp)
 
@@ -477,7 +463,7 @@ class WorkerProcess(Process):
                 self._pipeline.set_output(outfiles)
                 (n, bp1, bp2) = self._pipeline.process_reads()
                 cur_stats = Statistics()
-                cur_stats.collect(n, bp1, bp2, [], [], self._pipeline._filters)
+                cur_stats.collect(n, bp1, bp2, [], self._pipeline._filters)
                 stats += cur_stats
 
                 output.flush()
@@ -491,9 +477,8 @@ class WorkerProcess(Process):
                     self._write_pipe.send_bytes(processed_chunk2)
 
             m = self._pipeline._modifiers
-            m2 = getattr(self._pipeline, '_modifiers2', [])
             modifier_stats = Statistics()
-            modifier_stats.collect(0, 0, 0 if self._pipeline.paired else None, m, m2, [])
+            modifier_stats.collect(0, 0, 0 if self._pipeline.paired else None, m, [])
             stats += modifier_stats
             self._write_pipe.send(-1)
             self._write_pipe.send(stats)

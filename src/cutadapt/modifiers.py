@@ -1,12 +1,34 @@
 """
 This module implements all the read modifications that cutadapt supports.
-A modifier must be callable. It is implemented as a function if no parameters
-need to be stored, and as a class with a __call__ method if there are parameters
-(or statistics).
+A modifier must be callable and typically implemented as a class with a
+__call__ method.
 """
 import re
 from collections import OrderedDict
 from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
+
+
+class PairedModifier:
+    """
+    Wrapper for modifiers that work on both reads in a paired-end read
+    """
+    paired = True
+
+    def __init__(self, modifier1, modifier2):
+        """Set one of the modifiers to None to work on R1 or R2 only"""
+        self._modifier1 = modifier1
+        self._modifier2 = modifier2
+
+    def __repr__(self):
+        return 'PairedModifier(modifier1={!r}, modifier2={!r})'.format(
+            self._modifier1, self._modifier2)
+
+    def __call__(self, read1, read2, matches1, matches2):
+        if self._modifier1 is None:
+            return read1, self._modifier2(read2, matches2)
+        if self._modifier2 is None:
+            return self._modifier1(read1, matches1), read2
+        return self._modifier1(read1, matches1), self._modifier2(read2, matches2)
 
 
 class AdapterCutter:
@@ -28,6 +50,10 @@ class AdapterCutter:
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
+
+    def __repr__(self):
+        return 'AdapterCutter(adapters={!r}, times={}, action={!r})'.format(
+            self.adapters, self.times, self.action)
 
     def _best_match(self, read):
         """
