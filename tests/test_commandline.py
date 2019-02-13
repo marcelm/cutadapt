@@ -418,6 +418,18 @@ def test_demultiplex():
     shutil.rmtree(tempdir)
 
 
+def test_multiple_fake_anchored_adapters():
+    run("-g ^CGTCCGAAGTAGC -g ^ATTGCCCTAG "
+        "-a TTCCATGCAGCATT$ -a CCAGTCCCCCC$ "
+        "-a GCCGAACTTCTTAGACTGCCTTAAGGACGT",
+        "illumina.fastq",
+        "illumina.fastq.gz")
+
+
+def test_multiple_prefix_adapters():
+    run("-g ^GTACGGATTGTTCAGTA -g ^TATTAAGCTCATTC", "multiprefix.fasta", "multi.fasta")
+
+
 def test_max_n():
     run('--max-n 0', 'maxn0.fasta', 'maxn.fasta')
     run('--max-n 1', 'maxn1.fasta', 'maxn.fasta')
