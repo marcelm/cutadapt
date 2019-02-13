@@ -2,14 +2,14 @@ from textwrap import dedent
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import (Adapter, Match, FRONT, BACK, PREFIX,
-    expand_braces, LinkedAdapter, AdapterStatistics, AdapterParser, ANYWHERE)
+from cutadapt.adapters import (Adapter, Match, Where,
+    expand_braces, LinkedAdapter, AdapterStatistics, AdapterParser)
 
 
 def test_issue_52():
     adapter = Adapter(
         sequence='GAACTCCAGTCACNNNNN',
-        where=BACK,
+        where=Where.BACK,
         remove='suffix',
         max_error_rate=0.12,
         min_overlap=5,
@@ -46,7 +46,7 @@ def test_issue_80():
 
     adapter = Adapter(
         sequence="TCGTATGCCGTCTTC",
-        where=BACK,
+        where=Where.BACK,
         remove='suffix',
         max_error_rate=0.2,
         min_overlap=3,
@@ -60,7 +60,7 @@ def test_issue_80():
 
 
 def test_str():
-    a = Adapter('ACGT', where=BACK, remove='suffix', max_error_rate=0.1)
+    a = Adapter('ACGT', where=Where.BACK, remove='suffix', max_error_rate=0.1)
     str(a)
     str(a.match_to(Sequence(name='seq', sequence='TTACGT')))
 
@@ -86,8 +86,8 @@ def test_expand_braces_fail():
 
 
 def test_linked_adapter():
-    front_adapter = Adapter('AAAA', where=PREFIX, min_overlap=4)
-    back_adapter = Adapter('TTTT', where=BACK, min_overlap=3)
+    front_adapter = Adapter('AAAA', where=Where.PREFIX, min_overlap=4)
+    back_adapter = Adapter('TTTT', where=Where.BACK, min_overlap=3)
 
     linked_adapter = LinkedAdapter(
         front_adapter, back_adapter, front_required=True, back_required=False, name='name')
@@ -103,7 +103,7 @@ def test_linked_adapter():
 def test_info_record():
     adapter = Adapter(
         sequence='GAACTCCAGTCACNNNNN',
-        where=BACK,
+        where=Where.BACK,
         max_error_rate=0.12,
         min_overlap=5,
         read_wildcards=False,
@@ -128,22 +128,22 @@ def test_info_record():
 
 
 def test_random_match_probabilities():
-    a = Adapter('A', where=BACK, max_error_rate=0.1).create_statistics()
+    a = Adapter('A', where=Where.BACK, max_error_rate=0.1).create_statistics()
     assert a.back.random_match_probabilities(0.5) == [1, 0.25]
     assert a.back.random_match_probabilities(0.2) == [1, 0.4]
 
     for s in ('ACTG', 'XMWH'):
-        a = Adapter(s, where=BACK, max_error_rate=0.1).create_statistics()
+        a = Adapter(s, where=Where.BACK, max_error_rate=0.1).create_statistics()
         assert a.back.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
         assert a.back.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
-    a = Adapter('GTCA', where=FRONT, max_error_rate=0.1).create_statistics()
+    a = Adapter('GTCA', where=Where.FRONT, max_error_rate=0.1).create_statistics()
     assert a.front.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
     assert a.front.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
 
 def test_add_adapter_statistics():
-    stats = Adapter('A', name='name', where=BACK, max_error_rate=0.1).create_statistics()
+    stats = Adapter('A', name='name', where=Where.BACK, max_error_rate=0.1).create_statistics()
     end_stats = stats.back
     end_stats.adjacent_bases['A'] = 7
     end_stats.adjacent_bases['C'] = 19
@@ -158,7 +158,7 @@ def test_add_adapter_statistics():
     end_stats.errors[20][1] = 66
     end_stats.errors[20][2] = 6
 
-    stats2 = Adapter('A', name='name', where=BACK, max_error_rate=0.1).create_statistics()
+    stats2 = Adapter('A', name='name', where=Where.BACK, max_error_rate=0.1).create_statistics()
     end_stats2 = stats2.back
     end_stats2.adjacent_bases['A'] = 43
     end_stats2.adjacent_bases['C'] = 31
@@ -186,8 +186,8 @@ def test_add_adapter_statistics():
 def test_issue_265():
     """Crash when accessing the matches property of non-anchored linked adapters"""
     s = Sequence('name', 'AAAATTTT')
-    front_adapter = Adapter('GGG', where=FRONT)
-    back_adapter = Adapter('TTT', where=BACK)
+    front_adapter = Adapter('GGG', where=Where.FRONT)
+    back_adapter = Adapter('TTT', where=Where.BACK)
     la = LinkedAdapter(front_adapter, back_adapter, front_required=False, back_required=False, name='name')
     assert la.match_to(s).matches == 3
 
@@ -271,7 +271,7 @@ def test_anywhere_parameter():
         adapter_wildcards=False, indels=True)
     adapter = list(parser.parse('CTGAAGTGAAGTACACGGTT;anywhere', 'back'))[0]
     assert adapter.remove == 'suffix'
-    assert adapter.where == ANYWHERE
+    assert adapter.where is Where.ANYWHERE
     read = Sequence('foo1', 'TGAAGTACACGGTTAAAAAAAAAA')
     from cutadapt.modifiers import AdapterCutter
     cutter = AdapterCutter([adapter])

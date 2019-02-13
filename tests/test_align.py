@@ -1,24 +1,24 @@
 from cutadapt.align import (locate, compare_prefixes, compare_suffixes,
     Aligner)
-from cutadapt.adapters import BACK
+from cutadapt.adapters import Where
 
 
 class TestAligner():
     def test(self):
         reference = 'CTCCAGCTTAGACATATC'
-        aligner = Aligner(reference, 0.1, flags=BACK)
+        aligner = Aligner(reference, 0.1, flags=Where.BACK.value)
         aligner.locate('CC')
 
     def test_100_percent_error_rate(self):
         reference = 'GCTTAGACATATC'
-        aligner = Aligner(reference, 1.0, flags=BACK)
+        aligner = Aligner(reference, 1.0, flags=Where.BACK.value)
         aligner.locate('CAA')
 
 
 def test_polya():
     s = 'AAAAAAAAAAAAAAAAA'
     t = 'ACAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
-    result = locate(s, t, 0.0, BACK)
+    result = locate(s, t, 0.0, Where.BACK.value)
     # start_s, stop_s, start_t, stop_t, matches, cost = result
     assert result == (0, len(s), 4, 4 + len(s), len(s), 0)
 
@@ -86,11 +86,11 @@ def test_compare_suffixes():
 def test_wildcards_in_adapter():
     r = 'CATCTGTCC' + WILDCARD_SEQUENCES[0] + 'GCCAGGGTTGATTCGGCTGATCTGGCCG'
     for a in WILDCARD_SEQUENCES:
-        result = locate(a, r, 0.0, BACK, wildcard_ref=True)
+        result = locate(a, r, 0.0, Where.BACK.value, wildcard_ref=True)
         assert result == (0, 10, 9, 19, 10, 0), result
 
     a = 'CCCXTTXATC'
-    result = locate(a, r, 0.0, BACK, wildcard_ref=True)
+    result = locate(a, r, 0.0, Where.BACK.value, wildcard_ref=True)
     assert result is None
 
 
@@ -98,7 +98,7 @@ def test_wildcards_in_read():
     a = WILDCARD_SEQUENCES[0]
     for s in WILDCARD_SEQUENCES:
         r = 'CATCTGTCC' + s + 'GCCAGGGTTGATTCGGCTGATCTGGCCG'
-        result = locate(a, r, 0.0, BACK, wildcard_query=True)
+        result = locate(a, r, 0.0, Where.BACK.value, wildcard_query=True)
         if 'X' in s:
             assert result is None
         else:
@@ -111,10 +111,10 @@ def test_wildcards_in_both():
             if 'X' in s or 'X' in a:
                 continue
             r = 'CATCTGTCC' + s + 'GCCAGGGTTGATTCGGCTGATCTGGCCG'
-            result = locate(a, r, 0.0, BACK, wildcard_ref=True, wildcard_query=True)
+            result = locate(a, r, 0.0, Where.BACK.value, wildcard_ref=True, wildcard_query=True)
             assert result == (0, 10, 9, 19, 10, 0), result
 
 
 def test_no_match():
-    a = locate('CTGATCTGGCCG', 'AAAAGGG', 0.1, BACK)
+    a = locate('CTGATCTGGCCG', 'AAAAGGG', 0.1, Where.BACK.value)
     assert a is None, a

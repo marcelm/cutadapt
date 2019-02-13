@@ -5,33 +5,35 @@ The ...Adapter classes are responsible for finding adapters.
 The ...Match classes trim the reads.
 """
 import re
+from enum import Enum
 from collections import defaultdict
 from cutadapt import align
 from dnaio.readers import FastaReader
 
 
-# Constants for the Aligner.locate() function.
-# The function is called with SEQ1 as the adapter, SEQ2 as the read.
-# TODO get rid of those constants, use strings instead
-BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
-FRONT = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.START_WITHIN_SEQ1
-PREFIX = align.STOP_WITHIN_SEQ2
-SUFFIX = align.START_WITHIN_SEQ2
-# Just like FRONT/BACK, but without internal matches
-FRONT_NOT_INTERNAL = align.START_WITHIN_SEQ1 | align.STOP_WITHIN_SEQ2
-BACK_NOT_INTERNAL = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
-ANYWHERE = align.SEMIGLOBAL
-LINKED = 'linked'
+class Where(Enum):
+    # Constants for the Aligner.locate() function.
+    # The function is called with SEQ1 as the adapter, SEQ2 as the read.
+    # TODO get rid of those constants, use strings instead
+    BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
+    FRONT = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.START_WITHIN_SEQ1
+    PREFIX = align.STOP_WITHIN_SEQ2
+    SUFFIX = align.START_WITHIN_SEQ2
+    # Just like FRONT/BACK, but without internal matches
+    FRONT_NOT_INTERNAL = align.START_WITHIN_SEQ1 | align.STOP_WITHIN_SEQ2
+    BACK_NOT_INTERNAL = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
+    ANYWHERE = align.SEMIGLOBAL
+    LINKED = 'linked'
 
 # TODO put this in some kind of "list of pre-defined adapter types" along with the info above
 WHERE_TO_REMOVE_MAP = {
-    PREFIX: 'prefix',
-    FRONT_NOT_INTERNAL: 'prefix',
-    FRONT: 'prefix',
-    BACK: 'suffix',
-    SUFFIX: 'suffix',
-    BACK_NOT_INTERNAL: 'suffix',
-    ANYWHERE: 'auto',
+    Where.PREFIX: 'prefix',
+    Where.FRONT_NOT_INTERNAL: 'prefix',
+    Where.FRONT: 'prefix',
+    Where.BACK: 'suffix',
+    Where.SUFFIX: 'suffix',
+    Where.BACK_NOT_INTERNAL: 'suffix',
+    Where.ANYWHERE: 'auto',
 }
 
 
@@ -219,28 +221,28 @@ class AdapterParser:
     def _restriction_to_where(cmdline_type, restriction):
         if cmdline_type == 'front':
             if restriction is None:
-                return FRONT
+                return Where.FRONT
             elif restriction == 'anchored':
-                return PREFIX
+                return Where.PREFIX
             elif restriction == 'noninternal':
-                return FRONT_NOT_INTERNAL
+                return Where.FRONT_NOT_INTERNAL
             else:
                 raise ValueError(
                     'Value {} for a front restriction not allowed'.format(restriction))
         elif cmdline_type == 'back':
             if restriction is None:
-                return BACK
+                return Where.BACK
             elif restriction == 'anchored':
-                return SUFFIX
+                return Where.SUFFIX
             elif restriction == 'noninternal':
-                return BACK_NOT_INTERNAL
+                return Where.BACK_NOT_INTERNAL
             else:
                 raise ValueError(
                     'Value {} for a back restriction not allowed'.format(restriction))
         else:
             assert cmdline_type == 'anywhere'
             if restriction is None:
-                return ANYWHERE
+                return Where.ANYWHERE
             else:
                 raise ValueError('No placement may be specified for "anywhere" adapters')
 
@@ -330,11 +332,11 @@ class AdapterParser:
             name = specname
         if parameters.get('anywhere', False):
             parameters['remove'] = WHERE_TO_REMOVE_MAP[where]
-            where = ANYWHERE
+            where = Where.ANYWHERE
             del parameters['anywhere']
         params = self.default_parameters.copy()
         params.update(parameters)
-        if where in (FRONT, BACK):
+        if where in (Where.FRONT, Where.BACK):
             adapter_class = BackOrFrontAdapter
         else:
             adapter_class = Adapter
@@ -573,8 +575,7 @@ class Adapter:
     This class can find a single adapter characterized by sequence, error rate,
     type etc. within reads.
 
-    where --  One of the BACK, FRONT, PREFIX, SUFFIX or ANYWHERE constants.
-        This influences where the adapter is allowed to appear within the
+    where --  A Where enum value. This influences where the adapter is allowed to appear within the
         read.
 
     remove -- describes which part of the read to remove if the adapter was found:
@@ -628,7 +629,8 @@ class Adapter:
         self.read_wildcards = read_wildcards
 
         self.aligner = align.Aligner(self.sequence, self.max_error_rate,
-            flags=self.where, wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
+            flags=self.where.value, wildcard_ref=self.adapter_wildcards,
+            wildcard_query=self.read_wildcards)
         self.aligner.min_overlap = self.min_overlap
         self.indels = indels
         if not self.indels:
@@ -646,7 +648,7 @@ class Adapter:
 
     def is_anchored(self):
         """Return whether this adapter is anchored"""
-        return self.where in {PREFIX, SUFFIX}
+        return self.where in {Where.PREFIX, Where.SUFFIX}
 
     def enable_debug(self):
         """
@@ -669,11 +671,11 @@ class Adapter:
 
         # try to find an exact match first unless wildcards are allowed
         if not self.adapter_wildcards:
-            if self.where == PREFIX:
+            if self.where is Where.PREFIX:
                 pos = 0 if read_seq.startswith(self.sequence) else -1
-            elif self.where == SUFFIX:
+            elif self.where is Where.SUFFIX:
                 pos = (len(read_seq) - len(self.sequence)) if read_seq.endswith(self.sequence) else -1
-            elif self.where == BACK or self.where == FRONT:
+            elif self.where is Where.BACK or self.where is Where.FRONT:
                 pos = read_seq.find(self.sequence)
             # TODO BACK_NOT_INTERNAL, FRONT_NOT_INTERNAL
         if pos >= 0:
@@ -682,8 +684,8 @@ class Adapter:
                 len(self.sequence), 0)
         else:
             # try approximate matching
-            if not self.indels and self.where in (PREFIX, SUFFIX):
-                if self.where == PREFIX:
+            if not self.indels and self.where in (Where.PREFIX, Where.SUFFIX):
+                if self.where is Where.PREFIX:
                     alignment = align.compare_prefixes(self.sequence, read_seq,
                         wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
                 else:
@@ -735,7 +737,7 @@ class BackOrFrontAdapter(Adapter):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        assert self.where == BACK or self.where == FRONT
+        assert self.where is Where.BACK or self.where is Where.FRONT
         self._remove_before = self.remove == 'prefix'
 
     def match_to(self, read):
@@ -832,7 +834,7 @@ class LinkedAdapter:
         self._require_back_match = back_required
 
         # The following attributes are needed for the report
-        self.where = LINKED
+        self.where = Where.LINKED
         self.name = _generate_adapter_name() if name is None else name
         self.front_adapter = front_adapter
         self.back_adapter = back_adapter
@@ -860,4 +862,4 @@ class LinkedAdapter:
         return LinkedMatch(front_match, back_match, self)
 
     def create_statistics(self):
-        return AdapterStatistics(self.front_adapter, self.back_adapter, where=LINKED)
+        return AdapterStatistics(self.front_adapter, self.back_adapter, where=Where.LINKED)
