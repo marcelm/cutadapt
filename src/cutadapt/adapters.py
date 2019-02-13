@@ -405,8 +405,7 @@ class EndStatistics:
 
     @property
     def lengths(self):
-        # Python 2.6 has no dict comprehension
-        d = dict((length, sum(errors.values())) for length, errors in self.errors.items())
+        d = {length: sum(errors.values()) for length, errors in self.errors.items()}
         return d
 
     def random_match_probabilities(self, gc_content):
