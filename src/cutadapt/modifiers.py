@@ -75,7 +75,8 @@ class AdapterCutter:
                 best_match = match
         return best_match
 
-    def masked_read(self, trimmed_read, matches):
+    @staticmethod
+    def masked_read(trimmed_read, matches):
         # add N from last modification
         masked_sequence = trimmed_read.sequence
         for match in sorted(matches, reverse=True, key=lambda m: m.astart):
