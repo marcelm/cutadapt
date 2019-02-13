@@ -644,6 +644,10 @@ class Adapter:
             'adapter_wildcards={adapter_wildcards}, '\
             'indels={indels})>'.format(**vars(self))
 
+    def is_anchored(self):
+        """Return whether this adapter is anchored"""
+        return self.where in {PREFIX, SUFFIX}
+
     def enable_debug(self):
         """
         Print out the dynamic programming matrix after matching a read to an
