@@ -5,7 +5,7 @@ __call__ method.
 """
 import re
 from collections import OrderedDict
-from cutadapt.qualtrim import quality_trim_index, nextseq_trim_index
+from .qualtrim import quality_trim_index, nextseq_trim_index
 
 
 class PairedModifier:
