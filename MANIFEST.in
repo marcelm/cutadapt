@@ -2,6 +2,7 @@ include CHANGES.rst
 include CITATION
 include LICENSE
 include README.rst
+include pyproject.toml
 include doc/*.rst
 include doc/conf.py
 include doc/Makefile
