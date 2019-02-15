@@ -71,7 +71,7 @@ class BuildExt(_build_ext):
             check_cython_version()
             from Cython.Build import cythonize
             self.extensions = cythonize(self.extensions)
-        _build_ext.run(self)
+        super().run()
 
 
 class SDist(_sdist):
@@ -80,7 +80,7 @@ class SDist(_sdist):
         from Cython.Build import cythonize
         check_cython_version()
         cythonize(extensions)
-        _sdist.run(self)
+        super().run()
 
 
 encoding_arg = {'encoding': 'utf-8'} if sys.version > '3' else dict()
