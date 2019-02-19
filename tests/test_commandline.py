@@ -407,6 +407,10 @@ def test_adapter_file_3p_anchored_no_indels():
     run('-N --no-indels -a file:' + datapath('suffix-adapter.fasta'), 'anchored-back.fasta', 'anchored-back.fasta')
 
 
+def test_adapter_file_empty_name():
+    run('-N -a file:' + datapath('adapter-empty-name.fasta'), 'illumina.fastq', 'illumina.fastq.gz')
+
+
 def test_demultiplex():
     tempdir = tempfile.mkdtemp(prefix='cutadapt-tests.')
     multiout = os.path.join(tempdir, 'tmp-demulti.{name}.fasta')

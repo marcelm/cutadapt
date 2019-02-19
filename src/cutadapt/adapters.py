@@ -354,7 +354,8 @@ class AdapterParser:
             # read adapter sequences from a file
             with FastaReader(spec[5:]) as fasta:
                 for record in fasta:
-                    name = record.name.split(None, 1)[0]
+                    name = record.name.split(None, 1)
+                    name = name[0] if name else None
                     yield self._parse(record.sequence, cmdline_type, name=name)
         else:
             yield self._parse(spec, cmdline_type, name=None)
