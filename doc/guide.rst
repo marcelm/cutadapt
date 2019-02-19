@@ -1093,14 +1093,20 @@ fulfill a filtering criterion, such as
 ``--too-short-output``/``--too-short-paired-output``. That is, the reads are
 always sent in pairs to these alternative output files.
 
-By default, a read pair is discarded (or redirected) if one of the reads
-(R1 or R2) fulfills the filtering criterion. As an example, if option
-``--minimum-length=20`` is used and paired-end data is processed, a read pair
-if discarded if one of the reads is shorter than 20 nt.
+The ``--pair-filter`` option determines how to combine the filters for
+R1 and R2 into a single decision about the read pair.
+
+The default is ``--pair-filter=any``, which means that a read pair is discarded
+(or redirected) if *one of* the reads (R1 or R2) fulfills the filtering criterion.
+As an example, if option ``--minimum-length=20`` is used and paired-end data is
+processed, a read pair if discarded if one of the reads is shorter than 20 nt.
 
 To require that filtering criteria must apply to *both* reads in order for a
-read pair to be discarded, use the option ``--pair-filter=both``. The following
-table describes the effect for some filtering options.
+read pair to be discarded, use the option ``--pair-filter=both``.
+
+If you want to the filter to ignore the second read, use ``--pair-filter=first``.
+
+The following table describes the effect for some filtering options.
 
 +----------------------------+------------------------------------------------+-----------------------------------------+
 | Filtering option           | With ``--pair-filter=any``, the pair           | With ``-pair-filter=both``, the pair    |
@@ -1152,7 +1158,7 @@ These are the paired-end specific filtering and output options:
     Write the second read in a pair to this file if pair is too long. Use
     together with ``--too-long-output``.
 
-``--pair-filter=(any|both)``
+``--pair-filter=(any|both|first)``
     Which of the reads in a paired-end read have to match the filtering
     criterion in order for it to be filtered.
 
@@ -1162,6 +1168,8 @@ option is meant (unique prefix). For example, instead of ``--untrimmed-output``
 and ``--untrimmed-paired-output``, you can write ``--untrimmed-o`` and
 ``--untrimmed-p``.
 
+.. versionadded:: 1.18
+    ``--pair-filter=first``
 
 Interleaved paired-end reads
 ----------------------------
