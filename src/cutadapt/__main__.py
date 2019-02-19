@@ -335,6 +335,8 @@ def get_argument_parser():
         help=SUPPRESS)
     parser.set_defaults(colorspace=False)
 
+    # We could have two positional arguments here, with the second one optional, but
+    # we want custom, more helpful error messages.
     parser.add_argument("inputs", nargs='*', help=SUPPRESS)
 
     return parser
