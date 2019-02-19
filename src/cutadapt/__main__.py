@@ -514,7 +514,8 @@ def input_files_from_parsed_args(inputs, paired, interleaved):
     Return tuple (input_filename, input_paired_filename)
     """
     if len(inputs) == 0:
-        raise CommandLineError("You did not provide any input file names. Please give me something to do!")
+        raise CommandLineError(
+            "You did not provide any input file names. Please give me something to do!")
     elif len(inputs) > 2:
         raise CommandLineError(
             "You provided {} input file names, but either one or two are expected. ".format(len(inputs))
@@ -525,14 +526,18 @@ def input_files_from_parsed_args(inputs, paired, interleaved):
     if paired and not interleaved:
         # Two file names required
         if len(inputs) == 1:
-            raise CommandLineError("When paired-end trimming is enabled via -A/-G/-B/-U"
-                " or -p, two input files are required.")
+            raise CommandLineError(
+                "You used an option that enabled paired-end mode (such as -p, -A, -G, -B, -U), "
+                "but then you also need to provide two input files (you provided one) or "
+                "use --interleaved.")
         else:
             input_paired_filename = inputs[1]
     else:
         if len(inputs) == 2:
-            raise CommandLineError("When trimming single-end data, only one input file name must "
-                "be given (got two)")
+            raise CommandLineError(
+                "It appears you want to trim paired-end data because you provided two input files, "
+                "but then you also need to provide two output files (with -o and -p) or use the "
+                "--interleaved option.")
         input_paired_filename = None
 
     return input_filename, input_paired_filename
@@ -555,8 +560,8 @@ def pipeline_from_parsed_args(args, paired, pair_filter_mode, is_interleaved_out
     if paired:
         if not is_interleaved_output:
             if not args.paired_output:
-                raise CommandLineError("When paired-end trimming is enabled via -A/-G/-B/-U, "
-                    "a second output file needs to be specified via -p (--paired-output).")
+                raise CommandLineError("When a paired-end trimming option such as -A/-G/-B/-U, "
+                    "is used, a second output file needs to be specified via -p (--paired-output).")
             if not args.output:
                 raise CommandLineError("When you use -p or --paired-output, you must also "
                     "use the -o option.")
@@ -589,8 +594,8 @@ def pipeline_from_parsed_args(args, paired, pair_filter_mode, is_interleaved_out
         min_overlap=args.overlap,
         read_wildcards=args.match_read_wildcards,
         adapter_wildcards=args.match_adapter_wildcards,
-        indels=args.indels)
-
+        indels=args.indels,
+    )
     try:
         adapters = adapter_parser.parse_multi(args.adapters, args.anywhere, args.front)
         adapters2 = adapter_parser.parse_multi(args.adapters2, args.anywhere2, args.front2)
@@ -694,7 +699,7 @@ def main(cmdlineargs=None, default_outfile='-'):
             "These colorspace-specific options are no longer supported: "
             "--colorspace, -c, -d, --double-encode, -t, --trim-primer, "
             "--strip-f3, --maq, --bwa, --no-zero-cap. "
-            "Use Cutadapt version 1.18 or earlier to work with colorspace data.")
+            "Use Cutadapt 1.18 or earlier to work with colorspace data.")
     paired = determine_paired_mode(args)
     assert paired in (False, 'first', 'both')
 
