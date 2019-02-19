@@ -96,9 +96,7 @@ class PairedRedirector:
         pair_filter_mode -- these values are allowed:
             'any': The pair is discarded if any read matches.
             'both': The pair is discarded if both reads match.
-            'first': The pair is discarded if the first read matches
-                ('legacy' mode, backwards compatibility). With 'first', the
-                second read is not inspected.
+            'first': The pair is discarded if the first read matches.
         """
         if pair_filter_mode not in ('any', 'both', 'first'):
             raise ValueError("pair_filter_mode must be 'any', 'both' or 'first'")

@@ -78,7 +78,6 @@ class Pipeline:
     """
     Processing pipeline that loops over reads and applies modifiers and filters
     """
-    should_warn_legacy = False
     n_adapters = 0
 
     def __init__(self, ):
@@ -88,6 +87,7 @@ class Pipeline:
         self._modifiers = []
         self._outfiles = None
         self._demultiplexer = None
+        self.warnings = []
 
         # Filter settings
         self._minimum_length = None
@@ -260,15 +260,18 @@ class PairedEndPipeline(Pipeline):
     """
     Processing pipeline for paired-end reads.
     """
+    paired = True
 
     def __init__(self, pair_filter_mode, modify_first_read_only=False):
-        """Setting modify_first_read_only to True enables "legacy mode"
+        """
+        Setting modify_first_read_only to True enables "legacy mode"
         """
         super().__init__()
+        # Legacy mode has been removed
+        assert not modify_first_read_only
         self._pair_filter_mode = pair_filter_mode
         self._modify_first_read_only = modify_first_read_only
         self._add_both_called = False
-        self._should_warn_legacy = False
         self._reader = None
 
     def add(self, modifier):
@@ -280,7 +283,6 @@ class PairedEndPipeline(Pipeline):
             self._modifiers.append(PairedModifier(modifier, copy.copy(modifier)))
         else:
             self._modifiers.append(PairedModifier(modifier, None))
-            self._should_warn_legacy = True
 
     def add1(self, modifier):
         """Add a modifier for R1 only"""
@@ -308,18 +310,6 @@ class PairedEndPipeline(Pipeline):
                 if filter_(read1, read2, matches1, matches2):
                     break
         return (n, total1_bp, total2_bp)
-
-    @property
-    def should_warn_legacy(self):
-        return self._should_warn_legacy
-
-    @should_warn_legacy.setter
-    def should_warn_legacy(self, value):
-        self._should_warn_legacy = bool(value)
-
-    @property
-    def paired(self):
-        return 'first' if self._modify_first_read_only else 'both'
 
     def _filter_wrapper(self):
         return functools.partial(PairedRedirector, pair_filter_mode=self._pair_filter_mode)

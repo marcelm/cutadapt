@@ -53,11 +53,11 @@ def test_paired_separate():
     run('-a CAGTGGAGTA', 'paired-separate.2.fastq', 'paired.2.fastq')
 
 
-def test_paired_end_legacy(cores):
+def test_paired_end_no_legacy(cores):
     """--paired-output, not using -A/-B/-G"""
-    # the -m 14 filters out one read, which should then also be filtered out in the second output file
-    # -q 10 should not change anything: qualities in file 1 are high enough,
-    # qualities in file 2 should not be inspected.
+    # the -m 14 filters out one read, which should then also be removed from the second file
+    # Since legacy mode was removed, -q 10 should filter out an additional read which gets
+    # quality-trimmed in file 2
     run_paired(
         '-a TTAGACATAT -m 14 -q 10',
         in1='paired.1.fastq', in2='paired.2.fastq',
@@ -70,7 +70,7 @@ def test_untrimmed_paired_output():
     with temporary_path("tmp-untrimmed.1.fastq") as untrimmed1:
         with temporary_path("tmp-untrimmed.2.fastq") as untrimmed2:
             run_paired(
-                ['-a', 'TTAGACATAT',
+                ['-a', 'TTAGACATAT', '--pair-filter=first',
                     '--untrimmed-output', untrimmed1,
                     '--untrimmed-paired-output', untrimmed2],
                 in1='paired.1.fastq', in2='paired.2.fastq',
@@ -88,7 +88,7 @@ def test_explicit_format_with_paired():
             shutil.copyfile(datapath("paired.1.fastq"), txt1)
             shutil.copyfile(datapath("paired.2.fastq"), txt2)
             run_paired(
-                '--format=fastq -a TTAGACATAT -m 14',
+                '--format=fastq -a TTAGACATAT -m 14 -q 10',
                 in1=txt1, in2=txt2,
                 expected1='paired.m14.1.fastq',
                 expected2='paired.m14.2.fastq',
@@ -186,8 +186,8 @@ def test_paired_but_only_one_input_file(cores):
             + [datapath('paired.1.fastq')])
 
 
-def test_legacy_minlength(cores):
-    """Ensure -m is not applied to second read in a pair in legacy mode"""
+def test_no_legacy_minlength(cores):
+    """Legacy mode was removed: Ensure -m is applied to second read in a pair"""
     run_paired(
         '-a XXX -m 27',
         in1='paired.1.fastq', in2='paired.2.fastq',

@@ -1123,13 +1123,6 @@ The following table describes the effect for some filtering options.
 | ``--max-n``                | one of the reads contains too many ``N`` bases | both reads contain too many ``N`` bases |
 +----------------------------+------------------------------------------------+-----------------------------------------+
 
-To further complicate matters, Cutadapt switches to a backwards compatibility
-mode ("legacy mode") when none of the uppercase modification options
-(``-A``/``-B``/``-G``/``-U``) are given. In that mode, filtering criteria are
-checked only for the *first* read. Cutadapt will also tell you at the top of
-the report whether legacy mode is active. Check that line if you get strange
-results!
-
 These are the paired-end specific filtering and output options:
 
 ``--minimum-length LENGTH1:LENGTH2`` or ``-m LENGTH1:LENGTH2``
@@ -1194,24 +1187,25 @@ a second input file::
 Cutadapt will detect if an input file is not properly interleaved by checking
 whether read names match and whether the file contains an even number of entries.
 
-When ``--interleaved`` is used, legacy mode is disabled (that is,
-read-modification options such as ``-q`` always apply to both reads).
 
+Trimming paired-end reads separately
+------------------------------------
 
-Legacy paired-end read trimming
--------------------------------
+.. warning::
 
-.. note::
-    This section describes the way paired-end trimming was done
-    in Cutadapt before 1.8, where the ``-A``, ``-G``, ``-B`` options were not
-    available. It is more complicated, but you can still use it.
+    Trimming paired-end data in this way is not recommended as it
+    bypasses all paired-end error-checking, such as checking whether
+    the number of reads is the same in both files. You should use
+    the normal paired-end trimming mode with the ``-o``/``--p``
+    options described above.
 
 If you do not use any of the filtering options that discard reads, such
 as ``--discard``, ``--minimum-length`` or ``--maximum-length``, you can run
 Cutadapt on each file separately::
 
-    cutadapt -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
-    cutadapt -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
+    cutadapt -a ADAPTER_FWD -o trimmed.1.fastq.gz reads1.fastq.gz
+    cutadapt -a ADAPTER_REV -o trimmed.2.fastq.gz reads2.fastq.gz
+
 
 You can use the options that are listed under 'Additional modifications'
 in Cutadapt's help output without problems. For example, if you want to
@@ -1222,32 +1216,12 @@ be::
     cutadapt -q 10 -a ADAPTER_FWD -o trimmed.1.fastq reads1.fastq
     cutadapt -q 15 -a ADAPTER_REV -o trimmed.2.fastq reads2.fastq
 
-If you use any of the filtering options, you must use Cutadapt in the following
-way (with the ``-p`` option) to make sure that read pairs remain sychronized.
 
-First trim the forward read, writing output to temporary files (we also
-add some quality trimming)::
+.. note::
 
-    cutadapt -q 10 -a ADAPTER_FWD --minimum-length 20 -o tmp.1.fastq -p tmp.2.fastq reads.1.fastq reads.2.fastq
-
-Then trim the reverse read, using the temporary files as input::
-
-    cutadapt -q 15 -a ADAPTER_REV --minimum-length 20 -o trimmed.2.fastq -p trimmed.1.fastq tmp.2.fastq tmp.1.fastq
-
-Finally, remove the temporary files::
-
-    rm tmp.1.fastq tmp.2.fastq
-
-Please see the previous section for a much simpler way of trimming paired-end
-reads!
-
-In legacy paired-end mode, the read-modifying options such as ``-q`` only
-apply to the first file in each call to Cutadapt (first ``reads.1.fastq``, then
-``tmp.2.fastq`` in this example). Reads in the second file are not affected by those
-options, but by the filtering options: If a read in the first file is
-discarded, then the matching read in the second file is also filtered
-and not written to the output given by ``--paired-output`` in order to
-keep both output files synchronized.
+    Previous Cutadapt versions (up to 1.18) had a “legacy mode” in which the
+    read-modifying options such as ``-q`` would only apply to the forward/R1
+    reads. This mode no longer exists.
 
 
 .. _multiple-adapters:

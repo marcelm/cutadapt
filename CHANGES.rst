@@ -20,8 +20,13 @@ development version
   is now recognized from the file content.
 * Some other performance optimizations were made. Speedups of up to 15%
   are possible.
-* Fix :issue:`345`: ``--length`` now disables legacy mode.
 * Fix :issue:`354`: Sequences given using ``file:`` can now be unnamed.
+
+Backwards-incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* “Legacy mode” has been removed.
+* This fixes also :issue:`345`: ``--length`` would not enable legacy mode.
 
 
 v1.18 (2018-09-07)

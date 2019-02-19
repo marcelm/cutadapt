@@ -470,31 +470,21 @@ def open_output_files(options, default_outfile, interleaved):
     )
 
 
-def determine_paired_mode(options):
+def determine_paired_mode(args):
     """
-    Determine the paired-end mode: single-end, paired-end or legacy paired-end.
-
-    Return False, 'first' or 'both'.
-
-    False -- single-end
-    'first' -- Backwards-compatible "legacy" mode in which read modifications apply only to read 1
-    'both' -- normal paired-end mode in which read modifications apply to read 1 and 2
-
-    Legacy mode is deactivated as soon as any option is used that exists only in cutadapt 1.8 or
-    later, such as -A/-G/-B/-U/--interleaved/--nextseq-trim.
+    Determine whether we should work in paired-end mode.
     """
-    paired = False
-    if options.paired_output:
-        paired = 'first'
-
-    # Switch off legacy mode if certain options given
-    if paired and (options.nextseq_trim or options.length):
-        paired = 'both'
-    if (options.adapters2 or options.front2 or options.anywhere2 or
-            options.cut2 or options.interleaved or options.pair_filter or
-            options.too_short_paired_output or options.too_long_paired_output):
-        paired = 'both'
-    return paired
+    # Usage of any of these options enables paired-end mode
+    return bool(
+        args.paired_output
+        or args.interleaved
+        or args.adapters2
+        or args.front2
+        or args.anywhere2
+        or args.cut2
+        or args.pair_filter
+        or args.too_short_paired_output
+        or args.too_long_paired_output)
 
 
 def determine_interleaved(args):
@@ -543,7 +533,7 @@ def input_files_from_parsed_args(inputs, paired, interleaved):
     return input_filename, input_paired_filename
 
 
-def pipeline_from_parsed_args(args, paired, pair_filter_mode, is_interleaved_output):
+def pipeline_from_parsed_args(args, paired, is_interleaved_output):
     """
     Setup a processing pipeline from parsed command-line options.
 
@@ -609,13 +599,19 @@ def pipeline_from_parsed_args(args, paired, pair_filter_mode, is_interleaved_out
         for adapter in adapters + adapters2:
             adapter.enable_debug()
 
-    # Create the processing pipeline.
-    # If no second-read adapters were given (via -A/-G/-B/-U), we need to
-    # be backwards compatible and *no modifications* are done to the second read.
+    # Create the processing pipeline
     if paired:
-        pipeline = PairedEndPipeline(pair_filter_mode, modify_first_read_only=paired == 'first')
+        pair_filter_mode = 'any' if args.pair_filter is None else args.pair_filter
+        pipeline = PairedEndPipeline(pair_filter_mode, modify_first_read_only=False)
     else:
         pipeline = SingleEndPipeline()
+
+    if paired and not adapters2 and args.pair_filter is None and (
+            args.discard_untrimmed or args.untrimmed_output or args.untrimmed_paired_output):
+        pipeline.warnings.append(
+            "Option --discard-untrimmed or --untrimmed-(paired-)output used, but no adapters to "
+            "remove from R2 reads were given. This means that all read pairs will be regarded as "
+            "untrimmed! You probably want to use --pair-filter=first.")
 
     for add, cut in (('add1', args.cut), ('add2', args.cut2)):
         if not cut:
@@ -641,7 +637,7 @@ def pipeline_from_parsed_args(args, paired, pair_filter_mode, is_interleaved_out
         adapter_cutter2 = AdapterCutter(adapters2, args.times, args.action)
         pipeline.add2(adapter_cutter2)
 
-    # Modifiers that apply to both reads of paired-end reads unless in legacy mode
+    # Modifiers that apply to both reads of paired-end reads
     if args.length is not None:
         pipeline.add(Shortener(args.length))
     if args.trim_n:
@@ -701,24 +697,13 @@ def main(cmdlineargs=None, default_outfile='-'):
             "--strip-f3, --maq, --bwa, --no-zero-cap. "
             "Use Cutadapt 1.18 or earlier to work with colorspace data.")
     paired = determine_paired_mode(args)
-    assert paired in (False, 'first', 'both')
-
-    if paired == 'first':
-        # legacy mode
-        assert args.pair_filter is None
-        pair_filter_mode = 'first'
-    elif args.pair_filter is None:
-        # default
-        pair_filter_mode = 'any'
-    else:
-        # user-provided behavior
-        pair_filter_mode = args.pair_filter
+    assert paired in (False, True)
 
     try:
         is_interleaved_input, is_interleaved_output = determine_interleaved(args)
         input_filename, input_paired_filename = input_files_from_parsed_args(args.inputs,
             paired, is_interleaved_input)
-        pipeline = pipeline_from_parsed_args(args, paired, pair_filter_mode, is_interleaved_output)
+        pipeline = pipeline_from_parsed_args(args, paired, is_interleaved_output)
         outfiles = open_output_files(args, default_outfile, is_interleaved_output)
     except CommandLineError as e:
         parser.error(e)
@@ -757,16 +742,12 @@ def main(cmdlineargs=None, default_outfile='-'):
     logger.info("This is cutadapt %s with Python %s%s", __version__,
         platform.python_version(), opt)
     logger.info("Command line parameters: %s", " ".join(cmdlineargs))
+    for warning in pipeline.warnings:
+        logger.warning('\n' + '\n'.join(textwrap.wrap(warning)))
+
     logger.info("Processing reads on %d core%s in %s mode ...",
         cores, 's' if cores > 1 else '',
-        {False: 'single-end', 'first': 'paired-end legacy', 'both': 'paired-end'}[pipeline.paired])
-
-    if pipeline.should_warn_legacy:
-        logger.warning('\n'.join(textwrap.wrap('Legacy mode is '
-            'enabled. Read modification and filtering options *ignore* '
-            'the second read. To switch to regular paired-end mode, '
-            'provide the --pair-filter=any option or use any of the '
-            '-A/-B/-G/-U/--interleaved options.')))
+        {False: 'single-end', True: 'paired-end'}[pipeline.paired])
 
     try:
         stats = runner.run()
