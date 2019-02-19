@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2010-2018 Marcel Martin <marcel.martin@scilifelab.se>
+# Copyright (c) 2010-2019 Marcel Martin <marcel.martin@scilifelab.se>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 """
-cutadapt version %version
+cutadapt version {version}
 
 Copyright (C) 2010-2019 Marcel Martin <marcel.martin@scilifelab.se>
 
@@ -57,7 +57,7 @@ See https://cutadapt.readthedocs.io/ for full documentation.
 import sys
 import errno
 import time
-from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
+from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 import logging
 import platform
 import textwrap
@@ -76,14 +76,27 @@ from cutadapt.utils import available_cpu_count
 logger = logging.getLogger()
 
 
-class CutadaptOptionParser(OptionParser):
-    def get_usage(self):
-        return self.usage.lstrip().replace('%version', __version__)
+class CutadaptArgumentParser(ArgumentParser):
 
-    def error(self, msg):
+    class CustomUsageHelpFormatter(HelpFormatter):
+        def add_usage(self, usage, actions, groups, prefix=None):
+            if usage is not SUPPRESS:
+                args = usage, actions, groups, ''
+                self._add_item(self._format_usage, args)
+
+    def __init__(self, *args, **kwargs):
+        kwargs['formatter_class'] = self.CustomUsageHelpFormatter
+        kwargs['usage'] = kwargs['usage'].replace("{version}", __version__)
+        super().__init__(*args, **kwargs)
+
+    def error(self, message):
+        """
+        If you override this in a subclass, it should not return -- it
+        should either exit or raise an exception.
+        """
         print('Run "cutadapt --help" to see command-line options.', file=sys.stderr)
         print('See https://cutadapt.readthedocs.io/ for full documentation.', file=sys.stderr)
-        self.exit(2, "\n%s: error: %s\n" % (self.get_prog_name(), msg))
+        self.exit(2, "\n{prog}: error: {message}\n".format(prog=self.prog, message=message))
 
 
 class CommandLineError(Exception):
@@ -123,42 +136,45 @@ def setup_logging(stdout=False, quiet=False, debug=False):
     logger.addHandler(stream_handler)
 
 
-def get_option_parser():
-    parser = CutadaptOptionParser(usage=__doc__, version=__version__)
-
-    parser.add_option("--debug", action='store_true', default=False,
+def get_argument_parser():
+    parser = CutadaptArgumentParser(usage=__doc__, add_help=False)
+    group = parser.add_argument_group("Options")
+    group.add_argument("-h", "--help", action="help", help="Show this help message and exit")
+    group.add_argument("--version", action="version", help="Show version number and exit",
+        version=__version__)
+    group.add_argument("--debug", action='store_true', default=False,
         help="Print debugging information.")
-    parser.add_option("-f", "--format",
+    group.add_argument("-f", "--format",
         help="Input file format ('fasta' or 'fastq'). Default: auto-detect.")
-    parser.add_option('-j', '--cores', type=int, default=1,
-        help='Number of CPU cores to use. Use 0 to auto-detect. Default: %default')
+    group.add_argument('-j', '--cores', type=int, default=1,
+        help='Number of CPU cores to use. Use 0 to auto-detect. Default: %(default)s')
 
     # Hidden options
-    parser.add_option("--gc-content", type=float, default=50,  # it's a percentage
-        help=SUPPRESS_HELP)
-    parser.add_option("--buffer-size", type=int, default=4000000,
-        help=SUPPRESS_HELP)  # buffer size for the reader process when running in parallel
+    group.add_argument("--gc-content", type=float, default=50,  # it's a percentage
+        help=SUPPRESS)
+    group.add_argument("--buffer-size", type=int, default=4000000,
+        help=SUPPRESS)  # buffer size for the reader process when running in parallel
 
-    group = OptionGroup(parser, "Finding adapters",
+    group = parser.add_argument_group("Finding adapters",
         description="Parameters -a, -g, -b specify adapters to be removed from "
             "each read (or from the first read in a pair if data is paired). "
             "If specified multiple times, only the best matching adapter is "
             "trimmed (but see the --times option). When the special notation "
             "'file:FILE' is used, adapter sequences are read from the given "
             "FASTA file.")
-    group.add_option("-a", "--adapter", action="append", default=[], metavar="ADAPTER",
+    group.add_argument("-a", "--adapter", action="append", default=[], metavar="ADAPTER",
         dest="adapters",
         help="Sequence of an adapter ligated to the 3' end (paired data: of the "
             "first read). The adapter and subsequent bases are trimmed. If a "
             "'$' character is appended ('anchoring'), the adapter is only "
             "found if it is a suffix of the read.")
-    group.add_option("-g", "--front", action="append", default=[], metavar="ADAPTER",
+    group.add_argument("-g", "--front", action="append", default=[], metavar="ADAPTER",
         help="Sequence of an adapter ligated to the 5' end (paired data: of the "
             "first read). The adapter and any preceding bases are trimmed. "
             "Partial matches at the 5' end are allowed. If a '^' character is "
             "prepended ('anchoring'), the adapter is only found if it is a "
             "prefix of the read.")
-    group.add_option("-b", "--anywhere", action="append", default=[], metavar="ADAPTER",
+    group.add_argument("-b", "--anywhere", action="append", default=[], metavar="ADAPTER",
         help="Sequence of an adapter that may be ligated to the 5' or 3' end "
             "(paired data: of the first read). Both types of matches as "
             "described under -a und -g are allowed. If the first base of the "
@@ -166,163 +182,160 @@ def get_option_parser():
             "as with -a. This option is mostly for rescuing failed library "
             "preparations - do not use if you know which end your adapter was "
             "ligated to!")
-    group.add_option("-e", "--error-rate", type=float, default=0.1, metavar="RATE",
+    group.add_argument("-e", "--error-rate", type=float, default=0.1, metavar="RATE",
         help="Maximum allowed error rate as value between 0 and 1 (no. of "
-            "errors divided by length of matching region). Default: %default (=10%)")
-    group.add_option("--no-indels", action='store_false', dest='indels', default=True,
+            "errors divided by length of matching region). Default: %(default)s (=10%%)")
+    group.add_argument("--no-indels", action='store_false', dest='indels', default=True,
         help="Allow only mismatches in alignments. "
             "Default: allow both mismatches and indels")
-    group.add_option("-n", "--times", type=int, metavar="COUNT", default=1,
-        help="Remove up to COUNT adapters from each read. Default: %default")
-    group.add_option("-O", "--overlap", type=int, metavar="MINLENGTH", default=3,
+    group.add_argument("-n", "--times", type=int, metavar="COUNT", default=1,
+        help="Remove up to COUNT adapters from each read. Default: %(default)s")
+    group.add_argument("-O", "--overlap", type=int, metavar="MINLENGTH", default=3,
         help="Require MINLENGTH overlap between read and adapter for an adapter "
-            "to be found. Default: %default")
-    group.add_option("--match-read-wildcards", action="store_true", default=False,
-        help="Interpret IUPAC wildcards in reads. Default: %default")
-    group.add_option("-N", "--no-match-adapter-wildcards", action="store_false",
+            "to be found. Default: %(default)s")
+    group.add_argument("--match-read-wildcards", action="store_true", default=False,
+        help="Interpret IUPAC wildcards in reads. Default: %(default)s")
+    group.add_argument("-N", "--no-match-adapter-wildcards", action="store_false",
         default=True, dest='match_adapter_wildcards',
         help="Do not interpret IUPAC wildcards in adapters.")
-    group.add_option("--action", choices=('trim', 'mask', 'none'), default='trim',
+    group.add_argument("--action", choices=('trim', 'mask', 'none'), default='trim',
         help="What to do with found adapters: 'trim', 'mask' or 'none'. "
             "mask: replace with 'N' characters; "
             "none: leave unchanged (useful with "
             "--discard-untrimmed). Default: trim")
-    group.add_option("--no-trim", dest='action', action='store_const', const='none',
-        help=SUPPRESS_HELP)  # Deprecated, use --action=none
-    group.add_option("--mask-adapter", dest='action', action='store_const', const='mask',
-        help=SUPPRESS_HELP)  # Deprecated, use --action=mask
-    parser.add_option_group(group)
+    group.add_argument("--no-trim", dest='action', action='store_const', const='none',
+        help=SUPPRESS)  # Deprecated, use --action=none
+    group.add_argument("--mask-adapter", dest='action', action='store_const', const='mask',
+        help=SUPPRESS)  # Deprecated, use --action=mask
 
-    group = OptionGroup(parser, "Additional read modifications")
-    group.add_option("-u", "--cut", action='append', default=[], type=int, metavar="LENGTH",
+    group = parser.add_argument_group("Additional read modifications")
+    group.add_argument("-u", "--cut", action='append', default=[], type=int, metavar="LENGTH",
         help="Remove bases from each read (first read only if paired). "
             "If LENGTH is positive, remove bases from the beginning. "
             "If LENGTH is negative, remove bases from the end. "
             "Can be used twice if LENGTHs have different signs. "
             "This is applied *before* adapter trimming.")
-    group.add_option("--nextseq-trim", type=int, default=None, metavar="3'CUTOFF",
+    group.add_argument("--nextseq-trim", type=int, default=None, metavar="3'CUTOFF",
         help="NextSeq-specific quality trimming (each read). Trims also dark "
             "cycles appearing as high-quality G bases.")
-    group.add_option("-q", "--quality-cutoff", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
+    group.add_argument("-q", "--quality-cutoff", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
         help="Trim low-quality bases from 5' and/or 3' ends of each read before "
             "adapter removal. Applied to both reads if data is paired. If one "
             "value is given, only the 3' end is trimmed. If two "
             "comma-separated cutoffs are given, the 5' end is trimmed with "
             "the first cutoff, the 3' end with the second.")
-    group.add_option("--quality-base", type=int, default=33, metavar='N',
+    group.add_argument("--quality-base", type=int, default=33, metavar='N',
         help="Assume that quality values in FASTQ are encoded as ascii(quality "
             "+ N). This needs to be set to 64 for some old Illumina "
-            "FASTQ files. Default: %default")
-    group.add_option("--length", "-l", type=int, default=None, metavar="LENGTH",
+            "FASTQ files. Default: %(default)s")
+    group.add_argument("--length", "-l", type=int, default=None, metavar="LENGTH",
             help="Shorten reads to LENGTH. Positive values remove bases at the end "
             "while negative ones remove bases at the beginning. This and the following modifications "
             "are applied after adapter trimming.")
-    group.add_option("--trim-n", action='store_true', default=False,
+    group.add_argument("--trim-n", action='store_true', default=False,
         help="Trim N's on ends of reads.")
-    group.add_option("--length-tag", metavar="TAG",
+    group.add_argument("--length-tag", metavar="TAG",
         help="Search for TAG followed by a decimal number in the description "
             "field of the read. Replace the decimal number with the correct "
             "length of the trimmed read. For example, use --length-tag 'length=' "
             "to correct fields like 'length=123'.")
-    group.add_option("--strip-suffix", action='append', default=[],
+    group.add_argument("--strip-suffix", action='append', default=[],
         help="Remove this suffix from read names if present. Can be given multiple times.")
-    group.add_option("-x", "--prefix", default='',
+    group.add_argument("-x", "--prefix", default='',
         help="Add this prefix to read names. Use {name} to insert the name of the matching adapter.")
-    group.add_option("-y", "--suffix", default='',
+    group.add_argument("-y", "--suffix", default='',
         help="Add this suffix to read names; can also include {name}")
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, "Filtering of processed reads",
+    group = parser.add_argument_group("Filtering of processed reads",
         description="Filters are applied after above read modifications. "
             "Paired-end reads are always discarded pairwise (see also "
             "--pair-filter).")
-    group.add_option("-m", "--minimum-length", default=None, metavar="LEN[:LEN2]",
+    group.add_argument("-m", "--minimum-length", default=None, metavar="LEN[:LEN2]",
         help="Discard reads shorter than LEN. Default: 0")
-    group.add_option("-M", "--maximum-length", default=None, metavar="LEN[:LEN2]",
+    group.add_argument("-M", "--maximum-length", default=None, metavar="LEN[:LEN2]",
         help="Discard reads longer than LEN. Default: no limit")
-    group.add_option("--max-n", type=float, default=None, metavar="COUNT",
+    group.add_argument("--max-n", type=float, default=None, metavar="COUNT",
         help="Discard reads with more than COUNT 'N' bases. If COUNT is a number "
             "between 0 and 1, it is interpreted as a fraction of the read length.")
-    group.add_option("--discard-trimmed", "--discard", action='store_true', default=False,
+    group.add_argument("--discard-trimmed", "--discard", action='store_true', default=False,
         help="Discard reads that contain an adapter. Also use -O to avoid "
             "discarding too many randomly matching reads!")
-    group.add_option("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
+    group.add_argument("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
         help="Discard reads that do not contain an adapter.")
-    group.add_option("--discard-casava", action='store_true', default=False,
+    group.add_argument("--discard-casava", action='store_true', default=False,
         help="Discard reads that did not pass CASAVA filtering (header has :Y:).")
-    group.add_option("--zero-cap", "-z", action='store_true', default=False,
+    group.add_argument("--zero-cap", "-z", action='store_true', default=False,
         help="Change negative quality values to zero.")
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, "Output")
-    group.add_option("--quiet", default=False, action='store_true',
+    group = parser.add_argument_group("Output")
+    group.add_argument("--quiet", default=False, action='store_true',
         help="Print only error messages.")
-    group.add_option("--report", choices=('full', 'minimal'), default=None,
+    group.add_argument("--report", choices=('full', 'minimal'), default=None,
         help="Which type of report to print: 'full' or 'minimal'. Default: full")
-    group.add_option("-o", "--output", metavar="FILE",
+    group.add_argument("-o", "--output", metavar="FILE",
         help="Write trimmed reads to FILE. FASTQ or FASTA format is chosen "
             "depending on input. The summary report is sent to standard output. "
             "Use '{name}' in FILE to demultiplex reads into multiple "
             "files. Default: write to standard output")
-    group.add_option("--info-file", metavar="FILE",
+    group.add_argument("--info-file", metavar="FILE",
         help="Write information about each read and its adapter matches into FILE. "
             "See the documentation for the file format.")
-    group.add_option("-r", "--rest-file", metavar="FILE",
+    group.add_argument("-r", "--rest-file", metavar="FILE",
         help="When the adapter matches in the middle of a read, write the "
             "rest (after the adapter) to FILE.")
-    group.add_option("--wildcard-file", metavar="FILE",
+    group.add_argument("--wildcard-file", metavar="FILE",
         help="When the adapter has N wildcard bases, write adapter bases "
             "matching wildcard positions to FILE. (Inaccurate with indels.)")
-    group.add_option("--too-short-output", metavar="FILE",
+    group.add_argument("--too-short-output", metavar="FILE",
         help="Write reads that are too short (according to length specified by "
         "-m) to FILE. Default: discard reads")
-    group.add_option("--too-long-output", metavar="FILE",
+    group.add_argument("--too-long-output", metavar="FILE",
         help="Write reads that are too long (according to length specified by "
         "-M) to FILE. Default: discard reads")
-    group.add_option("--untrimmed-output", default=None, metavar="FILE",
+    group.add_argument("--untrimmed-output", default=None, metavar="FILE",
         help="Write reads that do not contain any adapter to FILE. Default: "
             "output to same file as trimmed reads")
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, "Paired-end options", description="The "
+    group = parser.add_argument_group("Paired-end options", description="The "
         "-A/-G/-B/-U options work like their -a/-b/-g/-u counterparts, but "
         "are applied to the second read in each pair.")
-    group.add_option("-A", dest='adapters2', action='append', default=[], metavar='ADAPTER',
+    group.add_argument("-A", dest='adapters2', action='append', default=[], metavar='ADAPTER',
         help="3' adapter to be removed from second read in a pair.")
-    group.add_option("-G", dest='front2', action='append', default=[], metavar='ADAPTER',
+    group.add_argument("-G", dest='front2', action='append', default=[], metavar='ADAPTER',
         help="5' adapter to be removed from second read in a pair.")
-    group.add_option("-B", dest='anywhere2', action='append', default=[], metavar='ADAPTER',
+    group.add_argument("-B", dest='anywhere2', action='append', default=[], metavar='ADAPTER',
         help="5'/3 adapter to be removed from second read in a pair.")
-    group.add_option("-U", dest='cut2', action='append', default=[], type=int, metavar="LENGTH",
+    group.add_argument("-U", dest='cut2', action='append', default=[], type=int, metavar="LENGTH",
         help="Remove LENGTH bases from second read in a pair.")
-    group.add_option("-p", "--paired-output", metavar="FILE",
+    group.add_argument("-p", "--paired-output", metavar="FILE",
         help="Write second read in a pair to FILE.")
     # Setting the default for pair_filter to None allows us to find out whether
     # the option was used at all.
-    group.add_option("--pair-filter", metavar='(any|both|first)', default=None,
+    group.add_argument("--pair-filter", metavar='(any|both|first)', default=None,
         choices=("any", "both", "first"),
         help="Which of the reads in a paired-end read have to match the "
             "filtering criterion in order for the pair to be filtered. "
             "Default: any")
-    group.add_option("--interleaved", action='store_true', default=False,
+    group.add_argument("--interleaved", action='store_true', default=False,
         help="Read and write interleaved paired-end reads.")
-    group.add_option("--untrimmed-paired-output", metavar="FILE",
+    group.add_argument("--untrimmed-paired-output", metavar="FILE",
         help="Write second read in a pair to this FILE when no adapter "
             "was found. Use with --untrimmed-output. Default: output "
             "to same file as trimmed reads")
-    group.add_option("--too-short-paired-output", metavar="FILE", default=None,
+    group.add_argument("--too-short-paired-output", metavar="FILE", default=None,
         help="Write second read in a pair to this file if pair is too short. "
             "Use also --too-short-output.")
-    group.add_option("--too-long-paired-output", metavar="FILE", default=None,
+    group.add_argument("--too-long-paired-output", metavar="FILE", default=None,
         help="Write second read in a pair to this file if pair is too long. "
             "Use also --too-long-output.")
-    parser.add_option_group(group)
 
-    for opt in ("--colorspace", "-c", "-d", "--double-encode", "-t", "--trim-primer",
+    for arg in ("--colorspace", "-c", "-d", "--double-encode", "-t", "--trim-primer",
             "--strip-f3", "--maq", "--bwa", "--no-zero-cap"):
-        parser.add_option(opt, dest='colorspace', action='store_true', default=False,
-        help=SUPPRESS_HELP)
+        group.add_argument(arg, dest='colorspace', action='store_true', default=False,
+        help=SUPPRESS)
     parser.set_defaults(colorspace=False)
+
+    parser.add_argument("inputs", nargs='*', help=SUPPRESS)
 
     return parser
 
@@ -482,40 +495,40 @@ def determine_paired_mode(options):
     return paired
 
 
-def determine_interleaved(options, args):
+def determine_interleaved(args):
     is_interleaved_input = False
     is_interleaved_output = False
-    if options.interleaved:
-        is_interleaved_input = len(args) == 1
-        is_interleaved_output = not options.paired_output
+    if args.interleaved:
+        is_interleaved_input = len(args.inputs) == 1
+        is_interleaved_output = not args.paired_output
         if not is_interleaved_input and not is_interleaved_output:
             raise CommandLineError("When --interleaved is used, you cannot provide both two "
                 "input files and two output files")
     return is_interleaved_input, is_interleaved_output
 
 
-def input_files_from_parsed_args(args, paired, interleaved):
+def input_files_from_parsed_args(inputs, paired, interleaved):
     """
     Return tuple (input_filename, input_paired_filename)
     """
-    if len(args) == 0:
+    if len(inputs) == 0:
         raise CommandLineError("You did not provide any input file names. Please give me something to do!")
-    elif len(args) > 2:
+    elif len(inputs) > 2:
         raise CommandLineError(
-            "You provided {} input file names, but either one or two are expected. ".format(len(args))
+            "You provided {} input file names, but either one or two are expected. ".format(len(inputs))
             + "The file names were:\n - "
-            + "\n - ".join("{!r}".format(p) for p in args)
+            + "\n - ".join("{!r}".format(p) for p in inputs)
             + "\nHint: If your path contains spaces, you need to enclose it in quotes")
-    input_filename = args[0]
+    input_filename = inputs[0]
     if paired and not interleaved:
         # Two file names required
-        if len(args) == 1:
+        if len(inputs) == 1:
             raise CommandLineError("When paired-end trimming is enabled via -A/-G/-B/-U"
                 " or -p, two input files are required.")
         else:
-            input_paired_filename = args[1]
+            input_paired_filename = inputs[1]
     else:
-        if len(args) == 2:
+        if len(inputs) == 2:
             raise CommandLineError("When trimming single-end data, only one input file name must "
                 "be given (got two)")
         input_paired_filename = None
@@ -523,7 +536,7 @@ def input_files_from_parsed_args(args, paired, interleaved):
     return input_filename, input_paired_filename
 
 
-def pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_output):
+def pipeline_from_parsed_args(args, paired, pair_filter_mode, is_interleaved_output):
     """
     Setup a processing pipeline from parsed command-line options.
 
@@ -533,59 +546,59 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_
     """
 
     if not paired:
-        if options.untrimmed_paired_output:
+        if args.untrimmed_paired_output:
             raise CommandLineError("Option --untrimmed-paired-output can only be used when "
                 "trimming paired-end reads (with option -p).")
 
     if paired:
         if not is_interleaved_output:
-            if not options.paired_output:
+            if not args.paired_output:
                 raise CommandLineError("When paired-end trimming is enabled via -A/-G/-B/-U, "
                     "a second output file needs to be specified via -p (--paired-output).")
-            if not options.output:
+            if not args.output:
                 raise CommandLineError("When you use -p or --paired-output, you must also "
                     "use the -o option.")
 
-        if bool(options.untrimmed_output) != bool(options.untrimmed_paired_output):
+        if bool(args.untrimmed_output) != bool(args.untrimmed_paired_output):
             raise CommandLineError("When trimming paired-end reads, you must use either none "
                 "or both of the --untrimmed-output/--untrimmed-paired-output options.")
-        if options.too_short_output and not options.too_short_paired_output:
+        if args.too_short_output and not args.too_short_paired_output:
             raise CommandLineError("When using --too-short-output with paired-end "
                 "reads, you also need to use --too-short-paired-output")
-        if options.too_long_output and not options.too_long_paired_output:
+        if args.too_long_output and not args.too_long_paired_output:
             raise CommandLineError("When using --too-long-output with paired-end "
                 "reads, you also need to use --too-long-paired-output")
 
-    if options.format is not None and options.format.lower() not in ['fasta', 'fastq']:
+    if args.format is not None and args.format.lower() not in ['fasta', 'fastq']:
         raise CommandLineError("The input file format must be 'fasta' or 'fastq', "
-            "not '{}'.".format(options.format))
+            "not '{}'.".format(args.format))
 
-    if not (0 <= options.error_rate <= 1.):
+    if not (0 <= args.error_rate <= 1.):
         raise CommandLineError("The maximum error rate must be between 0 and 1.")
-    if options.overlap < 1:
+    if args.overlap < 1:
         raise CommandLineError("The overlap must be at least 1.")
-    if not (0 <= options.gc_content <= 100):
+    if not (0 <= args.gc_content <= 100):
         raise CommandLineError("GC content must be given as percentage between 0 and 100")
-    if options.action == 'none':
-        options.action = None
+    if args.action == 'none':
+        args.action = None
 
     adapter_parser = AdapterParser(
-        max_error_rate=options.error_rate,
-        min_overlap=options.overlap,
-        read_wildcards=options.match_read_wildcards,
-        adapter_wildcards=options.match_adapter_wildcards,
-        indels=options.indels)
+        max_error_rate=args.error_rate,
+        min_overlap=args.overlap,
+        read_wildcards=args.match_read_wildcards,
+        adapter_wildcards=args.match_adapter_wildcards,
+        indels=args.indels)
 
     try:
-        adapters = adapter_parser.parse_multi(options.adapters, options.anywhere, options.front)
-        adapters2 = adapter_parser.parse_multi(options.adapters2, options.anywhere2, options.front2)
+        adapters = adapter_parser.parse_multi(args.adapters, args.anywhere, args.front)
+        adapters2 = adapter_parser.parse_multi(args.adapters2, args.anywhere2, args.front2)
     except IOError as e:
         if e.errno == errno.ENOENT:
             raise CommandLineError(e)
         raise
     except ValueError as e:
         raise CommandLineError(e)
-    if options.debug:
+    if args.debug:
         for adapter in adapters + adapters2:
             adapter.enable_debug()
 
@@ -597,7 +610,7 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_
     else:
         pipeline = SingleEndPipeline()
 
-    for add, cut in (('add1', options.cut), ('add2', options.cut2)):
+    for add, cut in (('add1', args.cut), ('add2', args.cut2)):
         if not cut:
             continue
         if len(cut) > 2:
@@ -608,37 +621,37 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_
             if c != 0:
                 getattr(pipeline, add)(UnconditionalCutter(c))
 
-    if options.nextseq_trim is not None:
-        pipeline.add(NextseqQualityTrimmer(options.nextseq_trim, options.quality_base))
-    if options.quality_cutoff is not None:
-        cutoffs = parse_cutoffs(options.quality_cutoff)
-        pipeline.add(QualityTrimmer(cutoffs[0], cutoffs[1], options.quality_base))
+    if args.nextseq_trim is not None:
+        pipeline.add(NextseqQualityTrimmer(args.nextseq_trim, args.quality_base))
+    if args.quality_cutoff is not None:
+        cutoffs = parse_cutoffs(args.quality_cutoff)
+        pipeline.add(QualityTrimmer(cutoffs[0], cutoffs[1], args.quality_base))
 
     if adapters:
-        adapter_cutter = AdapterCutter(adapters, options.times, options.action)
+        adapter_cutter = AdapterCutter(adapters, args.times, args.action)
         pipeline.add1(adapter_cutter)
     if adapters2:
-        adapter_cutter2 = AdapterCutter(adapters2, options.times, options.action)
+        adapter_cutter2 = AdapterCutter(adapters2, args.times, args.action)
         pipeline.add2(adapter_cutter2)
 
     # Modifiers that apply to both reads of paired-end reads unless in legacy mode
-    if options.length is not None:
-        pipeline.add(Shortener(options.length))
-    if options.trim_n:
+    if args.length is not None:
+        pipeline.add(Shortener(args.length))
+    if args.trim_n:
         pipeline.add(NEndTrimmer())
-    if options.length_tag:
-        pipeline.add(LengthTagModifier(options.length_tag))
-    for suffix in options.strip_suffix:
+    if args.length_tag:
+        pipeline.add(LengthTagModifier(args.length_tag))
+    for suffix in args.strip_suffix:
         pipeline.add(SuffixRemover(suffix))
-    if options.prefix or options.suffix:
-        pipeline.add(PrefixSuffixAdder(options.prefix, options.suffix))
-    if options.zero_cap:
-        pipeline.add(ZeroCapper(quality_base=options.quality_base))
+    if args.prefix or args.suffix:
+        pipeline.add(PrefixSuffixAdder(args.prefix, args.suffix))
+    if args.zero_cap:
+        pipeline.add(ZeroCapper(quality_base=args.quality_base))
 
     # Set filtering parameters
     # Minimum/maximum length
     for attr in 'minimum_length', 'maximum_length':
-        param = getattr(options, attr)
+        param = getattr(args, attr)
         if param is not None:
             lengths = parse_lengths(param)
             if not paired and len(lengths) == 2:
@@ -646,10 +659,10 @@ def pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_
             if paired and len(lengths) == 1:
                 lengths = (lengths[0], lengths[0])
             setattr(pipeline, attr, lengths)
-    pipeline.max_n = options.max_n
-    pipeline.discard_casava = options.discard_casava
-    pipeline.discard_trimmed = options.discard_trimmed
-    pipeline.discard_untrimmed = options.discard_untrimmed
+    pipeline.max_n = args.max_n
+    pipeline.discard_casava = args.discard_casava
+    pipeline.discard_trimmed = args.discard_trimmed
+    pipeline.discard_untrimmed = args.discard_untrimmed
 
     return pipeline
 
@@ -662,57 +675,57 @@ def main(cmdlineargs=None, default_outfile='-'):
     parameter is not used.
     """
     start_time = time.time()
-    parser = get_option_parser()
+    parser = get_argument_parser()
     if cmdlineargs is None:
         cmdlineargs = sys.argv[1:]
-    options, args = parser.parse_args(args=cmdlineargs)
+    args = parser.parse_args(args=cmdlineargs)
     # Setup logging only if there are not already any handlers (can happen when
     # this function is being called externally such as from unit tests)
     if not logging.root.handlers:
-        setup_logging(stdout=bool(options.output),
-            quiet=options.quiet or options.report == 'minimal', debug=options.debug)
-    if options.quiet and options.report:
+        setup_logging(stdout=bool(args.output),
+            quiet=args.quiet or args.report == 'minimal', debug=args.debug)
+    if args.quiet and args.report:
         parser.error("Options --quiet and --report cannot be used at the same time")
 
-    if options.colorspace:
+    if args.colorspace:
         parser.error(
             "These colorspace-specific options are no longer supported: "
             "--colorspace, -c, -d, --double-encode, -t, --trim-primer, "
             "--strip-f3, --maq, --bwa, --no-zero-cap. "
             "Use Cutadapt version 1.18 or earlier to work with colorspace data.")
-    paired = determine_paired_mode(options)
+    paired = determine_paired_mode(args)
     assert paired in (False, 'first', 'both')
 
     if paired == 'first':
         # legacy mode
-        assert options.pair_filter is None
+        assert args.pair_filter is None
         pair_filter_mode = 'first'
-    elif options.pair_filter is None:
+    elif args.pair_filter is None:
         # default
         pair_filter_mode = 'any'
     else:
         # user-provided behavior
-        pair_filter_mode = options.pair_filter
+        pair_filter_mode = args.pair_filter
 
     try:
-        is_interleaved_input, is_interleaved_output = determine_interleaved(options, args)
-        input_filename, input_paired_filename = input_files_from_parsed_args(args,
+        is_interleaved_input, is_interleaved_output = determine_interleaved(args)
+        input_filename, input_paired_filename = input_files_from_parsed_args(args.inputs,
             paired, is_interleaved_input)
-        pipeline = pipeline_from_parsed_args(options, paired, pair_filter_mode, is_interleaved_output)
-        outfiles = open_output_files(options, default_outfile, is_interleaved_output)
+        pipeline = pipeline_from_parsed_args(args, paired, pair_filter_mode, is_interleaved_output)
+        outfiles = open_output_files(args, default_outfile, is_interleaved_output)
     except CommandLineError as e:
         parser.error(e)
         return  # avoid IDE warnings below
 
-    if options.cores < 0:
+    if args.cores < 0:
         parser.error('Value for --cores cannot be negative')
-    cores = available_cpu_count() if options.cores == 0 else options.cores
+    cores = available_cpu_count() if args.cores == 0 else args.cores
     if cores > 1:
         if (
             ParallelPipelineRunner.can_output_to(outfiles)
-            and options.format is None
+            and args.format is None
         ):
-            runner = ParallelPipelineRunner(pipeline, cores, options.buffer_size)
+            runner = ParallelPipelineRunner(pipeline, cores, args.buffer_size)
         else:
             logger.error('Running in parallel is currently not supported for '
                 'the given combination of command-line parameters.\nThese '
@@ -727,7 +740,7 @@ def main(cmdlineargs=None, default_outfile='-'):
         runner = pipeline
     try:
         runner.set_input(input_filename, file2=input_paired_filename,
-            fileformat=options.format, interleaved=is_interleaved_input)
+            fileformat=args.format, interleaved=is_interleaved_input)
         runner.set_output(outfiles)
     except (dnaio.UnknownFileFormat, IOError) as e:
         parser.error(e)
@@ -763,14 +776,14 @@ def main(cmdlineargs=None, default_outfile='-'):
         sys.exit("cutadapt: error: {}".format(e))
 
     elapsed = time.time() - start_time
-    if not options.quiet:
+    if not args.quiet:
         # send statistics to stderr if result was sent to stdout
-        stat_file = sys.stderr if options.output is None else None
+        stat_file = sys.stderr if args.output is None else None
         with redirect_standard_output(stat_file):
-            if options.report == 'minimal':
-                print_minimal_report(stats, elapsed, options.gc_content / 100)
+            if args.report == 'minimal':
+                print_minimal_report(stats, elapsed, args.gc_content / 100)
             else:
-                print_report(stats, elapsed, options.gc_content / 100)
+                print_report(stats, elapsed, args.gc_content / 100)
 
 
 if __name__ == '__main__':
