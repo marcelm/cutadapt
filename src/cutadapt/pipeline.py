@@ -266,7 +266,6 @@ class PairedEndPipeline(Pipeline):
         """
         super().__init__()
         self._pair_filter_mode = pair_filter_mode
-        self._add_both_called = False
         self._reader = None
 
     def add(self, modifier1, modifier2):
