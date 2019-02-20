@@ -251,6 +251,8 @@ def get_argument_parser():
             "adapter.")
     group.add_argument("-y", "--suffix", default='',
         help="Add this suffix to read names; can also include {name}")
+    group.add_argument("--zero-cap", "-z", action='store_true', default=False,
+        help="Change negative quality values to zero.")
 
     group = parser.add_argument_group("Filtering of processed reads",
         description="Filters are applied after above read modifications. "
@@ -270,8 +272,6 @@ def get_argument_parser():
         help="Discard reads that do not contain an adapter.")
     group.add_argument("--discard-casava", action='store_true', default=False,
         help="Discard reads that did not pass CASAVA filtering (header has :Y:).")
-    group.add_argument("--zero-cap", "-z", action='store_true', default=False,
-        help="Change negative quality values to zero.")
 
     group = parser.add_argument_group("Output")
     group.add_argument("--quiet", default=False, action='store_true',
