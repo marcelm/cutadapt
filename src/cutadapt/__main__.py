@@ -78,7 +78,11 @@ logger = logging.getLogger()
 
 
 class CutadaptArgumentParser(ArgumentParser):
-
+    """
+    This ArgumentParser customizes two things:
+    - The usage message is not prefixed with 'usage:'
+    - A brief message is shown on errors, not full usage
+    """
     class CustomUsageHelpFormatter(HelpFormatter):
         def add_usage(self, usage, actions, groups, prefix=None):
             if usage is not SUPPRESS:
