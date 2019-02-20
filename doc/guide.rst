@@ -1126,7 +1126,7 @@ The following table describes the effect for some filtering options.
 .. note::
 
     As an exception, when you specify adapters *only* for R1 (``-a``/``-g``/``-b``) or *only* for
-    R2 (``-A``/``-G``/``-B``), then the ``-pair-filter`` mode for ``--discard-untrimmed`` is
+    R2 (``-A``/``-G``/``-B``), then the ``--pair-filter`` mode for ``--discard-untrimmed`` is
     forced to be ``both`` (and accordingly, also for the ``--untrimmed-(paired-)output`` options).
 
     Otherwise, with the default ``--pair-filter=any`` setting, all pairs would be considered
