@@ -81,6 +81,25 @@ def test_untrimmed_paired_output():
             assert_files_equal(cutpath('paired-untrimmed.2.fastq'), untrimmed2)
 
 
+def test_untrimmed_paired_output_automatic_pair_filter():
+    # When no R2 adapters are given, --pair-filter should be ignored for
+    # --discard-untrimmed, --untrimmed-output, --untrimmed-paired-output
+    # and always be 'both' (with --pair-filter=any, all pairs would be
+    # considered untrimmed because the R1 read is always untrimmed)
+    with temporary_path("tmp-untrimmed.1.fastq") as untrimmed1:
+        with temporary_path("tmp-untrimmed.2.fastq") as untrimmed2:
+            run_paired(
+                ['-a', 'TTAGACATAT',
+                    '--untrimmed-output', untrimmed1,
+                    '--untrimmed-paired-output', untrimmed2],
+                in1='paired.1.fastq', in2='paired.2.fastq',
+                expected1='paired-trimmed.1.fastq', expected2='paired-trimmed.2.fastq',
+                cores=1
+            )
+            assert_files_equal(cutpath('paired-untrimmed.1.fastq'), untrimmed1)
+            assert_files_equal(cutpath('paired-untrimmed.2.fastq'), untrimmed2)
+
+
 def test_explicit_format_with_paired():
     # Use --format=fastq with input files whose extension is .txt
     with temporary_path("paired.1.txt") as txt1:

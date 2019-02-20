@@ -1123,6 +1123,16 @@ The following table describes the effect for some filtering options.
 | ``--max-n``                | one of the reads contains too many ``N`` bases | both reads contain too many ``N`` bases |
 +----------------------------+------------------------------------------------+-----------------------------------------+
 
+.. note::
+
+    As an exception, when you specify adapters *only* for R1 (``-a``/``-g``/``-b``) or *only* for
+    R2 (``-A``/``-G``/``-B``), then the ``-pair-filter`` mode for ``--discard-untrimmed`` is
+    forced to be ``both`` (and accordingly, also for the ``--untrimmed-(paired-)output`` options).
+
+    Otherwise, with the default ``--pair-filter=any`` setting, all pairs would be considered
+    untrimmed because it would always be the case that one of the reads in the pair does not contain
+    an adapter.
+
 These are the paired-end specific filtering and output options:
 
 ``--minimum-length LENGTH1:LENGTH2`` or ``-m LENGTH1:LENGTH2``

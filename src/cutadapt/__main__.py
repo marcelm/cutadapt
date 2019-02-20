@@ -264,10 +264,10 @@ def get_argument_parser():
         help="Discard reads longer than LEN. Default: no limit")
     group.add_argument("--max-n", type=float, default=None, metavar="COUNT",
         help="Discard reads with more than COUNT 'N' bases. If COUNT is a number "
-            "between 0 and 1, it is interpreted as a fraction of the read length.")
+             "between 0 and 1, it is interpreted as a fraction of the read length.")
     group.add_argument("--discard-trimmed", "--discard", action='store_true', default=False,
-        help="Discard reads that contain an adapter. Also use -O to avoid "
-            "discarding too many randomly matching reads!")
+        help="Discard reads that contain an adapter. Use also -O to avoid "
+            "discarding too many randomly matching reads.")
     group.add_argument("--discard-untrimmed", "--trimmed-only", action='store_true', default=False,
         help="Discard reads that do not contain an adapter.")
     group.add_argument("--discard-casava", action='store_true', default=False,
@@ -542,7 +542,7 @@ def input_files_from_parsed_args(inputs, paired, interleaved):
 
 def pipeline_from_parsed_args(args, paired, is_interleaved_output):
     """
-    Setup a processing pipeline from parsed command-line options.
+    Setup a processing pipeline from parsed command-line arguments.
 
     If there are any problems parsing the arguments, a CommandLineError is thrown.
 
@@ -613,12 +613,11 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
     else:
         pipeline = SingleEndPipeline()
 
-    if paired and not adapters2 and args.pair_filter is None and (
+    # When adapters are being trimmed only in R1 or R2, override the pair filter mode
+    # as using the default of 'any' would regard all read pairs as untrimmed.
+    if paired and (not adapters2 or not adapters) and (
             args.discard_untrimmed or args.untrimmed_output or args.untrimmed_paired_output):
-        pipeline.warnings.append(
-            "Option --discard-untrimmed or --untrimmed-(paired-)output used, but no adapters to "
-            "remove from R2 reads were given. This means that all read pairs will be regarded as "
-            "untrimmed! You probably want to use --pair-filter=first.")
+        pipeline.override_untrimmed_pair_filter = True
 
     for i, cut_arg in enumerate([args.cut, args.cut2]):
         # cut_arg is a list

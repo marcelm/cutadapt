@@ -151,16 +151,19 @@ class Pipeline:
             self._demultiplexer = self._create_demultiplexer(outfiles)
             self._filters.append(self._demultiplexer)
         else:
+            # Allow overriding the wrapper for --discard-untrimmed/--untrimmed-(paired-)output
+            untrimmed_filter_wrapper = self._untrimmed_filter_wrapper()
+
             # Set up the remaining filters to deal with --discard-trimmed,
             # --discard-untrimmed and --untrimmed-output. These options
             # are mutually exclusive in order to avoid brain damage.
             if self.discard_trimmed:
                 self._filters.append(filter_wrapper(None, DiscardTrimmedFilter(), DiscardTrimmedFilter()))
             elif self.discard_untrimmed:
-                self._filters.append(filter_wrapper(None, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
+                self._filters.append(untrimmed_filter_wrapper(None, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
             elif outfiles.untrimmed:
                 untrimmed_writer = self._open_writer(outfiles.untrimmed, outfiles.untrimmed2)
-                self._filters.append(filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
+                self._filters.append(untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
             self._filters.append(self._final_filter(outfiles))
 
     def close(self):
@@ -186,6 +189,9 @@ class Pipeline:
         raise NotImplementedError()
 
     def _filter_wrapper(self):
+        raise NotImplementedError()
+
+    def _untrimmed_filter_wrapper(self):
         raise NotImplementedError()
 
     def _final_filter(self, outfiles):
@@ -228,6 +234,9 @@ class SingleEndPipeline(Pipeline):
     def _filter_wrapper(self):
         return Redirector
 
+    def _untrimmed_filter_wrapper(self):
+        return Redirector
+
     def _final_filter(self, outfiles):
         writer = self._open_writer(outfiles.out, outfiles.out2)
         return NoFilter(writer)
@@ -267,6 +276,8 @@ class PairedEndPipeline(Pipeline):
         super().__init__()
         self._pair_filter_mode = pair_filter_mode
         self._reader = None
+        # Whether to gnore pair_filter mode for discard-untrimmed filter
+        self.override_untrimmed_pair_filter = False
 
     def add(self, modifier1, modifier2):
         """
@@ -302,8 +313,20 @@ class PairedEndPipeline(Pipeline):
                     break
         return (n, total1_bp, total2_bp)
 
-    def _filter_wrapper(self):
-        return functools.partial(PairedRedirector, pair_filter_mode=self._pair_filter_mode)
+    def _filter_wrapper(self, pair_filter_mode=None):
+        if pair_filter_mode is None:
+            pair_filter_mode = self._pair_filter_mode
+        return functools.partial(PairedRedirector, pair_filter_mode=pair_filter_mode)
+
+    def _untrimmed_filter_wrapper(self):
+        """
+        Return a different filter wrapper when adapters were given only for R1
+        or only for R2 (then override_untrimmed_pair_filter will be set)
+        """
+        if self.override_untrimmed_pair_filter:
+            return self._filter_wrapper(pair_filter_mode='both')
+        else:
+            return self._filter_wrapper()
 
     def _final_filter(self, outfiles):
         writer = self._open_writer(outfiles.out, outfiles.out2, interleaved=outfiles.interleaved)
