@@ -206,11 +206,9 @@ class SingleEndPipeline(Pipeline):
         self._modifiers = []
 
     def add(self, modifier):
+        if modifier is None:
+            raise ValueError("Modifier must not be None")
         self._modifiers.append(modifier)
-
-    def add1(self, modifier):
-        """An alias for the add() function. Makes the interface similar to PairedEndPipeline"""
-        self.add(modifier)
 
     def process_reads(self):
         """Run the pipeline. Return statistics"""
@@ -271,20 +269,21 @@ class PairedEndPipeline(Pipeline):
         self._add_both_called = False
         self._reader = None
 
-    def add(self, modifier):
+    def add(self, modifier1, modifier2):
         """
-        Add a modifier for R1 and R2. If modify_first_read_only is True,
-        the modifier is not added for R2.
+        Add a modifier for R1 and R2. One of them can be None, in which case the modifier
+        will only be added for the respective read.
         """
+        if modifier1 is None and modifier2 is None:
+            raise ValueError("Not both modifiers can be None")
+        self._modifiers.append(PairedModifier(modifier1, modifier2))
+
+    def add_both(self, modifier):
+        """
+        Add one modifier for both R1 and R2
+        """
+        assert modifier is not None
         self._modifiers.append(PairedModifier(modifier, copy.copy(modifier)))
-
-    def add1(self, modifier):
-        """Add a modifier for R1 only"""
-        self._modifiers.append(PairedModifier(modifier, None))
-
-    def add2(self, modifier):
-        """Add a modifier for R2 only"""
-        self._modifiers.append(PairedModifier(None, modifier))
 
     def process_reads(self):
         n = 0  # no. of processed reads

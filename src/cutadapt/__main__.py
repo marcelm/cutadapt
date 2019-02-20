@@ -620,43 +620,60 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
             "remove from R2 reads were given. This means that all read pairs will be regarded as "
             "untrimmed! You probably want to use --pair-filter=first.")
 
-    for add, cut in (('add1', args.cut), ('add2', args.cut2)):
-        if not cut:
+    for i, cut_arg in enumerate([args.cut, args.cut2]):
+        # cut_arg is a list
+        if not cut_arg:
             continue
-        if len(cut) > 2:
+        if len(cut_arg) > 2:
             raise CommandLineError("You cannot remove bases from more than two ends.")
-        if len(cut) == 2 and cut[0] * cut[1] > 0:
+        if len(cut_arg) == 2 and cut_arg[0] * cut_arg[1] > 0:
             raise CommandLineError("You cannot remove bases from the same end twice.")
-        for c in cut:
-            if c != 0:
-                getattr(pipeline, add)(UnconditionalCutter(c))
+        for c in cut_arg:
+            if c == 0:
+                continue
+            if i == 0:  # R1
+                if paired:
+                    pipeline.add(UnconditionalCutter(c), None)
+                else:
+                    pipeline.add(UnconditionalCutter(c))
+            else:
+                # R2
+                assert isinstance(pipeline, PairedEndPipeline)
+                pipeline.add(None, UnconditionalCutter(c))
+
+    pipeline_add = pipeline.add_both if paired else pipeline.add
 
     if args.nextseq_trim is not None:
-        pipeline.add(NextseqQualityTrimmer(args.nextseq_trim, args.quality_base))
+        pipeline_add(NextseqQualityTrimmer(args.nextseq_trim, args.quality_base))
     if args.quality_cutoff is not None:
         cutoffs = parse_cutoffs(args.quality_cutoff)
-        pipeline.add(QualityTrimmer(cutoffs[0], cutoffs[1], args.quality_base))
+        pipeline_add(QualityTrimmer(cutoffs[0], cutoffs[1], args.quality_base))
 
+    adapter_cutter, adapter_cutter2 = None, None
     if adapters:
         adapter_cutter = AdapterCutter(adapters, args.times, args.action)
-        pipeline.add1(adapter_cutter)
     if adapters2:
         adapter_cutter2 = AdapterCutter(adapters2, args.times, args.action)
-        pipeline.add2(adapter_cutter2)
+    if paired:
+        if adapter_cutter or adapter_cutter2:
+            pipeline.add(adapter_cutter, adapter_cutter2)
+    else:
+        if adapter_cutter:
+            pipeline.add(adapter_cutter)
 
-    # Modifiers that apply to both reads of paired-end reads
+    # Remaining modifiers that apply to both reads of paired-end reads
     if args.length is not None:
-        pipeline.add(Shortener(args.length))
+        pipeline_add(Shortener(args.length))
     if args.trim_n:
-        pipeline.add(NEndTrimmer())
+        pipeline_add(NEndTrimmer())
     if args.length_tag:
-        pipeline.add(LengthTagModifier(args.length_tag))
+        pipeline_add(LengthTagModifier(args.length_tag))
     for suffix in args.strip_suffix:
-        pipeline.add(SuffixRemover(suffix))
+        pipeline_add(SuffixRemover(suffix))
     if args.prefix or args.suffix:
-        pipeline.add(PrefixSuffixAdder(args.prefix, args.suffix))
+        pipeline_add(PrefixSuffixAdder(args.prefix, args.suffix))
     if args.zero_cap:
-        pipeline.add(ZeroCapper(quality_base=args.quality_base))
+        pipeline_add(ZeroCapper(quality_base=args.quality_base))
 
     # Set filtering parameters
     # Minimum/maximum length
