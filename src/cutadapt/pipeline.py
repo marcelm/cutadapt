@@ -262,15 +262,12 @@ class PairedEndPipeline(Pipeline):
     """
     paired = True
 
-    def __init__(self, pair_filter_mode, modify_first_read_only=False):
+    def __init__(self, pair_filter_mode):
         """
         Setting modify_first_read_only to True enables "legacy mode"
         """
         super().__init__()
-        # Legacy mode has been removed
-        assert not modify_first_read_only
         self._pair_filter_mode = pair_filter_mode
-        self._modify_first_read_only = modify_first_read_only
         self._add_both_called = False
         self._reader = None
 
@@ -279,10 +276,7 @@ class PairedEndPipeline(Pipeline):
         Add a modifier for R1 and R2. If modify_first_read_only is True,
         the modifier is not added for R2.
         """
-        if not self._modify_first_read_only:
-            self._modifiers.append(PairedModifier(modifier, copy.copy(modifier)))
-        else:
-            self._modifiers.append(PairedModifier(modifier, None))
+        self._modifiers.append(PairedModifier(modifier, copy.copy(modifier)))
 
     def add1(self, modifier):
         """Add a modifier for R1 only"""
@@ -290,7 +284,6 @@ class PairedEndPipeline(Pipeline):
 
     def add2(self, modifier):
         """Add a modifier for R2 only"""
-        assert not self._modify_first_read_only
         self._modifiers.append(PairedModifier(None, modifier))
 
     def process_reads(self):

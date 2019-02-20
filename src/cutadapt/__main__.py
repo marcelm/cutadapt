@@ -609,7 +609,7 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
     # Create the processing pipeline
     if paired:
         pair_filter_mode = 'any' if args.pair_filter is None else args.pair_filter
-        pipeline = PairedEndPipeline(pair_filter_mode, modify_first_read_only=False)
+        pipeline = PairedEndPipeline(pair_filter_mode)
     else:
         pipeline = SingleEndPipeline()
 
