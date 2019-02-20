@@ -70,7 +70,8 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
     NextseqQualityTrimmer, Shortener)
 from cutadapt.report import print_report, print_minimal_report, redirect_standard_output
-from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, OutputFiles, ParallelPipelineRunner
+from cutadapt.pipeline import (SingleEndPipeline, PairedEndPipeline, OutputFiles,
+    ParallelPipelineRunner)
 from cutadapt.utils import available_cpu_count
 
 logger = logging.getLogger()
@@ -230,8 +231,8 @@ def get_argument_parser():
             "FASTQ files. Default: %(default)s")
     group.add_argument("--length", "-l", type=int, default=None, metavar="LENGTH",
             help="Shorten reads to LENGTH. Positive values remove bases at the end "
-            "while negative ones remove bases at the beginning. This and the following modifications "
-            "are applied after adapter trimming.")
+            "while negative ones remove bases at the beginning. This and the "
+            "following modifications are applied after adapter trimming.")
     group.add_argument("--trim-n", action='store_true', default=False,
         help="Trim N's on ends of reads.")
     group.add_argument("--length-tag", metavar="TAG",
@@ -242,7 +243,8 @@ def get_argument_parser():
     group.add_argument("--strip-suffix", action='append', default=[],
         help="Remove this suffix from read names if present. Can be given multiple times.")
     group.add_argument("-x", "--prefix", default='',
-        help="Add this prefix to read names. Use {name} to insert the name of the matching adapter.")
+        help="Add this prefix to read names. Use {name} to insert the name of the matching "
+            "adapter.")
     group.add_argument("-y", "--suffix", default='',
         help="Add this suffix to read names; can also include {name}")
 
@@ -508,7 +510,8 @@ def input_files_from_parsed_args(inputs, paired, interleaved):
             "You did not provide any input file names. Please give me something to do!")
     elif len(inputs) > 2:
         raise CommandLineError(
-            "You provided {} input file names, but either one or two are expected. ".format(len(inputs))
+            "You provided {} input file names, but either one or two are expected. ".format(
+                len(inputs))
             + "The file names were:\n - "
             + "\n - ".join("{!r}".format(p) for p in inputs)
             + "\nHint: If your path contains spaces, you need to enclose it in quotes")
