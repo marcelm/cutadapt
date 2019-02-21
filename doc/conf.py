@@ -53,16 +53,14 @@ copyright = u'2010-2019, Marcel Martin'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-from cutadapt import __version__
-# The short X.Y version.
-version = __version__
-
+from pkg_resources import get_distribution
+release = get_distribution('cutadapt').version
 # Read The Docs modifies the conf.py script and we therefore get
-# version numbers like 0.7+0.g27d0d31.dirty from versioneer.
-if version.endswith('.dirty') and os.environ.get('READTHEDOCS') == 'True':
-	version, _, rest = version.partition('+')
-	if not rest.startswith('0.'):
-		version = version + '+' + rest[:-6]
+# version numbers like 0.12+0.g27d0d31
+if os.environ.get('READTHEDOCS') == 'True':
+    version = '.'.join(release.split('.')[:2])
+else:
+    version = release
 
 # The full version, including alpha/beta/rc tags.
 release = version
