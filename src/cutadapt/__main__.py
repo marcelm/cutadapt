@@ -149,6 +149,7 @@ def get_argument_parser():
         version=__version__)
     group.add_argument("--debug", action='store_true', default=False,
         help="Print debugging information.")
+    group.add_argument("--profile", action="store_true", default=False, help=SUPPRESS)
     group.add_argument("-f", "--format",
         help="Input file format ('fasta' or 'fastq'). Default: auto-detect.")
     group.add_argument('-j', '--cores', type=int, default=1,
@@ -710,6 +711,11 @@ def main(cmdlineargs=None, default_outfile='-'):
     if not logging.root.handlers:
         setup_logging(stdout=bool(args.output),
             quiet=args.quiet or args.report == 'minimal', debug=args.debug)
+    if args.profile:
+        import cProfile
+        profiler = cProfile.Profile()
+        profiler.enable()
+
     if args.quiet and args.report:
         parser.error("Options --quiet and --report cannot be used at the same time")
 
@@ -774,7 +780,6 @@ def main(cmdlineargs=None, default_outfile='-'):
 
     try:
         stats = runner.run()
-        # cProfile.runctx('stats=runner.run()', globals(), locals(), 'profile_main.prof')
         runner.close()
     except KeyboardInterrupt:
         print("Interrupted", file=sys.stderr)
@@ -795,6 +800,11 @@ def main(cmdlineargs=None, default_outfile='-'):
                 print_minimal_report(stats, elapsed, args.gc_content / 100)
             else:
                 print_report(stats, elapsed, args.gc_content / 100)
+
+    if args.profile:
+        import pstats
+        profiler.disable()
+        pstats.Stats(profiler).sort_stats('time').print_stats(20)
 
 
 if __name__ == '__main__':
