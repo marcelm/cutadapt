@@ -1,9 +1,8 @@
-from cutadapt.align import (locate, compare_prefixes, compare_suffixes,
-    Aligner)
+from cutadapt.align import (locate, Aligner, PrefixComparer, SuffixComparer)
 from cutadapt.adapters import Where
 
 
-class TestAligner():
+class TestAligner:
     def test(self):
         reference = 'CTCCAGCTTAGACATATC'
         aligner = Aligner(reference, 0.1, flags=Where.BACK.value)
@@ -45,6 +44,20 @@ WILDCARD_SEQUENCES = [
 ]
 
 
+def compare_prefixes(ref, query, wildcard_ref=False, wildcard_query=False):
+    aligner = PrefixComparer(
+        ref, max_error_rate=0.9, wildcard_ref=wildcard_ref, wildcard_query=wildcard_query)
+    print('ref=', ref, 'query=', query, aligner)
+    return aligner.locate(query)
+
+
+def compare_suffixes(ref, query, wildcard_ref=False, wildcard_query=False):
+    aligner = SuffixComparer(
+        ref, max_error_rate=0.9, wildcard_ref=wildcard_ref, wildcard_query=wildcard_query)
+    print('ref=', ref, 'query=', query, aligner)
+    return aligner.locate(query)
+
+
 def test_compare_prefixes():
     assert compare_prefixes('AAXAA', 'AAAAATTTTTTTTT') == (0, 5, 0, 5, 4, 1)
     assert compare_prefixes('AANAA', 'AACAATTTTTTTTT', wildcard_ref=True) == (0, 5, 0, 5, 5, 0)
@@ -81,6 +94,25 @@ def test_compare_suffixes():
     assert compare_suffixes('AANAA', 'TTTTTTTAACAA', wildcard_ref=True) == (0, 5, 7, 12, 5, 0)
     assert compare_suffixes('AANAA', 'TTTTTTTAACAA', wildcard_ref=True) == (0, 5, 7, 12, 5, 0)
     assert compare_suffixes('AAAAAX', 'TTTTTTTAAAAA') == (0, 6, 6, 12, 4, 2)
+
+
+def test_prefix_comparer():
+    # only need to test whether None is returned on too many errors, the rest is tested above
+    comparer = PrefixComparer('AXCGT', max_error_rate=0.4)
+    assert comparer.locate('TTG') is None
+    assert comparer.locate('AGT') is not None
+    assert comparer.locate('CGT') is None
+    assert comparer.locate('TTG') is None
+
+
+def test_suffix_comparer():
+    # only need to test whether None is returned on too many errors, the rest is tested above
+    comparer = SuffixComparer('AXCGT', max_error_rate=0.4)
+    assert comparer.locate('TTG') is None
+    assert comparer.locate('AGT') is not None
+    assert comparer.locate('CGT') is not None
+    assert comparer.locate('TTG') is None
+
 
 
 def test_wildcards_in_adapter():

@@ -507,48 +507,111 @@ cdef class Aligner:
         PyMem_Free(self.column)
 
 
-def compare_prefixes(str ref, str query, bint wildcard_ref=False, bint wildcard_query=False):
+cdef class PrefixComparer:
     """
-    Find out whether one string is the prefix of the other one, allowing
-    IUPAC wildcards in ref and/or query if the appropriate flag is set.
+    A version of the Aligner that is specialized in the following way:
 
-    This is used to find an anchored 5' adapter (type 'FRONT') in the 'no indels' mode.
-    This is very simple as only the number of errors needs to be counted.
+    - it does not allow indels
+    - it allows only 5' anchored adapters
 
-    This function returns a tuple compatible with what Aligner.locate outputs.
+    This is a separate class, not simply a function, in order to be able
+    to cache the reference (avoiding to convert it from str to bytes on
+    every invocation)
     """
     cdef:
-        int m = len(ref)
-        int n = len(query)
-        bytes query_bytes = query.encode('ascii')
-        bytes ref_bytes = ref.encode('ascii')
-        char* r_ptr
-        char* q_ptr
-        int length = min(m, n)
-        int i, matches = 0
-        bint compare_ascii = False
+        bytes reference
+        bint wildcard_ref
+        bint wildcard_query
+        int m
+        int max_k  # max. number of errors
 
-    if wildcard_ref:
-        ref_bytes = ref_bytes.translate(IUPAC_TABLE)
-    elif wildcard_query:
-        ref_bytes = ref_bytes.translate(ACGT_TABLE)
-    else:
-        compare_ascii = True
-    if wildcard_query:
-        query_bytes = query_bytes.translate(IUPAC_TABLE)
-    elif wildcard_ref:
-        query_bytes = query_bytes.translate(ACGT_TABLE)
+    # __init__ instead of __cinit__ because we need to override this in SuffixComparer
+    def __init__(
+        self,
+        str reference,
+        double max_error_rate,
+        bint wildcard_ref=False,
+        bint wildcard_query=False,
+    ):
+        self.wildcard_ref = wildcard_ref
+        self.wildcard_query = wildcard_query
+        self.m = len(reference)
+        if not (0 <= max_error_rate <= 1.):
+            raise ValueError("max_error_rate must be between 0 and 1")
+        self.max_k = int(max_error_rate * self.m)
+        self.reference = reference.encode('ascii')
+        if self.wildcard_ref:
+            self.reference = self.reference.translate(IUPAC_TABLE)
+        elif self.wildcard_query:
+            self.reference = self.reference.translate(ACGT_TABLE)
+        #else:
+            #self.compare_ascii = False
 
-    if compare_ascii:
-        for i in range(length):
-            if ref[i] == query[i]:
-                matches += 1
-    else:
-        r_ptr = ref_bytes
-        q_ptr = query_bytes
-        for i in range(length):
-            if (r_ptr[i] & q_ptr[i]) != 0:
-                matches += 1
+    def __repr__(self):
+        return "PrefixComparer(reference={!r}, max_k={}, wildcard_ref={}, "\
+            "wildcard_query={})".format(
+                self.reference, self.max_k, self.wildcard_ref,
+                self.wildcard_query)
 
-    # length - matches = no. of errors
-    return (0, length, 0, length, matches, length - matches)
+    def locate(self, str query):
+        """
+        Find out whether one string is the prefix of the other one, allowing
+        IUPAC wildcards in ref and/or query if the appropriate flag is set.
+
+        This is used to find an anchored 5' adapter (type 'FRONT') in the 'no indels' mode.
+        This is very simple as only the number of errors needs to be counted.
+
+        This function returns a tuple compatible with what Aligner.locate outputs.
+        """
+        cdef:
+            bytes query_bytes = query.encode('ascii')
+            char* r_ptr = self.reference
+            char* q_ptr = query_bytes
+            int i, matches = 0
+            int n = len(query_bytes)
+            int length = min(self.m, n)
+            bint compare_ascii = False
+            int errors
+
+        if self.wildcard_query:
+            query_bytes = query_bytes.translate(IUPAC_TABLE)
+            q_ptr = query_bytes
+        elif self.wildcard_ref:
+            query_bytes = query_bytes.translate(ACGT_TABLE)
+            q_ptr = query_bytes
+        else:
+            compare_ascii = True
+
+        if compare_ascii:
+            for i in range(length):
+                if r_ptr[i] == q_ptr[i]:
+                    matches += 1
+        else:
+            for i in range(length):
+                if (r_ptr[i] & q_ptr[i]) != 0:
+                    matches += 1
+
+        errors = length - matches
+        if errors > self.max_k:
+            return None
+        return (0, length, 0, length, matches, length - matches)
+
+
+cdef class SuffixComparer(PrefixComparer):
+
+    def __init__(
+        self,
+        str reference,
+        double max_error_rate,
+        bint wildcard_ref=False,
+        bint wildcard_query=False,
+    ):
+        super().__init__(reference[::-1], max_error_rate, wildcard_ref, wildcard_query)
+
+    def locate(self, str query):
+        cdef int n = len(query)
+        result = super().locate(query[::-1])
+        if result is None:
+            return None
+        _, length, _, _, matches, errors = result
+        return (self.m - length, self.m, n - length, n, matches, errors)

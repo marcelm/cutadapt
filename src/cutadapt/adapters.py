@@ -628,17 +628,21 @@ class Adapter:
         # Optimization: Use non-wildcard matching if only ACGT is used
         self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set('ACGT')
         self.read_wildcards = read_wildcards
-
-        self.aligner = align.Aligner(self.sequence, self.max_error_rate,
-            flags=self.where.value, wildcard_ref=self.adapter_wildcards,
-            wildcard_query=self.read_wildcards)
-        self.aligner.min_overlap = self.min_overlap
         self.indels = indels
-        if not self.indels:
-            # TODO
-            # When indels are disallowed, an entirely different algorithm
-            # should be used.
-            self.aligner.indel_cost = 100000
+        if self.is_anchored and not self.indels:
+            aligner_class = align.PrefixComparer if self.where is Where.PREFIX else align.SuffixComparer
+            self.aligner = aligner_class(self.sequence, self.max_error_rate,
+                wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
+        else:
+            self.aligner = align.Aligner(self.sequence, self.max_error_rate,
+                flags=self.where.value, wildcard_ref=self.adapter_wildcards,
+                wildcard_query=self.read_wildcards)
+            if not self.indels:
+                # TODO
+                # When indels are disallowed, an entirely different algorithm
+                # should be used.
+                self.aligner.indel_cost = 100000
+            self.aligner.min_overlap = self.min_overlap
 
     def __repr__(self):
         return '<Adapter(name={name!r}, sequence={sequence!r}, where={where}, '\
@@ -647,6 +651,7 @@ class Adapter:
             'adapter_wildcards={adapter_wildcards}, '\
             'indels={indels})>'.format(**vars(self))
 
+    @property
     def is_anchored(self):
         """Return whether this adapter is anchored"""
         return self.where in {Where.PREFIX, Where.SUFFIX}
@@ -667,7 +672,7 @@ class Adapter:
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        read_seq = read.sequence.upper()  # temporary copy
+        read_seq = read.sequence.upper()  # temporary copy  # TODO can we let the aligner take care of this?
         pos = -1
 
         # try to find an exact match first unless wildcards are allowed
@@ -685,27 +690,17 @@ class Adapter:
                 len(self.sequence), 0)
         else:
             # try approximate matching
-            if not self.indels and self.where in (Where.PREFIX, Where.SUFFIX):
-                if self.where is Where.PREFIX:
-                    alignment = align.compare_prefixes(self.sequence, read_seq,
-                        wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
-                else:
-                    alignment = align.compare_suffixes(self.sequence, read_seq,
-                        wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
-                astart, astop, rstart, rstop, matches, errors = alignment
-                if astop - astart >= self.min_overlap and errors / (astop - astart) <= self.max_error_rate:
-                    match_args = alignment
-                else:
-                    match_args = None
-            else:
-                alignment = self.aligner.locate(read_seq)
-                if self._debug:
+            alignment = self.aligner.locate(read_seq)
+            if self._debug:
+                try:
                     print(self.aligner.dpmatrix)  # pragma: no cover
-                if alignment is None:
-                    match_args = None
-                else:
-                    astart, astop, rstart, rstop, matches, errors = alignment
-                    match_args = (astart, astop, rstart, rstop, matches, errors)
+                except AttributeError:
+                    pass
+            if alignment is None:
+                match_args = None
+            else:
+                astart, astop, rstart, rstop, matches, errors = alignment
+                match_args = (astart, astop, rstart, rstop, matches, errors)
 
         if match_args is None:
             return None
