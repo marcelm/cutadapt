@@ -530,7 +530,7 @@ class AnywhereAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        alignment = self.aligner.locate(sequence)
+        alignment = self.aligner.locate(sequence.upper())
         if self._debug:
             print(self.aligner.dpmatrix)  # pragma: no cover
         if alignment is None:
@@ -552,6 +552,7 @@ class NonInternalFrontAdapter(FrontAdapter):
         return self._make_aligner(Where.FRONT_NOT_INTERNAL.value)
 
     def match_to(self, sequence: str):
+        # The locate function takes care of uppercasing the sequence
         alignment = self.aligner.locate(sequence)
         if self._debug:
             try:
@@ -572,6 +573,7 @@ class NonInternalBackAdapter(BackAdapter):
         return self._make_aligner(Where.BACK_NOT_INTERNAL.value)
 
     def match_to(self, sequence: str):
+        # The locate function takes care of uppercasing the sequence
         alignment = self.aligner.locate(sequence)
         if self._debug:
             try:
@@ -789,7 +791,6 @@ class IndexedAdapters(Adapter, ABC):
     method, but is faster with lots of adapters.
 
     There are quite a few restrictions:
-    - no indels are allowed
     - the error rate allows at most 2 mismatches
     - wildcards in the adapter are not allowed
     - wildcards in the read are not allowed
@@ -828,8 +829,6 @@ class IndexedAdapters(Adapter, ABC):
         if adapter.adapter_wildcards:
             raise ValueError("Wildcards in the adapter not supported")
         k = int(len(adapter) * adapter.max_error_rate)
-        if k > 0 and adapter.indels:
-            raise ValueError("Indels not allowed")
         if k > 2:
             raise ValueError("Error rate too high")
 
@@ -855,7 +854,8 @@ class IndexedAdapters(Adapter, ABC):
         for adapter in self._adapters:
             sequence = adapter.sequence
             k = int(adapter.max_error_rate * len(sequence))
-            for s, errors, matches in align.hamming_environment(sequence, k):
+            environment = align.edit_environment if adapter.indels else align.hamming_environment
+            for s, errors, matches in environment(sequence, k):
                 if s in index:
                     other_adapter, other_errors, other_matches = index[s]
                     if matches < other_matches:
@@ -881,6 +881,8 @@ class IndexedAdapters(Adapter, ABC):
         Match the adapters against a string and return a Match that represents
         the best match or None if no match was found
         """
+        original_sequence = sequence
+        sequence = sequence.upper()
         # Check all the prefixes or suffixes (affixes) that could match
         best_adapter = None  # type: Optional[SingleAdapter]
         best_length = 0
@@ -906,7 +908,7 @@ class IndexedAdapters(Adapter, ABC):
             return None
         else:
             assert best_adapter is not None
-            return self._make_match(best_adapter, best_length, best_m, best_e, sequence)
+            return self._make_match(best_adapter, best_length, best_m, best_e, original_sequence)
 
     def enable_debug(self):
         pass

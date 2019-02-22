@@ -336,3 +336,15 @@ def test_indexed_suffix_adapters_incorrect_type():
             SuffixAdapter("GAAC", indels=False),
             PrefixAdapter("TGCT", indels=False),
         ])
+
+
+def test_multi_prefix_adapter_with_indels():
+    adapters = [
+        PrefixAdapter("GTAC", max_errors=1, indels=True),
+        PrefixAdapter("TGCT", max_errors=1, indels=True),
+    ]
+    ma = IndexedPrefixAdapters(adapters)
+    match = ma.match_to("GATACGGG")
+    assert match.adapter is adapters[0]
+    match = ma.match_to("TAGCTAA")
+    assert match.adapter is adapters[1]
