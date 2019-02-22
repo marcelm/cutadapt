@@ -5,10 +5,15 @@ The ...Adapter classes are responsible for finding adapters.
 The ...Match classes trim the reads.
 """
 import re
+import logging
 from enum import Enum
 from collections import defaultdict
-from cutadapt import align
 from dnaio.readers import FastaReader
+
+from cutadapt import align
+from .align import hamming_environment
+
+logger = logging.getLogger()
 
 
 class Where(Enum):
@@ -24,6 +29,7 @@ class Where(Enum):
     BACK_NOT_INTERNAL = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
     ANYWHERE = align.SEMIGLOBAL
     LINKED = 'linked'
+
 
 # TODO put this in some kind of "list of pre-defined adapter types" along with the info above
 WHERE_TO_REMOVE_MAP = {
@@ -470,6 +476,7 @@ class Match:
     __slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'remove_before',
         'adapter', 'read', 'length', '_trimmed_read', 'adjacent_base']
 
+    # TODO Can remove_before be removed from the constructor parameters?
     def __init__(self, astart, astop, rstart, rstop, matches, errors, remove_before, adapter, read):
         """
         remove_before -- True: remove bases before adapter. False: remove after
@@ -859,3 +866,147 @@ class LinkedAdapter:
 
     def create_statistics(self):
         return AdapterStatistics(self.front_adapter, self.back_adapter, where=Where.LINKED)
+
+
+class MultiAdapter:
+    """
+    Represent multiple adapters of the same type at once and use an index data structure
+    to speed up matching. This acts like a "normal" Adapter as it provides a match_to
+    method, but should be faster.
+
+    There are quite a few restrictions:
+    - the adapters need to be either all PREFIX or all SUFFIX adapters
+    - no indels are allowed
+    - the error rate allows at most 2 mismatches
+    - wildcards in the adapter are not allowed
+    - wildcards in the read are not allowed
+
+    Use the is_acceptable() method to check individual adapters.
+    """
+
+    def __init__(self, adapters):
+        """All given adapters must be of the same type, either Where.PREFIX or Where.SUFFIX"""
+        if not adapters:
+            raise ValueError("Adapter list is empty")
+        self._where = adapters[0].where
+        for adapter in adapters:
+            self._accept(adapter)
+            if adapter.where is not self._where:
+                raise ValueError("All adapters must have identical 'where' attributes")
+        self._adapters = adapters
+        self._longest, self._index = self._make_index()
+
+    def __repr__(self):
+        return 'MultiAdapter(adapters={!r}, where={})'.format(self._adapters, self._where)
+
+    @staticmethod
+    def _accept(adapter):
+        """Raise a ValueError if the adapter is not acceptable"""
+        if adapter.where is not Where.PREFIX and adapter.where is not Where.SUFFIX:
+            raise ValueError("Only anchored adapter types are allowed")
+        if adapter.read_wildcards:
+            raise ValueError("Wildcards in the read not supported")
+        if adapter.adapter_wildcards:
+            raise ValueError("Wildcards in the adapter not supported")
+        if adapter.indels:
+            raise ValueError("Indels not allowed")
+        k = int(len(adapter) * adapter.max_error_rate)
+        if k > 2:
+            raise ValueError("Error rate too high")
+
+    @staticmethod
+    def is_acceptable(adapter):
+        """
+        Return whether this adapter is acceptable for being used by MultiAdapter
+
+        Adapters are not acceptable if they allow wildcards, allow too many errors,
+        or would lead to a very large index.
+        """
+        try:
+            MultiAdapter._accept(adapter)
+        except ValueError:
+            return False
+        return True
+
+    def _make_index(self):
+        logger.info('Building index of %s adapters ...', len(self._adapters))
+        index = dict()
+        longest = 0
+        has_warned = False
+        for adapter in self._adapters:
+            sequence = adapter.sequence
+            k = int(adapter.max_error_rate * len(sequence))
+            for s, errors, matches in hamming_environment(sequence, k):
+                if s in index:
+                    other_adapter, other_errors, other_matches = index[s]
+                    if matches < other_matches:
+                        continue
+                    if other_matches == matches and not has_warned:
+                        logger.warning(
+                            "Adapters %s %r and %s %r are very similar. At %s allowed errors, "
+                            "the sequence %r cannot be assigned uniquely because the number of "
+                            "matches is %s compared to both adapters.",
+                            other_adapter.name, other_adapter.sequence, adapter.name,
+                            adapter.sequence, k, s, matches
+                        )
+                        has_warned = True
+                else:
+                    index[s] = (adapter, errors, matches)
+                longest = max(longest, len(s))
+        logger.info('Built an index containing %s strings.', len(index))
+
+        return longest, index
+
+    def match_to(self, read):
+        """
+        Match the adapters against the read and return a Match that represents
+        the best match or None if no match was found
+        """
+        if self._where is Where.PREFIX:
+            def make_affix(n):
+                return read.sequence[:n]
+        else:
+            def make_affix(n):
+                return read.sequence[-n:]
+
+        # Check all the prefixes of the read that could match
+        best_adapter = None
+        best_length = 0
+        best_m = -1
+        best_e = 1000
+        # TODO do not go through all the lengths, only those that actually exist in the index
+        for length in range(self._longest, -1, -1):
+            if length < best_m:
+                # No chance of getting the same or a higher number of matches, so we can stop early
+                break
+
+            affix = make_affix(length)
+            try:
+                adapter, e, m = self._index[affix]
+            except KeyError:
+                continue
+            if m > best_m or (m == best_m and e < best_e):
+                best_adapter = adapter
+                best_e = e
+                best_m = m
+                best_length = length
+
+        if best_m == -1:
+            return None
+        else:
+            if self._where is Where.PREFIX:
+                rstart, rstop = 0, best_length
+            else:
+                assert self._where is Where.SUFFIX
+                rstart, rstop = len(read) - best_length, len(read)
+            return Match(
+                astart=0,
+                astop=len(best_adapter.sequence),
+                rstart=rstart,
+                rstop=rstop,
+                matches=best_m,
+                errors=best_e,
+                remove_before=best_adapter.remove == 'prefix',
+                adapter=best_adapter,
+                read=read
+            )

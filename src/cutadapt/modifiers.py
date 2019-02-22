@@ -6,6 +6,7 @@ __call__ method.
 import re
 from collections import OrderedDict
 from .qualtrim import quality_trim_index, nextseq_trim_index
+from .adapters import Where, MultiAdapter
 
 
 class PairedModifier:
@@ -44,16 +45,49 @@ class AdapterCutter:
 
         action -- What to do with a found adapter: None, 'trim', or 'mask'
         """
-        self.adapters = adapters
         self.times = times
         assert action in ('trim', 'mask', None)
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
 
+        prefix, suffix, other = self._split_adapters(adapters)
+        # For somewhat better backwards compatibility, avoid re-ordering
+        # the adapters when we don’t need to
+        if len(prefix) > 1 or len(suffix) > 1:
+            adapters = other
+            for affix in (prefix, suffix):
+                if len(affix) > 1:
+                    adapters.append(MultiAdapter(affix))
+                else:
+                    adapters.extend(affix)
+        self.adapters = adapters
+
     def __repr__(self):
         return 'AdapterCutter(adapters={!r}, times={}, action={!r})'.format(
             self.adapters, self.times, self.action)
+
+    @staticmethod
+    def _split_adapters(adapters):
+        """
+        Split adapters for MultiAdapter:
+        - acceptable anchored 5'
+        - acceptable anchored 3'
+        - other
+        """
+        prefix, suffix, other = [], [], []
+        for a in adapters:
+
+            if MultiAdapter.is_acceptable(a):
+                if a.where == Where.PREFIX:
+                    lst = prefix
+                else:
+                    assert a.where == Where.SUFFIX
+                    lst = suffix
+            else:
+                lst = other
+            lst.append(a)
+        return prefix, suffix, other
 
     def _best_match(self, read):
         """
@@ -61,9 +95,6 @@ class AdapterCutter:
 
         Return either a Match instance or None if there are no matches.
         """
-        # TODO
-        # try to sort adapters by length, longest first, break when current best
-        # match is longer than length of next adapter to try
         best_match = None
         for adapter in self.adapters:
             match = adapter.match_to(read)

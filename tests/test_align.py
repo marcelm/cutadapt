@@ -1,4 +1,12 @@
-from cutadapt.align import (Aligner, PrefixComparer, SuffixComparer)
+import pytest
+
+from cutadapt.align import (
+    Aligner,
+    PrefixComparer,
+    SuffixComparer,
+    hamming_sphere,
+    SEMIGLOBAL,
+)
 from cutadapt.adapters import Where
 
 
@@ -155,3 +163,50 @@ def test_wildcards_in_both():
 def test_no_match():
     a = locate('CTGATCTGGCCG', 'AAAAGGG', 0.1, Where.BACK.value)
     assert a is None, a
+
+
+def binomial(n, k):
+    """
+    Return binomial coefficient ('n choose k').
+    This implementation does not use factorials.
+    """
+    k = min(k, n - k)
+    if k < 0:
+        return 0
+    r = 1
+    for j in range(k):
+        r *= n - j
+        r //= j + 1
+    return r
+
+
+def test_hamming_sphere_explicit():
+    assert list(hamming_sphere('', 0)) == ['']
+    assert list(hamming_sphere('A', 0)) == ['A']
+    assert list(hamming_sphere('A', 1)) == ['C', 'G', 'T']
+    assert list(hamming_sphere('GTC', 0)) == ['GTC']
+    assert list(hamming_sphere('GTC', 1)) == [
+        'ATC', 'CTC', 'TTC', 'GAC', 'GCC', 'GGC', 'GTA', 'GTG', 'GTT']
+
+
+def hamming_distance(s, t):
+    return sum(1 if c != d else 0 for c, d in zip(s, t))
+
+
+@pytest.mark.parametrize("sk", [
+    ('', 0),
+    ('A', 0),
+    ('AAA', 1),
+    ('ACC', 2),
+    ('TCATTA', 3),
+    ('AAAAAAAA', 1),
+    ('A' * 15, 2),
+])
+def test_hamming_sphere(sk):
+    s, k = sk
+    result = list(hamming_sphere(s, k))
+    result_set = set(result)
+    assert len(result) == len(result_set)
+    assert len(result) == 3 ** k * binomial(len(s), k)
+    for t in result:
+        assert hamming_distance(s, t) == k

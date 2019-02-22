@@ -434,6 +434,14 @@ def test_multiple_prefix_adapters():
     run("-g ^GTACGGATTGTTCAGTA -g ^TATTAAGCTCATTC", "multiprefix.fasta", "multi.fasta")
 
 
+def test_multiple_prefix_adapters_noindels():
+    run("--no-indels -g ^GTACGGATTGTTCAGTA -g ^TATTAAGCTCATTC", "multiprefix.fasta", "multi.fasta")
+
+
+def test_multiple_suffix_adapters_noindels():
+    run("--no-indels -a CGTGATTATCTTGC$ -a CCTATTAGTGGTTGAAC$", "multisuffix.fasta", "multi.fasta")
+
+
 def test_max_n():
     run('--max-n 0', 'maxn0.fasta', 'maxn.fasta')
     run('--max-n 1', 'maxn1.fasta', 'maxn.fasta')
