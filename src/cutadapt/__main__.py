@@ -694,6 +694,16 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
     return pipeline
 
 
+def log_header(cmdlineargs):
+    """Print the "This is cutadapt ..." header"""
+
+    implementation = platform.python_implementation()
+    opt = ' (' + implementation + ')' if implementation != 'CPython' else ''
+    logger.info("This is cutadapt %s with Python %s%s", __version__,
+        platform.python_version(), opt)
+    logger.info("Command line parameters: %s", " ".join(cmdlineargs))
+
+
 def main(cmdlineargs=None, default_outfile='-'):
     """
     Main function that sets up a processing pipeline and runs it.
@@ -728,6 +738,8 @@ def main(cmdlineargs=None, default_outfile='-'):
     paired = determine_paired_mode(args)
     assert paired in (False, True)
 
+    # Print the header now because some of the functions below create logging output
+    log_header(cmdlineargs)
     try:
         is_interleaved_input, is_interleaved_output = determine_interleaved(args)
         input_filename, input_paired_filename = input_files_from_parsed_args(args.inputs,
@@ -768,18 +780,9 @@ def main(cmdlineargs=None, default_outfile='-'):
     except (dnaio.UnknownFileFormat, IOError) as e:
         parser.error(e)
 
-    implementation = platform.python_implementation()
-    opt = ' (' + implementation + ')' if implementation != 'CPython' else ''
-    logger.info("This is cutadapt %s with Python %s%s", __version__,
-        platform.python_version(), opt)
-    logger.info("Command line parameters: %s", " ".join(cmdlineargs))
-    for warning in pipeline.warnings:
-        logger.warning('\n' + '\n'.join(textwrap.wrap(warning)))
-
     logger.info("Processing reads on %d core%s in %s mode ...",
         cores, 's' if cores > 1 else '',
         {False: 'single-end', True: 'paired-end'}[pipeline.paired])
-
     try:
         stats = runner.run()
         runner.close()

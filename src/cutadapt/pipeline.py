@@ -97,7 +97,6 @@ class Pipeline(ABC):
         self._modifiers = []
         self._outfiles = None
         self._demultiplexer = None
-        self.warnings = []
 
         # Filter settings
         self._minimum_length = None
