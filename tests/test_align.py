@@ -48,21 +48,19 @@ WILDCARD_SEQUENCES = [
     'CVCVTTVATC',  # V=A|C|G
     'CCNATNGATC',  # N=A|C|G|T
     'CCCNTTNATC',  # N
-#   'CCCXTTXATC',  # X
+    # 'CCCXTTXATC',  # X
 ]
 
 
 def compare_prefixes(ref, query, wildcard_ref=False, wildcard_query=False):
     aligner = PrefixComparer(
         ref, max_error_rate=0.9, wildcard_ref=wildcard_ref, wildcard_query=wildcard_query)
-    print('ref=', ref, 'query=', query, aligner)
     return aligner.locate(query)
 
 
 def compare_suffixes(ref, query, wildcard_ref=False, wildcard_query=False):
     aligner = SuffixComparer(
         ref, max_error_rate=0.9, wildcard_ref=wildcard_ref, wildcard_query=wildcard_query)
-    print('ref=', ref, 'query=', query, aligner)
     return aligner.locate(query)
 
 
@@ -120,7 +118,6 @@ def test_suffix_comparer():
     assert comparer.locate('AGT') is not None
     assert comparer.locate('CGT') is not None
     assert comparer.locate('TTG') is None
-
 
 
 def test_wildcards_in_adapter():
