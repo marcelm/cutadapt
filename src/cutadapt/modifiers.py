@@ -57,7 +57,6 @@ class AdapterCutter(Modifier):
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
-
         prefix, suffix, other = self._split_adapters(adapters)
         # For somewhat better backwards compatibility, avoid re-ordering
         # the adapters when we don’t need to
@@ -77,14 +76,14 @@ class AdapterCutter(Modifier):
     @staticmethod
     def _split_adapters(adapters):
         """
-        Split adapters for MultiAdapter:
-        - acceptable anchored 5'
-        - acceptable anchored 3'
-        - other
+        Split adapters into three different categories so that they can possibly be used
+        with a MultiAdapter. Return a tuple (prefix, suffix, other), where
+        - prefix is a list of all anchored 5' adapters that MultiAdapter would accept
+        - suffix is a list of all anchored 3' adapters that MultiAdapter would accept
+        - other is a list of all remaining adapters.
         """
         prefix, suffix, other = [], [], []
         for a in adapters:
-
             if MultiAdapter.is_acceptable(a):
                 if a.where == Where.PREFIX:
                     lst = prefix
