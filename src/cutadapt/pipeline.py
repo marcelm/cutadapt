@@ -12,6 +12,7 @@ import traceback
 from xopen import xopen
 import dnaio
 
+from .utils import Progress
 from .modifiers import PairedModifier, Modifier
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
@@ -188,7 +189,8 @@ class Pipeline(ABC):
         return self._reader.delivers_qualities
 
     @abstractmethod
-    def process_reads(self):
+    # TODO progress shouldn’t be a parameter
+    def process_reads(self, progress: Progress=None):
         pass
 
     @abstractmethod
@@ -223,12 +225,14 @@ class SingleEndPipeline(Pipeline):
             raise ValueError("Modifier must not be None")
         self._modifiers.append(modifier)
 
-    def process_reads(self):
+    def process_reads(self, progress: Progress = None):
         """Run the pipeline. Return statistics"""
         n = 0  # no. of processed reads  # TODO turn into attribute
         total_bp = 0
         for read in self._reader:
             n += 1
+            if n % 10000 == 0 and progress:
+                progress.update(n)
             total_bp += len(read.sequence)
             matches = []
             for modifier in self._modifiers:
@@ -302,12 +306,14 @@ class PairedEndPipeline(Pipeline):
         assert modifier is not None
         self._modifiers.append(PairedModifier(modifier, copy.copy(modifier)))
 
-    def process_reads(self):
+    def process_reads(self, progress: Progress = None):
         n = 0  # no. of processed reads
         total1_bp = 0
         total2_bp = 0
         for read1, read2 in self._reader:
             n += 1
+            if n % 10000 == 0 and progress:
+                progress.update(n)
             total1_bp += len(read1.sequence)
             total2_bp += len(read2.sequence)
             matches1 = []
@@ -481,6 +487,7 @@ class WorkerProcess(Process):
                 processed_chunk = output.getvalue()
 
                 self._write_pipe.send(chunk_index)
+                self._write_pipe.send(n)  # no. of reads processed in this chunk
                 self._write_pipe.send_bytes(processed_chunk)
                 if self._orig_outfiles.out2 is not None:
                     output2.flush()
@@ -527,6 +534,7 @@ class PipelineRunner(ABC):
     """
     def __init__(self, pipeline):
         self._pipeline = pipeline
+        self._progress = Progress()
 
     @abstractmethod
     def run(self):
@@ -646,6 +654,7 @@ class ParallelPipelineRunner(PipelineRunner):
                 continue
             writers.append(OrderedChunkWriter(outfile))
         stats = None
+        n = 0  # A running total of the number of processed reads (for progress indicator)
         while connections:
             ready_connections = multiprocessing.connection.wait(connections)
             for connection in ready_connections:
@@ -677,6 +686,14 @@ class ParallelPipelineRunner(PipelineRunner):
                     logger.debug('%s', tb_str)
                     raise e
 
+                # No. of reads processed in this chunk
+                chunk_n = connection.recv()
+                if chunk_n == -2:
+                    e, tb_str = connection.recv()
+                    logger.debug('%s', tb_str)
+                    raise e
+                n += chunk_n
+                self._progress.update(n)
                 for writer in writers:
                     data = connection.recv_bytes()
                     writer.write(data, chunk_index)
@@ -685,6 +702,7 @@ class ParallelPipelineRunner(PipelineRunner):
         for w in workers:
             w.join()
         self._reader_process.join()
+        self._progress.stop(n)
         return stats
 
     def close(self):
@@ -705,7 +723,7 @@ class SerialPipelineRunner(PipelineRunner):
         self._pipeline.set_output(outfiles)
 
     def run(self):
-        (n, total1_bp, total2_bp) = self._pipeline.process_reads()
+        (n, total1_bp, total2_bp) = self._pipeline.process_reads(progress=self._progress)
         # TODO
         return Statistics().collect(n, total1_bp, total2_bp, self._pipeline._modifiers, self._pipeline._filters)
 
