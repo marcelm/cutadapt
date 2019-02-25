@@ -4,6 +4,7 @@ import sys
 import copy
 import logging
 import functools
+from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe, Queue
 import multiprocessing.connection
 import traceback
@@ -11,7 +12,7 @@ import traceback
 from xopen import xopen
 import dnaio
 
-from .modifiers import PairedModifier
+from .modifiers import PairedModifier, Modifier
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
@@ -19,6 +20,14 @@ from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, In
     PairedDemultiplexer)
 
 logger = logging.getLogger()
+
+
+class InputFiles:
+    def __init__(self, file1, file2=None, fileformat=None, interleaved=False):
+        self.file1 = file1
+        self.file2 = file2
+        self.fileformat = fileformat
+        self.interleaved = interleaved
 
 
 class OutputFiles:
@@ -74,13 +83,13 @@ class OutputFiles:
         yield self.wildcard
 
 
-class Pipeline:
+class Pipeline(ABC):
     """
     Processing pipeline that loops over reads and applies modifiers and filters
     """
     n_adapters = 0
 
-    def __init__(self, ):
+    def __init__(self):
         self._close_files = []
         self._reader = None
         self._filters = []
@@ -97,9 +106,9 @@ class Pipeline:
         self.discard_trimmed = False
         self.discard_untrimmed = False
 
-    def set_input(self, file1, file2=None, fileformat=None, interleaved=False):
-        self._reader = dnaio.open(file1, file2=file2, fileformat=fileformat,
-            interleaved=interleaved, mode='r')
+    def set_input(self, infiles: InputFiles):
+        self._reader = dnaio.open(infiles.file1, file2=infiles.file2, fileformat=infiles.fileformat,
+            interleaved=infiles.interleaved, mode='r')
 
     def _open_writer(self, file, file2, **kwargs):
         # TODO backwards-incompatible change (?) would be to use outfiles.interleaved
@@ -178,27 +187,25 @@ class Pipeline:
     def uses_qualities(self):
         return self._reader.delivers_qualities
 
-    def run(self):
-        (n, total1_bp, total2_bp) = self.process_reads()
-        # TODO
-        stats = Statistics()
-        stats.collect(n, total1_bp, total2_bp, self._modifiers, self._filters)
-        return stats
-
+    @abstractmethod
     def process_reads(self):
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def _filter_wrapper(self):
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def _untrimmed_filter_wrapper(self):
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def _final_filter(self, outfiles):
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def _create_demultiplexer(self, outfiles):
-        raise NotImplementedError()
+        pass
 
 
 class SingleEndPipeline(Pipeline):
@@ -462,8 +469,9 @@ class WorkerProcess(Process):
                 else:
                     output2 = None
 
+                infiles = InputFiles(input, input2, interleaved=self._interleaved_input)
                 outfiles = OutputFiles(out=output, out2=output2, interleaved=self._orig_outfiles.interleaved)
-                self._pipeline.set_input(input, input2, interleaved=self._interleaved_input)
+                self._pipeline.set_input(infiles)
                 self._pipeline.set_output(outfiles)
                 (n, bp1, bp2) = self._pipeline.process_reads()
                 cur_stats = Statistics()
@@ -515,7 +523,23 @@ class OrderedChunkWriter:
         return not self._chunks
 
 
-class ParallelPipelineRunner:
+class PipelineRunner(ABC):
+    """
+    A read processing pipeline
+    """
+    def __init__(self, pipeline):
+        self._pipeline = pipeline
+
+    @abstractmethod
+    def run(self):
+        pass
+
+    @abstractmethod
+    def close(self):
+        pass
+
+
+class ParallelPipelineRunner(PipelineRunner):
     """
     Run a Pipeline in parallel
 
@@ -538,8 +562,15 @@ class ParallelPipelineRunner:
     processed by that worker.
     """
 
-    def __init__(self, pipeline, n_workers, buffer_size=4*1024**2):
-        self._pipeline = pipeline
+    def __init__(
+        self,
+        pipeline: Pipeline,
+        infiles: InputFiles,
+        outfiles: OutputFiles,
+        n_workers: int,
+        buffer_size=4*1024**2
+    ):
+        super().__init__(pipeline)
         self._pipes = []  # the workers read from these
         self._reader_process = None
         self._outfiles = None
@@ -549,8 +580,10 @@ class ParallelPipelineRunner:
         self._n_workers = n_workers
         self._need_work_queue = Queue()
         self._buffer_size = buffer_size
+        self._assign_input(infiles.file1, infiles.file2, infiles.fileformat, infiles.interleaved)
+        self._assign_output(outfiles)
 
-    def set_input(self, file1, file2=None, fileformat=None,    interleaved=False):
+    def _assign_input(self, file1, file2=None, fileformat=None, interleaved=False):
         if self._reader_process is not None:
             raise RuntimeError('Do not call set_input more than once')
         assert fileformat is None
@@ -586,7 +619,7 @@ class ParallelPipelineRunner:
             and not outfiles.demultiplex
         )
 
-    def set_output(self, outfiles):
+    def _assign_output(self, outfiles):
         if not self.can_output_to(outfiles):
             raise ValueError()
         self._outfiles = outfiles
@@ -661,3 +694,24 @@ class ParallelPipelineRunner:
             # TODO do not use hasattr
             if f is not None and f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
                 f.close()
+
+
+class SerialPipelineRunner(PipelineRunner):
+    """
+    Run a Pipeline on a single core
+    """
+
+    def __init__(self, pipeline: Pipeline, infiles: InputFiles, outfiles: OutputFiles):
+        super().__init__(pipeline)
+        self._pipeline.set_input(infiles)
+        self._pipeline.set_output(outfiles)
+
+    def run(self):
+        (n, total1_bp, total2_bp) = self._pipeline.process_reads()
+        # TODO
+        stats = Statistics()
+        stats.collect(n, total1_bp, total2_bp, self._pipeline._modifiers, self._pipeline._filters)
+        return stats
+
+    def close(self):
+        self._pipeline.close()

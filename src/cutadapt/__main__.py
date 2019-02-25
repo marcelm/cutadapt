@@ -70,8 +70,8 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
     NextseqQualityTrimmer, Shortener)
 from cutadapt.report import print_report, print_minimal_report, redirect_standard_output
-from cutadapt.pipeline import (SingleEndPipeline, PairedEndPipeline, OutputFiles,
-    ParallelPipelineRunner)
+from cutadapt.pipeline import (SingleEndPipeline, PairedEndPipeline, InputFiles, OutputFiles,
+    SerialPipelineRunner, ParallelPipelineRunner)
 from cutadapt.utils import available_cpu_count
 
 logger = logging.getLogger()
@@ -746,7 +746,8 @@ def main(cmdlineargs=None, default_outfile='-'):
             ParallelPipelineRunner.can_output_to(outfiles)
             and args.format is None
         ):
-            runner = ParallelPipelineRunner(pipeline, cores, args.buffer_size)
+            runner_class = ParallelPipelineRunner
+            runner_kwargs = dict(n_workers=cores, buffer_size=args.buffer_size)
         else:
             logger.error('Running in parallel is currently not supported for '
                 'the given combination of command-line parameters.\nThese '
@@ -758,11 +759,12 @@ def main(cmdlineargs=None, default_outfile='-'):
                 'Omit --cores/-j to continue.')
             sys.exit(1)
     else:
-        runner = pipeline
-    try:
-        runner.set_input(input_filename, file2=input_paired_filename,
+        runner_class = SerialPipelineRunner
+        runner_kwargs = dict()
+    infiles = InputFiles(input_filename, file2=input_paired_filename,
             fileformat=args.format, interleaved=is_interleaved_input)
-        runner.set_output(outfiles)
+    try:
+        runner = runner_class(pipeline, infiles, outfiles, **runner_kwargs)
     except (dnaio.UnknownFileFormat, IOError) as e:
         parser.error(e)
 
