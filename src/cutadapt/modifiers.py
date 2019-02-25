@@ -4,6 +4,7 @@ A modifier must be callable and typically implemented as a class with a
 __call__ method.
 """
 import re
+from abc import ABC, abstractmethod
 from collections import OrderedDict
 from .qualtrim import quality_trim_index, nextseq_trim_index
 from .adapters import Where, MultiAdapter
@@ -32,7 +33,13 @@ class PairedModifier:
         return self._modifier1(read1, matches1), self._modifier2(read2, matches2)
 
 
-class AdapterCutter:
+class Modifier(ABC):
+    @abstractmethod
+    def __call__(self, read, matches):
+        pass
+
+
+class AdapterCutter(Modifier):
     """
     Repeatedly find one of multiple adapters in reads.
     The number of times the search is repeated is specified by the
@@ -166,7 +173,7 @@ class AdapterCutter:
         return trimmed_read
 
 
-class UnconditionalCutter:
+class UnconditionalCutter(Modifier):
     """
     A modifier that unconditionally removes the first n or the last n bases from a read.
 
@@ -183,7 +190,7 @@ class UnconditionalCutter:
             return read[:self.length]
 
 
-class LengthTagModifier:
+class LengthTagModifier(Modifier):
     """
     Replace "length=..." strings in read names.
     """
@@ -198,7 +205,7 @@ class LengthTagModifier:
         return read
 
 
-class SuffixRemover:
+class SuffixRemover(Modifier):
     """
     Remove a given suffix from read names.
     """
@@ -212,7 +219,7 @@ class SuffixRemover:
         return read
 
 
-class PrefixSuffixAdder:
+class PrefixSuffixAdder(Modifier):
     """
     Add a suffix and a prefix to read names
     """
@@ -228,7 +235,7 @@ class PrefixSuffixAdder:
         return read
 
 
-class ZeroCapper:
+class ZeroCapper(Modifier):
     """
     Change negative quality values of a read to zero
     """
@@ -242,7 +249,7 @@ class ZeroCapper:
         return read
 
 
-class NextseqQualityTrimmer:
+class NextseqQualityTrimmer(Modifier):
     def __init__(self, cutoff, base):
         self.cutoff = cutoff
         self.base = base
@@ -254,7 +261,7 @@ class NextseqQualityTrimmer:
         return read[:stop]
 
 
-class QualityTrimmer:
+class QualityTrimmer(Modifier):
     def __init__(self, cutoff_front, cutoff_back, base):
         self.cutoff_front = cutoff_front
         self.cutoff_back = cutoff_back
@@ -267,7 +274,7 @@ class QualityTrimmer:
         return read[start:stop]
 
 
-class Shortener:
+class Shortener(Modifier):
     """Unconditionally shorten a read to the given length
 
     If the length is positive, the bases are removed from the end of the read.
@@ -283,7 +290,7 @@ class Shortener:
             return read[self.length:]
 
 
-class NEndTrimmer:
+class NEndTrimmer(Modifier):
     """Trims Ns from the 3' and 5' end of reads"""
     def __init__(self):
         self.start_trim = re.compile(r'^N+')
