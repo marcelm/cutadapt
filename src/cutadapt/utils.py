@@ -12,11 +12,11 @@ def available_cpu_count():
     Adapted from http://stackoverflow.com/a/1006301/715090
     """
     try:
-        with open('/proc/self/status') as f:
+        with open("/proc/self/status") as f:
             status = f.read()
-        m = re.search(r'(?m)^Cpus_allowed:\s*(.*)$', status)
+        m = re.search(r"(?m)^Cpus_allowed:\s*(.*)$", status)
         if m:
-            res = bin(int(m.group(1).replace(',', ''), 16)).count('1')
+            res = bin(int(m.group(1).replace(",", ""), 16)).count("1")
             if res > 0:
                 return min(res, multiprocessing.cpu_count())
     except IOError:
