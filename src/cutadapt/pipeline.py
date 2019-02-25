@@ -474,8 +474,7 @@ class WorkerProcess(Process):
                 self._pipeline.set_input(infiles)
                 self._pipeline.set_output(outfiles)
                 (n, bp1, bp2) = self._pipeline.process_reads()
-                cur_stats = Statistics()
-                cur_stats.collect(n, bp1, bp2, [], self._pipeline._filters)
+                cur_stats = Statistics().collect(n, bp1, bp2, [], self._pipeline._filters)
                 stats += cur_stats
 
                 output.flush()
@@ -489,8 +488,7 @@ class WorkerProcess(Process):
                     self._write_pipe.send_bytes(processed_chunk2)
 
             m = self._pipeline._modifiers
-            modifier_stats = Statistics()
-            modifier_stats.collect(0, 0, 0 if self._pipeline.paired else None, m, [])
+            modifier_stats = Statistics().collect(0, 0, 0 if self._pipeline.paired else None, m, [])
             stats += modifier_stats
             self._write_pipe.send(-1)
             self._write_pipe.send(stats)
@@ -709,9 +707,7 @@ class SerialPipelineRunner(PipelineRunner):
     def run(self):
         (n, total1_bp, total2_bp) = self._pipeline.process_reads()
         # TODO
-        stats = Statistics()
-        stats.collect(n, total1_bp, total2_bp, self._pipeline._modifiers, self._pipeline._filters)
-        return stats
+        return Statistics().collect(n, total1_bp, total2_bp, self._pipeline._modifiers, self._pipeline._filters)
 
     def close(self):
         self._pipeline.close()

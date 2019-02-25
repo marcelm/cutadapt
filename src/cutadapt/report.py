@@ -116,6 +116,9 @@ class Statistics:
                     self.with_adapters[i] += modifier.with_adapters
                     self.adapter_stats[i] = list(modifier.adapter_statistics.values())
 
+        # For chaining
+        return self
+
     @property
     def total(self):
         return sum(self.total_bp)
