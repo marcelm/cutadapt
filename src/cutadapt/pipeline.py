@@ -11,7 +11,7 @@ import traceback
 from xopen import xopen
 import dnaio
 
-from .modifiers import ZeroCapper, PairedModifier
+from .modifiers import PairedModifier
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
