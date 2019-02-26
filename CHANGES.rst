@@ -21,7 +21,7 @@ development version
 * Some other performance optimizations were made. Speedups of up to 15%
   are possible.
 * Fix :issue:`354`: Sequences given using ``file:`` can now be unnamed.
-* Fix :issue:`257`: When only R1 or only R2 adapters are given, the
+* Fix :issue:`257` and :issue:`242`: When only R1 or only R2 adapters are given, the
   ``--pair-filter`` setting is now forced to ``both`` for the
   ``--discard-untrimmed`` (and ``--untrimmed-(paired-)output``) filters.
   Otherwise, with the default ``--pair-filter=any``, all pairs would be
