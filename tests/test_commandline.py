@@ -10,7 +10,7 @@ from io import StringIO
 import pytest
 
 from cutadapt.__main__ import main
-from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
+from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr
 
 
 # pytest.mark.timeout will not fail even if pytest-timeout is not installed
@@ -44,17 +44,17 @@ def test_lowercase():
     run('-b ttagacatatctccgtcg', 'lowercase.fastq', 'small.fastq')
 
 
-def test_rest():
+def test_rest(tmpdir):
     """-r/--rest-file"""
-    with temporary_path('rest.tmp') as rest_tmp:
-        run(['-b', 'ADAPTER', '-N', '-r', rest_tmp], "rest.fa", "rest.fa")
-        assert_files_equal(datapath('rest.txt'), rest_tmp)
+    rest = str(tmpdir.join("rest.tmp"))
+    run(['-b', 'ADAPTER', '-N', '-r', rest], "rest.fa", "rest.fa")
+    assert_files_equal(datapath('rest.txt'), rest)
 
 
-def test_restfront():
-    with temporary_path("rest.txt") as path:
-        run(['-g', 'ADAPTER', '-N', '-r', path], "restfront.fa", "rest.fa")
-        assert_files_equal(datapath('restfront.txt'), path)
+def test_restfront(tmpdir):
+    path = str(tmpdir.join("rest.txt"))
+    run(['-g', 'ADAPTER', '-N', '-r', path], "restfront.fa", "rest.fa")
+    assert_files_equal(datapath('restfront.txt'), path)
 
 
 def test_discard():
@@ -208,18 +208,19 @@ def test_read_wildcard():
     run("--match-read-wildcards -b ACGTACGT", "wildcard.fa", "wildcard.fa")
 
 
-def test_adapter_wildcard():
+@pytest.mark.parametrize("adapter_type,expected", [
+    ("-a", "wildcard_adapter.fa"),
+    ("-b", "wildcard_adapter_anywhere.fa"),
+])
+def test_adapter_wildcard(adapter_type, expected, tmpdir):
     """wildcards in adapter"""
-    for adapter_type, expected in (
-            ("-a", "wildcard_adapter.fa"),
-            ("-b", "wildcard_adapter_anywhere.fa")):
-        with temporary_path("wildcardtmp.txt") as wildcardtmp:
-            run("--wildcard-file {0} {1} ACGTNNNACGT".format(wildcardtmp, adapter_type),
-                expected, "wildcard_adapter.fa")
-            with open(wildcardtmp) as wct:
-                lines = wct.readlines()
-            lines = [ line.strip() for line in lines ]
-            assert lines == ['AAA 1', 'GGG 2', 'CCC 3b', 'TTT 4b']
+    wildcard_path = str(tmpdir.join("wildcards.txt"))
+    run("--wildcard-file {} {} ACGTNNNACGT".format(wildcard_path, adapter_type),
+        expected, "wildcard_adapter.fa")
+    with open(wildcard_path) as wct:
+        lines = wct.readlines()
+    lines = [line.strip() for line in lines]
+    assert lines == ["AAA 1", "GGG 2", "CCC 3b", "TTT 4b"]
 
 
 def test_wildcard_N():
@@ -282,37 +283,37 @@ def test_ellipsis_notation():
     run('-a ...TTAGACATAT -g GAGATTGCCA --no-indels', 'no_indels.fasta', 'no_indels.fasta')
 
 
-def test_issue_46():
+def test_issue_46(tmpdir):
     """issue 46 - IndexError with --wildcard-file"""
-    with temporary_path("wildcardtmp.txt") as wildcardtmp:
-        run("--anywhere=AACGTN --wildcard-file={0}".format(wildcardtmp), "issue46.fasta", "issue46.fasta")
+    run("--anywhere=AACGTN --wildcard-file={}".format(
+        tmpdir.join("wildcards.txt")), "issue46.fasta", "issue46.fasta")
 
 
 def test_strip_suffix():
     run("--strip-suffix _sequence -a XXXXXXX", "stripped.fasta", "simple.fasta")
 
 
-def test_info_file():
+def test_info_file(tmpdir):
     # The true adapter sequence in the illumina.fastq.gz data set is
-    # GCCTAACTTCTTAGACTGCCTTAAGGACGT (fourth base is different)
-    #
-    with temporary_path("infotmp.txt") as infotmp:
-        run(["--info-file", infotmp, '-a', 'adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT'],
-            "illumina.fastq", "illumina.fastq.gz")
-        assert_files_equal(cutpath('illumina.info.txt'), infotmp)
+    # GCCTAACTTCTTAGACTGCCTTAAGGACGT (fourth base is different from the sequence shown here)
+    info_path = str(tmpdir.join("info.txt"))
+    run(["--info-file", info_path, "-a", "adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT"],
+        "illumina.fastq", "illumina.fastq.gz")
+    assert_files_equal(cutpath("illumina.info.txt"), info_path)
 
 
-def test_info_file_times():
-    with temporary_path("infotmp.txt") as infotmp:
-        run(["--info-file", infotmp, '--times', '2', '-a', 'adapt=GCCGAACTTCTTA',
-            '-a', 'adapt2=GACTGCCTTAAGGACGT'], "illumina5.fastq", "illumina5.fastq")
-        assert_files_equal(cutpath('illumina5.info.txt'), infotmp)
+def test_info_file_times(tmpdir):
+    info_path = str(tmpdir.join("info.txt"))
+    run(["--info-file", info_path, "--times", "2", "-a", "adapt=GCCGAACTTCTTA",
+        "-a", "adapt2=GACTGCCTTAAGGACGT"], "illumina5.fastq", "illumina5.fastq")
+    assert_files_equal(cutpath('illumina5.info.txt'), info_path)
 
 
-def test_info_file_fasta():
-    with temporary_path("infotmp.txt") as infotmp:
-        # Just make sure that it runs
-        run(['--info-file', infotmp, '-a', 'TTAGACATAT', '-g', 'GAGATTGCCA', '--no-indels'], 'no_indels.fasta', 'no_indels.fasta')
+def test_info_file_fasta(tmpdir):
+    info_path = str(tmpdir.join("info.txt"))
+    # Just make sure that it runs
+    run(["--info-file", info_path, "-a", "TTAGACATAT", "-g", "GAGATTGCCA", "--no-indels"],
+        "no_indels.fasta", "no_indels.fasta")
 
 
 def test_named_adapter():
@@ -386,10 +387,10 @@ def test_unconditional_cut_both():
     run('-u -5 -u 5', 'unconditional-both.fastq', 'small.fastq')
 
 
-def test_untrimmed_output():
-    with temporary_path('untrimmed.tmp.fastq') as tmp:
-        run(['-a', 'TTAGACATATCTCCGTCG', '--untrimmed-output', tmp], 'small.trimmed.fastq', 'small.fastq')
-        assert_files_equal(cutpath('small.untrimmed.fastq'), tmp)
+def test_untrimmed_output(tmpdir):
+    path = str(tmpdir.join("untrimmed.fastq"))
+    run(["-a", "TTAGACATATCTCCGTCG", "--untrimmed-output", path], "small.trimmed.fastq", "small.fastq")
+    assert_files_equal(cutpath("small.untrimmed.fastq"), path)
 
 
 def test_adapter_file():
