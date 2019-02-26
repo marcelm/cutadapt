@@ -12,7 +12,12 @@ import pytest
 from cutadapt.__main__ import main
 from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr, temporary_path
 
-import pytest_timeout as _unused
+
+# pytest.mark.timeout will not fail even if pytest-timeout is not installed
+try:
+    import pytest_timeout as _unused
+except ImportError:
+    raise ImportError("pytest_timeout needs to be installed")
 del _unused
 
 
