@@ -185,7 +185,7 @@ Paired-end read name check
 
 When reading paired-end files, Cutadapt checks whether the read names match.
 Only the part of the read name before the first space is considered. If the
-read name ends with ``/1`` or ``/2``, then that is also ignored. For example,
+read name ends with ``1`` or ``2``, then that is also ignored. For example,
 two FASTQ headers that would be considered to denote properly paired reads are::
 
     @my_read/1 a comment
@@ -202,9 +202,34 @@ and::
 
     @my_read/2;1
 
-Since the ``/1`` and ``/2`` are ignored only if the occur at the end of the read
+Since the ``1`` and ``2`` are ignored only if the occur at the end of the read
 name, and since the ``;1`` is considered to be part of the read name, these
 reads will not be considered to be propely paired.
+
+
+Rescuing single reads from paired-end reads that were filtered
+--------------------------------------------------------------
+
+When trimming and filtering paired-end reads, Cutadapt always discards entire read pairs. If you
+want to keep one of the reads, you need to write the filtered read pairs to an output file and
+postprocess it.
+
+For example, assume you are using ``-m 30`` to discard too short reads. Cutadapt discards all
+read pairs in which just one of the reads is too short (but see the ``--pair-filter`` option).
+To recover those (individual) reads that are long enough, you can first use the
+``--too-short-(paired)-output`` options to write the filtered pairs to a file, and then postprocess
+those files to keep only the long enough reads.
+
+
+    cutadapt -m 30 -q 20 -o out.1.fastq.gz -p out.2.fastq.gz --too-short-output=tooshort.1.fastq.gz --too-short-paired-output=tooshort.2.fastq.gz in.1.fastq.gz in.2.fastq.gz
+    cutadapt -m 30 -o rescued.a.fastq.gz tooshort.1.fastq.gz
+    cutadapt -m 30 -o rescued.b.fastq.gz tooshort.2.fastq.gz
+
+The two output files ``rescued.a.fastq.gz`` and ``rescued.b.fastq.gz`` contain those individual
+reads that are long enough. Note that the file names do not end in ``.1.fastq.gz`` and
+``.2.fastq.gz`` to make it very clear that these files no longer contain synchronized paired-end
+reads.
+
 
 Other things (unfinished)
 -------------------------
