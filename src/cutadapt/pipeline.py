@@ -723,6 +723,8 @@ class SerialPipelineRunner(PipelineRunner):
 
     def run(self):
         (n, total1_bp, total2_bp) = self._pipeline.process_reads(progress=self._progress)
+        if self._progress:
+            self._progress.stop(n)
         # TODO
         return Statistics().collect(n, total1_bp, total2_bp, self._pipeline._modifiers, self._pipeline._filters)
 
