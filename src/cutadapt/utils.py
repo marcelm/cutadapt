@@ -48,6 +48,22 @@ class Progress:
         # Time at which the progress was last updated
         self._time = time.time()
         self._start_time = self._time
+        self._animation = self.scissors()
+
+    @staticmethod
+    def scissors(width=10):
+        while True:
+            for is_reverse, rang in [(False, range(width + 1)), (True, range(width + 1))]:
+                for position in rang:
+                    for is_open in (True, False):
+                        left = " " * position
+                        right = "-" * (width - position)
+                        if is_reverse:
+                            sc = ">8" if is_open else "=8"
+                            left, right = right, left
+                        else:
+                            sc = "8<" if is_open else "8="
+                        yield "[" + left + sc + right + "]"
 
     def do_nothing(self, total, _force=False):
         pass
@@ -74,10 +90,13 @@ class Progress:
         per_item = time_delta / delta
 
         print(
-            "\r{hours:02d}:{minutes:02d}:{seconds:02d} "
-            "{total:12,d} reads   @   {per_item:6.0F} us/read; {per_minute:7.2F} M reads/minute".format(
+            "\r"
+            "{animation} {hours:02d}:{minutes:02d}:{seconds:02d} "
+            "{total:12,d} reads   @   {per_item:6.0F} us/read; {per_minute:7.2F} M reads/minute  "
+            "".format(
                 hours=hours, minutes=minutes, seconds=seconds,
-                total=total, per_item=per_item * 1E6, per_minute=per_second * 60 / 1E6),
+                total=total, per_item=per_item * 1E6, per_minute=per_second * 60 / 1E6,
+                animation=next(self._animation)),
             end="", file=sys.stderr
         )
         self._n = total
