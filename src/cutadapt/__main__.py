@@ -150,16 +150,18 @@ def get_argument_parser():
     group.add_argument("--debug", action='store_true', default=False,
         help="Print debugging information.")
     group.add_argument("--profile", action="store_true", default=False, help=SUPPRESS)
-    group.add_argument("-f", "--format",
-        help="Input file format ('fasta' or 'fastq'). Default: auto-detect.")
     group.add_argument('-j', '--cores', type=int, default=1,
         help='Number of CPU cores to use. Use 0 to auto-detect. Default: %(default)s')
 
     # Hidden options
-    group.add_argument("--gc-content", type=float, default=50,  # it's a percentage
+    # GC content as a percentage
+    group.add_argument("--gc-content", type=float, default=50,
         help=SUPPRESS)
+    # Buffer size for the reader process when running in parallel
     group.add_argument("--buffer-size", type=int, default=4000000,
-        help=SUPPRESS)  # buffer size for the reader process when running in parallel
+        help=SUPPRESS)
+    # The input format is always auto-detected
+    group.add_argument("-f", "--format", help=SUPPRESS)
 
     group = parser.add_argument_group("Finding adapters",
         description="Parameters -a, -g, -b specify adapters to be removed from "
@@ -574,9 +576,9 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
             raise CommandLineError("When using --too-long-output with paired-end "
                 "reads, you also need to use --too-long-paired-output")
 
-    if args.format is not None and args.format.lower() not in ['fasta', 'fastq']:
-        raise CommandLineError("The input file format must be 'fasta' or 'fastq', "
-            "not '{}'.".format(args.format))
+    if args.format is not None:
+        logger.warning("Option --format is deprecated and ignored because the input file format is "
+            "always auto-detected")
 
     if not (0 <= args.error_rate <= 1.):
         raise CommandLineError("The maximum error rate must be between 0 and 1.")
@@ -754,10 +756,7 @@ def main(cmdlineargs=None, default_outfile='-'):
         parser.error('Value for --cores cannot be negative')
     cores = available_cpu_count() if args.cores == 0 else args.cores
     if cores > 1:
-        if (
-            ParallelPipelineRunner.can_output_to(outfiles)
-            and args.format is None
-        ):
+        if ParallelPipelineRunner.can_output_to(outfiles):
             runner_class = ParallelPipelineRunner
             runner_kwargs = dict(n_workers=cores, buffer_size=args.buffer_size)
         else:
@@ -774,7 +773,7 @@ def main(cmdlineargs=None, default_outfile='-'):
         runner_class = SerialPipelineRunner
         runner_kwargs = dict()
     infiles = InputFiles(input_filename, file2=input_paired_filename,
-            fileformat=args.format, interleaved=is_interleaved_input)
+            interleaved=is_interleaved_input)
     try:
         runner = runner_class(pipeline, infiles, outfiles, **runner_kwargs)
     except (dnaio.UnknownFileFormat, IOError) as e:

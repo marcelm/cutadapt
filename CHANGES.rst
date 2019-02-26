@@ -27,6 +27,10 @@ development version
   Otherwise, with the default ``--pair-filter=any``, all pairs would be
   considered untrimmed because one of the reads in the pair is always
   untrimmed.
+* :issue:`359`: The ``-f``/``--format`` option is now ignored and a warning
+  will be printed if it is used. The input file format is always
+  auto-detected.
+
 
 Backwards-incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

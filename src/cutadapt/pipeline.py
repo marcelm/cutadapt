@@ -24,10 +24,9 @@ logger = logging.getLogger()
 
 
 class InputFiles:
-    def __init__(self, file1, file2=None, fileformat=None, interleaved=False):
+    def __init__(self, file1, file2=None, interleaved=False):
         self.file1 = file1
         self.file2 = file2
-        self.fileformat = fileformat
         self.interleaved = interleaved
 
 
@@ -107,7 +106,7 @@ class Pipeline(ABC):
         self.discard_untrimmed = False
 
     def set_input(self, infiles: InputFiles):
-        self._reader = dnaio.open(infiles.file1, file2=infiles.file2, fileformat=infiles.fileformat,
+        self._reader = dnaio.open(infiles.file1, file2=infiles.file2,
             interleaved=infiles.interleaved, mode='r')
 
     def _open_writer(self, file, file2, **kwargs):
@@ -585,13 +584,12 @@ class ParallelPipelineRunner(PipelineRunner):
         self._n_workers = n_workers
         self._need_work_queue = Queue()
         self._buffer_size = buffer_size
-        self._assign_input(infiles.file1, infiles.file2, infiles.fileformat, infiles.interleaved)
+        self._assign_input(infiles.file1, infiles.file2, infiles.interleaved)
         self._assign_output(outfiles)
 
-    def _assign_input(self, file1, file2=None, fileformat=None, interleaved=False):
+    def _assign_input(self, file1, file2=None, interleaved=False):
         if self._reader_process is not None:
             raise RuntimeError('Do not call set_input more than once')
-        assert fileformat is None
         self._input_path1 = file1 if type(file1) is str else file1.name
         self._input_path2 = file2 if type(file2) is str or file2 is None else file2.name
         self._interleaved_input = interleaved
