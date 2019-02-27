@@ -320,7 +320,7 @@ class AdapterParser:
             elif not spec2:
                 if cmdline_type == 'back':  # -a ADAPTER...
                     cmdline_type = 'front'
-                    spec = '^' + spec1
+                    spec = spec1
                 else:  # -g ADAPTER...
                     spec = spec1
             else:

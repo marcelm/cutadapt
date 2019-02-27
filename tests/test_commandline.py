@@ -260,7 +260,7 @@ def test_anchored_front():
 
 
 def test_anchored_front_ellipsis_notation():
-    run("-a FRONTADAPT... -N", "anchored.fasta", "anchored.fasta")
+    run("-a ^FRONTADAPT... -N", "anchored.fasta", "anchored.fasta")
 
 
 def test_anchored_back():
