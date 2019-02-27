@@ -3,7 +3,7 @@ import pytest
 
 from dnaio import Sequence
 from cutadapt.adapters import (Adapter, Match, Where,
-    expand_braces, LinkedAdapter, AdapterStatistics, AdapterParser)
+    expand_braces, LinkedAdapter, AdapterStatistics, AdapterParser, AdapterSpecification)
 
 
 def test_issue_52():
@@ -219,19 +219,19 @@ def test_parse_file_notation(tmpdir):
 
 
 def test_parse_not_linked():
-    p = AdapterParser._parse_not_linked
-    assert p('A', 'front') == (None, None, 'A', {})
-    assert p('A', 'back') == (None, None, 'A', {})
-    assert p('A', 'anywhere') == (None, None, 'A', {})
-    assert p('^A', 'front') == (None, 'anchored', 'A', {})
-    assert p('XXXA', 'front') == (None, 'noninternal', 'A', {})
-    assert p('A$', 'back') == (None, 'anchored', 'A', {})
-    assert p('AXXXX', 'back') == (None, 'noninternal', 'A', {})
-    assert p('a_name=ADAPT', 'front') == ('a_name', None, 'ADAPT', {})
+    p = AdapterSpecification.parse
+    assert p('A', 'front') == AdapterSpecification(None, None, 'A', {}, 'front')
+    assert p('A', 'back') == AdapterSpecification(None, None, 'A', {}, 'back')
+    assert p('A', 'anywhere') == AdapterSpecification(None, None, 'A', {}, 'anywhere')
+    assert p('^A', 'front') == AdapterSpecification(None, 'anchored', 'A', {}, 'front')
+    assert p('XXXA', 'front') == AdapterSpecification(None, 'noninternal', 'A', {}, 'front')
+    assert p('A$', 'back') == AdapterSpecification(None, 'anchored', 'A', {}, 'back')
+    assert p('AXXXX', 'back') == AdapterSpecification(None, 'noninternal', 'A', {}, 'back')
+    assert p('a_name=ADAPT', 'front') == AdapterSpecification('a_name', None, 'ADAPT', {}, 'front')
 
 
 def test_parse_parameters():
-    p = AdapterParser._parse_parameters
+    p = AdapterSpecification._parse_parameters
     assert p('e=0.1') == {'max_error_rate': 0.1}
     assert p('error_rate=0.1') == {'max_error_rate': 0.1}
     assert p('o=5') == {'min_overlap': 5}

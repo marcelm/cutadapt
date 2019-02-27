@@ -83,14 +83,49 @@ def expand_braces(sequence):
     return result
 
 
-class AdapterParser:
+class AdapterSpecification:
     """
-    Factory for Adapter classes that all use the same default parameters (error rate,
-    indels etc.). The given **kwargs will be passed to the Adapter constructors.
+    Description of a single adapter. This represents the same information that would be
+    given on the commandline through an option such as -a, but does not handle linked
+    adapters on also not the file: syntax.
+
+    These are the attributes:
+
+    - name (None or str)
+    - restriction (None, 'anchored', or 'noninternal')
+    - sequence (nucleotide sequence as string)
+    - parameters (dict with extra parameters such as 'max_error_rate', 'min_overlap')
+    - cmdline_type ('front' for -a, 'back' for -g and 'anywhere' for -b)
+
+    >>> AdapterSpecification.parse('a_name=ACGT;anywhere', 'back')
+    AdapterSpecification(name='a_name', restriction=None, sequence='ACGT', parameters={'anywhere': True}, cmdline_type='back')
     """
-    def __init__(self, **kwargs):
-        # kwargs: max_error_rate, min_overlap, read_wildcards, adapter_wildcards, indels
-        self.default_parameters = kwargs
+
+    def __init__(self, name, restriction, sequence, parameters, cmdline_type):
+        self.name = name
+        self.restriction = restriction
+        self.sequence = sequence
+        self.parameters = parameters
+        self.cmdline_type = cmdline_type
+
+    @classmethod
+    def parse(cls, spec: str, cmdline_type: str):
+        """Factory for creating an instance from a string specification"""
+
+        name, restriction, sequence, parameters = cls._parse(spec, cmdline_type)
+        return cls(name, restriction, sequence, parameters, cmdline_type)
+
+    def __repr__(self):
+        return '{}(name={!r}, restriction={!r}, sequence={!r}, parameters={!r}, cmdline_type={!r})'.format(
+            self.__class__.__name__, self.name, self.restriction, self.sequence, self.parameters, self.cmdline_type)
+
+    def __eq__(self, other):
+        return (self.name == other.name
+            and self.restriction == other.restriction
+            and self.sequence == other.sequence
+            and self.parameters == other.parameters
+            and self.cmdline_type == other.cmdline_type
+        )
 
     @staticmethod
     def _extract_name(spec):
@@ -106,7 +141,7 @@ class AdapterParser:
         spec = spec.strip()
         return name, spec
 
-    parameters = {
+    allowed_parameters = {
         # abbreviations
         'e': 'max_error_rate',
         'error_rate': 'max_error_rate',
@@ -118,8 +153,8 @@ class AdapterParser:
         'anywhere': None,
     }
 
-    @staticmethod
-    def _parse_parameters(spec):
+    @classmethod
+    def _parse_parameters(cls, spec):
         """Parse key=value;key=value;key=value into a dict"""
 
         fields = spec.split(';')
@@ -132,11 +167,11 @@ class AdapterParser:
             if equals == '=' and value == '':
                 raise ValueError('No value given')
             key = key.strip()
-            if key not in AdapterParser.parameters:
+            if key not in cls.allowed_parameters:
                 raise KeyError('Unknown parameter {}'.format(key))
             # unabbreviate
-            while AdapterParser.parameters[key] is not None:
-                key = AdapterParser.parameters[key]
+            while cls.allowed_parameters[key] is not None:
+                key = cls.allowed_parameters[key]
             value = value.strip()
             if value == '':
                 value = True
@@ -150,8 +185,8 @@ class AdapterParser:
             result[key] = value
         return result
 
-    @staticmethod
-    def _parse_not_linked(spec, cmdline_type):
+    @classmethod
+    def _parse(cls, spec, cmdline_type):
         """
         Parse an adapter specification for a non-linked adapter (without '...')
 
@@ -164,16 +199,16 @@ class AdapterParser:
         'front' and ^ADAPTER
         'anywhere' and ADAPTER
         """
+        if cmdline_type not in ("front", "back", "anywhere"):
+            raise ValueError("cmdline_type must be front, back or anywhere")
         error = ValueError(
-                "You cannot use multiple placement restrictions for an adapter at the same time. "
-                "Choose one of ^ADAPTER, ADAPTER$, XADAPTER or ADAPTERX")
+            "You cannot use multiple placement restrictions for an adapter at the same time. "
+            "Choose one of ^ADAPTER, ADAPTER$, XADAPTER or ADAPTERX")
         spec, middle, parameters_spec = spec.partition(';')
-        name, spec = AdapterParser._extract_name(spec)
+        name, spec = cls._extract_name(spec)
         spec = spec.strip()
-
-        parameters = AdapterParser._parse_parameters(parameters_spec)
-
-        spec = expand_braces(spec)
+        parameters = cls._parse_parameters(parameters_spec)
+        spec = expand_braces(spec)  # TODO turn into static method
 
         # Special case for adapters consisting of only X characters:
         # This needs to be supported for backwards-compatibilitity
@@ -252,7 +287,20 @@ class AdapterParser:
             else:
                 raise ValueError('No placement may be specified for "anywhere" adapters')
 
-    def _parse(self, spec, cmdline_type='back', name=None):
+    def where(self):
+        return self._restriction_to_where(self.cmdline_type, self.restriction)
+
+
+class AdapterParser:
+    """
+    Factory for Adapter classes that all use the same default parameters (error rate,
+    indels etc.). The given **kwargs will be passed to the Adapter constructors.
+    """
+    def __init__(self, **kwargs):
+        # kwargs: max_error_rate, min_overlap, read_wildcards, adapter_wildcards, indels
+        self.default_parameters = kwargs
+
+    def _parse(self, spec: str, cmdline_type='back', name=None):
         """
         Parse an adapter specification not using ``file:`` notation and return
         an object of an appropriate Adapter class.
@@ -270,48 +318,8 @@ class AdapterParser:
 
         # Handle linked adapter
         if middle == '...' and spec1 and spec2:
-            if cmdline_type == 'anywhere':
-                raise ValueError("'anywhere' (-b) adapters may not be linked")
-            name1, front_restriction, sequence1, parameters1 = self._parse_not_linked(spec1, 'front')
-            name2, back_restriction, sequence2, parameters2 = self._parse_not_linked(spec2, 'back')
-            if not name:
-                name = name1
-
-            # Automatically anchor the 5' adapter if -a is used
-            if cmdline_type == 'back' and front_restriction is None:
-                front_restriction = 'anchored'
-
-            front_anchored = front_restriction is not None
-            back_anchored = back_restriction is not None
-
-            front_parameters = self.default_parameters.copy()
-            front_parameters.update(parameters1)
-            back_parameters = self.default_parameters.copy()
-            back_parameters.update(parameters2)
-
-            if cmdline_type == 'front':
-                # -g requires both adapters to be present
-                front_required = True
-                back_required = True
-            else:
-                # -a requires only the anchored adapters to be present
-                front_required = front_anchored
-                back_required = back_anchored
-
-            front_where = self._restriction_to_where('front', front_restriction)
-            back_where = self._restriction_to_where('back', back_restriction)
-            front_adapter = Adapter(sequence1, where=front_where, name=None, **front_parameters)
-            back_adapter = Adapter(sequence2, where=back_where, name=None, **back_parameters)
-
-            return LinkedAdapter(
-                front_adapter=front_adapter,
-                back_adapter=back_adapter,
-                front_required=front_required,
-                back_required=back_required,
-                name=name,
-            )
-
-        if middle == '...':
+            return self._parse_linked(spec1, spec2, name, cmdline_type)
+        elif middle == '...':
             if not spec1:
                 if cmdline_type == 'back':  # -a ...ADAPTER
                     spec = spec2
@@ -328,25 +336,64 @@ class AdapterParser:
         else:
             spec = spec1
 
-        # TODO
-        specname, restriction, sequence, parameters = self._parse_not_linked(spec, cmdline_type)
-        del spec
-
-        where = self._restriction_to_where(cmdline_type, restriction)
-
+        spec = AdapterSpecification.parse(spec, cmdline_type)
+        where = spec.where()
         if not name:
-            name = specname
-        if parameters.get('anywhere', False):
-            parameters['remove'] = WHERE_TO_REMOVE_MAP[where]
+            name = spec.name
+        if spec.parameters.get('anywhere', False):
+            spec.parameters['remove'] = WHERE_TO_REMOVE_MAP[where]
             where = Where.ANYWHERE
-            del parameters['anywhere']
-        params = self.default_parameters.copy()
-        params.update(parameters)
+            del spec.parameters['anywhere']
+        parameters = self.default_parameters.copy()
+        parameters.update(spec.parameters)
         if where in (Where.FRONT, Where.BACK):
             adapter_class = BackOrFrontAdapter
         else:
             adapter_class = Adapter
-        return adapter_class(sequence=sequence, where=where, name=name, **params)
+        return adapter_class(sequence=spec.sequence, where=where, name=name, **parameters)
+
+    def _parse_linked(self, spec1, spec2, name, cmdline_type):
+
+        if cmdline_type == 'anywhere':
+            raise ValueError("'anywhere' (-b) adapters may not be linked")
+        front_spec = AdapterSpecification.parse(spec1, 'front')
+        back_spec = AdapterSpecification.parse(spec2, 'back')
+        if not name:
+            name = front_spec.name
+
+        # Automatically anchor the 5' adapter if -a is used
+        if cmdline_type == 'back' and front_spec.restriction is None:
+            front_spec.restriction = 'anchored'
+
+        front_anchored = front_spec.restriction is not None
+        back_anchored = back_spec.restriction is not None
+
+        front_parameters = self.default_parameters.copy()
+        front_parameters.update(front_spec.parameters)
+        back_parameters = self.default_parameters.copy()
+        back_parameters.update(back_spec.parameters)
+
+        if cmdline_type == 'front':
+            # -g requires both adapters to be present
+            front_required = True
+            back_required = True
+        else:
+            # -a requires only the anchored adapters to be present
+            front_required = front_anchored
+            back_required = back_anchored
+
+        front_adapter = Adapter(front_spec.sequence, where=front_spec.where(), name=None,
+            **front_spec.parameters)
+        back_adapter = Adapter(back_spec.sequence, where=back_spec.where(), name=None,
+            **back_spec.parameters)
+
+        return LinkedAdapter(
+            front_adapter=front_adapter,
+            back_adapter=back_adapter,
+            front_required=front_required,
+            back_required=back_required,
+            name=name,
+        )
 
     def parse(self, spec, cmdline_type='back'):
         """
