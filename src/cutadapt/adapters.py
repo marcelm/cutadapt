@@ -43,46 +43,6 @@ WHERE_TO_REMOVE_MAP = {
 }
 
 
-def expand_braces(sequence):
-    """
-    Replace all occurrences of ``x{n}`` (where x is any character) with n
-    occurrences of x. Raise ValueError if the expression cannot be parsed.
-
-    >>> expand_braces('TGA{5}CT')
-    'TGAAAAACT'
-    """
-    # Simple DFA with four states, encoded in prev
-    result = ''
-    prev = None
-    for s in re.split('([{}])', sequence):
-        if s == '':
-            continue
-        if prev is None:
-            if s == '{':
-                raise ValueError('"{" must be used after a character')
-            if s == '}':
-                raise ValueError('"}" cannot be used here')
-            prev = s
-            result += s
-        elif prev == '{':
-            prev = int(s)
-            if not 0 <= prev <= 10000:
-                raise ValueError('Value {} invalid'.format(prev))
-        elif isinstance(prev, int):
-            if s != '}':
-                raise ValueError('"}" expected')
-            result = result[:-1] + result[-1] * prev
-            prev = None
-        else:
-            if s != '{':
-                raise ValueError('Expected "{"')
-            prev = '{'
-    # Check if we are in a non-terminating state
-    if isinstance(prev, int) or prev == '{':
-        raise ValueError("Unterminated expression")
-    return result
-
-
 class AdapterSpecification:
     """
     Description of a single adapter. This represents the same information that would be
@@ -111,7 +71,6 @@ class AdapterSpecification:
     @classmethod
     def parse(cls, spec: str, cmdline_type: str):
         """Factory for creating an instance from a string specification"""
-
         name, restriction, sequence, parameters = cls._parse(spec, cmdline_type)
         return cls(name, restriction, sequence, parameters, cmdline_type)
 
@@ -120,12 +79,53 @@ class AdapterSpecification:
             self.__class__.__name__, self.name, self.restriction, self.sequence, self.parameters, self.cmdline_type)
 
     def __eq__(self, other):
-        return (self.name == other.name
+        return (
+            self.name == other.name
             and self.restriction == other.restriction
             and self.sequence == other.sequence
             and self.parameters == other.parameters
             and self.cmdline_type == other.cmdline_type
         )
+
+    @staticmethod
+    def expand_braces(sequence):
+        """
+        Replace all occurrences of ``x{n}`` (where x is any character) with n
+        occurrences of x. Raise ValueError if the expression cannot be parsed.
+
+        >>> AdapterSpecification.expand_braces('TGA{5}CT')
+        'TGAAAAACT'
+        """
+        # Simple DFA with four states, encoded in prev
+        result = ''
+        prev = None
+        for s in re.split('([{}])', sequence):
+            if s == '':
+                continue
+            if prev is None:
+                if s == '{':
+                    raise ValueError('"{" must be used after a character')
+                if s == '}':
+                    raise ValueError('"}" cannot be used here')
+                prev = s
+                result += s
+            elif prev == '{':
+                prev = int(s)
+                if not 0 <= prev <= 10000:
+                    raise ValueError('Value {} invalid'.format(prev))
+            elif isinstance(prev, int):
+                if s != '}':
+                    raise ValueError('"}" expected')
+                result = result[:-1] + result[-1] * prev
+                prev = None
+            else:
+                if s != '{':
+                    raise ValueError('Expected "{"')
+                prev = '{'
+        # Check if we are in a non-terminating state
+        if isinstance(prev, int) or prev == '{':
+            raise ValueError("Unterminated expression")
+        return result
 
     @staticmethod
     def _extract_name(spec):
@@ -208,7 +208,7 @@ class AdapterSpecification:
         name, spec = cls._extract_name(spec)
         spec = spec.strip()
         parameters = cls._parse_parameters(parameters_spec)
-        spec = expand_braces(spec)  # TODO turn into static method
+        spec = AdapterSpecification.expand_braces(spec)
 
         # Special case for adapters consisting of only X characters:
         # This needs to be supported for backwards-compatibilitity

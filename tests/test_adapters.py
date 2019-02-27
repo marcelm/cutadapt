@@ -2,8 +2,8 @@ from textwrap import dedent
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import (Adapter, Match, Where,
-    expand_braces, LinkedAdapter, AdapterStatistics, AdapterParser, AdapterSpecification)
+from cutadapt.adapters import (Adapter, Match, Where, LinkedAdapter, AdapterParser,
+    AdapterSpecification)
 
 
 def test_issue_52():
@@ -66,6 +66,7 @@ def test_str():
 
 
 def test_expand_braces():
+    expand_braces = AdapterSpecification.expand_braces
     assert expand_braces('') == ''
     assert expand_braces('A') == 'A'
     assert expand_braces('A{0}') == ''
@@ -82,7 +83,7 @@ def test_expand_braces_fail():
     for expression in ['{', '}', '{}', '{5', '{1}', 'A{-7}', 'A{', 'A{1', 'N{7', 'AN{7', 'A{4{}',
             'A{4}{3}', 'A{b}', 'A{6X}', 'A{X6}']:
         with pytest.raises(ValueError):
-            expand_braces(expression)
+            AdapterSpecification.expand_braces(expression)
 
 
 def test_linked_adapter():
