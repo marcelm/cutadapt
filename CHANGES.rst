@@ -30,6 +30,8 @@ development version
 * :issue:`359`: The ``-f``/``--format`` option is now ignored and a warning
   will be printed if it is used. The input file format is always
   auto-detected.
+* :issue:`335`: For linked adapters, it is now possible to specify which
+  of the two adapters should be required, overriding the default.
 
 
 Backwards-incompatible changes

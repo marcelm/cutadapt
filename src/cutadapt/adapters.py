@@ -151,6 +151,8 @@ class AdapterSpecification:
         'max_error_rate': None,
         'min_overlap': None,
         'anywhere': None,
+        'required': None,
+        'optional': None,  # If this is specified, 'required' will be set to False
     }
 
     @classmethod
@@ -183,6 +185,11 @@ class AdapterSpecification:
             if key in result:
                 raise KeyError('Key {} specified twice'.format(key))
             result[key] = value
+        if 'optional' in result and 'required' in result:
+            raise ValueError("'optional' and 'required' cannot be specified at the same time")
+        if 'optional' in result:
+            result['required'] = False
+            del result['optional']
         return result
 
     @classmethod
@@ -340,10 +347,9 @@ class AdapterParser:
         where = spec.where()
         if not name:
             name = spec.name
-        if spec.parameters.get('anywhere', False):
+        if spec.parameters.pop('anywhere', False):
             spec.parameters['remove'] = WHERE_TO_REMOVE_MAP[where]
             where = Where.ANYWHERE
-            del spec.parameters['anywhere']
         parameters = self.default_parameters.copy()
         parameters.update(spec.parameters)
         if where in (Where.FRONT, Where.BACK):
@@ -352,7 +358,8 @@ class AdapterParser:
             adapter_class = Adapter
         return adapter_class(sequence=spec.sequence, where=where, name=name, **parameters)
 
-    def _parse_linked(self, spec1, spec2, name, cmdline_type):
+    def _parse_linked(self, spec1: str, spec2: str, name, cmdline_type):
+        """Return a linked adapter from two specification strings"""
 
         if cmdline_type == 'anywhere':
             raise ValueError("'anywhere' (-b) adapters may not be linked")
@@ -381,6 +388,10 @@ class AdapterParser:
             # -a requires only the anchored adapters to be present
             front_required = front_anchored
             back_required = back_anchored
+
+        # Handle parameters overriding whether an adapter is required
+        front_required = front_spec.parameters.pop('required', front_required)
+        back_required = back_spec.parameters.pop('required', back_required)
 
         front_adapter = Adapter(front_spec.sequence, where=front_spec.where(), name=None,
             **front_spec.parameters)
@@ -875,13 +886,8 @@ class LinkedAdapter:
         back_required,
         name,
     ):
-        """
-        require_both -- require both adapters to match. If not specified, the default is to
-            require only anchored adapters to match.
-        kwargs are passed on to individual Adapter constructors
-        """
-        self._require_front_match = front_required
-        self._require_back_match = back_required
+        self.front_required = front_required
+        self.back_required = back_required
 
         # The following attributes are needed for the report
         self.where = Where.LINKED
@@ -900,14 +906,14 @@ class LinkedAdapter:
         both need to match.
         """
         front_match = self.front_adapter.match_to(read)
-        if self._require_front_match and front_match is None:
+        if self.front_required and front_match is None:
             return None
 
         if front_match is not None:
             # TODO statistics
             read = front_match.trimmed()
         back_match = self.back_adapter.match_to(read)
-        if back_match is None and (self._require_back_match or front_match is None):
+        if back_match is None and (self.back_required or front_match is None):
             return None
         return LinkedMatch(front_match, back_match, self)
 

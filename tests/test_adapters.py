@@ -239,6 +239,8 @@ def test_parse_parameters():
     assert p('min_overlap=5') == {'min_overlap': 5}
     assert p('o=7; e=0.4') == {'min_overlap': 7, 'max_error_rate': 0.4}
     assert p('anywhere') == {'anywhere': True}
+    assert p('required') == {'required': True}
+    assert p('optional') == {'required': False}
 
     with pytest.raises(ValueError):
         p('e=hallo')
@@ -265,6 +267,38 @@ def test_parse_with_parameters():
         assert isinstance(a, LinkedAdapter)
         assert a.front_adapter.max_error_rate == 0.15
         assert a.back_adapter.max_error_rate == 0.17
+
+
+@pytest.mark.parametrize("r1,r2,exp1,exp2", [
+    ("", "", True, False),
+    ("", ";required", True, True),
+    (";required", "", True, False),
+    (";required", ";required", True, True),
+    ("", ";optional", True, False),
+    (";optional", "", False, False),
+    (";optional", ";optional", False, False),
+])
+def test_linked_adapter_back_required_optional(r1, r2, exp1, exp2):
+    a = AdapterParser()._parse("ACG" + r1 + "...TGT" + r2, "back")
+    assert isinstance(a, LinkedAdapter)
+    assert a.front_required is exp1
+    assert a.back_required is exp2
+
+
+@pytest.mark.parametrize("r1,r2,exp1,exp2", [
+    ("", "", True, True),
+    ("", ";required", True, True),
+    (";required", "", True, True),
+    (";required", ";required", True, True),
+    ("", ";optional", True, False),
+    (";optional", "", False, True),
+    (";optional", ";optional", False, False),
+])
+def test_linked_adapter_front_required_optional(r1, r2, exp1, exp2):
+    a = AdapterParser()._parse("ACG" + r1 + "...TGT" + r2, "front")
+    assert isinstance(a, LinkedAdapter)
+    assert a.front_required is exp1
+    assert a.back_required is exp2
 
 
 def test_anywhere_parameter():

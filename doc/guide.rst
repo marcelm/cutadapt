@@ -514,6 +514,26 @@ This feature has been added on a tentative basis. It may change in the next prog
 .. versionchanged:: 1.15
     Require both adapters for a read to be trimmed.
 
+.. _linked-override:
+
+Overriding which adapters are required
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A linked adapter is made up of two adapters, and each of them can be “required” or “optional”. If
+a required adapter cannot be found, the read is not trimmed at all, even if the other adapter
+occurs.
+
+When you specify the linked adapter with ``-a``, all adapters that are anchored are *required*,
+and the non-anchored adapters are *optional*.
+
+When you specify the linked adapter with ``-g``, both adapters are required.
+
+To override this, you can use the :ref:`trimming parameters <trimming-parameters>` ``required`` or
+``optional``. For example, to request that the 5' adapter (here ``ADAPTER1``) should not be
+required, you can specify it like this ::
+
+    cutadapt -g "ADAPTER1;optional...ADAPTER2" -o output.fastq.gz input.fastq.gz
+
 
 Linked adapter statistics
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -611,15 +631,20 @@ separator between two commands.
 
 The following parameters are supported at the moment:
 
-====================== ============= ================================
-Parameter              Global option Adapter-specific parameter
-====================== ============= ================================
-Maximum error rate     ``-e 0.2``    | ``ADAPTER;e=0.2`` or
-                                     | ``ADAPTER;max_error_rate=0.2``
-Minimum overlap        ``-O 5``      | ``ADAPTER;o=5`` or
-                                     | ``ADAPTER;min_overlap=5``
-Allow matches anywhere               ``ADAPTER;anywhere``
-====================== ============= ================================
+================================================== ============= ================================
+Parameter                                          Global option Adapter-specific parameter
+================================================== ============= ================================
+Maximum error rate                                 ``-e 0.2``    | ``ADAPTER;e=0.2`` or
+                                                                 | ``ADAPTER;max_error_rate=0.2``
+
+Minimum overlap                                    ``-O 5``      | ``ADAPTER;o=5`` or
+                                                                 | ``ADAPTER;min_overlap=5``
+
+Allow matches anywhere                                           ``ADAPTER;anywhere``
+
+:ref:`Linked adapter required <linked-override>`                 ``ADAPTER;required``
+:ref:`Linked adapter optional <linked-override>`                 ``ADAPTER;optional``
+================================================== ============= ================================
 
 Adapter-specific parameters override the global option.
 
