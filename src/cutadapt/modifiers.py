@@ -53,7 +53,7 @@ class AdapterCutter(Modifier):
         action -- What to do with a found adapter: None, 'trim', or 'mask'
         """
         self.times = times
-        assert action in ('trim', 'mask', None)
+        assert action in ('trim', 'mask', 'lowercase', None)
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
@@ -114,27 +114,55 @@ class AdapterCutter(Modifier):
         return best_match
 
     @staticmethod
-    def masked_read(trimmed_read, matches):
-        # add N from last modification
-        masked_sequence = trimmed_read.sequence
-        for match in sorted(matches, reverse=True, key=lambda m: m.astart):
-            ns = 'N' * (len(match.read.sequence) -
-                        len(match.trimmed().sequence))
-            # add N depending on match position
+    def remainder(matches):
+        """
+        Determine which part of the read was not trimmed. Return a tuple (start, stop)
+        that gives the interval of the untrimmed part relative to the original read.
+
+        matches is a list of Match objects. The original read is assumed to be
+        matches[0].read
+        """
+        # Start with the full read
+        read = matches[0].read
+        start, stop = 0, len(read)
+        for match in matches:
             if match.remove_before:
-                masked_sequence = ns + masked_sequence
+                # Length of the prefix that was removed
+                start += match.rstop
             else:
-                masked_sequence += ns
-        # set masked sequence as sequence with original quality
+                # Length of the suffix that was removed
+                stop -= len(match.read) - match.rstart
+        return (start, stop)
+
+    @staticmethod
+    def masked_read(trimmed_read, matches):
+        start, stop = AdapterCutter.remainder(matches)
+        read = matches[0].read
         # TODO modification in place
-        trimmed_read.sequence = masked_sequence
+        trimmed_read.sequence = (
+            'N' * start
+            + read.sequence[start:stop]
+            + 'N' * (len(read) - stop))
+        trimmed_read.qualities = read.qualities
+        return trimmed_read
+
+    @staticmethod
+    def lowercased_read(trimmed_read, matches):
+        start, stop = AdapterCutter.remainder(matches)
+        read_sequence = matches[0].read.sequence
+        # TODO modification in place
+        trimmed_read.sequence = (
+            read_sequence[:start].lower()
+            + read_sequence[start:stop].upper()
+            + read_sequence[stop:].lower()
+        )
         trimmed_read.qualities = matches[0].read.qualities
         return trimmed_read
 
     def __call__(self, read, matches):
         """
         Search for the best-matching adapter in a read, perform the requested action
-        ('trim', 'mask', or None as determined by self.action) it and return the
+        ('trim', 'mask', 'lowercase' or None as determined by self.action) and return the
         (possibly) modified read.
 
         *self.times* adapter removal rounds are done. During each round,
@@ -143,11 +171,10 @@ class AdapterCutter(Modifier):
 
         The 'matches' parameter needs to be a list. Every time an adapter is found,
         a Match object describing the match will be appended to it.
-
-        The read is converted to uppercase before it is compared to the adapter
-        sequences.
         """
         trimmed_read = read
+        if self.action == 'lowercase':
+            trimmed_read.sequence = trimmed_read.sequence.upper()
         for _ in range(self.times):
             match = self._best_match(trimmed_read)
             if match is None:
@@ -165,6 +192,9 @@ class AdapterCutter(Modifier):
             pass
         elif self.action == 'mask':
             trimmed_read = self.masked_read(trimmed_read, matches)
+            assert len(trimmed_read.sequence) == len(read)
+        elif self.action == 'lowercase':
+            trimmed_read = self.lowercased_read(trimmed_read, matches)
             assert len(trimmed_read.sequence) == len(read)
         elif self.action is None:  # --no-trim
             trimmed_read = read[:]

@@ -32,7 +32,9 @@ development version
   auto-detected.
 * :issue:`335`: For linked adapters, it is now possible to specify which
   of the two adapters should be required, overriding the default.
-
+* :issue:`166`: By specifying ``--action=lowercase``, it is now possible
+  to not trim adapters, but to instead convert the section of the read
+  that would have been trimmed to lowercase.
 
 Backwards-incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

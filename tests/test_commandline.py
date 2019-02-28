@@ -192,6 +192,10 @@ def test_action_mask():
     run("-b CAAG -n 3 --action=mask", "anywhere_repeat.fastq", "anywhere_repeat.fastq")
 
 
+def test_action_lowercase():
+    run("-b CAAG -n 3 --action=lowercase", "action_lowercase.fasta", "action_lowercase.fasta")
+
+
 def test_gz_multiblock():
     """compressed gz file with multiple blocks (created by concatenating two .gz files)"""
     run("-b TTAGACATATCTCCGTCG", "small.fastq", "multiblock.fastq.gz")

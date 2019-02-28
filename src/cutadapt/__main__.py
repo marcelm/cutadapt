@@ -206,9 +206,10 @@ def get_argument_parser():
     group.add_argument("-N", "--no-match-adapter-wildcards", action="store_false",
         default=True, dest='match_adapter_wildcards',
         help="Do not interpret IUPAC wildcards in adapters.")
-    group.add_argument("--action", choices=('trim', 'mask', 'none'), default='trim',
-        help="What to do with found adapters: 'trim', 'mask' or 'none'. "
+    group.add_argument("--action", choices=('trim', 'mask', 'lowercase', 'none'), default='trim',
+        help="What to do with found adapters. "
             "mask: replace with 'N' characters; "
+            "lowercase: convert to lowercase; "
             "none: leave unchanged (useful with "
             "--discard-untrimmed). Default: trim")
     group.add_argument("--no-trim", dest='action', action='store_const', const='none',
