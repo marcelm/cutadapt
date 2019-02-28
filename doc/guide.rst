@@ -185,8 +185,7 @@ Adapter types
 
 Cutadapt can detect multiple adapter types. 5' adapters preceed the sequence of
 interest and 3' adapters follow it. Further distinctions are made according to
-where in the read the adapter sequence is allowed to occur to be found by the
-program.
+where in the read the adapter sequence is allowed to occur.
 
 ========================================================= ===========================
 Adapter type                                              Command-line option
@@ -264,21 +263,21 @@ The read that it outputs will then have a part of the adapter in the
 end. Or, if the adapter was short and the read length quite long, then the
 adapter will be somewhere within the read, followed by some other bases.
 
-For example, assume your fragment of interest is *MYSEQUENCE* and the adapter is
+For example, assume your fragment of interest is *mysequence* and the adapter is
 *ADAPTER*. Depending on the read length, you will get reads that look like this::
 
-    MYSEQUEN
-    MYSEQUENCEADAP
-    MYSEQUENCEADAPTER
-    MYSEQUENCEADAPTERSOMETHINGELSE
+    mysequen
+    mysequenceADAP
+    mysequenceADAPTER
+    mysequenceADAPTERsomethingelse
 
 Use Cutadapt's ``-a ADAPTER`` option to remove this type of adapter. This will
 be the result::
 
-    MYSEQUEN
-    MYSEQUENCE
-    MYSEQUENCE
-    MYSEQUENCE
+    mysequen
+    mysequence
+    mysequence
+    mysequence
 
 As this example shows, Cutadapt allows regular 3' adapters to occur in full
 anywhere within the read (preceeded and/or succeeded by zero or more bases), and
@@ -286,7 +285,7 @@ also partially degraded at the 3' end. Cutadapt deals with 3' adapters
 by removing the adapter itself and any sequence that may follow. As a consequence,
 a sequence that starts with an adapter, like this, will be trimmed to an empty read::
 
-    ADAPTERSOMETHING
+    ADAPTERsomething
 
 By default, empty reads are kept and will appear in the output. If you do not
 want this, use the ``--minimum-length``/``-m`` :ref:`filtering option <filtering>`.
@@ -308,19 +307,19 @@ start (5' end) of it, where in the latter case also partial occurrences are
 allowed. In all cases, the adapter itself and the sequence preceding it is
 removed.
 
-Assume your fragment of interest is *MYSEQUENCE* and the adapter is
+Assume your fragment of interest is *mysequence* and the adapter is
 *ADAPTER*. The reads may look like this::
 
-    ADAPTERMYSEQUENCE
-    DAPTERMYSEQUENCE
-    TERMYSEQUENCE
-    SOMETHINGADAPTERMYSEQUENCE
+    ADAPTERmysequence
+    DAPTERmysequence
+    TERmysequence
+    somethingADAPTERmysequence
 
-All the above sequences are trimmed to ``MYSEQUENCE`` when you use `-g ADAPTER`.
+All the above sequences are trimmed to ``mysequence`` when you use `-g ADAPTER`.
 As with 3' adapters, the resulting read may have a length of zero when the
 sequence ends with the adapter. For example, the read ::
 
-    SOMETHINGADAPTER
+    somethingADAPTER
 
 will be empty after trimming.
 
@@ -335,7 +334,7 @@ adapters. You may know, for example, that degradation does not occur and that
 the adapter is also not expected to be within the read. Thus, you always expect
 the read to look like the first example from above::
 
-    ADAPTERSOMETHING
+    ADAPTERsomething
 
 If you want to trim only this type of adapter, use ``-g ^ADAPTER``. The ``^`` is
 supposed to indicate the the adapter is "anchored" at the beginning of the read.
@@ -352,7 +351,7 @@ Be aware that Cutadapt still searches for adapters error-tolerantly and, in
 particular, allows insertions. So if your maximum error rate is sufficiently
 high, even this read will be trimmed::
 
-    BADAPTERSOMETHING
+    BADAPTERsomething
 
 The ``B`` in the beginning is seen as an insertion. If you also want to prevent
 this from happening, use the option ``--no-indels`` to disallow insertions and
@@ -377,15 +376,15 @@ appropriate anchored 5' adapter.
 
 As an example, assume you have these reads::
 
-    MYSEQUENCEADAP
-    MYSEQUENCEADAPTER
-    MYSEQUENCEADAPTERSOMETHINGELSE
+    mysequenceADAP
+    mysequenceADAPTER
+    mysequenceADAPTERsomethingelse
 
 Using ``-a ADAPTER$`` will result in::
 
-    MYSEQUENCEADAP
-    MYSEQUENCE
-    MYSEQUENCEADAPTERSOMETHINGELSE
+    mysequenceADAP
+    mysequence
+    mysequenceADAPTERsomethingelse
 
 That is, only the middle read is trimmed at all.
 
