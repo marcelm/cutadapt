@@ -822,6 +822,28 @@ Modifying reads
 This section describes in which ways reads can be modified other than adapter
 removal.
 
+
+Not trimming adapters
+---------------------
+
+Instead of removing an adapter from a read, it is also possible to take other
+actions when an adapter is found by specifying the ``--action`` option.
+
+The default is ``--action=trim``, which will remove the adapter and either
+the sequence before or after it from the read.
+
+Use ``--action=none`` to not remove the adapter from the read. This is useful
+when combined with other options, such as ``--untrimmed-output``, which
+will redirect the reads without adapter to a different file. Other read
+modification options (as listed below) may still change the read.
+
+Use ``--action=mask`` to write ``N`` characters to that parts of the read
+that would otherwise have been removed .
+
+Use ``--action=lowercase`` to change to lowercase that part of the read that would otherwise
+have been removed. The rest is converted to uppercase.
+
+
 .. _cut-bases:
 
 Removing a fixed number of bases
@@ -1301,7 +1323,7 @@ following way which adapter should be trimmed:
   FASTA file.
 
 If your adapter sequences are all similar and differ only by a variable barcode
-sequence, you should use a single adapter sequence instead that
+sequence, you can use a single adapter sequence instead that
 :ref:`contains wildcard characters <wildcards>`.
 
 If you want to search for a combination of a 5' and a 3' adapter, you may want
