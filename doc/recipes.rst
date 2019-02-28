@@ -231,6 +231,49 @@ reads that are long enough. Note that the file names do not end in ``.1.fastq.gz
 reads.
 
 
+.. _bisulfite:
+
+Bisulfite sequencing (RRBS)
+---------------------------
+
+When trimming reads that come from a library prepared with the RRBS (reduced
+representation bisulfite sequencing) protocol, the last two 3' bases must be
+removed in addition to the adapter itself. This can be achieved by using not
+the adapter sequence itself, but by adding two wildcard characters to its
+beginning. If the adapter sequence is ``ADAPTER``, the command for trimming
+should be::
+
+    cutadapt -a NNADAPTER -o output.fastq input.fastq
+
+Details can be found in `Babraham bioinformatics' "Brief guide to
+RRBS" <http://www.bioinformatics.babraham.ac.uk/projects/bismark/RRBS_Guide.pdf>`_.
+A summary follows.
+
+During RRBS library preparation, DNA is digested with the restriction enzyme
+MspI, generating a two-base overhang on the 5' end (``CG``). MspI recognizes
+the sequence ``CCGG`` and cuts
+between ``C`` and ``CGG``. A double-stranded DNA fragment is cut in this way::
+
+    5'-NNNC|CGGNNN-3'
+    3'-NNNGGC|CNNN-5'
+
+The fragment between two MspI restriction sites looks like this::
+
+    5'-CGGNNN...NNNC-3'
+      3'-CNNN...NNNGGC-5'
+
+Before sequencing (or PCR) adapters can be ligated, the missing base positions
+must be filled in with GTP and CTP::
+
+    5'-ADAPTER-CGGNNN...NNNCcg-ADAPTER-3'
+    3'-ADAPTER-gcCNNN...NNNGGC-ADAPTER-5'
+
+The filled-in bases, marked in lowercase above, do not contain any original
+methylation information, and must therefore not be used for methylation calling.
+By prefixing the adapter sequence with ``NN``, the bases will be automatically
+stripped during adapter trimming.
+
+
 Other things (unfinished)
 -------------------------
 
