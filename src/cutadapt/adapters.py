@@ -453,6 +453,7 @@ class EndStatistics:
         self.where = adapter.where
         self.max_error_rate = adapter.max_error_rate
         self.sequence = adapter.sequence
+        self.effective_length = adapter.effective_length
         self.has_wildcards = adapter.adapter_wildcards
         # self.errors[l][e] == n iff n times a sequence of length l matching at e errors was removed
         self.errors = defaultdict(returns_defaultdict_int)
@@ -460,8 +461,15 @@ class EndStatistics:
         self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
 
     def __iadd__(self, other):
-        if (self.where != other.where or self._remove != other._remove or
-                self.max_error_rate != other.max_error_rate or self.sequence != other.sequence):
+        if not isinstance(other, self.__class__):
+            raise ValueError("Cannot compare")
+        if (
+            self.where != other.where
+            or self._remove != other._remove
+            or self.max_error_rate != other.max_error_rate
+            or self.sequence != other.sequence
+            or self.effective_length != other.effective_length
+        ):
             raise RuntimeError('Incompatible EndStatistics, cannot be added')
         for base in ('A', 'C', 'G', 'T', ''):
             self.adjacent_bases[base] += other.adjacent_bases[base]
@@ -720,6 +728,10 @@ class Adapter:
     def is_anchored(self):
         """Return whether this adapter is anchored"""
         return self.where in {Where.PREFIX, Where.SUFFIX}
+
+    @property
+    def effective_length(self):
+        return self.aligner.effective_length
 
     def enable_debug(self):
         """

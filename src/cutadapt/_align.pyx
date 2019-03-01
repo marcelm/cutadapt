@@ -1,7 +1,6 @@
 # cython: profile=False, emit_code_comments=False, language_level=3
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 
-
 # structure for a DP matrix entry
 ctypedef struct _Entry:
     int cost
@@ -202,6 +201,8 @@ cdef class Aligner:
         object _dpmatrix
         bytes _reference  # TODO rename to translated_reference or so
         str str_reference
+        readonly int effective_length
+        int* n_counts  # n_counts[i] == number of N characters in reference[:i]
 
     def __cinit__(
         self,
@@ -254,10 +255,25 @@ cdef class Aligner:
             mem = <_Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(_Entry))
             if not mem:
                 raise MemoryError()
+            mem_nc = <int*> PyMem_Realloc(self.n_counts, (len(reference) + 1) * sizeof(int))
+            if not mem_nc:
+                raise MemoryError()
             self.column = mem
+            self.n_counts = mem_nc
             self._reference = reference.encode('ascii')
             self.m = len(reference)
+            self.effective_length = self.m
+            n_count = 0
+            for i in range(self.m):
+                self.n_counts[i] = n_count
+                if reference[i] == 'n' or reference[i] == 'N':
+                    n_count += 1
+            self.n_counts[self.m] = n_count
+            assert self.n_counts[self.m] == reference.count('N') + reference.count('n')
             if self.wildcard_ref:
+                self.effective_length = self.m - self.n_counts[self.m]
+                if self.effective_length == 0:
+                    raise ValueError("Cannot have only N wildcards in the sequence")
                 self._reference = self._reference.translate(IUPAC_TABLE)
             elif self.wildcard_query:
                 self._reference = self._reference.translate(ACGT_TABLE)
@@ -388,6 +404,8 @@ cdef class Aligner:
             int cost_insertion
             int origin, cost, matches
             int length
+            int ref_start
+            int cur_effective_length
             bint characters_equal
             # We keep only a single column of the DP matrix in memory.
             # To access the diagonal cell to the upper left,
@@ -458,9 +476,17 @@ cdef class Aligner:
                     # Found a match. If requested, find best match in last row.
                     # length of the aligned part of the reference
                     length = m + min(column[m].origin, 0)
+                    cur_effective_length = length
+                    if self.wildcard_ref:
+                        if length < m:
+                            # Recompute effective length so that it only takes into
+                            # account the matching suffix of the reference
+                            cur_effective_length = length - self.n_counts[length]
+                        else:
+                            cur_effective_length = self.effective_length
                     cost = column[m].cost
                     matches = column[m].matches
-                    if length >= self._min_overlap and cost <= length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
+                    if length >= self._min_overlap and cost <= cur_effective_length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
                         # update
                         best.matches = matches
                         best.cost = cost
@@ -479,7 +505,21 @@ cdef class Aligner:
                 length = i + min(column[i].origin, 0)
                 cost = column[i].cost
                 matches = column[i].matches
-                if length >= self._min_overlap and cost <= length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
+                if self.wildcard_ref:
+                    if length < m:
+                        # Recompute effective length so that it only takes into
+                        # account the matching part of the reference
+                        ref_start = -min(column[i].origin, 0)
+                        assert 0 <= ref_start < m
+                        cur_effective_length = length - (self.n_counts[i] - self.n_counts[ref_start])
+                    else:
+                        cur_effective_length = self.effective_length
+                else:
+                    cur_effective_length = length
+                assert 0 <= cur_effective_length and cur_effective_length <= length
+                assert cur_effective_length <= self.effective_length
+
+                if length >= self._min_overlap and cost <= cur_effective_length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
                     # update best
                     best.matches = matches
                     best.cost = cost
@@ -505,6 +545,7 @@ cdef class Aligner:
 
     def __dealloc__(self):
         PyMem_Free(self.column)
+        PyMem_Free(self.n_counts)
 
 
 cdef class PrefixComparer:
@@ -524,6 +565,7 @@ cdef class PrefixComparer:
         bint wildcard_query
         int m
         int max_k  # max. number of errors
+        readonly int effective_length
 
     # __init__ instead of __cinit__ because we need to override this in SuffixComparer
     def __init__(
@@ -536,16 +578,19 @@ cdef class PrefixComparer:
         self.wildcard_ref = wildcard_ref
         self.wildcard_query = wildcard_query
         self.m = len(reference)
+        self.effective_length = self.m
+        if self.wildcard_ref:
+            self.effective_length -= reference.count('N') - reference.count('n')
+            if self.effective_length == 0:
+                raise ValueError("Cannot have only N wildcards in the sequence")
         if not (0 <= max_error_rate <= 1.):
             raise ValueError("max_error_rate must be between 0 and 1")
-        self.max_k = int(max_error_rate * self.m)
+        self.max_k = int(max_error_rate * self.effective_length)
         self.reference = reference.encode('ascii')
         if self.wildcard_ref:
             self.reference = self.reference.translate(IUPAC_TABLE)
         elif self.wildcard_query:
             self.reference = self.reference.translate(ACGT_TABLE)
-        #else:
-            #self.compare_ascii = False
 
     def __repr__(self):
         return "{}(reference={!r}, max_k={}, wildcard_ref={}, "\

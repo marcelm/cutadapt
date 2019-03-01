@@ -4,7 +4,7 @@ Routines for printing a report.
 import sys
 from contextlib import contextmanager
 import textwrap
-from .adapters import Where
+from .adapters import Where, EndStatistics
 from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
     PairedDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter, WildcardFileWriter,
@@ -172,18 +172,21 @@ ADAPTER_TYPES = {
 }
 
 
-def print_error_ranges(adapter_length, error_rate):
-    print("No. of allowed errors:")
+def error_ranges(adapter_statistics: EndStatistics):
+    length = adapter_statistics.effective_length
+    error_rate = adapter_statistics.max_error_rate
     prev = 0
-    for errors in range(1, int(error_rate * adapter_length) + 1):
+    s = ""
+    for errors in range(1, int(error_rate * length) + 1):
         r = int(errors / error_rate)
-        print("{}-{} bp: {};".format(prev, r - 1, errors - 1), end=' ')
+        s += "{}-{} bp: {}; ".format(prev, r - 1, errors - 1)
         prev = r
-    if prev == adapter_length:
-        print("{} bp: {}".format(adapter_length, int(error_rate * adapter_length)))
+    if prev == length:
+        s += "{} bp: {}".format(length, int(error_rate * length))
     else:
-        print("{}-{} bp: {}".format(prev, adapter_length, int(error_rate * adapter_length)))
-    print()
+        s += "{}-{} bp: {}".format(prev, length, int(error_rate * length))
+
+    return "No. of allowed errors:\n" + s + "\n"
 
 
 def print_histogram(end_statistics, n, gc_content):
@@ -356,7 +359,7 @@ def print_report(stats, time, gc_content):
                 print(total_front, "times, it overlapped the 5' end of a read")
                 print(total_back, "times, it overlapped the 3' end or was within the read")
                 print()
-                print_error_ranges(len(adapter_statistics.front.sequence), adapter_statistics.front.max_error_rate)
+                print(error_ranges(adapter_statistics.front))
                 print("Overview of removed sequences (5')")
                 print_histogram(adapter_statistics.front, stats.n, gc_content)
                 print()
@@ -364,8 +367,8 @@ def print_report(stats, time, gc_content):
                 print_histogram(adapter_statistics.back, stats.n, gc_content)
             elif where is Where.LINKED:
                 print()
-                print_error_ranges(len(adapter_statistics.front.sequence), adapter_statistics.front.max_error_rate)
-                print_error_ranges(len(adapter_statistics.back.sequence), adapter_statistics.back.max_error_rate)
+                print(error_ranges(adapter_statistics.front))
+                print(error_ranges(adapter_statistics.back))
                 print("Overview of removed sequences at 5' end")
                 print_histogram(adapter_statistics.front, stats.n, gc_content)
                 print()
@@ -373,13 +376,13 @@ def print_report(stats, time, gc_content):
                 print_histogram(adapter_statistics.back, stats.n, gc_content)
             elif where in (Where.FRONT, Where.PREFIX, Where.FRONT_NOT_INTERNAL):
                 print()
-                print_error_ranges(len(adapter_statistics.front.sequence), adapter_statistics.front.max_error_rate)
+                print(error_ranges(adapter_statistics.front))
                 print("Overview of removed sequences")
                 print_histogram(adapter_statistics.front, stats.n, gc_content)
             else:
                 assert where in (Where.BACK, Where.SUFFIX, Where.BACK_NOT_INTERNAL)
                 print()
-                print_error_ranges(len(adapter_statistics.back.sequence), adapter_statistics.back.max_error_rate)
+                print(error_ranges(adapter_statistics.back))
                 base_stats = AdjacentBaseStatistics(adapter_statistics.back.adjacent_bases)
                 warning = warning or base_stats.print()
                 print("Overview of removed sequences")

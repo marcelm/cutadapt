@@ -669,7 +669,7 @@ a single adapter only. Example: ``-a "ADAPTER;max_error_rate=0.15"``
 (the quotation marks are necessary).
 
 To determine the number of allowed errors, the maximum error rate is multiplied
-by the length of the match (and then rounded off).
+by the length of the match and then rounded off.
 What does that mean?
 Assume you have a long adapter ``LONGADAPTER`` and it appears in full somewhere
 within the read. The length of the match is 11 characters since the full adapter
@@ -677,15 +677,17 @@ has a length of 11, therefore 11·0.1=1.1 errors are allowed with the default
 maximum error rate of 0.1. This is rounded off to 1 allowed error. So the
 adapter will be found within this read::
 
-    SEQUENCELONGADUPTERSOMETHING
+    sequenceLONGADUPTERsomething
 
 If the match is a bit shorter, however, the result is different::
 
-    SEQUENCELONGADUPT
+    sequenceLONGADUPT
 
-Only 9 characters of the adapter match: ``LONGADAPT`` matches ``LONGADUPT``
-with one substitution. Therefore, only 9·0.1=0.9 errors are allowed. Since this
-is rounded off to zero allowed errors, the adapter will not be found.
+Only the first 9 characters of the adapter match a part of the read:
+``LONGADAPT`` is matched to ``LONGADUPT``. So the length of the match
+is 9 and therefore, only 9·0.1=0.9 errors are allowed. This is then
+rounded off to zero, which means that the adapter will not be found
+as there is actually one substitution.
 
 The number of errors allowed for a given adapter match length is also shown in
 the report that Cutadapt prints::
@@ -709,6 +711,32 @@ Insertions and deletions can be disallowed by using the option
 ``--no-indels``.
 
 See also the :ref:`section on details of the alignment algorithm <adapter-alignment-algorithm>`.
+
+
+N wildcard characters
+~~~~~~~~~~~~~~~~~~~~~
+
+Any ``N`` wildcard characters in the adapter sequence are skipped when
+computing the error rate. That is, they do not contribute to the length of
+a match. For example, the adapter sequence ``ACGTACNNNNNNNNGTACGT`` has a length
+of 20, but only 12 non-``N``-characters. At a maximum error rate of 0.1, only
+one error is allowed if this sequence is found in full in a read because
+12·0.1=1.2, which is 1 when rounded down.
+
+This is done because ``N`` bases cannot contribute to the number of errors.
+In previous versions, ``N`` wildcard characters did contribute to the match
+length, but this artificially inflates the number of allowed errors. For example,
+an adapter like ``N{18}CC`` (18 ``N`` wildcards followed by ``CC``) would
+effectively match anywhere because the default error rate of 0.1 would allow for
+two errors, but there are only two non-``N`` bases in the particular adapter.
+
+However, even in previous versions, the location with the greatest number of
+matching bases is chosen as the best location for an adapter, so in many cases
+the adapter would still be placed properly.
+
+.. versionadded: 2.0
+    Ignore ``N`` wildcards when computing the error rate.
+
 
 .. _random-matches:
 

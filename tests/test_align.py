@@ -29,6 +29,12 @@ class TestAligner:
         aligner = Aligner(reference, 1.0, flags=Where.BACK.value)
         aligner.locate('CAA')
 
+    def test_not_only_n_wildcards(self):
+        reference = 'NNNNN'
+        with pytest.raises(ValueError) as info:
+            Aligner(reference, 0.1, wildcard_ref=True)
+        assert "only N wildcards" in info.value.args[0]
+
 
 def test_polya():
     s = 'AAAAAAAAAAAAAAAAA'
@@ -126,6 +132,46 @@ def test_suffix_comparer():
     assert comparer.locate('AGT') is not None
     assert comparer.locate('CGT') is not None
     assert comparer.locate('TTG') is None
+
+
+@pytest.mark.parametrize("comparer_class", [PrefixComparer, SuffixComparer])
+def test_n_wildcards_not_counted_affix(comparer_class):
+    # N bases should not contribute to effective adapter length, so only 1 mismatch is allowed
+    ref = 'CNNNNNNNNGTT'
+    assert len(ref) == 12
+    comparer = comparer_class(ref, max_error_rate=0.25, wildcard_ref=True)
+    assert comparer.locate('CAAAAAAAAGTT') is not None
+    assert comparer.locate('CAAAAAAAAGTA') is not None
+    assert comparer.locate('CAAAAAAAAGAA') is None  # two mismatches
+
+
+def test_n_wildcards_not_counted_aligner_back():
+    ref = 'AGGNNNNNNNNNNNNNNTTC'
+    assert len(ref) == 20
+    aligner = Aligner(ref, max_error_rate=0.1, wildcard_ref=True, flags=Where.BACK.value)
+    aligner.min_overlap = 3
+    assert aligner.effective_length == 6
+    assert aligner.locate('TTC') is None
+    # adapter start, adapter stop, read start, read stop
+    assert aligner.locate('AGG')[:4] == (0, 3, 0, 3)
+    assert aligner.locate('AGGCCCCCCC')[:4] == (0, 10, 0, 10)
+    assert aligner.locate('ATGCCCCCCC') is None
+    assert aligner.locate('AGGCCCCCCCCCCCCCCATC') is None
+    assert aligner.locate('CCC' + ref.replace('N', 'G') + 'AAA') == (0, 20, 3, 23, 20, 0)
+
+
+def test_n_wildcards_not_counted_aligner_front():
+    ref = 'AGGNNNNNNNNNNNNNNTTC'
+    assert len(ref) == 20
+    aligner = Aligner(ref, max_error_rate=0.1, wildcard_ref=True, flags=Where.FRONT.value)
+    aligner.min_overlap = 3
+    assert aligner.effective_length == 6
+    # adapter start, adapter stop, read start, read stop
+    assert aligner.locate('TTC')[:4] == (17, 20, 0, 3)
+    assert aligner.locate('TGC') is None
+    assert aligner.locate('CCCCCCCTTC')[:4] == (10, 20, 0, 10)
+    assert aligner.locate('CCCCCCCGTC') is None
+    assert aligner.locate('CCC' + ref.replace('N', 'G') + 'AAA') == (0, 20, 3, 23, 20, 0)
 
 
 def test_wildcards_in_adapter():

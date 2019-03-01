@@ -22,6 +22,14 @@ Backwards-incompatible changes
   such as ``-q`` would only apply to the forward/R1 reads. This was necessary
   for compatibility with old Cutadapt versions, but became increasingly
   confusing.
+* :issue:`360`: Computation of the error rate of an adapter match no longer
+  counts the ``N`` wildcard bases. Previously, an adapter like ``N{18}CC``
+  (18 ``N`` wildcards followed by ``CC``) would effectively match
+  anywhere because the default error rate of 0.1 (10%) would allow for
+  two errors. That is, the error rate of a match is now computed as
+  the number of non-``N`` bases in the matching part of the adapter
+  divided by the number of errors.
+
 
 Features
 ~~~~~~~~

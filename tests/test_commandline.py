@@ -370,7 +370,7 @@ def test_anchored_no_indels_wildcard_read():
 
 def test_anchored_no_indels_wildcard_adapt():
     """anchored 5' adapter, mismatches only (no indels), but wildcards in the adapter count as matches"""
-    run('-g ^TTAGACANAT --no-indels -e 0.1', 'anchored_no_indels.fasta', 'anchored_no_indels.fasta')
+    run('-g ^TTAGACANAT --no-indels -e 0.12', 'anchored_no_indels.fasta', 'anchored_no_indels.fasta')
 
 
 def test_non_iupac_characters():
