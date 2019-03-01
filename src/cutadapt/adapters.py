@@ -749,7 +749,7 @@ class Adapter:
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        read_seq = read.sequence.upper()  # temporary copy  # TODO can we let the aligner take care of this?
+        read_seq = read.sequence
         pos = -1
 
         # try to find an exact match first unless wildcards are allowed

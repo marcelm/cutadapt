@@ -116,20 +116,32 @@ def test_compare_suffixes():
     assert compare_suffixes('AAAAAX', 'TTTTTTTAAAAA') == (0, 6, 6, 12, 4, 2)
 
 
-def test_prefix_comparer():
+@pytest.mark.parametrize("upper", (True, False))
+def test_prefix_comparer(upper):
     # only need to test whether None is returned on too many errors, the rest is tested above
-    comparer = PrefixComparer('AXCGT', max_error_rate=0.4)
+    ref = 'axcgt'
+    if upper:
+        ref = ref.upper()
+    comparer = PrefixComparer(ref, max_error_rate=0.4)
+    repr(comparer)
     assert comparer.locate('TTG') is None
     assert comparer.locate('AGT') is not None
+    assert comparer.locate('agt') is not None
     assert comparer.locate('CGT') is None
     assert comparer.locate('TTG') is None
 
 
-def test_suffix_comparer():
+@pytest.mark.parametrize("upper", (True, False))
+def test_suffix_comparer(upper):
     # only need to test whether None is returned on too many errors, the rest is tested above
-    comparer = SuffixComparer('AXCGT', max_error_rate=0.4)
+    ref = 'axcgt'
+    if upper:
+        ref = ref.upper()
+    comparer = SuffixComparer(ref, max_error_rate=0.4)
+    repr(comparer)
     assert comparer.locate('TTG') is None
     assert comparer.locate('AGT') is not None
+    assert comparer.locate('agt') is not None
     assert comparer.locate('CGT') is not None
     assert comparer.locate('TTG') is None
 

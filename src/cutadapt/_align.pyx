@@ -311,7 +311,7 @@ cdef class Aligner:
         cdef:
             char* s1 = self._reference
             bytes query_bytes = query.encode('ascii')
-            char* s2 = query_bytes
+            char* s2
             int m = self.m
             int n = len(query)
             _Entry* column = self.column  # Current column of the DP matrix
@@ -321,12 +321,14 @@ cdef class Aligner:
 
         if self.wildcard_query:
             query_bytes = query_bytes.translate(IUPAC_TABLE)
-            s2 = query_bytes
         elif self.wildcard_ref:
             query_bytes = query_bytes.translate(ACGT_TABLE)
-            s2 = query_bytes
         else:
+            # TODO Adding the .upper() increases overall runtime slightly even
+            # when I remove the .upper() from Adapter.match_to().
+            query_bytes = query_bytes.upper()
             compare_ascii = True
+        s2 = query_bytes
         """
         DP Matrix:
                    query (j)
@@ -586,7 +588,7 @@ cdef class PrefixComparer:
         if not (0 <= max_error_rate <= 1.):
             raise ValueError("max_error_rate must be between 0 and 1")
         self.max_k = int(max_error_rate * self.effective_length)
-        self.reference = reference.encode('ascii')
+        self.reference = reference.encode('ascii').upper()
         if self.wildcard_ref:
             self.reference = self.reference.translate(IUPAC_TABLE)
         elif self.wildcard_query:
@@ -612,7 +614,7 @@ cdef class PrefixComparer:
         cdef:
             bytes query_bytes = query.encode('ascii')
             char* r_ptr = self.reference
-            char* q_ptr = query_bytes
+            char* q_ptr
             int i, matches = 0
             int n = len(query_bytes)
             int length = min(self.m, n)
@@ -621,12 +623,12 @@ cdef class PrefixComparer:
 
         if self.wildcard_query:
             query_bytes = query_bytes.translate(IUPAC_TABLE)
-            q_ptr = query_bytes
         elif self.wildcard_ref:
             query_bytes = query_bytes.translate(ACGT_TABLE)
-            q_ptr = query_bytes
         else:
+            query_bytes = query_bytes.upper()
             compare_ascii = True
+        q_ptr = query_bytes
 
         if compare_ascii:
             for i in range(length):
