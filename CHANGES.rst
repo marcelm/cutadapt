@@ -2,24 +2,54 @@
 Changes
 =======
 
-development version
--------------------
+v2.0 (in development)
+---------------------
 
-* A progress indicator is printed while Cutadapt is working.
+This is a major new release because there were some backwards-incompatible
+changes. They should not affect that many users, but please do review them
+and adjust your scripts accordingly if necessary.
+
+Backwards-incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* This release of Cutadapt requires at least Python 3.4 to run. Python 2.7
+  is no longer supported.
 * Support for colorspace data was removed. Thus, the following command-line
   options can no longer be used: ``-c``, ``-d``, ``-t``, ``--strip-f3``,
-  ``--maq``, ``--bwa``, ``--no-zero-cap``
+  ``--maq``, ``--bwa``, ``--no-zero-cap``.
+* “Legacy mode” has been removed. This mode was enabled under certain
+  conditions and would change the behavior such that the read-modifying options
+  such as ``-q`` would only apply to the forward/R1 reads. This was necessary
+  for compatibility with old Cutadapt versions, but became increasingly
+  confusing.
+
+Features
+~~~~~~~~
+
+* A progress indicator is printed while Cutadapt is working. If you redirect
+  standard error to a file, the indicator is disabled.
 * Reading of FASTQ files has gotten faster due to a new parser. The FASTA
   and FASTQ reading/writing functions are now available as part of the
   `dnaio library <https://github.com/marcelm/dnaio/>`_. This is a separate
   Python package that can be installed independently from Cutadapt.
   There is one regression at the moment: FASTQ files that use a second
   header (after the "+") will have that header removed in the output.
+* Some other performance optimizations were made. Speedups of up to 15%
+  are possible.
+* :issue:`335`: For linked adapters, it is now possible to specify which
+  of the two adapters should be required, overriding the default.
+* :issue:`166`: By specifying ``--action=lowercase``, it is now possible
+  to not trim adapters, but to instead convert the section of the read
+  that would have been trimmed to lowercase.
+
+Bug fixes
+~~~~~~~~~
+
+* Removal of legacy mode fixes also :issue:`345`: ``--length`` would not enable
+  legacy mode.
 * The switch to ``dnaio`` also fixed :issue:`275`: Input files with
   non-standard names now no longer lead to a crash. Instead the format
   is now recognized from the file content.
-* Some other performance optimizations were made. Speedups of up to 15%
-  are possible.
 * Fix :issue:`354`: Sequences given using ``file:`` can now be unnamed.
 * Fix :issue:`257` and :issue:`242`: When only R1 or only R2 adapters are given, the
   ``--pair-filter`` setting is now forced to ``both`` for the
@@ -27,21 +57,13 @@ development version
   Otherwise, with the default ``--pair-filter=any``, all pairs would be
   considered untrimmed because one of the reads in the pair is always
   untrimmed.
+
+Other
+~~~~~
+
 * :issue:`359`: The ``-f``/``--format`` option is now ignored and a warning
   will be printed if it is used. The input file format is always
   auto-detected.
-* :issue:`335`: For linked adapters, it is now possible to specify which
-  of the two adapters should be required, overriding the default.
-* :issue:`166`: By specifying ``--action=lowercase``, it is now possible
-  to not trim adapters, but to instead convert the section of the read
-  that would have been trimmed to lowercase.
-
-Backwards-incompatible changes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-* “Legacy mode” has been removed.
-* This fixes also :issue:`345`: ``--length`` would not enable legacy mode.
-* This release of Cutadapt requires at least Python 3.4 to run.
 
 
 v1.18 (2018-09-07)
