@@ -548,8 +548,9 @@ cdef class PrefixComparer:
             #self.compare_ascii = False
 
     def __repr__(self):
-        return "PrefixComparer(reference={!r}, max_k={}, wildcard_ref={}, "\
+        return "{}(reference={!r}, max_k={}, wildcard_ref={}, "\
             "wildcard_query={})".format(
+                self.__class__.__name__,
                 self.reference, self.max_k, self.wildcard_ref,
                 self.wildcard_query)
 
