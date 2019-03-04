@@ -1533,7 +1533,7 @@ De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understand
 Under some circumstances, you may want to consider not trimming adapters at all.
 For example, a good library prepared for exome, genome or transcriptome
 sequencing should contain very few reads with adapters anyway. Also, some read
-mapping programs including BWA-MEM and STAR will soft-clip bases at the 5' ends
+mapping programs including BWA-MEM and STAR will soft-clip bases at the 3' ends
 of reads that do not match the reference, which will take care of adapters
 implicitly.
 
