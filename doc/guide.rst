@@ -1530,11 +1530,12 @@ could therefore skew your results very slightly at those loci ::
 The adapter sequences can be found in the document `Illumina TruSeq Adapters
 De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf>`__.
 
-Under some circumstances you may want to consider not trimming adapters at all.
-If you have whole-exome or whole-genome reads, there will be very few reads
-with adapters anyway. And if you use BWA-MEM, the trailing (5') bases of
-a read that do not match the reference are soft-clipped, which covers those
-cases in which an adapter does occur.
+Under some circumstances, you may want to consider not trimming adapters at all.
+For example, a good library prepared for exome, genome or transcriptome
+sequencing should contain very few reads with adapters anyway. Also, some read
+mapping programs including BWA-MEM and STAR will soft-clip bases at the 5' ends
+of reads that do not match the reference, which will take care of adapters
+implicitly.
 
 
 .. _warnbase:
