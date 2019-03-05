@@ -1497,38 +1497,36 @@ following command can be used to trim such a read::
 Illumina TruSeq
 ===============
 
-If you have reads containing Illumina TruSeq adapters, follow these
-steps.
+Illumina makes their adapter sequences available in the
+`Illumina Adapter Sequences Document <https://support.illumina.com/downloads/illumina-adapter-sequences-document-1000000002694.html>`_.
 
-Single-end reads as well as the first reads of paired-end data need to be
-trimmed with ``A`` + the “TruSeq Indexed Adapter”. Use only the prefix of the
-adapter sequence that is common to all Indexed Adapter sequences::
-
-    cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC -o trimmed.fastq.gz reads.fastq.gz
-
-If you have paired-end data, trim also read 2 with the reverse complement of the
-“TruSeq Universal Adapter”. The full command-line looks as follows::
+As an example for how to use that information with Cutadapt, we show
+how to trim TruSeq adapters. The document gives the adapter sequence
+for read 1 as ``AGATCGGAAGAGCACACGTCTGAACTCCAGTCA`` and for read 2
+as ``AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT``. When using Cutadapt, this
+means you should trim your paired-end data as follows:
 
     cutadapt \
-        -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC \
-        -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT \
-        -o trimmed.1.fastq.gz -p trimmed.2.fastq.gz \
-        reads.1.fastq.gz reads.2.fastq.gz
+        -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA \
+        -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT \
+        -o trimmed.R1.fastq.gz -p trimmed.R2.fastq.gz \
+        reads.R1.fastq.gz reads.R2.fastq.gz
 
 See also the :ref:`section about paired-end adapter trimming above <paired-end>`.
 
-If you want to simplify this a bit, you can also use the common prefix
-``AGATCGGAAGAGC`` as the adapter sequence in both cases. However, you should
-be aware that this sequence occurs multiple times in the human genome and it
-could therefore skew your results very slightly at those loci ::
+Keep in mind that Cutadapt removes the adapter that it finds and also the sequence
+following it, so even if the actual adapter sequence that is used in a protocol
+is longer than that (and possibly contains a variable index), it is sufficient to
+specify a prefix of the sequence(s).
 
-    cutadapt \
-        -a AGATCGGAAGAGC -A AGATCGGAAGAGC \
-        -o trimmed.1.fastq.gz -p trimmed.2.fastq.gz \
-        reads.1.fastq.gz reads.2.fastq.gz
+.. note::
+   Previous versions of this document also recommended using ``AGATCGGAAGAGC``
+   as adapter sequence for both read 1 and read 2, but you should avoid doing so
+   as that sequence occurs multiple times in the human genome.
 
-The adapter sequences can be found in the document `Illumina TruSeq Adapters
-De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf>`__.
+Some older information is also available in the document `Illumina TruSeq Adapters
+De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf>`_,
+but keep in mind that it does not cover newer protocols.
 
 Under some circumstances, you may want to consider not trimming adapters at all.
 For example, a good library prepared for exome, genome or transcriptome
