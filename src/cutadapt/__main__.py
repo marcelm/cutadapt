@@ -160,7 +160,7 @@ def get_argument_parser():
     # Buffer size for the reader process when running in parallel
     group.add_argument("--buffer-size", type=int, default=4000000,
         help=SUPPRESS)
-    # The input format is always auto-detected
+    # Deprecated: The input format is always auto-detected
     group.add_argument("-f", "--format", help=SUPPRESS)
 
     group = parser.add_argument_group("Finding adapters",
