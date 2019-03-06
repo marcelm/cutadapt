@@ -187,9 +187,9 @@ Cutadapt can detect multiple adapter types. 5' adapters preceed the sequence of
 interest and 3' adapters follow it. Further distinctions are made according to
 where in the read the adapter sequence is allowed to occur.
 
-========================================================= ===========================
+========================================================= =============================
 Adapter type                                              Command-line option
-========================================================= ===========================
+========================================================= =============================
 :ref:`Regular 3' adapter <three-prime-adapters>`          ``-a ADAPTER``
 :ref:`Regular 5' adapter <five-prime-adapters>`           ``-g ADAPTER``
 :ref:`Non-internal 3' adapter <non-internal>`             ``-a ADAPTERX``
@@ -197,9 +197,9 @@ Adapter type                                              Command-line option
 :ref:`Anchored 3' adapter <anchored-3adapters>`           ``-a ADAPTER$``
 :ref:`Anchored 5' adapter <anchored-5adapters>`           ``-g ^ADAPTER``
 :ref:`5' or 3' (both possible) <anywhere-adapters>`       ``-b ADAPTER``
-:ref:`Linked adapter <linked-adapters>`                   ``-a ADAPTER1...ADAPTER2``
-:ref:`Non-anchored linked adapter <linked-nonanchored>`   ``-g ADAPTER1...ADAPTER2``
-========================================================= ===========================
+:ref:`Linked adapter <linked-adapters>`                   | ``-a ^ADAPTER1...ADAPTER2``
+                                                          | ``-g ADAPTER1...ADAPTER2``
+========================================================= =============================
 
 By default, all adapters :ref:`are searched error-tolerantly <error-tolerance>`.
 Adapter sequences :ref:`may also contain any IUPAC wildcard
@@ -433,29 +433,35 @@ Linked adapters (combined 5' and 3' adapter)
 
 If your sequence of interest ist “framed” by a 5' and a 3' adapter, and you want
 to remove both adapters, then you may want to use a *linked adapter*. A linked
-adapter combines an anchored 5' adapter and a 3' adapter. The 3' adapter can be
-regular or anchored. The idea is that a read is only trimmed if the anchored
-adapters occur. Thus, the 5' adapter is always required, and if the 3' adapter
-was specified as anchored, it also must exist for a successful match.
+adapter combines a 5' and a 3' adapter. By default, the adapters are not anchored,
+but in many cases, you should anchor the 5’ adapter by prefixing it with ``^``.
 
 :ref:`See the previous sections <anchored-5adapters>` for what anchoring means.
 
-Use ``-a ADAPTER1...ADAPTER2`` to search for a linked adapter. ADAPTER1 is
-always interpreted as an anchored 5' adapter. Here, ADAPTER2 is a
-regular 3' adapter. If you write ``-a ADAPTER1...ADAPTER2$`` instead,
-then the 3' adapter also becomes anchored, that is, for a read to be
-trimmed, both adapters must exist at the respective ends.
+.. note::
+   Cutadapt versions before 2.0 anchored the 5’ adapter within linked adapters
+   automatically even if the initial ``^`` was not specified. If you have scripts
+   written for Cutadapt versions earlier than 2.0, please add the ``^`` so that
+   the behavior does not change!
 
-Note that the ADAPTER1 is always interpreted as an anchored 5' adapter even though
-there is no ``^`` character in the beginning.
+Linked adapters are specified as two sequences separated by ``...`` (three dots)::
 
-In summary:
+    cutadapt -a ^ADAPTER1...ADAPTER2 -o out.fastq.gz in.fastq.gz
 
-* ``-a ADAPTER1...ADAPTER2``: The 5' adapter is removed if it occurs. If a 3' adapter
-  occurs, it is removed only when also a 5' adapter is present.
-* ``-a ADAPTER1...ADAPTER2$``: The adapters are removed only if both occur.
+If you anchor an adapter, it will also become marked as being *required*. If a
+required adapter cannot be found, the read will not be trimmed at all even if
+the other adapter occurs. If an adapter is not required, it is *optional*.
 
-As an  example, assume the 5' adapter is *FIRST* and the 3' adapter is *SECOND*
+Also, when you use the ``--discard-untrimmed`` option (or ``--trimmed-only``) with a
+linked adapter, then a read is considered to be trimmed only if all required adapters
+were found.
+
+In the previous example, ``ADAPTER1`` was anchored and therefore required, but ``ADAPTER2``
+was optional. Anchoring also ``ADAPTER2`` (and making it required as well) would look like this::
+
+    cutadapt -a ^ADAPTER1...ADAPTER2$ -o out.fastq.gz in.fastq.gz
+
+As an example, assume the 5' adapter is *FIRST*, the 3' adapter is *SECOND*
 and you have these input reads::
 
     FIRSTmysequenceSECONDextrabases
@@ -465,7 +471,7 @@ and you have these input reads::
 
 Trimming with ::
 
-    cutadapt -a FIRST...SECOND -o output.fastq input.fastq
+    cutadapt -a ^FIRST...SECOND -o output.fastq input.fastq
 
 will result in ::
 
@@ -474,64 +480,49 @@ will result in ::
     myseque
     anotherreadSECOND
 
-The 3' adapter in the last read is not trimmed because the read does not contain
-the 5' adapter.
+The 3' adapter in the last read is not trimmed because the anchored 5’ adapter is required, but
+missing in the read.
 
-This feature does not work when used in combination with some other options,
-such as ``--info-file``, ``--mask-adapter``.
+Linked adapters do not work when used in combination with ``--info-file`` and ``--mask-adapter``.
 
 .. versionadded:: 1.10
 
 .. versionadded:: 1.13
    Ability to anchor the 3' adapter.
 
+.. versionadded:: 2.0
+   The 5’ adapter is no longer anchored by default.
 
-.. _linked-nonanchored:
-
-Linked adapters without anchoring
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This adapter type is especially suited for trimming CRISR screening reads.
-
-Sometimes, the 5' adapter of a linked adapter pair should not be anchored. It is possible to
-specify linked adapters also with ``-g ADAPTER1...ADAPTER2`` (note that ``-g`` is used instead
-of ``-a``). These work like the linked adapters described in the previous section, but with
-these two differences:
-
-* The 5' adapter is not anchored by default. (So neither the 5' nor 3' adapter are anchored.)
-* *Both* adapters are required. If one of them is not found, the read is not trimmed.
-
-That is, when you use the `--discard-untrimmed`` option (or ``--trimmed-only``) with a
-linked adapter specified with ``-g``, then a read is considered to be trimmed if *both*
-adapter parts (5' and 3') are present in the read. This is different from linked adapters
-specified with ``-a``, where a non-anchored 3' adapter is optional.
-
-This feature has been added on a tentative basis. It may change in the next program version.
-
-.. versionadded:: 1.13
-
-.. versionchanged:: 1.15
-    Require both adapters for a read to be trimmed.
 
 .. _linked-override:
 
-Overriding which adapters are required
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Changing which adapters are required
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A linked adapter is made up of two adapters, and each of them can be “required” or “optional”. If
-a required adapter cannot be found, the read is not trimmed at all, even if the other adapter
-occurs.
+As described, when you specify a linked adapter with ``-a``, the adapters that are anchored
+become *required*, and the non-anchored adapters become *optional*. To change this, you can
+instead use ``-g`` to specify a linked adapter. In that case, *both* adapters are required
+(even if they are not anchored). This type of linked adapter type is especially suited for
+trimming CRISR screening reads. For example::
 
-When you specify the linked adapter with ``-a``, all adapters that are anchored are *required*,
-and the non-anchored adapters are *optional*.
+    cutadapt -g ADAPTER1...ADAPTER2 -o out.fastq.gz in.fastq.gz
 
-When you specify the linked adapter with ``-g``, both adapters are required.
+Here, both ``ADAPTER1`` and ``ADAPTER2`` are not anchored, but they are required because ``-g``
+was used.
 
-To override this, you can use the :ref:`trimming parameters <trimming-parameters>` ``required`` or
-``optional``. For example, to request that the 5' adapter (here ``ADAPTER1``) should not be
-required, you can specify it like this ::
+The ``-g`` option does not cover all cases, so you can also mark each adapter explicitly as
+required or optional using the :ref:`trimming parameters <trimming-parameters>`
+``required`` and ``optional``. This is the only way to make an anchored adapter optional.
+For example, to request that an anchored 5' adapter (here ``ADAPTER1``) should not be required,
+you can specify it like this ::
 
-    cutadapt -g "ADAPTER1;optional...ADAPTER2" -o output.fastq.gz input.fastq.gz
+    cutadapt -a "^ADAPTER1;optional...ADAPTER2" -o output.fastq.gz input.fastq.gz
+
+.. versionadded:: 1.13
+    Option ``-g`` added.
+
+.. versionchanged:: 1.15
+    Option ``-g`` requires both adapters.
 
 
 Linked adapter statistics
@@ -1414,7 +1405,7 @@ made-up example for such a ``barcodes.fasta`` file::
     ^ATGATGAT
 
 Our barcodes are located at the 5’ end of the R1 read, so we made sure to use
-:ref:`anchored 5’ adapters <anchored-5p-adapters>` by prefixing
+:ref:`anchored 5’ adapters <anchored-5adapters>` by prefixing
 each sequence with the `^` character. We will then use ``-g file:barcodes.fasta``,
 where the ``-g`` option specifies that our adapters are 5’ adapters.
 
@@ -1455,6 +1446,8 @@ More advice on demultiplexing:
   receives the untrimmed R2 reads.
 * If you want to demultiplex, but keep the barcode in the reads, use the option ``--action=none``.
 
+
+.. _speed-up-demultiplexing:
 
 Speeding up demultiplexing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1526,7 +1519,7 @@ describe how it was done. For example, when the 5' adapter is *FIRST* and the
     FIRSTmysequenceSECOND
 
 That is, the sequence of interest is framed by the 5' and the 3' adapter. The
-following command can be used to trim such a read::
+following command would be used to trim such a read::
 
     cutadapt -g ^FIRST -a SECOND -n 2 ...
 

@@ -5,15 +5,15 @@ Changes
 v2.0 (in development)
 ---------------------
 
-This is a major new release because there were some backwards-incompatible
-changes. They should not affect that many users, but please do review them
-and adjust your scripts accordingly if necessary.
+This is a major new release with some backwards-incompatible changes.
+Please review them and adjust your scripts if necessary.
 
 Backwards-incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* This release of Cutadapt requires at least Python 3.4 to run. Python 2.7
-  is no longer supported.
+* :issue:`329`: Linked adapters specified with ``-a ADAPTER1...ADAPTER2``
+  are no longer anchored by default. To get results consist with the old
+  behavior, use ``-a ^ADAPTER1...ADAPTER2`` instead.
 * Support for colorspace data was removed. Thus, the following command-line
   options can no longer be used: ``-c``, ``-d``, ``-t``, ``--strip-f3``,
   ``--maq``, ``--bwa``, ``--no-zero-cap``.
@@ -26,10 +26,11 @@ Backwards-incompatible changes
   counts the ``N`` wildcard bases. Previously, an adapter like ``N{18}CC``
   (18 ``N`` wildcards followed by ``CC``) would effectively match
   anywhere because the default error rate of 0.1 (10%) would allow for
-  two errors. That is, the error rate of a match is now computed as
+  two errors. The error rate of a match is now computed as
   the number of non-``N`` bases in the matching part of the adapter
   divided by the number of errors.
-
+* This release of Cutadapt requires at least Python 3.4 to run. Python 2.7
+  is no longer supported.
 
 Features
 ~~~~~~~~
@@ -44,8 +45,10 @@ Features
   header (after the "+") will have that header removed in the output.
 * Some other performance optimizations were made. Speedups of up to 15%
   are possible.
-* :issue:`335`: For linked adapters, it is now possible to specify which
-  of the two adapters should be required, overriding the default.
+* Demultiplexing has become a lot faster :ref:`under certain conditions <speed-up-demultiplexing>`.
+* :issue:`335`: For linked adapters, it is now possible to
+  :ref:`specify which of the two adapters should be required <linked-override>`,
+  overriding the default.
 * :issue:`166`: By specifying ``--action=lowercase``, it is now possible
   to not trim adapters, but to instead convert the section of the read
   that would have been trimmed to lowercase.

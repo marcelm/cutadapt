@@ -269,20 +269,35 @@ def test_parse_with_parameters():
         assert a.back_adapter.max_error_rate == 0.17
 
 
-@pytest.mark.parametrize("r1,r2,exp1,exp2", [
-    ("", "", True, False),
-    ("", ";required", True, True),
+@pytest.mark.parametrize("seq,req1,req2", [
+    ("ACG...TGT", False, False),
+    ("ACG...TGT$", False, True),
+    ("^ACG...TGT", True, False),
+    ("^ACG...TGT$", True, True),
+])
+def test_anchoring_makes_front_linked_adapter_required(seq, req1, req2):
+    # -a X...Y
+    a = AdapterParser()._parse(seq, "back")
+    assert isinstance(a, LinkedAdapter)
+    assert a.front_required is req1
+    assert a.back_required is req2
+
+
+@pytest.mark.parametrize("r1,r2,req1,req2", [
+    ("", "", False, False),
+    ("", ";required", False, True),
     (";required", "", True, False),
     (";required", ";required", True, True),
-    ("", ";optional", True, False),
+    ("", ";optional", False, False),
     (";optional", "", False, False),
     (";optional", ";optional", False, False),
 ])
-def test_linked_adapter_back_required_optional(r1, r2, exp1, exp2):
+def test_linked_adapter_back_required_optional(r1, r2, req1, req2):
+    # -a X...Y
     a = AdapterParser()._parse("ACG" + r1 + "...TGT" + r2, "back")
     assert isinstance(a, LinkedAdapter)
-    assert a.front_required is exp1
-    assert a.back_required is exp2
+    assert a.front_required is req1
+    assert a.back_required is req2
 
 
 @pytest.mark.parametrize("r1,r2,exp1,exp2", [
@@ -295,6 +310,7 @@ def test_linked_adapter_back_required_optional(r1, r2, exp1, exp2):
     (";optional", ";optional", False, False),
 ])
 def test_linked_adapter_front_required_optional(r1, r2, exp1, exp2):
+    # -g X...Y
     a = AdapterParser()._parse("ACG" + r1 + "...TGT" + r2, "front")
     assert isinstance(a, LinkedAdapter)
     assert a.front_required is exp1

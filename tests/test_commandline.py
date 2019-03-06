@@ -484,20 +484,16 @@ def test_nextseq():
     run('--nextseq-trim 22', 'nextseq.fastq', 'nextseq.fastq')
 
 
-def test_linked():
-    run('-a AAAAAAAAAA...TTTTTTTTTT', 'linked.fasta', 'linked.fasta')
-
-
 def test_linked_explicitly_anchored():
     run('-a ^AAAAAAAAAA...TTTTTTTTTT', 'linked.fasta', 'linked.fasta')
 
 
 def test_linked_multiple():
-    run('-a AAAAAAAAAA...TTTTTTTTTT -a AAAAAAAAAA...GCGCGCGCGC', 'linked.fasta', 'linked.fasta')
+    run('-a ^AAAAAAAAAA...TTTTTTTTTT -a ^AAAAAAAAAA...GCGCGCGCGC', 'linked.fasta', 'linked.fasta')
 
 
 def test_linked_both_anchored():
-    run('-a AAAAAAAAAA...TTTTT$', 'linked-anchored.fasta', 'linked.fasta')
+    run('-a ^AAAAAAAAAA...TTTTT$', 'linked-anchored.fasta', 'linked.fasta')
 
 
 def test_linked_5p_not_anchored():
@@ -505,7 +501,7 @@ def test_linked_5p_not_anchored():
 
 
 def test_linked_discard_untrimmed():
-    run('-a AAAAAAAAAA...TTTTTTTTTT --discard-untrimmed', 'linked-discard.fasta', 'linked.fasta')
+    run('-a ^AAAAAAAAAA...TTTTTTTTTT --discard-untrimmed', 'linked-discard.fasta', 'linked.fasta')
 
 
 def test_linked_discard_untrimmed_g():
