@@ -2,11 +2,13 @@
 Changes
 =======
 
-v2.0 (in development)
----------------------
+v2.0 (2019-03-06)
+-----------------
 
-This is a major new release with some backwards-incompatible changes.
-Please review them and adjust your scripts if necessary.
+This is a major new release with lots of bug fixes and new features, but
+also some backwards-incompatible changes. These should hopefully
+not affect too many users, but please make sure to review them and
+possibly update your scripts!
 
 Backwards-incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
