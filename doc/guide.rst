@@ -458,10 +458,10 @@ In summary:
 As an  example, assume the 5' adapter is *FIRST* and the 3' adapter is *SECOND*
 and you have these input reads::
 
-    FIRSTMYSEQUENCESECONDEXTRABASES
-    FIRSTMYSEQUENCESEC
-    FIRSTMYSEQUE
-    ANOTHERREADSECOND
+    FIRSTmysequenceSECONDextrabases
+    FIRSTmysequenceSEC
+    FIRSTmyseque
+    anotherreadSECOND
 
 Trimming with ::
 
@@ -469,10 +469,10 @@ Trimming with ::
 
 will result in ::
 
-    MYSEQUENCE
-    MYSEQUENCE
-    MYSEQUE
-    ANOTHERREADSECOND
+    mysequence
+    mysequence
+    myseque
+    anotherreadSECOND
 
 The 3' adapter in the last read is not trimmed because the read does not contain
 the 5' adapter.
@@ -1514,7 +1514,7 @@ As an example, assume you have a protocol in which a 5' adapter gets ligated
 to your DNA fragment, but it's possible that the adapter is ligated more than
 once. So your sequence could look like this::
 
-    ADAPTERADAPTERADAPTERMYSEQUENCE
+    ADAPTERADAPTERADAPTERmysequence
 
 To be on the safe side, you assume that there are at most five copies of the
 adapter sequence. This command can be used to trim the reads correctly::
@@ -1532,7 +1532,7 @@ recommended way to search for 5'/3' linked adapters. For completeness, we
 describe how it was done. For example, when the 5' adapter is *FIRST* and the
 3' adapter is *SECOND*, then the read could look like this::
 
-    FIRSTMYSEQUENCESECOND
+    FIRSTmysequenceSECOND
 
 That is, the sequence of interest is framed by the 5' and the 3' adapter. The
 following command can be used to trim such a read::
