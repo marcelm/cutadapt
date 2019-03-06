@@ -581,9 +581,6 @@ Read before trimming           Read after trimming Detected adapter type
 ``TERMYSEQUENCE``              ``MYSEQUENCE``      5' adapter
 ============================== =================== =====================
 
-The ``-b`` option cannot be used with colorspace data.
-
-
 
 Multiple adapter occurrences within a single read
 -------------------------------------------------
@@ -824,8 +821,6 @@ and *do not* use ``--match-read-wildcards``, then Cutadapt compares characters
 by their ASCII value. Thus, both the read and adapter can be arbitrary strings
 (such as ``SEQUENCE`` or ``ADAPTER`` as used here in the examples).
 
-Wildcards do not work in colorspace.
-
 
 Repeated bases
 --------------
@@ -1008,11 +1003,7 @@ each read. Steps not requested on the command-line are skipped.
 6. Length tag modification (``--length-tag``)
 7. Read name suffix removal (``--strip-suffix``)
 8. Addition of prefix and suffix to read name (``-x``/``--prefix`` and ``-y``/``--suffix``)
-9. Double-encode the sequence (only colorspace)
-10. Replace negative quality values with zero (zero capping, only colorspace)
-11. Trim primer base (only colorspace)
-
-The last three steps are colorspace-specific.
+9. Replace negative quality values with zero (zero capping)
 
 
 .. _filtering:
