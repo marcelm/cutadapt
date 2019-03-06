@@ -937,7 +937,7 @@ class MultiAdapter:
     """
     Represent multiple adapters of the same type at once and use an index data structure
     to speed up matching. This acts like a "normal" Adapter as it provides a match_to
-    method, but should be faster.
+    method, but is faster with lots of adaptes.
 
     There are quite a few restrictions:
     - the adapters need to be either all PREFIX or all SUFFIX adapters

@@ -1409,46 +1409,94 @@ Example::
     cutadapt -a one=TATA -a two=GCGC -o trimmed-{name}.fastq.gz input.fastq.gz
 
 This command will create the three files ``demulti-one.fastq.gz``,
-``demulti-two.fastq.gz`` and ``demulti-unknown.fastq.gz``. You can :ref:`also
-provide adapter sequences in a FASTA file <multiple-adapters>`.
+``demulti-two.fastq.gz`` and ``demulti-unknown.fastq.gz``.
 
-In order to not trim the input files at all, but to only do multiplexing, use
-option ``--no-trim``. And if you want to output the reads in which no
-adapters were found to a different file, use the ``--untrimmed-output``
-parameter with a file name. Here is an example that uses both parameters and
-reads the adapters from a FASTA file (note that ``--untrimmed-output`` can be
-abbreviated)::
-
-    cutadapt -a file:barcodes.fasta --no-trim --untrimmed-o untrimmed.fastq.gz -o trimmed-{name}.fastq.gz input.fastq.gz
-
-Here is a made-up example for the ``barcodes.fasta`` file::
+More realistically, your “adapters” would actually be barcode sequences that you
+will want to :ref:`provide in a FASTA file <multiple-adapters>`. Here is a
+made-up example for such a ``barcodes.fasta`` file::
 
     >barcode01
-    TTAAGGCC
+    ^TTAAGGCC
     >barcode02
-    TAGCTAGC
+    ^TAGCTAGC
     >barcode03
-    ATGATGAT
+    ^ATGATGAT
+
+Our barcodes are located at the 5’ end of the R1 read, so we made sure to use
+:ref:`anchored 5’ adapters <anchored-5p-adapters>` by prefixing
+each sequence with the `^` character. We will then use ``-g file:barcodes.fasta``,
+where the ``-g`` option specifies that our adapters are 5’ adapters.
+
+These barcode sequences have a length of 8, which means that Cutadapt
+would not allow any errors when matching them: The default is to allow 10%
+errors, but 10% of 8 is 0.8, which is rounded down to 0. To allow one
+error, we increase the maximum error rate to 15% with ``-e 0.15``.
+Finally, we also use ``--no-indels`` because we don’t want to allow
+insertions or deletions. Also, with the ``--no-indels`` option, Cutadapt can
+use a different algorithm and demultiplexing will be many times faster.
+Here is the final command::
+
+    cutadapt -e 0.15 --no-indels -g file:barcodes.fasta -o "trimmed-{name}.fastq.gz" input.fastq.gz
 
 Demultiplexing is also supported for paired-end data if you provide the ``{name}`` template
-in both output file names (``-o`` and ``-p``). Paired-end demultiplexing always uses the adapter
-matches of the *first* read to decide where a read should be written.
-If adapters to be found in read 2 are given (``-A``/``-G``), they are detected and removed as normal, but
-these matches do not influence where the read pair is written. This is
-to ensure that read 1 and read 2 are always synchronized. Example::
+in both output file names (``-o`` and ``-p``). Example::
 
-    cutadapt -a first=AACCGG -a second=TTTTGG -A ACGTACGT -A TGCATGCA -o trimmed-{name}.1.fastq.gz -p trimmed-{name}.2.fastq.gz input.1.fastq.gz input.2.fastq.gz
+    cutadapt -e 0.15 --no-indels -g file:barcodes.fasta -o trimmed-{name}.1.fastq.gz -p trimmed-{name}.2.fastq.gz input.1.fastq.gz input.2.fastq.gz
 
-This will create up to six output files named ``trimmed-first.1.fastq.gz``, ``trimmed-second.1.fastq.gz``,
-``trimmed-unknown.1.fastq.gz`` and ``trimmed-first.2.fastq.gz``, ``trimmed-second.2.fastq.gz``,
-``trimmed-unknown.2.fastq.gz``.
+Paired-end demultiplexing always uses the adapter matches of the *first* read to decide where a
+read should be written. If adapters for read 2 are given (``-A``/``-G``), they are detected and
+removed as normal, but these matches do not influence where the read pair is written. This is
+to ensure that read 1 and read 2 are always synchronized.
 
-You can use ``--untrimmed-paired-output`` to change the name for the output file that receives the
-untrimmed second reads.
+To demultiplex using a barcode that is located on read 2, you can swap the roles of R1 and R2 for
+both the input and output files ::
 
+    cutadapt -e 0.15 --no-indels -g file:barcodes.fasta -o trimmed-{name}.2.fastq.gz -p trimmed-{name}.1.fastq.gz input.2.fastq.gz input.1.fastq.gz
+
+If you do this in a script or pipeline, it may be a good idea to add a comment to clarify that
+this reversal of R1 and R2 is intended.
+
+More advice on demultiplexing:
+
+* You can use ``--untrimmed-output`` to change the name of the output file that receives the
+  untrimmed reads (those in which no barcode could be found).
+* Similarly, you can use ``--untrimmed-paired-output`` to change the name of the output file that
+  receives the untrimmed R2 reads.
+* If you want to demultiplex, but keep the barcode in the reads, use the option ``--action=none``.
+
+
+Speeding up demultiplexing
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Finding many adapters/barcodes simultaneously (which is what demultiplexing in Cutadapt is about),
+can be sped up tremendously by using the right options since Cutadapt will then be able to create an
+index of the barcode sequences instead of checking for each barcode separately. Currently, the
+following conditions need to be met in order for index creation to be enabled:
+
+* The barcodes/adapters must be anchored 5’ adapters (``-g ^ADAPTER``) or anchored 3’ adapters
+  (``-a ADAPTER$``).
+* The maximum error rate (``-e``) must be set in such a way as to allow at most 2 errors or less.
+  For example, if the barcode has length 10, you can use ``-e 0.2`` (or lower).
+* The option ``--no-indels`` must be used.
+* No IUPAC wildcards must be used in the barcode/adapter. Also, you cannot use the option
+  ``--match-read-wildcards``.
+
+An index will be built for all the adapters that fulfill these criteria if there are at least two
+of them. You can provide additional adapters/barcodes, and they will just not be included in the
+index. Whether an index is created or not should not affect the results, only how fast you get them.
+
+To see whether an index is created, look for a message like this in the first few lines of
+Cutadapt’s output::
+
+    Building index of 23 adapters ...
+
+Hopefully some of the above restrictions will be lifted in the future.
 
 .. versionadded:: 1.15
    Demultiplexing of paired-end data.
+
+.. versionadded:: 2.0
+   Added ability to use an index of adapters for speeding up demultiplexing
 
 
 .. _more-than-one:
