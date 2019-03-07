@@ -65,18 +65,22 @@ class Progress:
                             sc = "8<" if is_open else "8="
                         yield "[" + left + sc + right + "]"
 
-    def do_nothing(self, total, _force=False):
+    def do_nothing(self, total, _final=False):
         pass
 
-    def update(self, total, _force=False):
+    def update(self, total, _final=False):
         """
         """
         current_time = time.time()
-        time_delta = current_time - self._time
-        delta = total - self._n
+        if _final:
+            time_delta = current_time - self._start_time
+            delta = total
+        else:
+            time_delta = current_time - self._time
+            delta = total - self._n
         if delta < 1:
             return
-        if not _force:
+        if not _final:
             if time_delta < self._every:
                 return
             if total <= self._n:
@@ -92,7 +96,7 @@ class Progress:
         print(
             "\r"
             "{animation} {hours:02d}:{minutes:02d}:{seconds:02d} "
-            "{total:12,d} reads   @   {per_item:6.0F} us/read; {per_minute:7.2F} M reads/minute  "
+            "{total:13,d} reads  @  {per_item:7.1F} µs/read; {per_minute:6.2F} M reads/minute"
             "".format(
                 hours=hours, minutes=minutes, seconds=seconds,
                 total=total, per_item=per_item * 1E6, per_minute=per_second * 60 / 1E6,
@@ -106,6 +110,6 @@ class Progress:
         """
         Print final progress reflecting the final total
         """
-        self.update(total, _force=True)
+        self.update(total, _final=True)
         if self._show:
             print(file=sys.stderr)
