@@ -580,8 +580,8 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
         logger.warning("Option --format is deprecated and ignored because the input file format is "
             "always auto-detected")
 
-    if not (0 <= args.error_rate <= 1.):
-        raise CommandLineError("The maximum error rate must be between 0 and 1.")
+    if not (0 <= args.error_rate < 1.):
+        raise CommandLineError("The maximum error rate must be at least 0 and less than 1.")
     if args.overlap < 1:
         raise CommandLineError("The overlap must be at least 1.")
     if not (0 <= args.gc_content <= 100):
