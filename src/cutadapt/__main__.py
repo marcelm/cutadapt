@@ -60,7 +60,6 @@ import time
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 import logging
 import platform
-import textwrap
 from xopen import xopen
 import dnaio
 
