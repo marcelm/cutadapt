@@ -706,7 +706,7 @@ def log_header(cmdlineargs):
     logger.info("Command line parameters: %s", " ".join(cmdlineargs))
 
 
-def main(cmdlineargs=None, default_outfile='-'):
+def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     """
     Main function that sets up a processing pipeline and runs it.
 

@@ -43,7 +43,7 @@ def test_example(run):
 
 
 def test_small(run):
-    run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq')
+    run('-a TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq')
 
 
 def test_empty(run):
@@ -53,12 +53,12 @@ def test_empty(run):
 
 def test_newlines(run):
     """DOS/Windows newlines"""
-    run('-e 0.12 -b TTAGACATATCTCCGTCG', 'dos.fastq', 'dos.fastq')
+    run('-e 0.12 -a TTAGACATATCTCCGTCG', 'dos.fastq', 'dos.fastq')
 
 
 def test_lowercase(run):
     """lowercase adapter"""
-    run('-b ttagacatatctccgtcg', 'lowercase.fastq', 'small.fastq')
+    run('-a ttagacatatctccgtcg', 'lowercase.fastq', 'small.fastq')
 
 
 def test_rest(run, tmpdir):
@@ -610,3 +610,43 @@ def test_paired_separate(run):
     """test separate trimming of paired-end reads"""
     run("-a TTAGACATAT", "paired-separate.1.fastq", "paired.1.fastq")
     run("-a CAGTGGAGTA", "paired-separate.2.fastq", "paired.2.fastq")
+
+
+def test_run_as_module():
+    """Check that "python3 -m cutadapt ..." works"""
+    import subprocess
+    from cutadapt import __version__
+    py = subprocess.Popen([sys.executable, "-m", "cutadapt", "--version"], stdout=subprocess.PIPE)
+    assert py.communicate()[0].decode().strip() == __version__
+
+
+def test_standard_input_pipe(tmpdir, cores):
+    """Read FASTQ from standard input"""
+
+    import subprocess
+    out_path = str(tmpdir.join("out.fastq"))
+    in_path = datapath("small.fastq")
+    # Use 'cat' to simulate that no file name is available for stdin
+    cat = subprocess.Popen(["cat", in_path], stdout=subprocess.PIPE)
+    py = subprocess.Popen([
+        sys.executable, "-m", "cutadapt", "--cores", str(cores),
+        "-a", "TTAGACATATCTCCGTCG", "-o", out_path, "-"],
+        stdin=cat.stdout)
+    _ = py.communicate()
+    cat.stdout.close()
+    _ = py.communicate()[0]
+    assert_files_equal(cutpath("small.fastq"), out_path)
+
+
+def test_standard_output(tmpdir, cores):
+    """Write FASTQ to standard output (not using --output/-o option)"""
+
+    import subprocess
+    out_path = str(tmpdir.join("out.fastq"))
+    with open(out_path, "w") as out_file:
+        py = subprocess.Popen([
+            sys.executable, "-m", "cutadapt", "--cores", str(cores),
+            "-a", "TTAGACATATCTCCGTCG", datapath("small.fastq")],
+            stdout=out_file)
+        _ = py.communicate()
+    assert_files_equal(cutpath("small.fastq"), out_path)
