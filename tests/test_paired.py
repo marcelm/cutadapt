@@ -6,7 +6,7 @@ from itertools import product
 import pytest
 
 from cutadapt.__main__ import main
-from utils import run, assert_files_equal, datapath, cutpath, redirect_stderr
+from utils import assert_files_equal, datapath, cutpath, redirect_stderr
 
 
 @pytest.fixture
@@ -53,12 +53,6 @@ def run_interleaved(tmpdir):
         assert_files_equal(cutpath(expected1), tmp1)
 
     return _run
-
-
-def test_paired_separate():
-    """test separate trimming of paired-end reads"""
-    run("-a TTAGACATAT", "paired-separate.1.fastq", "paired.1.fastq")
-    run("-a CAGTGGAGTA", "paired-separate.2.fastq", "paired.2.fastq")
 
 
 def test_paired_end_no_legacy(run_paired, cores):
