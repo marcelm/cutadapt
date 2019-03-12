@@ -394,18 +394,18 @@ def parse_lengths(s):
     return tuple(values)
 
 
-def open_output_files(options, default_outfile, interleaved):
+def open_output_files(args, default_outfile, interleaved):
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
     """
     rest_file = info_file = wildcard = None
-    if options.rest_file is not None:
-        rest_file = xopen(options.rest_file, 'w')
-    if options.info_file is not None:
-        info_file = xopen(options.info_file, 'w')
-    if options.wildcard_file is not None:
-        wildcard = xopen(options.wildcard_file, 'w')
+    if args.rest_file is not None:
+        rest_file = xopen(args.rest_file, 'w')
+    if args.info_file is not None:
+        info_file = xopen(args.info_file, 'w')
+    if args.wildcard_file is not None:
+        wildcard = xopen(args.wildcard_file, 'w')
 
     def open2(path1, path2):
         file1 = file2 = None
@@ -416,47 +416,47 @@ def open_output_files(options, default_outfile, interleaved):
         return file1, file2
 
     too_short = too_short2 = None
-    if options.minimum_length is not None:
-        too_short, too_short2 = open2(options.too_short_output, options.too_short_paired_output)
+    if args.minimum_length is not None:
+        too_short, too_short2 = open2(args.too_short_output, args.too_short_paired_output)
 
     too_long = too_long2 = None
-    if options.maximum_length is not None:
-        too_long, too_long2 = open2(options.too_long_output, options.too_long_paired_output)
+    if args.maximum_length is not None:
+        too_long, too_long2 = open2(args.too_long_output, args.too_long_paired_output)
 
-    if int(options.discard_trimmed) + int(options.discard_untrimmed) + int(
-                    options.untrimmed_output is not None) > 1:
+    if int(args.discard_trimmed) + int(args.discard_untrimmed) + int(
+        args.untrimmed_output is not None) > 1:
         raise CommandLineError("Only one of the --discard-trimmed, --discard-untrimmed "
             "and --untrimmed-output options can be used at the same time.")
 
-    demultiplex = options.output is not None and '{name}' in options.output
-    if options.paired_output is not None and (demultiplex != ('{name}' in options.paired_output)):
+    demultiplex = args.output is not None and '{name}' in args.output
+    if args.paired_output is not None and (demultiplex != ('{name}' in args.paired_output)):
         raise CommandLineError('When demultiplexing paired-end data, "{name}" must appear in '
             'both output file names (-o and -p)')
 
     if demultiplex:
-        if options.discard_trimmed:
+        if args.discard_trimmed:
             raise CommandLineError("Do not use --discard-trimmed when demultiplexing.")
 
-        out = options.output
-        untrimmed = options.output.replace('{name}', 'unknown')
-        if options.untrimmed_output:
-            untrimmed = options.untrimmed_output
-        if options.discard_untrimmed:
+        out = args.output
+        untrimmed = args.output.replace('{name}', 'unknown')
+        if args.untrimmed_output:
+            untrimmed = args.untrimmed_output
+        if args.discard_untrimmed:
             untrimmed = None
 
-        if options.paired_output is not None:
-            out2 = options.paired_output
-            untrimmed2 = options.paired_output.replace('{name}', 'unknown')
-            if options.untrimmed_paired_output:
-                untrimmed2 = options.untrimmed_paired_output
-            if options.discard_untrimmed:
+        if args.paired_output is not None:
+            out2 = args.paired_output
+            untrimmed2 = args.paired_output.replace('{name}', 'unknown')
+            if args.untrimmed_paired_output:
+                untrimmed2 = args.untrimmed_paired_output
+            if args.discard_untrimmed:
                 untrimmed2 = None
 
         else:
             untrimmed2 = out2 = None
     else:
-        untrimmed, untrimmed2 = open2(options.untrimmed_output, options.untrimmed_paired_output)
-        out, out2 = open2(options.output, options.paired_output)
+        untrimmed, untrimmed2 = open2(args.untrimmed_output, args.untrimmed_paired_output)
+        out, out2 = open2(args.output, args.paired_output)
         if out is None:
             out = default_outfile
 
