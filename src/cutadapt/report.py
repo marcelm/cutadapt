@@ -2,6 +2,7 @@
 Routines for printing a report.
 """
 import sys
+from io import StringIO
 from contextlib import contextmanager
 import textwrap
 from .adapters import Where, EndStatistics
@@ -189,35 +190,38 @@ def error_ranges(adapter_statistics: EndStatistics):
     return "No. of allowed errors:\n" + s + "\n"
 
 
-def print_histogram(end_statistics, n, gc_content):
+def histogram(end_statistics: EndStatistics, n: int, gc_content: float):
     """
-    Print a histogram. Also, print the no. of reads expected to be
+    Return a formatted histogram. Include the no. of reads expected to be
     trimmed by chance (assuming a uniform distribution of nucleotides in the reads).
 
     adapter_statistics -- EndStatistics object
     adapter_length -- adapter length
     n -- total no. of reads.
     """
+    sio = StringIO()
     d = end_statistics.lengths
     errors = end_statistics.errors
 
     match_probabilities = end_statistics.random_match_probabilities(gc_content=gc_content)
-    print("length", "count", "expect", "max.err", "error counts", sep="\t")
+    print("length", "count", "expect", "max.err", "error counts", sep="\t", file=sio)
     for length in sorted(d):
         # when length surpasses adapter_length, the
         # probability does not increase anymore
         expect = n * match_probabilities[min(len(end_statistics.sequence), length)]
         count = d[length]
         max_errors = max(errors[length].keys())
-        errs = ' '.join(str(errors[length][e]) for e in range(max_errors+1))
+        errs = ' '.join(str(errors[length][e]) for e in range(max_errors + 1))
         print(
             length,
             count,
             "{:.1F}".format(expect),
-            int(end_statistics.max_error_rate*min(length, len(end_statistics.sequence))),
+            int(end_statistics.max_error_rate * min(length, len(end_statistics.sequence))),
             errs,
-            sep="\t")
-    print()
+            sep="\t",
+            file=sio,
+        )
+    return sio.getvalue() + "\n"
 
 
 class AdjacentBaseStatistics:
@@ -240,43 +244,39 @@ class AdjacentBaseStatistics:
             if total < 20:
                 self._warnbase = None
 
+    def __repr__(self):
+        return 'AdjacentBaseStatistics(bases={})'.format(self.bases)
+
     @property
     def should_warn(self):
         return self._warnbase is not None
 
-    def print(self):
+    def __str__(self):
         if not self._fractions:
-            return False
-        print('Bases preceding removed adapters:')
+            return ""
+        sio = StringIO()
+        print('Bases preceding removed adapters:', file=sio)
         for text, fraction in self._fractions:
-            print('  {}: {:.1%}'.format(text, fraction))
+            print('  {}: {:.1%}'.format(text, fraction), file=sio)
         if self.should_warn:
-            print('WARNING:')
-            print('    The adapter is preceded by "{}" extremely often.'.format(self._warnbase))
-            print("    The provided adapter sequence could be incomplete at its 3' end.")
-            print()
-            return True
-        print()
-        return False
+            print('WARNING:', file=sio)
+            print('    The adapter is preceded by "{}" extremely often.'.format(self._warnbase), file=sio)
+            print("    The provided adapter sequence could be incomplete at its 3' end.", file=sio)
+        return sio.getvalue()
 
 
-@contextmanager
-def redirect_standard_output(file):
-    if file is None:
-        yield
-        return
-    old_stdout = sys.stdout
-    sys.stdout = file
-    yield
-    sys.stdout = old_stdout
-
-
-def print_report(stats, time, gc_content):
+def full_report(stats, time, gc_content) -> str:
     """Print report to standard output."""
     if stats.n == 0:
-        print("No reads processed! Either your input file is empty or you used the wrong -f/--format parameter.")
-        return
-    print("Finished in {:.2F} s ({:.0F} us/read; {:.2F} M reads/minute).".format(
+        return "No reads processed!"
+
+    sio = StringIO()
+
+    def print_s(*args, **kwargs):
+        kwargs['file'] = sio
+        print(*args, **kwargs)
+
+    print_s("Finished in {:.2F} s ({:.0F} us/read; {:.2F} M reads/minute).".format(
         time, 1E6 * time / stats.n, stats.n / time * 60 / 1E6))
 
     report = "\n=== Summary ===\n\n"
@@ -319,7 +319,7 @@ def print_report(stats, time, gc_content):
         report += "  Read 2: {o.written_bp[1]:13,d} bp\n"
     pairs_or_reads = "Pairs" if stats.paired else "Reads"
     report = report.format(o=stats, pairs_or_reads=pairs_or_reads)
-    print(report)
+    print_s(report)
 
     warning = False
     for which_in_pair in (0, 1):
@@ -337,11 +337,11 @@ def print_report(stats, time, gc_content):
             else:
                 extra = ''
 
-            print("=" * 3, extra + "Adapter", adapter_statistics.name, "=" * 3)
-            print()
+            print_s("=" * 3, extra + "Adapter", adapter_statistics.name, "=" * 3)
+            print_s()
 
             if where is Where.LINKED:
-                print("Sequence: {}...{}; Type: linked; Length: {}+{}; "
+                print_s("Sequence: {}...{}; Type: linked; Length: {}+{}; "
                     "5' trimmed: {} times; 3' trimmed: {} times".format(
                         adapter_statistics.front.sequence,
                         adapter_statistics.back.sequence,
@@ -349,53 +349,56 @@ def print_report(stats, time, gc_content):
                         len(adapter_statistics.back.sequence),
                         total_front, total_back))
             else:
-                print("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times.".
+                print_s("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times.".
                     format(adapter_statistics.front.sequence, ADAPTER_TYPES[adapter_statistics.where],
                         len(adapter_statistics.front.sequence), total))
             if total == 0:
-                print()
+                print_s()
                 continue
             if where is Where.ANYWHERE:
-                print(total_front, "times, it overlapped the 5' end of a read")
-                print(total_back, "times, it overlapped the 3' end or was within the read")
-                print()
-                print(error_ranges(adapter_statistics.front))
-                print("Overview of removed sequences (5')")
-                print_histogram(adapter_statistics.front, stats.n, gc_content)
-                print()
-                print("Overview of removed sequences (3' or within)")
-                print_histogram(adapter_statistics.back, stats.n, gc_content)
+                print_s(total_front, "times, it overlapped the 5' end of a read")
+                print_s(total_back, "times, it overlapped the 3' end or was within the read")
+                print_s()
+                print_s(error_ranges(adapter_statistics.front))
+                print_s("Overview of removed sequences (5')")
+                print_s(histogram(adapter_statistics.front, stats.n, gc_content))
+                print_s()
+                print_s("Overview of removed sequences (3' or within)")
+                print_s(histogram(adapter_statistics.back, stats.n, gc_content))
             elif where is Where.LINKED:
-                print()
-                print(error_ranges(adapter_statistics.front))
-                print(error_ranges(adapter_statistics.back))
-                print("Overview of removed sequences at 5' end")
-                print_histogram(adapter_statistics.front, stats.n, gc_content)
-                print()
-                print("Overview of removed sequences at 3' end")
-                print_histogram(adapter_statistics.back, stats.n, gc_content)
+                print_s()
+                print_s(error_ranges(adapter_statistics.front))
+                print_s(error_ranges(adapter_statistics.back))
+                print_s("Overview of removed sequences at 5' end")
+                print_s(histogram(adapter_statistics.front, stats.n, gc_content))
+                print_s()
+                print_s("Overview of removed sequences at 3' end")
+                print_s(histogram(adapter_statistics.back, stats.n, gc_content))
             elif where in (Where.FRONT, Where.PREFIX, Where.FRONT_NOT_INTERNAL):
-                print()
-                print(error_ranges(adapter_statistics.front))
-                print("Overview of removed sequences")
-                print_histogram(adapter_statistics.front, stats.n, gc_content)
+                print_s()
+                print_s(error_ranges(adapter_statistics.front))
+                print_s("Overview of removed sequences")
+                print_s(histogram(adapter_statistics.front, stats.n, gc_content))
             else:
                 assert where in (Where.BACK, Where.SUFFIX, Where.BACK_NOT_INTERNAL)
-                print()
-                print(error_ranges(adapter_statistics.back))
+                print_s()
+                print_s(error_ranges(adapter_statistics.back))
                 base_stats = AdjacentBaseStatistics(adapter_statistics.back.adjacent_bases)
-                warning = warning or base_stats.print()
-                print("Overview of removed sequences")
-                print_histogram(adapter_statistics.back, stats.n, gc_content)
+                warning = warning or base_stats.should_warn
+                print_s(base_stats)
+                print_s("Overview of removed sequences")
+                print_s(histogram(adapter_statistics.back, stats.n, gc_content))
 
     if warning:
-        print('WARNING:')
-        print('    One or more of your adapter sequences may be incomplete.')
-        print('    Please see the detailed output above.')
+        print_s('WARNING:')
+        print_s('    One or more of your adapter sequences may be incomplete.')
+        print_s('    Please see the detailed output above.')
+
+    return sio.getvalue().rstrip()
 
 
-def print_minimal_report(stats, time, gc_content):
-    """Print a minimal tabular report suitable for concatenation"""
+def minimal_report(stats, time, gc_content) -> str:
+    """Create a minimal tabular report suitable for concatenation"""
 
     def none(value):
         return 0 if value is None else value
@@ -433,5 +436,4 @@ def print_minimal_report(stats, time, gc_content):
         'w/adapters', 'qualtrim_bp', 'out_bp']
     if stats.paired:
         header += ['w/adapters2', 'qualtrim2_bp', 'out2_bp']
-    print(*header, sep='\t')
-    print(*fields, sep='\t')
+    return "\t".join(header) + "\n" + "\t".join(str(x) for x in fields)

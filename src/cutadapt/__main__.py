@@ -68,7 +68,7 @@ from cutadapt.adapters import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
     NextseqQualityTrimmer, Shortener)
-from cutadapt.report import print_report, print_minimal_report, redirect_standard_output
+from cutadapt.report import full_report, minimal_report
 from cutadapt.pipeline import (SingleEndPipeline, PairedEndPipeline, InputFiles, OutputFiles,
     SerialPipelineRunner, ParallelPipelineRunner)
 from cutadapt.utils import available_cpu_count
@@ -718,10 +718,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     if cmdlineargs is None:
         cmdlineargs = sys.argv[1:]
     args = parser.parse_args(args=cmdlineargs)
+    # log to stderr if results are to be sent to stdout
+    log_to_stdout = args.output is not None
     # Setup logging only if there are not already any handlers (can happen when
     # this function is being called externally such as from unit tests)
     if not logging.root.handlers:
-        setup_logging(stdout=bool(args.output),
+        setup_logging(stdout=log_to_stdout,
             quiet=args.quiet or args.report == 'minimal', debug=args.debug)
     if args.profile:
         import cProfile
@@ -796,15 +798,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         sys.exit("cutadapt: error: {}".format(e))
 
     elapsed = time.time() - start_time
-    if not args.quiet:
-        # send statistics to stderr if result was sent to stdout
-        stat_file = sys.stderr if args.output is None else None
-        with redirect_standard_output(stat_file):
-            if args.report == 'minimal':
-                print_minimal_report(stats, elapsed, args.gc_content / 100)
-            else:
-                print_report(stats, elapsed, args.gc_content / 100)
-
+    if args.report == 'minimal':
+        report = minimal_report
+    else:
+        report = full_report
+    logger.info('%s', report(stats, elapsed, args.gc_content / 100))
     if args.profile:
         import pstats
         profiler.disable()

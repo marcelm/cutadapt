@@ -489,7 +489,7 @@ class EndStatistics:
         d = {length: sum(errors.values()) for length, errors in self.errors.items()}
         return d
 
-    def random_match_probabilities(self, gc_content):
+    def random_match_probabilities(self, gc_content: float):
         """
         Estimate probabilities that this adapter end matches a
         random sequence. Indels are not taken into account.
