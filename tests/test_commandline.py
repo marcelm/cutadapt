@@ -650,3 +650,17 @@ def test_standard_output(tmpdir, cores):
             stdout=out_file)
         _ = py.communicate()
     assert_files_equal(cutpath("small.fastq"), out_path)
+
+
+def test_explicit_standard_output(tmpdir, cores):
+    """Write FASTQ to standard output (using "-o -")"""
+
+    import subprocess
+    out_path = str(tmpdir.join("out.fastq"))
+    with open(out_path, "w") as out_file:
+        py = subprocess.Popen([
+            sys.executable, "-m", "cutadapt", "-o", "-", "--cores", str(cores),
+            "-a", "TTAGACATATCTCCGTCG", datapath("small.fastq")],
+            stdout=out_file)
+        _ = py.communicate()
+    assert_files_equal(cutpath("small.fastq"), out_path)

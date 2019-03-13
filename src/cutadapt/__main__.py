@@ -719,7 +719,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         cmdlineargs = sys.argv[1:]
     args = parser.parse_args(args=cmdlineargs)
     # log to stderr if results are to be sent to stdout
-    log_to_stdout = args.output is not None
+    log_to_stdout = args.output is not None and args.output != "-" and args.paired_output != "-"
     # Setup logging only if there are not already any handlers (can happen when
     # this function is being called externally such as from unit tests)
     if not logging.root.handlers:

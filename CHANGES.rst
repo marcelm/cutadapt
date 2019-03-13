@@ -2,6 +2,12 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`366`: Fix some problems when combining ``--cores`` with
+  reading from standard input or writing to standard output.
+
 v2.0 (2019-03-06)
 -----------------
 
