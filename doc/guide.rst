@@ -1268,7 +1268,7 @@ reads will only be trimmed if either
 * ``AAAAA`` is found in R1 *and* ``CCCCC`` is found in R2,
 * or ``GGGG`` is found in R1 *and* ``TTTT`` is found in R2.
 
-The ``--pair-adapters`` option can be used also when :ref:`when demultiplexing <demultiplexing>`.
+The ``--pair-adapters`` option can be used also :ref:`when demultiplexing <demultiplexing>`.
 
 There is one limitation of the algorithm at the moment: The program looks for the best-matching R1 adapter
 first and then checks whether the corresponding R2 adapter can be found. If not, the read pair
