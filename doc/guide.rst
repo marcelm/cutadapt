@@ -1406,7 +1406,7 @@ made-up example for such a ``barcodes.fasta`` file::
 
 Our barcodes are located at the 5’ end of the R1 read, so we made sure to use
 :ref:`anchored 5’ adapters <anchored-5adapters>` by prefixing
-each sequence with the `^` character. We will then use ``-g file:barcodes.fasta``,
+each sequence with the ``^`` character. We will then use ``-g file:barcodes.fasta``,
 where the ``-g`` option specifies that our adapters are 5’ adapters.
 
 These barcode sequences have a length of 8, which means that Cutadapt
@@ -1481,6 +1481,40 @@ Hopefully some of the above restrictions will be lifted in the future.
 
 .. versionadded:: 2.0
    Added ability to use an index of adapters for speeding up demultiplexing
+
+
+Demultiplexing paired-end reads in mixed orientation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For some protocols, the barcode will be located either on R1 or on R2
+depending on the orientation in which the DNA fragment was sequenced.
+
+For example, the read layout could be either this ::
+
+    R1: barcode-forwardprimer-sequence  R2: reverseprimer-sequence
+
+or this ::
+
+    R1: reverseprimer-sequence  R2: barcode-forwardprimer-sequence
+
+To demultiplex such data with Cutadapt, choose one of the orientations first and
+demultiplex the reads as if only that existed in the data, using a command like this ::
+
+    cutadapt -g file:barcodes.fasta \
+        -o round1-{name}.R1.fastq.gz \
+        -p round1-{name}.R2.fastq.gz \
+        R1.fastq.gz R2.fastq.gz
+
+Then all the read pairs in which no barcode could be found will end up in
+``round1-unknown.R1.fastq.gz`` and ``round1-unknown.R2.fastq.gz``. This will
+also include the pairs in which the barcode was not actually in R1, but in R2. To
+demultiplex these reads as well, run Cutadapt a second time with those “unknown”
+files as input, but also reverse the roles of R1 and R2 ::
+
+    cutadapt -g file:barcodes.fasta \
+        -o round2-{name}.R2.fastq.gz \
+        -p round2-{name}.R1.fastq.gz \
+        round1-unknown.R2.fastq.gz round1-unknown.R1.fastq.gz
 
 
 .. _more-than-one:
