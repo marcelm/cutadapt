@@ -646,3 +646,7 @@ def test_explicit_standard_output(tmpdir, cores):
             stdout=out_file)
         _ = py.communicate()
     assert_files_equal(cutpath("small.fastq"), out_path)
+
+
+def test_empty_read_with_wildcard_in_adapter(run):
+    run("-g CWC", "empty.fastq", "empty.fastq")
