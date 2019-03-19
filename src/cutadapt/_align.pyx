@@ -512,7 +512,7 @@ cdef class Aligner:
                         # Recompute effective length so that it only takes into
                         # account the matching part of the reference
                         ref_start = -min(column[i].origin, 0)
-                        assert 0 <= ref_start < m
+                        assert 0 <= ref_start <= m
                         cur_effective_length = length - (self.n_counts[i] - self.n_counts[ref_start])
                     else:
                         cur_effective_length = self.effective_length
