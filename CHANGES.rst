@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v2.2 (2019-03-20)
+-----------------
 
 * :issue:`369`: Fix a crash when attempting to trim an empty read using a ``-g``
   adapter with wildcards.
