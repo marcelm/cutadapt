@@ -150,13 +150,12 @@ environment and what you want to call it. Let us assume you chose the path
 ``~/cutadapt-venv``. Then use these commands for the installation::
 
     python3 -m venv ~/cutadapt-venv
-    ~/cutadapt-venv/bin/pip install Cython
-    ~/cutadapt-venv/bin/pip install https://github.com/marcelm/cutadapt/archive/master.zip
+    ~/cutadapt-venv/bin/pip install git+https://github.com/marcelm/cutadapt.git#egg=cutadapt
 
 To run Cutadapt and see the version number, type ::
 
     ~/cutadapt-venv/bin/cutadapt --version
 
-The reported version number will be something like ``1.14+65.g5610275``. This
-means that you are now running a Cutadapt version that contains 65 additional
-changes (*commits*) since version 1.14.
+The reported version number will be something like ``2.2.dev5+gf564208``. This
+means that you are now running the version of Cutadapt that will become 2.2, and that is contains
+5 changes (*commits*) since the previous release (2.1 in this case).
