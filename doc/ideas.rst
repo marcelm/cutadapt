@@ -6,24 +6,17 @@ things that could be improved in the source code, and of possible algorithmic
 improvements.
 
 - show average error rate
-- In colorspace and probably also for Illumina data, gapped alignment
-  is not necessary
-- ``--progress``
 - run pylint, pychecker
 - length histogram
-- check whether input is FASTQ although -f fasta is given
 - search for adapters in the order in which they are given on the
   command line
 - more tests for the alignment algorithm
 - ``--detect`` prints out best guess which of the given adapters is the correct one
-- alignment algorithm: make a 'banded' version
 - it seems the str.find optimization isn't very helpful. In any case, it should be
   moved into the Aligner class.
 - allow to remove not the adapter itself, but the sequence before or after it
-- instead of trimming, convert adapter to lowercase
 - warn when given adapter sequence contains non-IUPAC characters
 - extensible file type detection
-- the --times setting should be an attribute of Adapter
 
 
 Backwards-incompatible changes
@@ -31,7 +24,6 @@ Backwards-incompatible changes
 
 - Drop ``--rest-file`` support
 - Possibly drop wildcard-file support, extend info-file instead
-- Drop "legacy mode"
 - For non-anchored 5' adapters, find rightmost match
 
 
@@ -87,16 +79,6 @@ Model somehow all the flags that exist for semiglobal alignment. For start of th
 Not degraded and no bases before allowed = anchored.
 Degraded and bases before allowed = regular 5'
 
-By default, the 5' end should be anchored, the 3' end not.
-
-* ``-a ADAPTER...`` → not degraded, no bases before allowed
-* ``-a N*ADAPTER...`` → not degraded, bases before allowed
-* ``-a ADAPTER^...`` → degraded, no bases before allowed
-* ``-a N*ADAPTER^...`` → degraded, bases before allowed
-* ``-a ...ADAPTER`` → degraded, bases after allowed
-* ``-a ...ADAPTER$`` → not degraded, no bases after allowed
-
-
 
 Paired-end trimming
 -------------------
@@ -108,4 +90,4 @@ Available/used letters for command-line options
 
 * Remaining characters: All uppercase letters except A, B, G, M, N, O, U
 * Lowercase letters: i, j, k, s, w
-* Planned/reserved: Q (paired-end quality trimming), j (multithreading)
+* Planned/reserved: Q (paired-end quality trimming)
