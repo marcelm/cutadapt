@@ -150,6 +150,7 @@ environment and what you want to call it. Let us assume you chose the path
 ``~/cutadapt-venv``. Then use these commands for the installation::
 
     python3 -m venv ~/cutadapt-venv
+    ~/cutadapt-venv/bin/python3 -m pip install --upgrade pip
     ~/cutadapt-venv/bin/pip install git+https://github.com/marcelm/cutadapt.git#egg=cutadapt
 
 To run Cutadapt and see the version number, type ::
