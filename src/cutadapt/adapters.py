@@ -713,14 +713,18 @@ class Adapter:
             self.aligner = aligner_class(self.sequence, self.max_error_rate,
                 wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
         else:
-            self.aligner = align.Aligner(self.sequence, self.max_error_rate,
-                flags=self.where.value, wildcard_ref=self.adapter_wildcards,
-                wildcard_query=self.read_wildcards)
-            if not self.indels:
-                # TODO
-                # When indels are disallowed, an entirely different algorithm
-                # should be used.
-                self.aligner.indel_cost = 100000
+            # TODO
+            # Indels are suppressed by setting their cost very high, but a different algorithm
+            # should be used instead.
+            indel_cost = 1 if self.indels else 100000
+            self.aligner = align.Aligner(
+                self.sequence,
+                self.max_error_rate,
+                flags=self.where.value,
+                wildcard_ref=self.adapter_wildcards,
+                wildcard_query=self.read_wildcards,
+                indel_cost=indel_cost,
+            )
             self.aligner.min_overlap = self.min_overlap
 
     def __repr__(self):
