@@ -724,8 +724,8 @@ class Adapter:
                 wildcard_ref=self.adapter_wildcards,
                 wildcard_query=self.read_wildcards,
                 indel_cost=indel_cost,
+                min_overlap=self.min_overlap,
             )
-            self.aligner.min_overlap = self.min_overlap
 
     def __repr__(self):
         return '<Adapter(name={name!r}, sequence={sequence!r}, where={where}, '\

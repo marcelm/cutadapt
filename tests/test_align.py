@@ -13,8 +13,7 @@ from cutadapt.adapters import Where
 # convenience function (to avoid having to instantiate an Aligner manually)
 def locate(reference, query, max_error_rate, flags=SEMIGLOBAL, wildcard_ref=False,
         wildcard_query=False, min_overlap=1):
-    aligner = Aligner(reference, max_error_rate, flags, wildcard_ref, wildcard_query)
-    aligner.min_overlap = min_overlap
+    aligner = Aligner(reference, max_error_rate, flags, wildcard_ref, wildcard_query, min_overlap=min_overlap)
     return aligner.locate(query)
 
 
@@ -160,8 +159,7 @@ def test_n_wildcards_not_counted_affix(comparer_class):
 def test_n_wildcards_not_counted_aligner_back():
     ref = 'AGGNNNNNNNNNNNNNNTTC'
     assert len(ref) == 20
-    aligner = Aligner(ref, max_error_rate=0.1, wildcard_ref=True, flags=Where.BACK.value)
-    aligner.min_overlap = 3
+    aligner = Aligner(ref, max_error_rate=0.1, wildcard_ref=True, flags=Where.BACK.value, min_overlap=3)
     assert aligner.effective_length == 6
     assert aligner.locate('TTC') is None
     # adapter start, adapter stop, read start, read stop
@@ -175,8 +173,7 @@ def test_n_wildcards_not_counted_aligner_back():
 def test_n_wildcards_not_counted_aligner_front():
     ref = 'AGGNNNNNNNNNNNNNNTTC'
     assert len(ref) == 20
-    aligner = Aligner(ref, max_error_rate=0.1, wildcard_ref=True, flags=Where.FRONT.value)
-    aligner.min_overlap = 3
+    aligner = Aligner(ref, max_error_rate=0.1, wildcard_ref=True, flags=Where.FRONT.value, min_overlap=3)
     assert aligner.effective_length == 6
     # adapter start, adapter stop, read start, read stop
     assert aligner.locate('TTC')[:4] == (17, 20, 0, 3)

@@ -212,6 +212,7 @@ cdef class Aligner:
         bint wildcard_ref=False,
         bint wildcard_query=False,
         int indel_cost=1,
+        int min_overlap=1,
     ):
         self.max_error_rate = max_error_rate
         self.start_in_reference = flags & 1
@@ -221,22 +222,15 @@ cdef class Aligner:
         self.wildcard_ref = wildcard_ref
         self.wildcard_query = wildcard_query
         self._set_reference(reference)
-        self._min_overlap = 1
+        if min_overlap < 1:
+            raise ValueError('min_overlap must be at least 1')
+        self._min_overlap = min_overlap
         self.debug = False
         self._dpmatrix = None
         if indel_cost < 1:
             raise ValueError('indel_cost must be at least 1')
         self._insertion_cost = indel_cost
         self._deletion_cost = indel_cost
-
-    property min_overlap:
-        def __get__(self):
-            return self._min_overlap
-
-        def __set__(self, int value):
-            if value < 1:
-                raise ValueError('Minimum overlap must be at least 1')
-            self._min_overlap = value
 
     def _set_reference(self, str reference):
         mem = <_Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(_Entry))
