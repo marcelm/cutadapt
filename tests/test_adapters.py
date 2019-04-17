@@ -328,3 +328,11 @@ def test_anywhere_parameter():
     cutter = AdapterCutter([adapter])
     trimmed_read = cutter(read, [])
     assert trimmed_read.sequence == ''
+
+
+@pytest.mark.parametrize("where", [Where.PREFIX, Where.SUFFIX])
+def test_no_indels_empty_read(where):
+    # Issue #376
+    adapter = Adapter('ACGT', where=where, indels=False)
+    empty = Sequence('name', '')
+    adapter.match_to(empty)

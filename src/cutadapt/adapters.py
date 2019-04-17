@@ -710,8 +710,13 @@ class Adapter:
         self.indels = indels
         if self.is_anchored and not self.indels:
             aligner_class = align.PrefixComparer if self.where is Where.PREFIX else align.SuffixComparer
-            self.aligner = aligner_class(self.sequence, self.max_error_rate,
-                wildcard_ref=self.adapter_wildcards, wildcard_query=self.read_wildcards)
+            self.aligner = aligner_class(
+                self.sequence,
+                self.max_error_rate,
+                wildcard_ref=self.adapter_wildcards,
+                wildcard_query=self.read_wildcards,
+                min_overlap=self.min_overlap
+            )
         else:
             # TODO
             # Indels are suppressed by setting their cost very high, but a different algorithm

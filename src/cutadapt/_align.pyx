@@ -549,6 +549,7 @@ cdef class PrefixComparer:
         int m
         int max_k  # max. number of errors
         readonly int effective_length
+        int min_overlap
 
     # __init__ instead of __cinit__ because we need to override this in SuffixComparer
     def __init__(
@@ -557,6 +558,7 @@ cdef class PrefixComparer:
         double max_error_rate,
         bint wildcard_ref=False,
         bint wildcard_query=False,
+        int min_overlap=1,
     ):
         self.wildcard_ref = wildcard_ref
         self.wildcard_query = wildcard_query
@@ -570,6 +572,9 @@ cdef class PrefixComparer:
             raise ValueError("max_error_rate must be between 0 and 1")
         self.max_k = int(max_error_rate * self.effective_length)
         self.reference = reference.encode('ascii').upper()
+        if min_overlap < 1:
+            raise ValueError("min_overlap must be at least 1")
+        self.min_overlap = min_overlap
         if self.wildcard_ref:
             self.reference = self.reference.translate(IUPAC_TABLE)
         elif self.wildcard_query:
@@ -621,7 +626,7 @@ cdef class PrefixComparer:
                     matches += 1
 
         errors = length - matches
-        if errors > self.max_k:
+        if errors > self.max_k or length < self.min_overlap:
             return None
         return (0, length, 0, length, matches, length - matches)
 
@@ -634,8 +639,9 @@ cdef class SuffixComparer(PrefixComparer):
         double max_error_rate,
         bint wildcard_ref=False,
         bint wildcard_query=False,
+        int min_overlap=1,
     ):
-        super().__init__(reference[::-1], max_error_rate, wildcard_ref, wildcard_query)
+        super().__init__(reference[::-1], max_error_rate, wildcard_ref, wildcard_query, min_overlap)
 
     def locate(self, str query):
         cdef int n = len(query)

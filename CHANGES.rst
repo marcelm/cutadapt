@@ -2,9 +2,11 @@
 Changes
 =======
 
-v2.2 (2019-03-20)
------------------
+v2.2 (in development)
+---------------------
 
+* :issue:`376`: Fix a crash when using anchored 5' adapters together with
+  ``--no-indels`` and trying to trim an empty read.
 * :issue:`369`: Fix a crash when attempting to trim an empty read using a ``-g``
   adapter with wildcards.
 
