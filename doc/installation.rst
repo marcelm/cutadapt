@@ -35,7 +35,7 @@ Then install Cutadapt like this::
 
     conda install -c bioconda cutadapt
 
-If neither `pip` nor `conda` installation works, keep reading.
+If neither ``pip`` nor ``conda`` installation works, keep reading.
 
 
 .. _dependencies:
