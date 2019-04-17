@@ -199,8 +199,8 @@ cdef class Aligner:
         bint wildcard_query
         bint debug
         object _dpmatrix
-        bytes _reference  # TODO rename to translated_reference or so
-        str str_reference
+        str reference  # reference as set by the user (as str)
+        bytes _reference  # internal, bytes version of reference (possibly translated to a non-ASCII representation)
         readonly int effective_length
         int* n_counts  # n_counts[i] == number of N characters in reference[:i]
 
@@ -219,8 +219,7 @@ cdef class Aligner:
         self.stop_in_query = flags & 8
         self.wildcard_ref = wildcard_ref
         self.wildcard_query = wildcard_query
-        self.str_reference = reference
-        self.reference = reference
+        self._set_reference(reference)
         self._min_overlap = 1
         self.debug = False
         self._dpmatrix = None
@@ -247,37 +246,33 @@ cdef class Aligner:
             self._insertion_cost = value
             self._deletion_cost = value
 
-    property reference:
-        def __get__(self):
-            return self._reference
-
-        def __set__(self, str reference):
-            mem = <_Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(_Entry))
-            if not mem:
-                raise MemoryError()
-            mem_nc = <int*> PyMem_Realloc(self.n_counts, (len(reference) + 1) * sizeof(int))
-            if not mem_nc:
-                raise MemoryError()
-            self.column = mem
-            self.n_counts = mem_nc
-            self._reference = reference.encode('ascii')
-            self.m = len(reference)
-            self.effective_length = self.m
-            n_count = 0
-            for i in range(self.m):
-                self.n_counts[i] = n_count
-                if reference[i] == 'n' or reference[i] == 'N':
-                    n_count += 1
-            self.n_counts[self.m] = n_count
-            assert self.n_counts[self.m] == reference.count('N') + reference.count('n')
-            if self.wildcard_ref:
-                self.effective_length = self.m - self.n_counts[self.m]
-                if self.effective_length == 0:
-                    raise ValueError("Cannot have only N wildcards in the sequence")
-                self._reference = self._reference.translate(IUPAC_TABLE)
-            elif self.wildcard_query:
-                self._reference = self._reference.translate(ACGT_TABLE)
-            self.str_reference = reference
+    def _set_reference(self, str reference):
+        mem = <_Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(_Entry))
+        if not mem:
+            raise MemoryError()
+        mem_nc = <int*> PyMem_Realloc(self.n_counts, (len(reference) + 1) * sizeof(int))
+        if not mem_nc:
+            raise MemoryError()
+        self.column = mem
+        self.n_counts = mem_nc
+        self._reference = reference.encode('ascii')
+        self.m = len(reference)
+        self.effective_length = self.m
+        n_count = 0
+        for i in range(self.m):
+            self.n_counts[i] = n_count
+            if reference[i] == 'n' or reference[i] == 'N':
+                n_count += 1
+        self.n_counts[self.m] = n_count
+        assert self.n_counts[self.m] == reference.count('N') + reference.count('n')
+        if self.wildcard_ref:
+            self.effective_length = self.m - self.n_counts[self.m]
+            if self.effective_length == 0:
+                raise ValueError("Cannot have only N wildcards in the sequence")
+            self._reference = self._reference.translate(IUPAC_TABLE)
+        elif self.wildcard_query:
+            self._reference = self._reference.translate(ACGT_TABLE)
+        self.reference = reference
 
     property dpmatrix:
         """
@@ -385,7 +380,7 @@ cdef class Aligner:
                 column[i].origin = min_n - i
 
         if self.debug:
-            self._dpmatrix = DPMatrix(self.str_reference, query)
+            self._dpmatrix = DPMatrix(self.reference, query)
             for i in range(m + 1):
                 self._dpmatrix.set_entry(i, min_n, column[i].cost)
         cdef _Match best
