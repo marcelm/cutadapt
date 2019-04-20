@@ -2,7 +2,7 @@
 Changes
 =======
 
-v2.2 (in development)
+v2.2 (2019-04-20)
 ---------------------
 
 * :issue:`376`: Fix a crash when using anchored 5' adapters together with
