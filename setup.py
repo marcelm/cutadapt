@@ -90,7 +90,7 @@ with open('README.rst', **encoding_arg) as f:
 setup(
     name='cutadapt',
     setup_requires=['setuptools_scm'],  # Support pip versions that don't know about pyproject.toml
-    use_scm_version=True,
+    use_scm_version={'write_to': 'src/cutadapt/_version.py'},
     author='Marcel Martin',
     author_email='marcel.martin@scilifelab.se',
     url='https://cutadapt.readthedocs.io/',

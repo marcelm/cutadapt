@@ -14,3 +14,4 @@ __pycache__/
 /src/cutadapt/*.so
 /doc/_build
 /src/cutadapt.egg-info/
+src/cutadapt/_version.py
