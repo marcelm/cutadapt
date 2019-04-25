@@ -2,6 +2,13 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`378`: The ``--pair-adapters`` option, added in version 2.1, was
+  not actually usable for demultiplexing.
+
+
 v2.2 (2019-04-20)
 ---------------------
 

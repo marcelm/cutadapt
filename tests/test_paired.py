@@ -482,3 +482,22 @@ def test_pair_adapters_unequal_length(tmpdir):
             datapath("paired.1.fastq"),
             datapath("paired.2.fastq"),
         ])
+
+
+def test_pair_adapters_demultiplexing(tmpdir):
+    params = "-g i1=AAAA -G i1=GGGG -g i2=CCCC -G i2=TTTT".split()
+    params += ["--pair-adapters"]
+    params += ["-o", str(tmpdir.join("dual-{name}.1.fastq"))]
+    params += ["-p", str(tmpdir.join("dual-{name}.2.fastq"))]
+    params += [datapath("dual-index.1.fastq"), datapath("dual-index.2.fastq")]
+    assert main(params) is None
+    for name in [
+        "dual-i1.1.fastq",
+        "dual-i1.2.fastq",
+        "dual-i2.1.fastq",
+        "dual-i2.2.fastq",
+        "dual-unknown.1.fastq",
+        "dual-unknown.2.fastq",
+    ]:
+        assert tmpdir.join(name).check()
+        assert_files_equal(cutpath(name), str(tmpdir.join(name)))

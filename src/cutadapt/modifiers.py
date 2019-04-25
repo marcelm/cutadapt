@@ -273,6 +273,8 @@ class PairedAdapterCutter:
             elif self.action is None:  # --no-trim
                 trimmed_read = read[:]
             result.append(trimmed_read)
+        matches1.append(match1)
+        matches2.append(match2)
         return result
 
 
