@@ -151,7 +151,6 @@ def get_argument_parser():
     group.add_argument("--profile", action="store_true", default=False, help=SUPPRESS)
     group.add_argument('-j', '--cores', type=int, default=1,
         help='Number of CPU cores to use. Use 0 to auto-detect. Default: %(default)s')
-
     # Hidden options
     # GC content as a percentage
     group.add_argument("--gc-content", type=float, default=50,
@@ -286,6 +285,8 @@ def get_argument_parser():
             "depending on input. The summary report is sent to standard output. "
             "Use '{name}' in FILE to demultiplex reads into multiple "
             "files. Default: write to standard output")
+    group.add_argument('--output-compression-level', default=1, dest="compresslevel",
+        help= 'Compression level if gzipped output files are used.  Default: %(default)s')
     group.add_argument("--info-file", metavar="FILE",
         help="Write information about each read and its adapter matches into FILE. "
             "See the documentation for the file format.")
@@ -397,7 +398,7 @@ def parse_lengths(s):
     return tuple(values)
 
 
-def open_output_files(args, default_outfile, interleaved):
+def open_output_files(args, default_outfile, interleaved, compresslevel):
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
@@ -413,9 +414,9 @@ def open_output_files(args, default_outfile, interleaved):
     def open2(path1, path2):
         file1 = file2 = None
         if path1 is not None:
-            file1 = xopen(path1, 'wb')
+            file1 = xopen(path1, 'wb', compresslevel=compresslevel)
             if path2 is not None:
-                file2 = xopen(path2, 'wb')
+                file2 = xopen(path2, 'wb', compresslevel=compresslevel)
         return file1, file2
 
     too_short = too_short2 = None
@@ -764,7 +765,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         input_filename, input_paired_filename = input_files_from_parsed_args(args.inputs,
             paired, is_interleaved_input)
         pipeline = pipeline_from_parsed_args(args, paired, is_interleaved_output)
-        outfiles = open_output_files(args, default_outfile, is_interleaved_output)
+        outfiles = open_output_files(args, default_outfile, is_interleaved_output, args.compresslevel)
     except CommandLineError as e:
         parser.error(e)
         return  # avoid IDE warnings below
