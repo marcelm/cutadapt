@@ -285,7 +285,7 @@ def get_argument_parser():
             "depending on input. The summary report is sent to standard output. "
             "Use '{name}' in FILE to demultiplex reads into multiple "
             "files. Default: write to standard output")
-    group.add_argument('--output-compression-level', default=1, dest="compresslevel",
+    group.add_argument('--output-compression-level', default=6, dest="compresslevel",
         help= 'Compression level if gzipped output files are used.  Default: %(default)s')
     group.add_argument("--info-file", metavar="FILE",
         help="Write information about each read and its adapter matches into FILE. "
@@ -405,11 +405,11 @@ def open_output_files(args, default_outfile, interleaved, compresslevel):
     """
     rest_file = info_file = wildcard = None
     if args.rest_file is not None:
-        rest_file = xopen(args.rest_file, 'w')
+        rest_file = xopen(args.rest_file, 'w',compresslevel=compresslevel)
     if args.info_file is not None:
-        info_file = xopen(args.info_file, 'w')
+        info_file = xopen(args.info_file, 'w', compresslevel=compresslevel)
     if args.wildcard_file is not None:
-        wildcard = xopen(args.wildcard_file, 'w')
+        wildcard = xopen(args.wildcard_file, 'w', compresslevel=compresslevel)
 
     def open2(path1, path2):
         file1 = file2 = None
