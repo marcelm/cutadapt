@@ -179,7 +179,7 @@ you to create named pipes in bash.
 
     mkfifo R1.fastq R2.fastq
     cutadapt -a ${ADAPTER_R1} -A ${ADAPTER_R2} -o R1.fastq -p R2.fastq ${READ1} ${READ2} > cutadapt.report & \
-    bwa mem ${INDEX} <R1.fastq <R2.fastq
+    bwa mem -o output.sam ${INDEX} R1.fastq R2.fastq
 
 This command will run cutadapt and BWA simultaneously, using cutadapts output as
 BWA's input, and capturing cutadapts report in ``cutadapt.report``.
