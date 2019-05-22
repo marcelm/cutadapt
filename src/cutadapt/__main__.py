@@ -151,6 +151,7 @@ def get_argument_parser():
     group.add_argument("--profile", action="store_true", default=False, help=SUPPRESS)
     group.add_argument('-j', '--cores', type=int, default=1,
         help='Number of CPU cores to use. Use 0 to auto-detect. Default: %(default)s')
+
     # Hidden options
     # GC content as a percentage
     group.add_argument("--gc-content", type=float, default=50,
@@ -285,10 +286,10 @@ def get_argument_parser():
             "depending on input. The summary report is sent to standard output. "
             "Use '{name}' in FILE to demultiplex reads into multiple "
             "files. Default: write to standard output")
-    group.add_argument('--compression-level', default=6, dest="compresslevel",
+    group.add_argument("--compression-level", default=6,
         help= 'Compression level if gzipped output files are used.  Default: %(default)s')
-    group.add_argument('-Z', action='store_true', dest='Z',
-        help= 'Short-hand for `--compression_level 1`. ')
+    group.add_argument('-Z', action="store_constant", conts=1, dest='compression_level',
+        help= 'Short-hand for --compression-level=1.')
     group.add_argument("--info-file", metavar="FILE",
         help="Write information about each read and its adapter matches into FILE. "
             "See the documentation for the file format.")
@@ -758,7 +759,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
             "--strip-f3, --maq, --bwa, --no-zero-cap. "
             "Use Cutadapt 1.18 or earlier to work with colorspace data.")
 
-    compresslevel = 1 if args.Z else args.compresslevel
     paired = determine_paired_mode(args)
     assert paired in (False, True)
 
@@ -769,7 +769,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         input_filename, input_paired_filename = input_files_from_parsed_args(args.inputs,
             paired, is_interleaved_input)
         pipeline = pipeline_from_parsed_args(args, paired, is_interleaved_output)
-        outfiles = open_output_files(args, default_outfile, is_interleaved_output, compresslevel)
+        outfiles = open_output_files(args, default_outfile, is_interleaved_output, args.compression_level)
     except CommandLineError as e:
         parser.error(e)
         return  # avoid IDE warnings below

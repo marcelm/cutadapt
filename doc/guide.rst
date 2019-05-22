@@ -161,10 +161,10 @@ Speed-up tricks
 
 There are several tricks for limiting wall-clock time while using cutadapt.
 
-``-Z`` (shorthand for ``--compression-level 1``) can be used to limit the
-amount of cpu time which is spent on the compression of output files.
+``-Z`` (shorthand for ``--compression-level=1``) can be used to limit the
+amount of CPU time which is spent on the compression of output files.
 Alternatively, choosing filenames not ending with ``.gz``, ``.bz2`` or ``.xz``
-will make sure no cpu time is spent on compression at all. NOTE: on systems
+will make sure no cpu time is spent on compression at all.  On systems
 with slow I/O, it can actually be faster to set a higher compression-level
 than 1.
 
