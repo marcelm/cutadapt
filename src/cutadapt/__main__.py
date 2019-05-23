@@ -288,7 +288,7 @@ def get_argument_parser():
             "files. Default: write to standard output")
     group.add_argument("--compression-level", default=6,
         help= 'Compression level if gzipped output files are used.  Default: %(default)s')
-    group.add_argument('-Z', action="store_constant", conts=1, dest='compression_level',
+    group.add_argument('-Z', action="store_const", conts=1, dest='compression_level',
         help= 'Short-hand for --compression-level=1.')
     group.add_argument("--info-file", metavar="FILE",
         help="Write information about each read and its adapter matches into FILE. "
