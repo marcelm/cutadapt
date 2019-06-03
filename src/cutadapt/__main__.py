@@ -159,6 +159,9 @@ def get_argument_parser():
     # Buffer size for the reader process when running in parallel
     group.add_argument("--buffer-size", type=int, default=4000000,
         help=SUPPRESS)
+    # Compression level for gzipped output files. Not exposed since we have -Z
+    group.add_argument("--compression-level", default=6,
+        help=SUPPRESS)
     # Deprecated: The input format is always auto-detected
     group.add_argument("-f", "--format", help=SUPPRESS)
 
@@ -283,13 +286,11 @@ def get_argument_parser():
         help="Which type of report to print: 'full' or 'minimal'. Default: full")
     group.add_argument("-o", "--output", metavar="FILE",
         help="Write trimmed reads to FILE. FASTQ or FASTA format is chosen "
-            "depending on input. The summary report is sent to standard output. "
-            "Use '{name}' in FILE to demultiplex reads into multiple "
-            "files. Default: write to standard output")
-    group.add_argument("--compression-level", default=6,
-        help= 'Compression level if gzipped output files are used.  Default: %(default)s')
-    group.add_argument('-Z', action="store_const", const=1, dest='compression_level',
-        help= 'Short-hand for --compression-level=1.')
+            "depending on input. Summary report is sent to standard output. "
+            "Use '{name}' for demultiplexing (see docs). "
+            "Default: write to standard output")
+    group.add_argument("-Z", action="store_const", const=1, dest="compression_level",
+        help="Use compression level 1 for gzipped output files (faster, but uses more space)")
     group.add_argument("--info-file", metavar="FILE",
         help="Write information about each read and its adapter matches into FILE. "
             "See the documentation for the file format.")

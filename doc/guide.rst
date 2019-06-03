@@ -62,8 +62,9 @@ All of Cutadapt's options that expect a file name support this.
 The supported compression formats are gzip (``.gz``), bzip2 (``.bz2``)
 and xz (``.xz``).
 
-The compression level for output gzip (``.gz``) files can be set using
-``--compression-level`` (default=6).
+The default compression level for gzip output is 6. Use option ``-Z`` to
+change this to level 1. This is faster, but the files need more space, and
+therefore a good choice for short-lived intermediate files.
 
 
 Standard input and output
@@ -161,7 +162,7 @@ Speed-up tricks
 
 There are several tricks for limiting wall-clock time while using cutadapt.
 
-``-Z`` (shorthand for ``--compression-level=1``) can be used to limit the
+``-Z`` (alternatively ``--compression-level=1``) can be used to limit the
 amount of CPU time which is spent on the compression of output files.
 Alternatively, choosing filenames not ending with ``.gz``, ``.bz2`` or ``.xz``
 will make sure no cpu time is spent on compression at all.  On systems
