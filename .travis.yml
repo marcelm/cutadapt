@@ -43,3 +43,4 @@ jobs:
 
   allow_failures:
     - python: "nightly"
+    - python: "3.8-dev"
