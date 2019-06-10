@@ -107,6 +107,10 @@ class CommandLineError(Exception):
     pass
 
 
+# Custom log level, see setup_logging
+REPORT = 25
+
+
 class NiceFormatter(logging.Formatter):
     """
     Do not prefix "INFO:" to info-level log messages (but do it for all other
@@ -115,24 +119,31 @@ class NiceFormatter(logging.Formatter):
     Based on http://stackoverflow.com/a/9218261/715090 .
     """
     def format(self, record):
-        if record.levelno != logging.INFO:
+        if record.levelno not in (logging.INFO, REPORT):
             record.msg = '{}: {}'.format(record.levelname, record.msg)
         return super().format(record)
 
 
-def setup_logging(stdout=False, quiet=False, debug=False):
+def setup_logging(stdout=False, minimal=False, quiet=False, debug=False):
     """
     Attach handler to the global logger object
     """
+    # For --report=minimal, we need this custom log level because we want to
+    # print nothing except the minimal report and therefore cannot use the
+    # INFO level (and the ERROR level would give us an 'ERROR:' prefix).
+    logging.addLevelName(REPORT, 'REPORT')
+
     # Due to backwards compatibility, logging output is sent to standard output
     # instead of standard error if the -o option is used.
     stream_handler = logging.StreamHandler(sys.stdout if stdout else sys.stderr)
     stream_handler.setFormatter(NiceFormatter())
-    # debug overrides quiet
+    # debug overrides quiet overrides minimal
     if debug:
         level = logging.DEBUG
     elif quiet:
         level = logging.ERROR
+    elif minimal:
+        level = REPORT
     else:
         level = logging.INFO
     stream_handler.setLevel(level)
@@ -744,7 +755,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     # this function is being called externally such as from unit tests)
     if not logging.root.handlers:
         setup_logging(stdout=log_to_stdout,
-            quiet=args.quiet or args.report == 'minimal', debug=args.debug)
+            quiet=args.quiet, minimal=args.report == 'minimal', debug=args.debug)
     if args.profile:
         import cProfile
         profiler = cProfile.Profile()
@@ -824,7 +835,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         report = minimal_report
     else:
         report = full_report
-    logger.info('%s', report(stats, elapsed, args.gc_content / 100))
+    logger.log(REPORT, '%s', report(stats, elapsed, args.gc_content / 100))
     if args.profile:
         import pstats
         profiler.disable()
