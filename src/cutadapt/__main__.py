@@ -444,7 +444,7 @@ def open_output_files(args, default_outfile, interleaved):
         too_long, too_long2 = open2(args.too_long_output, args.too_long_paired_output)
 
     if int(args.discard_trimmed) + int(args.discard_untrimmed) + int(
-        args.untrimmed_output is not None) > 1:
+            args.untrimmed_output is not None) > 1:
         raise CommandLineError("Only one of the --discard-trimmed, --discard-untrimmed "
             "and --untrimmed-output options can be used at the same time.")
 
@@ -804,7 +804,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
                 '--too-long-paired-output, --format\n'
                 'Also, demultiplexing is not supported.\n'
                 'Omit --cores/-j to continue.')
-            sys.exit(1)
+            return  # avoid IDE warnings below
     else:
         runner_class = SerialPipelineRunner
         runner_kwargs = dict()
@@ -814,6 +814,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         runner = runner_class(pipeline, infiles, outfiles, **runner_kwargs)
     except (dnaio.UnknownFileFormat, IOError) as e:
         parser.error(e)
+        return  # avoid IDE warnings below
 
     logger.info("Processing reads on %d core%s in %s mode ...",
         cores, 's' if cores > 1 else '',

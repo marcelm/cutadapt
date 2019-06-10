@@ -188,7 +188,7 @@ class Pipeline(ABC):
 
     @abstractmethod
     # TODO progress shouldn’t be a parameter
-    def process_reads(self, progress: Progress=None):
+    def process_reads(self, progress: Progress = None):
         pass
 
     @abstractmethod
