@@ -54,6 +54,7 @@ class OutputFiles:
             wildcard=None,
             demultiplex=False,
             interleaved=False,
+            force_fasta=None,
     ):
         self.out = out
         self.out2 = out2
@@ -68,6 +69,7 @@ class OutputFiles:
         self.wildcard = wildcard
         self.demultiplex = demultiplex
         self.interleaved = interleaved
+        self.force_fasta = force_fasta
 
     def __iter__(self):
         yield self.out
@@ -109,9 +111,11 @@ class Pipeline(ABC):
         self._reader = dnaio.open(infiles.file1, file2=infiles.file2,
             interleaved=infiles.interleaved, mode='r')
 
-    def _open_writer(self, file, file2, **kwargs):
+    def _open_writer(self, file, file2, force_fasta=None, **kwargs):
         # TODO backwards-incompatible change (?) would be to use outfiles.interleaved
         # for all outputs
+        if force_fasta:
+            kwargs['fileformat'] = 'fasta'
         return dnaio.open(file, file2=file2, mode='w', qualities=self.uses_qualities,
             **kwargs)
 
@@ -247,7 +251,7 @@ class SingleEndPipeline(Pipeline):
         return Redirector
 
     def _final_filter(self, outfiles):
-        writer = self._open_writer(outfiles.out, outfiles.out2)
+        writer = self._open_writer(outfiles.out, outfiles.out2, force_fasta=outfiles.force_fasta)
         return NoFilter(writer)
 
     def _create_demultiplexer(self, outfiles):
@@ -344,7 +348,9 @@ class PairedEndPipeline(Pipeline):
             return self._filter_wrapper()
 
     def _final_filter(self, outfiles):
-        writer = self._open_writer(outfiles.out, outfiles.out2, interleaved=outfiles.interleaved)
+        writer = self._open_writer(
+            outfiles.out, outfiles.out2, interleaved=outfiles.interleaved,
+            force_fasta=outfiles.force_fasta)
         return PairedNoFilter(writer)
 
     def _create_demultiplexer(self, outfiles):
@@ -478,7 +484,7 @@ class WorkerProcess(Process):
                     output2 = None
 
                 infiles = InputFiles(input, input2, interleaved=self._interleaved_input)
-                outfiles = OutputFiles(out=output, out2=output2, interleaved=self._orig_outfiles.interleaved)
+                outfiles = OutputFiles(out=output, out2=output2, interleaved=self._orig_outfiles.interleaved, force_fasta=self._orig_outfiles.force_fasta)
                 self._pipeline.set_input(infiles)
                 self._pipeline.set_output(outfiles)
                 (n, bp1, bp2) = self._pipeline.process_reads()

@@ -6,6 +6,9 @@ v2.4 (in development)
 ---------------------
 
 * :issue:`381`: Fixed ``--report=minimal`` not working.
+* :issue:`380`: Add a ``--fasta`` option for forcing that FASTA is written
+  to standard output output even when input is FASTQ. Previously, forcing
+  FASTA was only possible by providing an output file name.
 
 v2.3 (2019-04-25)
 -----------------

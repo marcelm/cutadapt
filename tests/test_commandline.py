@@ -7,10 +7,10 @@ import sys
 import tempfile
 from io import StringIO
 import pytest
+import subprocess
 
 from cutadapt.__main__ import main
 from utils import assert_files_equal, datapath, cutpath, redirect_stderr
-
 
 # pytest.mark.timeout will not fail even if pytest-timeout is not installed
 try:
@@ -637,7 +637,6 @@ def test_standard_output(tmpdir, cores):
 def test_explicit_standard_output(tmpdir, cores):
     """Write FASTQ to standard output (using "-o -")"""
 
-    import subprocess
     out_path = str(tmpdir.join("out.fastq"))
     with open(out_path, "w") as out_file:
         py = subprocess.Popen([
@@ -646,6 +645,19 @@ def test_explicit_standard_output(tmpdir, cores):
             stdout=out_file)
         _ = py.communicate()
     assert_files_equal(cutpath("small.fastq"), out_path)
+
+
+def test_force_fasta_output(tmpdir, cores):
+    """Write FASTA to standard output even on FASTQ input"""
+
+    out_path = str(tmpdir.join("out.fasta"))
+    with open(out_path, "w") as out_file:
+        py = subprocess.Popen([
+            sys.executable, "-m", "cutadapt", "--fasta", "-o", "-", "--cores", str(cores),
+            "-a", "TTAGACATATCTCCGTCG", datapath("small.fastq")],
+            stdout=out_file)
+        _ = py.communicate()
+    assert_files_equal(cutpath("small.fasta"), out_path)
 
 
 def test_empty_read_with_wildcard_in_adapter(run):

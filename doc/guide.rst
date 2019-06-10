@@ -48,6 +48,11 @@ trimming)::
 
     cutadapt -o output.fasta.gz input.fastq.gz
 
+When you want to do the same (read FASTQ, write FASTA), but want to write to
+standard output, you need to use ``--fasta`` instead because there is no
+output file name::
+
+    cutadapt --fasta input.fastq.gz > out.fasta
 
 
 .. _compressed-files:

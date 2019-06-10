@@ -300,6 +300,8 @@ def get_argument_parser():
             "depending on input. Summary report is sent to standard output. "
             "Use '{name}' for demultiplexing (see docs). "
             "Default: write to standard output")
+    group.add_argument("--fasta", default=False, action='store_true',
+        help="Output FASTA to standard output even on FASTQ input.")
     group.add_argument("-Z", action="store_const", const=1, dest="compression_level",
         help="Use compression level 1 for gzipped output files (faster, but uses more space)")
     group.add_argument("--info-file", metavar="FILE",
@@ -496,6 +498,7 @@ def open_output_files(args, default_outfile, interleaved):
         out2=out2,
         demultiplex=demultiplex,
         interleaved=interleaved,
+        force_fasta=args.fasta,
     )
 
 
