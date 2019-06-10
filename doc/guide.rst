@@ -30,19 +30,24 @@ explained further down.
 Input and output file formats
 -----------------------------
 
-Input files for Cutadapt need to be in one the these formats:
+Input and output files need to be in FASTA or FASTQ format. Reading and writing
+compressed file formats ``.gz``, ``.bz2`` or ``.xz`` is also supported. Cutadapt
+uses ``pigz`` internally if possible to speed up writing and reading of
+gzipped files.
 
-* FASTA with extensions ``.fasta``, ``.fa`` or ``.fna``
-* FASTQ with extensions ``.fastq`` or ``.fq``
-* Any of the above, but compressed as ``.gz``, ``.bz2`` or ``.xz``
+The input file format is recognized from the file name extension. If the
+extension was not recognized or when Cutadapt reads from standard input,
+the contents are inspected instead.
 
-Input and output file formats are recognized from the file name extension. You
-can override the input format with the ``--format`` option.
+The output file format is also recognized from the file name extension. If the
+extensions was not recognized or when Cutadapt writes to standard input, the
+same format as the input is used for the output.
 
-You can use the automatic format detection to convert from FASTQ to FASTA
-(without doing any adapter trimming)::
+You can use this to convert from FASTQ to FASTA (without doing any adapter
+trimming)::
 
     cutadapt -o output.fasta.gz input.fastq.gz
+
 
 
 .. _compressed-files:
@@ -52,8 +57,8 @@ Compressed files
 
 Cutadapt supports compressed input and output files. Whether an input file
 needs to be decompressed or an output file needs to be compressed is detected
-automatically by inspecting the file name: If it ends in ``.gz``, then gzip
-compression is assumed. This is why the example given above works::
+automatically by inspecting the file name: For example, if it ends in ``.gz``,
+then gzip compression is assumed ::
 
     cutadapt -a AACCGGTT -o output.fastq.gz input.fastq.gz
 
@@ -63,7 +68,7 @@ The supported compression formats are gzip (``.gz``), bzip2 (``.bz2``)
 and xz (``.xz``).
 
 The default compression level for gzip output is 6. Use option ``-Z`` to
-change this to level 1. This is faster, but the files need more space, and
+change this to level 1. The files need more space, but it is faster and
 therefore a good choice for short-lived intermediate files.
 
 
