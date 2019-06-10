@@ -2,6 +2,11 @@
 Changes
 =======
 
+v2.4 (in development)
+---------------------
+
+* :issue:`381`: Fixed ``--report=minimal`` not working.
+
 v2.3 (2019-04-25)
 -----------------
 
