@@ -295,7 +295,7 @@ class PairedDemultiplexer:
 
     def close(self):
         self._demultiplexer1.close()
-        self._demultiplexer1.close()
+        self._demultiplexer2.close()
 
 
 class RestFileWriter:
