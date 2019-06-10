@@ -1299,6 +1299,10 @@ This scheme, also called “non-redundant indexing”, uses 96 unique i5 indices
 indices, which are only used in pairs, that is, the first i5 index is always used with the first i7
 index and so on.
 
+.. note::
+    If the adapters do not come in pairs, but all combinations are possible, see
+    :ref:`the section about combinatorial demultiplexing <combinatorial-demultiplexing>`.
+
 An example::
 
     cutadapt --pair-adapters -a AAAAA -a GGGG -A CCCCC -a TTTT -o out.1.fastq -p out.2.fastq in.1.fastq in.2.fastq
@@ -1314,7 +1318,7 @@ The ``--pair-adapters`` option can be used also :ref:`when demultiplexing <demul
 There is one limitation of the algorithm at the moment: The program looks for the best-matching R1 adapter
 first and then checks whether the corresponding R2 adapter can be found. If not, the read pair
 remains unchanged. However, it is in theory possible that a different R1 adapter that does not
-fit as well has a partner that *can* be found. Some read pairs may therefore remain untrimmed.
+fit as well would have a partner that *can* be found. Some read pairs may therefore remain untrimmed.
 
 .. versionadded:: 2.1
 
@@ -1534,6 +1538,45 @@ More advice on demultiplexing:
 * Similarly, you can use ``--untrimmed-paired-output`` to change the name of the output file that
   receives the untrimmed R2 reads.
 * If you want to demultiplex, but keep the barcode in the reads, use the option ``--action=none``.
+
+
+.. _combinatorial-demultiplexing:
+
+Demultiplexing paired-end reads with combinatorial dual indexes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Illumina’s combinatorial dual indexing strategy uses a set of indexed adapters on R1 and another one
+on R2. Unlike
+`unique dual indexes (UDI) <https://support.illumina.com/bulletins/2018/08/understanding-unique-dual-indexes--udi--and-associated-library-p.html>`_,
+all combinations of indexes are possible.
+
+For demultiplexing this type of data ("combinatorial demultiplexing"), it is necessary to write each
+read pair to an output file depending on the adapters found on R1 *and* R2.
+
+Doing this with Cutadapt is similar to doing normal demultiplexing as described above, but you need
+to use ``{name1}}`` and ``{name2}`` in both output file name templates. For example::
+
+    cutadapt \
+        -e 0.15 --no-indels \
+        -g file:barcodes_fwd.fasta \
+        -G file:barcodes_rev.fasta \
+        -o trimmed-{name1}-{name2}.1.fastq.gz -p trimmed-{name1}-{name2}.2.fastq.gz \
+        input.1.fastq.gz input.2.fastq.gz
+
+The ``{name1}`` will be replaced with the name of the best-matching R1 adapter and ``{name2}}`` will
+be replaced with the name of the best-matching R2 adapter.
+
+If there was no match of an R1 adapter, ``{name1}`` is set to "unknown", and if there is no match of
+an R2 adapter, ``{name2}`` is set to "unknown". To discard read pairs for which one or both adapters
+could not be found, use ``--discard-untrimmed``.
+
+The ``--untrimmed-output`` and ``--untrimmed-paired-output`` options cannot be used.
+
+Read the :ref:`demultiplexing <demultiplexing>` section for how to choose the error rate etc.
+Also, the tips below about how to speed up demultiplexing apply even with combinatorial
+demultiplexing.
+
+.. versionadded:: 2.4
 
 
 .. _speed-up-demultiplexing:

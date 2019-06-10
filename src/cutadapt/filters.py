@@ -298,6 +298,71 @@ class PairedDemultiplexer:
         self._demultiplexer2.close()
 
 
+class CombinatorialDemultiplexer:
+    """
+    Demultiplex reads depending on which adapter matches, taking into account both matches
+    on R1 and R2.
+    """
+    def __init__(self, path_template, path_paired_template, untrimmed_name, qualities):
+        """
+        path_template must contain the string '{name1}' and '{name2}', which will be replaced
+        with the name of the adapters found on R1 and R2, respectively to form the final output
+        path. For reads without an adapter match, the name1 and/or name2 are set to the string
+        specified by untrimmed_name. Alternatively, untrimmed_name can be set to None; in that
+        case, read pairs for which at least one read does not have an adapter match are
+        discarded.
+        """
+        assert '{name1}' in path_template and '{name2}' in path_template
+        assert '{name1}' in path_paired_template and '{name2}' in path_paired_template
+        self.template = path_template
+        self.paired_template = path_paired_template
+        self.untrimmed_name = untrimmed_name
+        self.writers = dict()
+        self.written = 0
+        self.written_bp = [0, 0]
+        self.qualities = qualities
+
+    @staticmethod
+    def _make_path(template, name1, name2):
+        return template.replace('{name1}', name1).replace('{name2}', name2)
+
+    def __call__(self, read1, read2, matches1, matches2):
+        """
+        Write the read to the proper output file according to the most recent matches both on
+        R1 and R2
+        """
+        # import ipdb; ipdb.set_trace()
+        assert read2 is not None
+        name1 = matches1[-1].adapter.name if matches1 else None
+        name2 = matches2[-1].adapter.name if matches2 else None
+        key = (name1, name2)
+        if key not in self.writers:
+            if name1 is None:
+                name1 = self.untrimmed_name
+            if name2 is None:
+                name2 = self.untrimmed_name
+            if name1 is None or name2 is None:
+                return DISCARD
+            path1 = self._make_path(self.template, name1, name2)
+            path2 = self._make_path(self.paired_template, name1, name2)
+            self.writers[key] = (
+                dnaio.open(path1, mode='w', qualities=self.qualities),
+                dnaio.open(path2, mode='w', qualities=self.qualities),
+            )
+        writer1, writer2 = self.writers[key]
+        self.written += 1
+        self.written_bp[0] += len(read1)
+        self.written_bp[1] += len(read2)
+        writer1.write(read1)
+        writer2.write(read2)
+        return DISCARD
+
+    def close(self):
+        for w1, w2 in self.writers.values():
+            w1.close()
+            w2.close()
+
+
 class RestFileWriter:
     def __init__(self, file):
         self.file = file

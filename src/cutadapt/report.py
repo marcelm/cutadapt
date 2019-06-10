@@ -8,8 +8,8 @@ import textwrap
 from .adapters import Where, EndStatistics
 from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter, PairedAdapterCutter
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
-    PairedDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter, WildcardFileWriter,
-    RestFileWriter)
+    PairedDemultiplexer, CombinatorialDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter,
+    WildcardFileWriter, RestFileWriter)
 
 
 def safe_divide(numerator, denominator):
@@ -91,7 +91,8 @@ class Statistics:
         for w in writers:
             if isinstance(w, (InfoFileWriter, RestFileWriter, WildcardFileWriter)):
                 pass
-            elif isinstance(w, (NoFilter, PairedNoFilter, PairedDemultiplexer, Demultiplexer)):
+            elif isinstance(w, (NoFilter, PairedNoFilter, PairedDemultiplexer,
+                    CombinatorialDemultiplexer, Demultiplexer)):
                 self.written += w.written
                 self.written_bp[0] += w.written_bp[0]
                 self.written_bp[1] += w.written_bp[1]

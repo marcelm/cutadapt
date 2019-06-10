@@ -451,13 +451,25 @@ def open_output_files(args, default_outfile, interleaved):
             "and --untrimmed-output options can be used at the same time.")
 
     demultiplex = args.output is not None and '{name}' in args.output
+
     if args.paired_output is not None and (demultiplex != ('{name}' in args.paired_output)):
         raise CommandLineError('When demultiplexing paired-end data, "{name}" must appear in '
             'both output file names (-o and -p)')
 
+    demultiplex_combinatorial = (
+        args.output is not None
+        and args.paired_output is not None
+        and '{name1}' in args.output
+        and '{name2}' in args.output
+        and '{name1}' in args.paired_output
+        and '{name2}' in args.paired_output
+    )
+    if (demultiplex or demultiplex_combinatorial) and args.discard_trimmed:
+        raise CommandLineError("Do not use --discard-trimmed when demultiplexing.")
+
     if demultiplex:
-        if args.discard_trimmed:
-            raise CommandLineError("Do not use --discard-trimmed when demultiplexing.")
+        if demultiplex_combinatorial:
+            raise CommandLineError("You cannot combine {name} with {name1} and {name2}")
 
         out = args.output
         untrimmed = args.output.replace('{name}', 'unknown')
@@ -476,14 +488,24 @@ def open_output_files(args, default_outfile, interleaved):
 
         else:
             untrimmed2 = out2 = None
+
+        assert out is not None and '{name}' in out and (out2 is None or '{name}' in out2)
+    elif demultiplex_combinatorial:
+        out = args.output
+        out2 = args.paired_output
+        if args.untrimmed_output or args.untrimmed_paired_output:
+            raise CommandLineError("Combinatorial demultiplexing (with {name1} and {name2})"
+                " cannot be combined with --untrimmed-output or --untrimmed-paired-output")
+        if args.discard_untrimmed:
+            untrimmed = untrimmed2 = None
+        else:
+            untrimmed = untrimmed2 = 'unknown'
     else:
         untrimmed, untrimmed2 = open2(args.untrimmed_output, args.untrimmed_paired_output)
         out, out2 = open2(args.output, args.paired_output)
         if out is None:
             out = default_outfile
 
-    if demultiplex:
-        assert out is not None and '{name}' in out and (out2 is None or '{name}' in out2)
     return OutputFiles(
         rest=rest_file,
         info=info_file,
@@ -496,7 +518,7 @@ def open_output_files(args, default_outfile, interleaved):
         untrimmed2=untrimmed2,
         out=out,
         out2=out2,
-        demultiplex=demultiplex,
+        demultiplex=demultiplex or demultiplex_combinatorial,
         interleaved=interleaved,
         force_fasta=args.fasta,
     )

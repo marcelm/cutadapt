@@ -501,3 +501,24 @@ def test_pair_adapters_demultiplexing(tmpdir):
     ]:
         assert tmpdir.join(name).check()
         assert_files_equal(cutpath(name), str(tmpdir.join(name)))
+
+
+def test_combinatorial_demultiplexing(tmpdir):
+    params = "-g A=^AAAAAAAAAA -g C=^CCCCCCCCCC -G G=^GGGGGGGGGG -G T=^TTTTTTTTTT".split()
+    params += ["-o", str(tmpdir.join("combinatorial.{name1}_{name2}.1.fasta"))]
+    params += ["-p", str(tmpdir.join("combinatorial.{name1}_{name2}.2.fasta"))]
+    params += [datapath("combinatorial.1.fasta"), datapath("combinatorial.2.fasta")]
+    assert main(params) is None
+    for (name1, name2) in [
+        ("A", "G"),
+        ("A", "T"),
+        ("C", "G"),
+        ("C", "T"),
+        ("unknown", "G"),
+        ("A", "unknown"),
+    ]:
+        for i in (1, 2):
+            name = "combinatorial.{name1}_{name2}.{i}.fasta".format(name1=name1, name2=name2, i=i)
+            path = cutpath(os.path.join("combinatorial", name))
+            assert tmpdir.join(name).check(), "Output file missing"
+            assert_files_equal(path, str(tmpdir.join(name)))

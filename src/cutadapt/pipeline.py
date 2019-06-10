@@ -18,7 +18,7 @@ from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
     CasavaFilter, DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer,
-    PairedDemultiplexer)
+    PairedDemultiplexer, CombinatorialDemultiplexer)
 
 logger = logging.getLogger()
 
@@ -33,8 +33,8 @@ class InputFiles:
 class OutputFiles:
     """
     The attributes are open file-like objects except when demultiplex is True. In that case,
-    untrimmed, untrimmed2 are file names, and out and out2 are file name templates
-    containing '{name}'.
+    untrimmed, untrimmed2, out and out2 are file names or templates
+    as required by the used demultiplexer ('{name}' etc.).
     If interleaved is True, then out is written interleaved.
     Files may also be None.
     """
@@ -119,7 +119,7 @@ class Pipeline(ABC):
         return dnaio.open(file, file2=file2, mode='w', qualities=self.uses_qualities,
             **kwargs)
 
-    def set_output(self, outfiles):
+    def set_output(self, outfiles: OutputFiles):
         self._filters = []
         self._outfiles = outfiles
         filter_wrapper = self._filter_wrapper()
@@ -354,7 +354,11 @@ class PairedEndPipeline(Pipeline):
         return PairedNoFilter(writer)
 
     def _create_demultiplexer(self, outfiles):
-        return PairedDemultiplexer(outfiles.out, outfiles.out2,
+        if '{name1}' in outfiles.out and '{name2}' in outfiles.out:
+            return CombinatorialDemultiplexer(outfiles.out, outfiles.out2,
+                outfiles.untrimmed, qualities=self.uses_qualities)
+        else:
+            return PairedDemultiplexer(outfiles.out, outfiles.out2,
             outfiles.untrimmed, outfiles.untrimmed2, qualities=self.uses_qualities)
 
     @property
