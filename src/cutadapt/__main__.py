@@ -413,25 +413,26 @@ def parse_lengths(s):
     return tuple(values)
 
 
-def open_output_files(args, default_outfile, interleaved, compresslevel):
+def open_output_files(args, default_outfile, interleaved):
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
     """
+    compression_level = args.compression_level
     rest_file = info_file = wildcard = None
     if args.rest_file is not None:
-        rest_file = xopen(args.rest_file, 'w',compresslevel=compresslevel)
+        rest_file = xopen(args.rest_file, 'w', compresslevel=compression_level)
     if args.info_file is not None:
-        info_file = xopen(args.info_file, 'w', compresslevel=compresslevel)
+        info_file = xopen(args.info_file, 'w', compresslevel=compression_level)
     if args.wildcard_file is not None:
-        wildcard = xopen(args.wildcard_file, 'w', compresslevel=compresslevel)
+        wildcard = xopen(args.wildcard_file, 'w', compresslevel=compression_level)
 
     def open2(path1, path2):
         file1 = file2 = None
         if path1 is not None:
-            file1 = xopen(path1, 'wb', compresslevel=compresslevel)
+            file1 = xopen(path1, 'wb', compresslevel=compression_level)
             if path2 is not None:
-                file2 = xopen(path2, 'wb', compresslevel=compresslevel)
+                file2 = xopen(path2, 'wb', compresslevel=compression_level)
         return file1, file2
 
     too_short = too_short2 = None
@@ -781,7 +782,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         input_filename, input_paired_filename = input_files_from_parsed_args(args.inputs,
             paired, is_interleaved_input)
         pipeline = pipeline_from_parsed_args(args, paired, is_interleaved_output)
-        outfiles = open_output_files(args, default_outfile, is_interleaved_output, args.compression_level)
+        outfiles = open_output_files(args, default_outfile, is_interleaved_output)
     except CommandLineError as e:
         parser.error(e)
         return  # avoid IDE warnings below
