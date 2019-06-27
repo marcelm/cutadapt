@@ -24,6 +24,10 @@ def test_example(run):
     run('-N -b ADAPTER', 'example.fa', 'example.fa')
 
 
+def test_compressed_fasta(run):
+    run("", "simple.fasta", "simple.fasta.gz")
+
+
 def test_small(run):
     run('-a TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq')
 
