@@ -472,7 +472,7 @@ Input read                         Processed read
 Linked adapters (combined 5' and 3' adapter)
 --------------------------------------------
 
-If your sequence of interest ist “framed” by a 5' and a 3' adapter, and you want
+If your sequence of interest is “framed” by a 5' and a 3' adapter, and you want
 to remove both adapters, then you may want to use a *linked adapter*. A linked
 adapter combines a 5' and a 3' adapter. By default, the adapters are not anchored,
 but in many cases, you should anchor the 5’ adapter by prefixing it with ``^``.
