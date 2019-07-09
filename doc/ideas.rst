@@ -79,15 +79,19 @@ Model somehow all the flags that exist for semiglobal alignment. For start of th
 Not degraded and no bases before allowed = anchored.
 Degraded and bases before allowed = regular 5'
 
+API
+---
+
+* https://github.com/marcelm/cutadapt/labels/API
 
 Paired-end trimming
 -------------------
 
 * Could also use a paired-end read merger, then remove adapters with -a and -g
 
-Available/used letters for command-line options
+Available letters for command-line options
 -----------------------------------------------
 
 * Remaining characters: All uppercase letters except A, B, G, M, N, O, U
-* Lowercase letters: i, j, k, s, w
+* Lowercase letters: i, k, s, w
 * Planned/reserved: Q (paired-end quality trimming)
