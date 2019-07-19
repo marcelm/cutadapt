@@ -171,7 +171,7 @@ def get_argument_parser():
     group.add_argument("--buffer-size", type=int, default=4000000,
         help=SUPPRESS)
     # Compression level for gzipped output files. Not exposed since we have -Z
-    group.add_argument("--compression-level", default=6,
+    group.add_argument("--compression-level", type=int, default=6,
         help=SUPPRESS)
     # Deprecated: The input format is always auto-detected
     group.add_argument("-f", "--format", help=SUPPRESS)
