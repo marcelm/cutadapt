@@ -20,6 +20,10 @@ install:
 script:
   - tox
 
+after_success:
+  - pip install codecov
+  - codecov
+
 env:
   global:
     #- TWINE_REPOSITORY_URL=https://test.pypi.org/legacy/
