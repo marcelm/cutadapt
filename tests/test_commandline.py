@@ -666,3 +666,8 @@ def test_force_fasta_output(tmpdir, cores):
 
 def test_empty_read_with_wildcard_in_adapter(run):
     run("-g CWC", "empty.fastq", "empty.fastq")
+
+
+def test_print_progress_to_tty(tmpdir, mocker):
+    mocker.patch("cutadapt.utils.sys.stderr").isatty.return_value = True
+    main(["-o", str(tmpdir.join("out.fastq")), datapath("small.fastq")])
