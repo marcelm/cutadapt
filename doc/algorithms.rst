@@ -73,7 +73,7 @@ overlaps that are actually allowed by the adapter type are actually considered.
 .. _quality-trimming-algorithm:
 
 Quality trimming algorithm
---------------------------
+==========================
 
 The trimming algorithm implemented in Cutadapt is the same as the one used by
 BWA, but applied to both
