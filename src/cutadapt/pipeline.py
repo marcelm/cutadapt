@@ -13,7 +13,7 @@ from xopen import xopen
 import dnaio
 
 from .utils import Progress
-from .modifiers import PairedModifier, Modifier
+from .modifiers import PairedModifier
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
@@ -40,21 +40,21 @@ class OutputFiles:
     """
     # TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?
     def __init__(
-            self,
-            out=None,
-            out2=None,
-            untrimmed=None,
-            untrimmed2=None,
-            too_short=None,
-            too_short2=None,
-            too_long=None,
-            too_long2=None,
-            info=None,
-            rest=None,
-            wildcard=None,
-            demultiplex=False,
-            interleaved=False,
-            force_fasta=None,
+        self,
+        out=None,
+        out2=None,
+        untrimmed=None,
+        untrimmed2=None,
+        too_short=None,
+        too_short2=None,
+        too_long=None,
+        too_long2=None,
+        info=None,
+        rest=None,
+        wildcard=None,
+        demultiplex=False,
+        interleaved=False,
+        force_fasta=None,
     ):
         self.out = out
         self.out2 = out2

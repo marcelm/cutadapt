@@ -13,6 +13,7 @@ filters is created and each redirector is called in turn until one returns True.
 The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded).
 """
+from abc import ABC, abstractmethod
 import dnaio
 
 # Constants used when returning from a Filter’s __call__ method to improve
@@ -21,7 +22,19 @@ DISCARD = True
 KEEP = False
 
 
-class NoFilter:
+class SingleEndFilter(ABC):
+    @abstractmethod
+    def __call__(self, read, matches):
+        pass
+
+
+class PairedEndFilter(ABC):
+    @abstractmethod
+    def __call__(self, read1, matches1, read2, matches2):
+        pass
+
+
+class NoFilter(SingleEndFilter):
     """
     No filtering, just send each read to the given writer.
     """
@@ -41,7 +54,7 @@ class NoFilter:
         return DISCARD
 
 
-class PairedNoFilter:
+class PairedNoFilter(PairedEndFilter):
     """
     No filtering, just send each paired-end read to the given writer.
     """
@@ -62,7 +75,7 @@ class PairedNoFilter:
         return DISCARD
 
 
-class Redirector:
+class Redirector(SingleEndFilter):
     """
     Redirect discarded reads to the given writer. This is for single-end reads.
     """
@@ -85,7 +98,7 @@ class Redirector:
         return KEEP
 
 
-class PairedRedirector:
+class PairedRedirector(PairedEndFilter):
     """
     Redirect paired-end reads matching a filtering criterion to a writer.
     Different filtering styles are supported, differing by which of the
@@ -141,7 +154,7 @@ class PairedRedirector:
         return KEEP
 
 
-class TooShortReadFilter:
+class TooShortReadFilter(SingleEndFilter):
     def __init__(self, minimum_length):
         self.minimum_length = minimum_length
 
@@ -149,7 +162,7 @@ class TooShortReadFilter:
         return len(read) < self.minimum_length
 
 
-class TooLongReadFilter:
+class TooLongReadFilter(SingleEndFilter):
     def __init__(self, maximum_length):
         self.maximum_length = maximum_length
 
@@ -157,7 +170,7 @@ class TooLongReadFilter:
         return len(read) > self.maximum_length
 
 
-class NContentFilter:
+class NContentFilter(SingleEndFilter):
     """
     Discards a reads that has a number of 'N's over a given threshold. It handles both raw counts
     of Ns as well as proportions. Note, for raw counts, it is a 'greater than' comparison,
@@ -183,7 +196,7 @@ class NContentFilter:
             return n_count > self.cutoff
 
 
-class DiscardUntrimmedFilter:
+class DiscardUntrimmedFilter(SingleEndFilter):
     """
     Return True if read is untrimmed.
     """
@@ -191,7 +204,7 @@ class DiscardUntrimmedFilter:
         return not matches
 
 
-class DiscardTrimmedFilter:
+class DiscardTrimmedFilter(SingleEndFilter):
     """
     Return True if read is trimmed.
     """
@@ -199,7 +212,7 @@ class DiscardTrimmedFilter:
         return bool(matches)
 
 
-class CasavaFilter:
+class CasavaFilter(SingleEndFilter):
     """
     Remove reads that fail the CASAVA filter. These have header lines that
     look like ``xxxx x:Y:x:x`` (with a ``Y``). Reads that pass the filter
@@ -212,7 +225,7 @@ class CasavaFilter:
         return right[1:4] == ':Y:'  # discard if :Y: found
 
 
-class Demultiplexer:
+class Demultiplexer(SingleEndFilter):
     """
     Demultiplex trimmed reads. Reads are written to different output files
     depending on which adapter matches. Files are created when the first read
@@ -263,7 +276,7 @@ class Demultiplexer:
             self.untrimmed_writer.close()
 
 
-class PairedDemultiplexer:
+class PairedDemultiplexer(PairedEndFilter):
     """
     Demultiplex trimmed paired-end reads. Reads are written to different output files
     depending on which adapter (in read 1) matches.
@@ -298,7 +311,7 @@ class PairedDemultiplexer:
         self._demultiplexer2.close()
 
 
-class CombinatorialDemultiplexer:
+class CombinatorialDemultiplexer(PairedEndFilter):
     """
     Demultiplex reads depending on which adapter matches, taking into account both matches
     on R1 and R2.
@@ -331,7 +344,6 @@ class CombinatorialDemultiplexer:
         Write the read to the proper output file according to the most recent matches both on
         R1 and R2
         """
-        # import ipdb; ipdb.set_trace()
         assert read2 is not None
         name1 = matches1[-1].adapter.name if matches1 else None
         name2 = matches2[-1].adapter.name if matches2 else None
@@ -363,7 +375,7 @@ class CombinatorialDemultiplexer:
             w2.close()
 
 
-class RestFileWriter:
+class RestFileWriter(SingleEndFilter):
     def __init__(self, file):
         self.file = file
 
@@ -375,7 +387,7 @@ class RestFileWriter:
         return KEEP
 
 
-class WildcardFileWriter:
+class WildcardFileWriter(SingleEndFilter):
     def __init__(self, file):
         self.file = file
 
@@ -385,7 +397,7 @@ class WildcardFileWriter:
         return KEEP
 
 
-class InfoFileWriter:
+class InfoFileWriter(SingleEndFilter):
     def __init__(self, file):
         self.file = file
 
