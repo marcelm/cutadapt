@@ -29,7 +29,7 @@ Code style
 * There are inconsistencies in the current code base since it’s a few years old
   already. New code should follow the current rules, however.
 * At the moment, no automatic code formatting is done, but one idea might be to
-  switch to the `black <https://black.readthedocs.io/>` code formatter at some
+  switch to the `black <https://black.readthedocs.io/>`_ code formatter at some
   point. If you’re familiar with its style, you can use that already now for
   new code to make the diff smaller.
 * Prefer double quotation marks in new code. This will also make the diff smaller

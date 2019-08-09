@@ -289,7 +289,7 @@ class PairedEndPipeline(Pipeline):
         super().__init__()
         self._pair_filter_mode = pair_filter_mode
         self._reader = None
-        # Whether to gnore pair_filter mode for discard-untrimmed filter
+        # Whether to ignore pair_filter mode for discard-untrimmed filter
         self.override_untrimmed_pair_filter = False
 
     def add(self, modifier1, modifier2):
@@ -527,10 +527,10 @@ class OrderedChunkWriter:
         self._current_index = 0
         self._outfile = outfile
 
-    def write(self, data, chunk_index):
+    def write(self, data, index):
         """
         """
-        self._chunks[chunk_index] = data
+        self._chunks[index] = data
         while self._current_index in self._chunks:
             self._outfile.write(self._chunks[self._current_index])
             del self._chunks[self._current_index]

@@ -158,5 +158,5 @@ To run Cutadapt and see the version number, type ::
     ~/cutadapt-venv/bin/cutadapt --version
 
 The reported version number will be something like ``2.2.dev5+gf564208``. This
-means that you are now running the version of Cutadapt that will become 2.2, and that is contains
+means that you are now running the version of Cutadapt that will become 2.2, and that it contains
 5 changes (*commits*) since the previous release (2.1 in this case).
