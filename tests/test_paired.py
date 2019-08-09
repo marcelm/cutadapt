@@ -522,3 +522,15 @@ def test_combinatorial_demultiplexing(tmpdir):
             path = cutpath(os.path.join("combinatorial", name))
             assert tmpdir.join(name).check(), "Output file missing"
             assert_files_equal(path, str(tmpdir.join(name)))
+
+
+def test_info_file(tmpdir):
+    info_path = str(tmpdir.join("info.txt"))
+    params = [
+        "--info-file", info_path,
+        "-o", str(tmpdir.join("out.1.fastq")),
+        "-p", str(tmpdir.join("out.2.fastq")),
+        datapath("paired.1.fastq"),
+        datapath("paired.2.fastq"),
+    ]
+    assert main(params) is None

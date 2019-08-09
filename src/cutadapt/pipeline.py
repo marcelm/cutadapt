@@ -125,11 +125,11 @@ class Pipeline(ABC):
         filter_wrapper = self._filter_wrapper()
 
         if outfiles.rest:
-            self._filters.append(RestFileWriter(outfiles.rest))
+            self._filters.append(filter_wrapper(None, RestFileWriter(outfiles.rest), None))
         if outfiles.info:
-            self._filters.append(InfoFileWriter(outfiles.info))
+            self._filters.append(filter_wrapper(None, InfoFileWriter(outfiles.info), None))
         if outfiles.wildcard:
-            self._filters.append(WildcardFileWriter(outfiles.wildcard))
+            self._filters.append(filter_wrapper(None, WildcardFileWriter(outfiles.wildcard), None))
 
         # minimum length and maximum length
         for lengths, file1, file2, filter_class in (
