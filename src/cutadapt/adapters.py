@@ -396,13 +396,13 @@ class AdapterParser:
             back_required = back_anchored
 
         # Handle parameters overriding whether an adapter is required
-        front_required = front_spec.parameters.pop('required', front_required)
-        back_required = back_spec.parameters.pop('required', back_required)
+        front_required = front_parameters.pop('required', front_required)
+        back_required = back_parameters.pop('required', back_required)
 
         front_adapter = Adapter(front_spec.sequence, where=front_spec.where(), name=None,
-            **front_spec.parameters)
+            **front_parameters)
         back_adapter = Adapter(back_spec.sequence, where=back_spec.where(), name=None,
-            **back_spec.parameters)
+            **back_parameters)
 
         return LinkedAdapter(
             front_adapter=front_adapter,

@@ -8,6 +8,8 @@ development version
 * :issue:`393`: Using ``--info-file`` no longer crashes when processing
   paired-end data. However, the info file itself will only contain results
   for R1.
+* :issue:`394`: Options ``-e``/``--no-indels``/``-O`` were ignored for
+  linked adapters
 
 v2.4 (2019-07-09)
 -----------------

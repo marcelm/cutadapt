@@ -317,6 +317,16 @@ def test_linked_adapter_front_required_optional(r1, r2, exp1, exp2):
     assert a.back_required is exp2
 
 
+def test_linked_adapter_parameters():
+    # issue #394
+    a = AdapterParser(max_error_rate=0.17, indels=False)._parse("ACG...TGT")
+    assert isinstance(a, LinkedAdapter)
+    assert a.front_adapter.max_error_rate == 0.17
+    assert a.back_adapter.max_error_rate == 0.17
+    assert not a.front_adapter.indels
+    assert not a.back_adapter.indels
+
+
 def test_anywhere_parameter():
     parser = AdapterParser(max_error_rate=0.2, min_overlap=4, read_wildcards=False,
         adapter_wildcards=False, indels=True)
