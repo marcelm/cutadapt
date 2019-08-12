@@ -2,8 +2,8 @@ from textwrap import dedent
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import (Adapter, Match, Where, LinkedAdapter, AdapterParser,
-    AdapterSpecification)
+from cutadapt.adapters import Adapter, Match, Where, LinkedAdapter
+from cutadapt.parser import AdapterParser, AdapterSpecification
 
 
 def test_issue_52():

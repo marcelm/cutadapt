@@ -64,7 +64,7 @@ from xopen import xopen
 import dnaio
 
 from cutadapt import __version__
-from cutadapt.adapters import AdapterParser
+from cutadapt.parser import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
     PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener)
