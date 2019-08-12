@@ -8,8 +8,7 @@ import logging
 from enum import Enum
 from collections import defaultdict
 
-from cutadapt import align
-from .align import hamming_environment
+from . import align
 
 logger = logging.getLogger()
 
@@ -612,7 +611,7 @@ class MultiAdapter:
         for adapter in self._adapters:
             sequence = adapter.sequence
             k = int(adapter.max_error_rate * len(sequence))
-            for s, errors, matches in hamming_environment(sequence, k):
+            for s, errors, matches in align.hamming_environment(sequence, k):
                 if s in index:
                     other_adapter, other_errors, other_matches = index[s]
                     if matches < other_matches:
