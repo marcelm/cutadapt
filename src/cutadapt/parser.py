@@ -287,28 +287,37 @@ class AdapterParser:
         if cmdline_type not in ('front', 'back', 'anywhere'):
             raise ValueError('cmdline_type cannot be {!r}'.format(cmdline_type))
         spec1, middle, spec2 = spec.partition('...')
-        del spec
-
-        # Handle linked adapter
         if middle == '...' and spec1 and spec2:
             return self._parse_linked(spec1, spec2, name, cmdline_type)
-        elif middle == '...':
-            if not spec1:
-                if cmdline_type == 'back':  # -a ...ADAPTER
-                    spec = spec2
-                else:  # -g ...ADAPTER
-                    raise ValueError('Invalid adapter specification')
-            elif not spec2:
-                if cmdline_type == 'back':  # -a ADAPTER...
-                    cmdline_type = 'front'
-                    spec = spec1
-                else:  # -g ADAPTER...
-                    spec = spec1
-            else:
-                assert False, 'This should not happen'
+
+        if middle == '...':
+            spec, cmdline_type = self._normalize_ellipsis(spec1, spec2, cmdline_type)
         else:
             spec = spec1
+        return self._parse_not_linked(spec, name, cmdline_type)
 
+    @staticmethod
+    def _normalize_ellipsis(spec1: str, spec2: str, cmdline_type):
+        if not spec1:
+            if cmdline_type == 'back':
+                # -a ...ADAPTER
+                spec = spec2
+            else:
+                # -g ...ADAPTER
+                raise ValueError('Invalid adapter specification')
+        elif not spec2:
+            if cmdline_type == 'back':
+                # -a ADAPTER...
+                cmdline_type = 'front'
+                spec = spec1
+            else:
+                # -g ADAPTER...
+                spec = spec1
+        else:
+            raise ValueError("Expected either spec1 or spec2")
+        return spec, cmdline_type
+
+    def _parse_not_linked(self, spec: str, name, cmdline_type):
         spec = AdapterSpecification.parse(spec, cmdline_type)
         where = spec.where()
         if not name:
