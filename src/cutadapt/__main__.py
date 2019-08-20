@@ -588,15 +588,7 @@ def input_files_from_parsed_args(inputs, paired, interleaved):
     return input_filename, input_paired_filename
 
 
-def pipeline_from_parsed_args(args, paired, is_interleaved_output):
-    """
-    Setup a processing pipeline from parsed command-line arguments.
-
-    If there are any problems parsing the arguments, a CommandLineError is thrown.
-
-    Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
-    """
-
+def check_arguments(args, paired, is_interleaved_output):
     if not paired:
         if args.untrimmed_paired_output:
             raise CommandLineError("Option --untrimmed-paired-output can only be used when "
@@ -631,6 +623,17 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
         raise CommandLineError("The overlap must be at least 1.")
     if not (0 <= args.gc_content <= 100):
         raise CommandLineError("GC content must be given as percentage between 0 and 100")
+
+
+def pipeline_from_parsed_args(args, paired, is_interleaved_output):
+    """
+    Setup a processing pipeline from parsed command-line arguments.
+
+    If there are any problems parsing the arguments, a CommandLineError is thrown.
+
+    Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
+    """
+    check_arguments(args, paired, is_interleaved_output)
     if args.action == 'none':
         args.action = None
 

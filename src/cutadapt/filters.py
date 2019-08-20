@@ -79,7 +79,7 @@ class Redirector(SingleEndFilter):
     """
     Redirect discarded reads to the given writer. This is for single-end reads.
     """
-    def __init__(self, writer, filter, filter2=None):
+    def __init__(self, writer, filter: SingleEndFilter, filter2=None):
         # TODO filter2 should really not be here
         self.filtered = 0
         self.writer = writer

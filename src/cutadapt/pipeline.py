@@ -94,7 +94,7 @@ class Pipeline(ABC):
     def __init__(self):
         self._close_files = []
         self._reader = None
-        self._filters = []
+        self._filters = None
         self._modifiers = []
         self._outfiles = None
         self._demultiplexer = None
@@ -107,11 +107,12 @@ class Pipeline(ABC):
         self.discard_trimmed = False
         self.discard_untrimmed = False
 
-    def set_input(self, infiles: InputFiles):
+    def connect_io(self, infiles: InputFiles, outfiles: OutputFiles):
         self._reader = dnaio.open(infiles.file1, file2=infiles.file2,
             interleaved=infiles.interleaved, mode='r')
+        self._set_output(outfiles)
 
-    def _open_writer(self, file, file2, force_fasta=None, **kwargs):
+    def _open_writer(self, file, file2=None, force_fasta=None, **kwargs):
         # TODO backwards-incompatible change (?) would be to use outfiles.interleaved
         # for all outputs
         if force_fasta:
@@ -119,33 +120,33 @@ class Pipeline(ABC):
         return dnaio.open(file, file2=file2, mode='w', qualities=self.uses_qualities,
             **kwargs)
 
-    def set_output(self, outfiles: OutputFiles):
+    def _set_output(self, outfiles: OutputFiles):
         self._filters = []
         self._outfiles = outfiles
         filter_wrapper = self._filter_wrapper()
 
-        if outfiles.rest:
-            self._filters.append(filter_wrapper(None, RestFileWriter(outfiles.rest), None))
-        if outfiles.info:
-            self._filters.append(filter_wrapper(None, InfoFileWriter(outfiles.info), None))
-        if outfiles.wildcard:
-            self._filters.append(filter_wrapper(None, WildcardFileWriter(outfiles.wildcard), None))
+        for filter_class, outfile in (
+            (RestFileWriter, outfiles.rest),
+            (InfoFileWriter, outfiles.info),
+            (WildcardFileWriter, outfiles.wildcard),
+        ):
+            if outfile:
+                self._filters.append(filter_wrapper(None, filter_class(outfile), None))
 
         # minimum length and maximum length
         for lengths, file1, file2, filter_class in (
                 (self._minimum_length, outfiles.too_short, outfiles.too_short2, TooShortReadFilter),
                 (self._maximum_length, outfiles.too_long, outfiles.too_long2, TooLongReadFilter)
         ):
-            writer = None
-            if lengths is not None:
-                if file1:
-                    writer = self._open_writer(file1, file2)
-                f1 = filter_class(lengths[0]) if lengths[0] is not None else None
-                if len(lengths) == 2 and lengths[1] is not None:
-                    f2 = filter_class(lengths[1])
-                else:
-                    f2 = None
-                self._filters.append(filter_wrapper(writer, filter=f1, filter2=f2))
+            if lengths is None:
+                continue
+            writer = self._open_writer(file1, file2) if file1 else None
+            f1 = filter_class(lengths[0]) if lengths[0] is not None else None
+            if len(lengths) == 2 and lengths[1] is not None:
+                f2 = filter_class(lengths[1])
+            else:
+                f2 = None
+            self._filters.append(filter_wrapper(writer, filter=f1, filter2=f2))
 
         if self.max_n is not None:
             f1 = f2 = NContentFilter(self.max_n)
@@ -251,7 +252,8 @@ class SingleEndPipeline(Pipeline):
         return Redirector
 
     def _final_filter(self, outfiles):
-        writer = self._open_writer(outfiles.out, outfiles.out2, force_fasta=outfiles.force_fasta)
+        assert outfiles.out2 is None
+        writer = self._open_writer(outfiles.out, force_fasta=outfiles.force_fasta)
         return NoFilter(writer)
 
     def _create_demultiplexer(self, outfiles):
@@ -486,8 +488,7 @@ class WorkerProcess(Process):
 
                 infiles = InputFiles(input, input2, interleaved=self._interleaved_input)
                 outfiles = OutputFiles(out=output, out2=output2, interleaved=self._orig_outfiles.interleaved, force_fasta=self._orig_outfiles.force_fasta)
-                self._pipeline.set_input(infiles)
-                self._pipeline.set_output(outfiles)
+                self._pipeline.connect_io(infiles, outfiles)
                 (n, bp1, bp2) = self._pipeline.process_reads()
                 cur_stats = Statistics().collect(n, bp1, bp2, [], self._pipeline._filters)
                 stats += cur_stats
@@ -558,7 +559,7 @@ class ParallelPipelineRunner(PipelineRunner):
     """
     Run a Pipeline in parallel
 
-    - When set_input() is called, a reader process is spawned.
+    - When connect_io() is called, a reader process is spawned.
     - When run() is called, as many worker processes as requested are spawned.
     - In the main process, results are written to the output files in the correct
       order, and statistics are aggregated.
@@ -600,7 +601,7 @@ class ParallelPipelineRunner(PipelineRunner):
 
     def _assign_input(self, file1, file2=None, interleaved=False):
         if self._reader_process is not None:
-            raise RuntimeError('Do not call set_input more than once')
+            raise RuntimeError('Do not call connect_io more than once')
         self._input_path1 = file1 if type(file1) is str else file1.name
         self._input_path2 = file2 if type(file2) is str or file2 is None else file2.name
         self._interleaved_input = interleaved
@@ -727,8 +728,7 @@ class SerialPipelineRunner(PipelineRunner):
 
     def __init__(self, pipeline: Pipeline, infiles: InputFiles, outfiles: OutputFiles):
         super().__init__(pipeline)
-        self._pipeline.set_input(infiles)
-        self._pipeline.set_output(outfiles)
+        self._pipeline.connect_io(infiles, outfiles)
 
     def run(self):
         (n, total1_bp, total2_bp) = self._pipeline.process_reads(progress=self._progress)
