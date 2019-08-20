@@ -283,9 +283,6 @@ class PairedEndPipeline(Pipeline):
     paired = True
 
     def __init__(self, pair_filter_mode):
-        """
-        Setting modify_first_read_only to True enables "legacy mode"
-        """
         super().__init__()
         self._pair_filter_mode = pair_filter_mode
         self._reader = None
