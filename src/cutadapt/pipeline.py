@@ -395,6 +395,15 @@ def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
 
     and finally sends "poison pills" (the value -1) to all connections.
     """
+
+    def send_to_worker(chunk_index, chunk1, chunk2=None):
+        worker_index = queue.get()
+        connection = connections[worker_index]
+        connection.send(chunk_index)
+        connection.send_bytes(chunk1)
+        if chunk2 is not None:
+            connection.send_bytes(chunk2)
+
     if stdin_fd != -1:
         sys.stdin.close()
         sys.stdin = os.fdopen(stdin_fd)
@@ -403,19 +412,10 @@ def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
             if file2:
                 with xopen(file2, 'rb') as f2:
                     for chunk_index, (chunk1, chunk2) in enumerate(dnaio.read_paired_chunks(f, f2, buffer_size)):
-                        # Determine the worker that should get this chunk
-                        worker_index = queue.get()
-                        pipe = connections[worker_index]
-                        pipe.send(chunk_index)
-                        pipe.send_bytes(chunk1)
-                        pipe.send_bytes(chunk2)
+                        send_to_worker(chunk_index, chunk1, chunk2)
             else:
                 for chunk_index, chunk in enumerate(dnaio.read_chunks(f, buffer_size)):
-                    # Determine the worker that should get this chunk
-                    worker_index = queue.get()
-                    pipe = connections[worker_index]
-                    pipe.send(chunk_index)
-                    pipe.send_bytes(chunk)
+                    send_to_worker(chunk_index, chunk)
 
         # Send poison pills to all workers
         for _ in range(len(connections)):
