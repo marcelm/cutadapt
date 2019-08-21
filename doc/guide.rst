@@ -149,9 +149,6 @@ There are some limitations at the moment:
       - ``--info-file``
       - ``--rest-file``
       - ``--wildcard-file``
-      - ``--untrimmed-output``, ``--untrimmed-paired-output``
-      - ``--too-short-output``, ``--too-short-paired-output``
-      - ``--too-long-output``, ``--too-long-paired-output``
 
 * Multi-core is also not compatible with ``--format``
 
@@ -166,6 +163,10 @@ Some of these limitations will be lifted in the future, as time allows.
 
 .. versionadded:: 1.18
     ``--cores=0`` for autodetection
+
+.. versionadded:: 2.5
+    Multicore works with ``--untrimmed/too-short/too-long-(paired)-output``
+
 
 Speed-up tricks
 ---------------

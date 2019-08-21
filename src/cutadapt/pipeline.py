@@ -493,26 +493,29 @@ class WorkerProcess(Process):
         return InputFiles(input, input2, interleaved=self._interleaved_input)
 
     def _make_output_files(self):
-        output = io.BytesIO()
-        output.name = self._orig_outfiles.out.name
+        """
+        Using self._orig_outfiles as a template, make a new OutputFiles instance
+        that has BytesIO instances for each non-None output file
+        """
+        output_files = copy.copy(self._orig_outfiles)
+        # TODO info, rest, wildcard need to be StringIO()
+        for attr in (
+            "out", "out2", "untrimmed", "untrimmed2", "too_short", "too_short2", "too_long",
+            "too_long2", "info", "rest", "wildcard"
+        ):
+            orig_outfile = getattr(self._orig_outfiles, attr)
+            if orig_outfile is not None:
+                output = io.BytesIO()
+                output.name = orig_outfile.name
+                setattr(output_files, attr, output)
 
-        if self._orig_outfiles.out2 is not None:
-            output2 = io.BytesIO()
-            output2.name = self._orig_outfiles.out2.name
-        else:
-            output2 = None
-
-        return OutputFiles(out=output, out2=output2, interleaved=self._orig_outfiles.interleaved,
-            force_fasta=self._orig_outfiles.force_fasta)
+        return output_files
 
     def _send_outfiles(self, outfiles, chunk_index, n_reads):
         self._write_pipe.send(chunk_index)
         self._write_pipe.send(n_reads)
 
-        for f in (
-            outfiles.out,
-            outfiles.out2,
-        ):
+        for f in outfiles:
             if f is None:
                 continue
             f.flush()
@@ -629,12 +632,6 @@ class ParallelPipelineRunner(PipelineRunner):
             and outfiles.rest is None
             and outfiles.info is None
             and outfiles.wildcard is None
-            and outfiles.too_short is None
-            and outfiles.too_short2 is None
-            and outfiles.too_long is None
-            and outfiles.too_long2 is None
-            and outfiles.untrimmed is None
-            and outfiles.untrimmed2 is None
             and not outfiles.demultiplex
         )
 
@@ -662,7 +659,7 @@ class ParallelPipelineRunner(PipelineRunner):
     def run(self):
         workers, connections = self._start_workers()
         writers = []
-        for outfile in [self._outfiles.out, self._outfiles.out2]:
+        for outfile in self._outfiles:
             if outfile is None:
                 continue
             writers.append(OrderedChunkWriter(outfile))

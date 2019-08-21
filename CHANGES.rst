@@ -5,6 +5,9 @@ Changes
 development version
 -------------------
 
+* :issue:`391`: Multicore is now supported even when using
+  ``--untrimmed-output``, ``--too-short-output``, ``--too-long-output``
+  or the corresponding ``...-paired-output`` options.
 * :issue:`393`: Using ``--info-file`` no longer crashes when processing
   paired-end data. However, the info file itself will only contain results
   for R1.

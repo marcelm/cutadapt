@@ -1,6 +1,5 @@
 import os.path
 import shutil
-import tempfile
 from itertools import product
 
 import pytest
@@ -352,29 +351,31 @@ def test_pair_filter_first(run_paired, cores):
     )
 
 
-def test_too_short_paired_output(run_paired, tmpdir):
+def test_too_short_paired_output(run_paired, tmpdir, cores):
     p1 = str(tmpdir.join("too-short.1.fastq"))
     p2 = str(tmpdir.join("too-short.2.fastq"))
     run_paired(
-        "-a TTAGACATAT -A CAGTGGAGTA -m 14 --too-short-output "
-        "{0} --too-short-paired-output {1}".format(p1, p2),
+        " -a TTAGACATAT -A CAGTGGAGTA -m 14"
+        " --too-short-output {}"
+        " --too-short-paired-output {}".format(p1, p2),
         in1="paired.1.fastq", in2="paired.2.fastq",
         expected1="paired.1.fastq", expected2="paired.2.fastq",
-        cores=1
+        cores=cores
     )
     assert_files_equal(cutpath("paired-too-short.1.fastq"), p1)
     assert_files_equal(cutpath("paired-too-short.2.fastq"), p2)
 
 
-def test_too_long_output(run_paired, tmpdir):
+def test_too_long_output(run_paired, tmpdir, cores):
     p1 = str(tmpdir.join("too-long.1.fastq"))
     p2 = str(tmpdir.join("too-long.2.fastq"))
     run_paired(
-        "-a TTAGACATAT -A CAGTGGAGTA -M 14 --too-long-output "
-        "{0} --too-long-paired-output {1}".format(p1, p2),
+        " -a TTAGACATAT -A CAGTGGAGTA -M 14"
+        " --too-long-output {}"
+        " --too-long-paired-output {}".format(p1, p2),
         in1="paired.1.fastq", in2="paired.2.fastq",
         expected1="paired-too-short.1.fastq", expected2="paired-too-short.2.fastq",
-        cores=1
+        cores=cores
     )
     assert_files_equal(cutpath("paired.1.fastq"), p1)
     assert_files_equal(cutpath("paired.2.fastq"), p2)

@@ -98,10 +98,15 @@ def test_minimum_length(run):
     run("-m 5 -a TTAGACATATCTCCGTCG", "minlen.fa", "lengths.fa")
 
 
-def test_too_short(run, tmpdir):
+def test_too_short(run, tmpdir, cores):
     """--too-short-output"""
     too_short_path = str(tmpdir.join('tooshort.fa'))
-    run("-m 5 -a TTAGACATATCTCCGTCG --too-short-output " + too_short_path, "minlen.fa", "lengths.fa")
+    run([
+        "--cores", str(cores),
+        "-m", "5",
+        "-a", "TTAGACATATCTCCGTCG",
+        "--too-short-output", too_short_path
+    ], "minlen.fa", "lengths.fa")
     assert_files_equal(datapath('tooshort.fa'), too_short_path)
 
 
@@ -110,10 +115,15 @@ def test_maximum_length(run):
     run("-M 5 -a TTAGACATATCTCCGTCG", "maxlen.fa", "lengths.fa")
 
 
-def test_too_long(run, tmpdir):
+def test_too_long(run, tmpdir, cores):
     """--too-long-output"""
     too_long_path = str(tmpdir.join('toolong.fa'))
-    run("-M 5 -a TTAGACATATCTCCGTCG --too-long-output " + too_long_path, "maxlen.fa", "lengths.fa")
+    run([
+        "--cores", str(cores),
+        "-M", "5",
+        "-a", "TTAGACATATCTCCGTCG",
+        "--too-long-output", too_long_path
+    ], "maxlen.fa", "lengths.fa")
     assert_files_equal(datapath('toolong.fa'), too_long_path)
 
 
@@ -394,9 +404,10 @@ def test_unconditional_cut_both(run):
     run('-u -5 -u 5', 'unconditional-both.fastq', 'small.fastq')
 
 
-def test_untrimmed_output(run, tmpdir):
+def test_untrimmed_output(run, cores, tmpdir):
     path = str(tmpdir.join("untrimmed.fastq"))
-    run(["-a", "TTAGACATATCTCCGTCG", "--untrimmed-output", path], "small.trimmed.fastq", "small.fastq")
+    run(["--cores", str(cores), "-a", "TTAGACATATCTCCGTCG", "--untrimmed-output", path],
+        "small.trimmed.fastq", "small.fastq")
     assert_files_equal(cutpath("small.untrimmed.fastq"), path)
 
 
