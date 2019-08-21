@@ -464,40 +464,13 @@ class WorkerProcess(Process):
                     logger.error('%s', tb_str)
                     raise e
 
-                data = self._read_pipe.recv_bytes()
-                input = io.BytesIO(data)
-
-                if self._two_input_files:
-                    data = self._read_pipe.recv_bytes()
-                    input2 = io.BytesIO(data)
-                else:
-                    input2 = None
-                output = io.BytesIO()
-                output.name = self._orig_outfiles.out.name
-
-                if self._orig_outfiles.out2 is not None:
-                    output2 = io.BytesIO()
-                    output2.name = self._orig_outfiles.out2.name
-                else:
-                    output2 = None
-
-                infiles = InputFiles(input, input2, interleaved=self._interleaved_input)
-                outfiles = OutputFiles(out=output, out2=output2, interleaved=self._orig_outfiles.interleaved, force_fasta=self._orig_outfiles.force_fasta)
+                infiles = self._make_input_files()
+                outfiles = self._make_output_files()
                 self._pipeline.connect_io(infiles, outfiles)
                 (n, bp1, bp2) = self._pipeline.process_reads()
                 cur_stats = Statistics().collect(n, bp1, bp2, [], self._pipeline._filters)
                 stats += cur_stats
-
-                output.flush()
-                processed_chunk = output.getvalue()
-
-                self._write_pipe.send(chunk_index)
-                self._write_pipe.send(n)  # no. of reads processed in this chunk
-                self._write_pipe.send_bytes(processed_chunk)
-                if self._orig_outfiles.out2 is not None:
-                    output2.flush()
-                    processed_chunk2 = output2.getvalue()
-                    self._write_pipe.send_bytes(processed_chunk2)
+                self._send_outfiles(outfiles, chunk_index, n)
 
             m = self._pipeline._modifiers
             modifier_stats = Statistics().collect(0, 0, 0 if self._pipeline.paired else None, m, [])
@@ -507,6 +480,44 @@ class WorkerProcess(Process):
         except Exception as e:
             self._write_pipe.send(-2)
             self._write_pipe.send((e, traceback.format_exc()))
+
+    def _make_input_files(self):
+        data = self._read_pipe.recv_bytes()
+        input = io.BytesIO(data)
+
+        if self._two_input_files:
+            data = self._read_pipe.recv_bytes()
+            input2 = io.BytesIO(data)
+        else:
+            input2 = None
+        return InputFiles(input, input2, interleaved=self._interleaved_input)
+
+    def _make_output_files(self):
+        output = io.BytesIO()
+        output.name = self._orig_outfiles.out.name
+
+        if self._orig_outfiles.out2 is not None:
+            output2 = io.BytesIO()
+            output2.name = self._orig_outfiles.out2.name
+        else:
+            output2 = None
+
+        return OutputFiles(out=output, out2=output2, interleaved=self._orig_outfiles.interleaved,
+            force_fasta=self._orig_outfiles.force_fasta)
+
+    def _send_outfiles(self, outfiles, chunk_index, n_reads):
+        self._write_pipe.send(chunk_index)
+        self._write_pipe.send(n_reads)
+
+        for f in (
+            outfiles.out,
+            outfiles.out2,
+        ):
+            if f is None:
+                continue
+            f.flush()
+            processed_chunk = f.getvalue()
+            self._write_pipe.send_bytes(processed_chunk)
 
 
 class OrderedChunkWriter:
