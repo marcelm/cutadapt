@@ -436,13 +436,12 @@ class WorkerProcess(Process):
     To notify the reader process that it wants data, it puts its own identifier into the
     need_work_queue before attempting to read data from the read_pipe.
     """
-    def __init__(self, id_, pipeline, input_path1, input_path2,
+    def __init__(self, id_, pipeline, two_input_files,
             interleaved_input, orig_outfiles, read_pipe, write_pipe, need_work_queue):
         super().__init__()
         self._id = id_
         self._pipeline = pipeline
-        self._input_path1 = input_path1
-        self._input_path2 = input_path2
+        self._two_input_files = two_input_files
         self._interleaved_input = interleaved_input
         self._orig_outfiles = orig_outfiles
         self._read_pipe = read_pipe
@@ -465,16 +464,12 @@ class WorkerProcess(Process):
                     logger.error('%s', tb_str)
                     raise e
 
-                # Setting the .buffer.name attributess below is necessary because
-                # file format detection uses the file name
                 data = self._read_pipe.recv_bytes()
                 input = io.BytesIO(data)
-                input.name = self._input_path1
 
-                if self._input_path2:
+                if self._two_input_files:
                     data = self._read_pipe.recv_bytes()
                     input2 = io.BytesIO(data)
-                    input2.name = self._input_path2
                 else:
                     input2 = None
                 output = io.BytesIO()
@@ -590,8 +585,7 @@ class ParallelPipelineRunner(PipelineRunner):
         self._pipes = []  # the workers read from these
         self._reader_process = None
         self._outfiles = None
-        self._input_path1 = None
-        self._input_path2 = None
+        self._two_input_files = None
         self._interleaved_input = None
         self._n_workers = n_workers
         self._need_work_queue = Queue()
@@ -602,8 +596,7 @@ class ParallelPipelineRunner(PipelineRunner):
     def _assign_input(self, file1, file2=None, interleaved=False):
         if self._reader_process is not None:
             raise RuntimeError('Do not call connect_io more than once')
-        self._input_path1 = file1 if type(file1) is str else file1.name
-        self._input_path2 = file2 if type(file2) is str or file2 is None else file2.name
+        self._two_input_files = file2 is not None
         self._interleaved_input = interleaved
         connections = [Pipe(duplex=False) for _ in range(self._n_workers)]
         self._pipes, connw = zip(*connections)
@@ -647,7 +640,7 @@ class ParallelPipelineRunner(PipelineRunner):
             connections.append(conn_r)
             worker = WorkerProcess(
                 index, self._pipeline,
-                self._input_path1, self._input_path2,
+                self._two_input_files,
                 self._interleaved_input, self._outfiles,
                 self._pipes[index], conn_w, self._need_work_queue)
             worker.daemon = True
