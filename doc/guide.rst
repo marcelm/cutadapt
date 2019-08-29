@@ -928,23 +928,29 @@ Quality trimming
 ----------------
 
 The ``-q`` (or ``--quality-cutoff``) parameter can be used to trim
-low-quality ends from reads before adapter removal. For this to work
-correctly, the quality values must be encoded as ascii(phred quality +
-33). If they are encoded as ascii(phred quality + 64), you need to add
-``--quality-base=64`` to the command line.
-
-Quality trimming can be done without adapter trimming, so this will work::
+low-quality ends from reads. If you specify a single cutoff value, the
+3' end of each read is trimmed::
 
     cutadapt -q 10 -o output.fastq input.fastq
 
-By default, only the 3' end of each read is quality-trimmed. If you want to
-trim the 5' end as well, use the ``-q`` option with two comma-separated cutoffs::
+For Illumina reads, this is sufficient as their quality is high at the beginning,
+but degrades towards the 3' end.
+
+It is also possible to also trim from the 5' end by specifying two
+comma-separated cutoffs as *5' cutoff,3' cutoff*. For example, ::
 
     cutadapt -q 15,10 -o output.fastq input.fastq
 
-The 5' end will then be trimmed with a cutoff of 15, and the 3' end will be
-trimmed with a cutoff of 10. If you only want to trim the 5' end, then use a
-cutoff of 0 for the 3' end, as in ``-q 10,0``.
+will quality-trim the 5' end with a cutoff of 15 and the 3' end with a cutoff
+of 10. To only trim the 5' end, use a cutoff of 0 for the 3' end, as in
+``-q 15,0``.
+
+Quality trimming is done before any adapter trimming.
+
+By default, quality values are assumed to be encoded as
+ascii(phred quality + 33). Nowadays, this should always be the case.
+Some old Illumina FASTQ files encode qualities as ascii(phred quality + 64).
+For those, you must add ``--quality-base=64`` to the command line.
 
 A :ref:`description of the quality-trimming algorithm is also
 available <quality-trimming-algorithm>`. The algorithm is the same as used by BWA.
@@ -956,11 +962,11 @@ Quality trimming of reads using two-color chemistry (NextSeq)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Some Illumina instruments use a two-color chemistry to encode the four bases.
-This includes the NextSeq and the (at the time of this writing) recently
-announced NovaSeq. In those instruments, a 'dark cycle' (with no detected color)
+This includes the NextSeq and the NovaSeq. In those instruments, a
+'dark cycle' (with no detected color)
 encodes a ``G``. However, dark cycles also occur when when sequencing "falls
 off" the end of the fragment. The read then `contains a run of high-quality, but
-incorrect ``G`` calls <https://sequencing.qcfail.com/articles/illumina-2-colour-chemistry-can-overcall-high-confidence-g-bases/>`_
+incorrect “G” calls <https://sequencing.qcfail.com/articles/illumina-2-colour-chemistry-can-overcall-high-confidence-g-bases/>`_
 at its 3' end.
 
 Since the regular quality-trimming algorithm cannot deal with this situation,
