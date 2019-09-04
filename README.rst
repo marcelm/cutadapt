@@ -44,4 +44,4 @@ Links
 * `Report an issue <https://github.com/marcelm/cutadapt/issues>`_
 * `Project page on PyPI (Python package index) <https://pypi.python.org/pypi/cutadapt/>`_
 * `Follow @marcelm_ on Twitter <https://twitter.com/marcelm_>`_
-* `Wrapper for the Galaxy platform <https://bitbucket.org/lance_parsons/cutadapt_galaxy_wrapper>`_
+* `Wrapper for the Galaxy platform <https://github.com/galaxyproject/tools-iuc/tree/master/tools/cutadapt>`_
