@@ -35,7 +35,9 @@ class OutputFiles:
     The attributes are open file-like objects except when demultiplex is True. In that case,
     untrimmed, untrimmed2, out and out2 are file names or templates
     as required by the used demultiplexer ('{name}' etc.).
+
     If interleaved is True, then out is written interleaved.
+
     Files may also be None.
     """
     # TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?

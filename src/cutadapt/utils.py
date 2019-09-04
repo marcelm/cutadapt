@@ -1,6 +1,7 @@
 import re
 import sys
 import time
+import resource
 import multiprocessing
 
 
@@ -25,6 +26,12 @@ def available_cpu_count():
         pass
 
     return multiprocessing.cpu_count()
+
+
+def raise_open_files_limit(n):
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    soft += n
+    resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
 
 
 class Progress:

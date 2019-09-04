@@ -586,7 +586,7 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
     """
     Setup a processing pipeline from parsed command-line arguments.
 
-    If there are any problems parsing the arguments, a CommandLineError is thrown.
+    If there are any problems parsing the arguments, a CommandLineError is raised.
 
     Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
     """

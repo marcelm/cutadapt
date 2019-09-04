@@ -14,7 +14,12 @@ The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded).
 """
 from abc import ABC, abstractmethod
+import errno
+
 import dnaio
+
+from .utils import raise_open_files_limit
+
 
 # Constants used when returning from a Filter’s __call__ method to improve
 # readability (it is unintuitive that "return True" means "discard the read").
@@ -225,6 +230,22 @@ class CasavaFilter(SingleEndFilter):
         return right[1:4] == ':Y:'  # discard if :Y: found
 
 
+def _open_raise_limit(path, qualities):
+    """
+    Open a FASTA/FASTQ file for writing. If it fails because the number of open files
+    would be exceeded, try to raise the soft limit and re-try.
+    """
+    try:
+        f = dnaio.open(path, mode="w", qualities=qualities)
+    except OSError as e:
+        if e.errno == errno.EMFILE:  # Too many open files
+            raise_open_files_limit(8)
+            f = dnaio.open(path, mode="w", qualities=qualities)
+        else:
+            raise
+    return f
+
+
 class Demultiplexer(SingleEndFilter):
     """
     Demultiplex trimmed reads. Reads are written to different output files
@@ -254,15 +275,15 @@ class Demultiplexer(SingleEndFilter):
         if matches:
             name = matches[-1].adapter.name
             if name not in self.writers:
-                self.writers[name] = dnaio.open(self.template.replace('{name}', name),
-                    mode='w', qualities=self.qualities)
+                self.writers[name] = _open_raise_limit(
+                    self.template.replace('{name}', name), self.qualities)
             self.written += 1
             self.written_bp[0] += len(read)
             self.writers[name].write(read)
         else:
             if self.untrimmed_writer is None and self.untrimmed_path is not None:
-                self.untrimmed_writer = dnaio.open(self.untrimmed_path,
-                    mode='w', qualities=self.qualities)
+                self.untrimmed_writer = _open_raise_limit(
+                    self.untrimmed_path, self.qualities)
             if self.untrimmed_writer is not None:
                 self.written += 1
                 self.written_bp[0] += len(read)
@@ -358,8 +379,8 @@ class CombinatorialDemultiplexer(PairedEndFilter):
             path1 = self._make_path(self.template, name1, name2)
             path2 = self._make_path(self.paired_template, name1, name2)
             self.writers[key] = (
-                dnaio.open(path1, mode='w', qualities=self.qualities),
-                dnaio.open(path2, mode='w', qualities=self.qualities),
+                _open_raise_limit(path1, qualities=self.qualities),
+                _open_raise_limit(path2, qualities=self.qualities),
             )
         writer1, writer2 = self.writers[key]
         self.written += 1
