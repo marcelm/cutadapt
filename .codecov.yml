@@ -1,0 +1,16 @@
+comment: off
+
+codecov:
+  require_ci_to_pass: no
+
+coverage:
+  precision: 1
+  round: down
+  range: "70...100"
+
+  status:
+    project: yes
+    patch: no
+    changes: no
+
+comment: off
