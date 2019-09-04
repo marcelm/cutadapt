@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v2.5 (2019-09-04)
+-----------------
 
 * :issue:`391`: Multicore is now supported even when using
   ``--untrimmed-output``, ``--too-short-output``, ``--too-long-output``
@@ -13,6 +13,10 @@ development version
   for R1.
 * :issue:`394`: Options ``-e``/``--no-indels``/``-O`` were ignored for
   linked adapters
+* :issue:`320`: When a “Too many open files” error occurs during
+  demultiplexing, Cutadapt can now automatically raise the limit and
+  re-try if the limit is a “soft” limit.
+
 
 v2.4 (2019-07-09)
 -----------------
