@@ -1,6 +1,6 @@
 from dnaio import Sequence
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
-    Shortener)
+    Shortener, AdapterCutter)
 
 
 def test_unconditional_cutter():
@@ -49,3 +49,11 @@ def test_shortener():
 
     shortener = Shortener(100)
     assert shortener(read, []) == read
+
+
+def test_adapter_cutter():
+    from cutadapt.adapters import Adapter, Where
+    a1 = Adapter('GTAGTCCCGC', where=Where.BACK)
+    a2 = Adapter('GTAGTCCCCC', where=Where.BACK)
+    match = AdapterCutter.best_match([a1, a2], Sequence("name", "ATACCCCTGTAGTCCCC"))
+    assert match.adapter is a2

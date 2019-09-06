@@ -2,6 +2,12 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`399`: When two adapters align to a read equally well (in terms
+  of the number of matches), prefer the alignment that has fewer errors.
+
 v2.5 (2019-09-04)
 -----------------
 

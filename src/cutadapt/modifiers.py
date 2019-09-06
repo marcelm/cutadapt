@@ -109,7 +109,9 @@ class AdapterCutter(Modifier):
                 continue
 
             # the no. of matches determines which adapter fits best
-            if best_match is None or match.matches > best_match.matches:
+            if best_match is None or match.matches > best_match.matches or (
+                match.matches == best_match.matches and match.errors < best_match.errors
+            ):
                 best_match = match
         return best_match
 
