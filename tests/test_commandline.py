@@ -682,3 +682,8 @@ def test_empty_read_with_wildcard_in_adapter(run):
 def test_print_progress_to_tty(tmpdir, mocker):
     mocker.patch("cutadapt.utils.sys.stderr").isatty.return_value = True
     main(["-o", str(tmpdir.join("out.fastq")), datapath("small.fastq")])
+
+
+def test_adapter_order(run):
+    run("-g ^AAACC -a CCGGG", "adapterorder-ga.fasta", "adapterorder.fasta")
+    run("-a CCGGG -g ^AAACC", "adapterorder-ag.fasta", "adapterorder.fasta")

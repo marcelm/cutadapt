@@ -405,16 +405,18 @@ class AdapterParser:
         else:
             yield self._parse(spec, cmdline_type, name=None)
 
-    def parse_multi(self, back, anywhere, front):
+    def parse_multi(self, type_spec_pairs):
         """
         Parse all three types of commandline options that can be used to
-        specify adapters. back, anywhere and front are lists of strings,
-        corresponding to the respective commandline types (-a, -b, -g).
+        specify adapters. adapters must be a list of (str, str) pairs, where the first is
+        the adapter type (either 'front', 'back' or 'anywhere') and the second is the
+        adapter specification given on the commandline
 
         Return a list of appropriate Adapter classes.
         """
         adapters = []
-        for specs, cmdline_type in (back, 'back'), (anywhere, 'anywhere'), (front, 'front'):
-            for spec in specs:
-                adapters.extend(self.parse(spec, cmdline_type))
+        for cmdline_type, spec in type_spec_pairs:
+            if cmdline_type not in {'front', 'back', 'anywhere'}:
+                raise ValueError('adapter type must be front, back or anywhere')
+            adapters.extend(self.parse(spec, cmdline_type))
         return adapters

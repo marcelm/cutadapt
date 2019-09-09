@@ -139,19 +139,21 @@ def get_argument_parser():
             "trimmed (but see the --times option). When the special notation "
             "'file:FILE' is used, adapter sequences are read from the given "
             "FASTA file.")
-    group.add_argument("-a", "--adapter", action="append", default=[], metavar="ADAPTER",
-        dest="adapters",
+    group.add_argument("-a", "--adapter", type=lambda x: ("back", x), action="append",
+        default=[], metavar="ADAPTER", dest="adapters",
         help="Sequence of an adapter ligated to the 3' end (paired data: of the "
             "first read). The adapter and subsequent bases are trimmed. If a "
             "'$' character is appended ('anchoring'), the adapter is only "
             "found if it is a suffix of the read.")
-    group.add_argument("-g", "--front", action="append", default=[], metavar="ADAPTER",
+    group.add_argument("-g", "--front", type=lambda x: ("front", x), action="append",
+        default=[], metavar="ADAPTER", dest="adapters",
         help="Sequence of an adapter ligated to the 5' end (paired data: of the "
             "first read). The adapter and any preceding bases are trimmed. "
             "Partial matches at the 5' end are allowed. If a '^' character is "
             "prepended ('anchoring'), the adapter is only found if it is a "
             "prefix of the read.")
-    group.add_argument("-b", "--anywhere", action="append", default=[], metavar="ADAPTER",
+    group.add_argument("-b", "--anywhere", type=lambda x: ("anywhere", x), action="append",
+        default=[], metavar="ADAPTER", dest="adapters",
         help="Sequence of an adapter that may be ligated to the 5' or 3' end "
             "(paired data: of the first read). Both types of matches as "
             "described under -a und -g are allowed. If the first base of the "
@@ -282,11 +284,14 @@ def get_argument_parser():
     group = parser.add_argument_group("Paired-end options", description="The "
         "-A/-G/-B/-U options work like their -a/-b/-g/-u counterparts, but "
         "are applied to the second read in each pair.")
-    group.add_argument("-A", dest='adapters2', action='append', default=[], metavar='ADAPTER',
+    group.add_argument("-A", type=lambda x: ("back", x), dest='adapters2',
+        action='append', default=[], metavar='ADAPTER',
         help="3' adapter to be removed from second read in a pair.")
-    group.add_argument("-G", dest='front2', action='append', default=[], metavar='ADAPTER',
+    group.add_argument("-G", type=lambda x: ("front", x), dest='adapters2',
+        action='append', default=[], metavar='ADAPTER',
         help="5' adapter to be removed from second read in a pair.")
-    group.add_argument("-B", dest='anywhere2', action='append', default=[], metavar='ADAPTER',
+    group.add_argument("-B", type=lambda x: ("anywhere", x), dest='adapters2',
+        action='append', default=[], metavar='ADAPTER',
         help="5'/3 adapter to be removed from second read in a pair.")
     group.add_argument("-U", dest='cut2', action='append', default=[], type=int, metavar="LENGTH",
         help="Remove LENGTH bases from second read in a pair.")
@@ -489,8 +494,6 @@ def determine_paired_mode(args):
         args.paired_output
         or args.interleaved
         or args.adapters2
-        or args.front2
-        or args.anywhere2
         or args.cut2
         or args.pair_filter
         or args.too_short_paired_output
@@ -601,8 +604,8 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
         indels=args.indels,
     )
     try:
-        adapters = adapter_parser.parse_multi(args.adapters, args.anywhere, args.front)
-        adapters2 = adapter_parser.parse_multi(args.adapters2, args.anywhere2, args.front2)
+        adapters = adapter_parser.parse_multi(args.adapters)
+        adapters2 = adapter_parser.parse_multi(args.adapters2)
     except FileNotFoundError as e:
         raise CommandLineError(e)
     except ValueError as e:
