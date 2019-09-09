@@ -55,7 +55,6 @@ See https://cutadapt.readthedocs.io/ for full documentation.
 """
 
 import sys
-import errno
 import time
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 import logging
@@ -604,10 +603,8 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
     try:
         adapters = adapter_parser.parse_multi(args.adapters, args.anywhere, args.front)
         adapters2 = adapter_parser.parse_multi(args.adapters2, args.anywhere2, args.front2)
-    except IOError as e:
-        if e.errno == errno.ENOENT:
-            raise CommandLineError(e)
-        raise
+    except FileNotFoundError as e:
+        raise CommandLineError(e)
     except ValueError as e:
         raise CommandLineError(e)
     if args.debug:
@@ -807,10 +804,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     except KeyboardInterrupt:
         print("Interrupted", file=sys.stderr)
         sys.exit(130)
-    except IOError as e:
-        if e.errno == errno.EPIPE:
-            sys.exit(1)
-        raise
+    except BrokenPipeError:
+        sys.exit(1)
     except (dnaio.FileFormatError, dnaio.UnknownFileFormat, EOFError) as e:
         sys.exit("cutadapt: error: {}".format(e))
 
