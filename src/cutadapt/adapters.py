@@ -565,12 +565,20 @@ class LinkedAdapter:
     def create_statistics(self):
         return AdapterStatistics(self.front_adapter, self.back_adapter, where=Where.LINKED)
 
+    @property
+    def sequence(self):
+        return self.front_adapter.sequence + "..." + self.back_adapter.sequence
+
+    @property
+    def remove(self):
+        return None
+
 
 class MultiAdapter:
     """
     Represent multiple adapters of the same type at once and use an index data structure
     to speed up matching. This acts like a "normal" Adapter as it provides a match_to
-    method, but is faster with lots of adaptes.
+    method, but is faster with lots of adapters.
 
     There are quite a few restrictions:
     - the adapters need to be either all PREFIX or all SUFFIX adapters
@@ -708,3 +716,14 @@ class MultiAdapter:
                 adapter=best_adapter,
                 read=read
             )
+
+
+def warn_duplicate_adapters(adapters):
+    d = dict()
+    for adapter in adapters:
+        key = (adapter.sequence, adapter.where, adapter.remove)
+        if key in d:
+            logger.warning("Adapter %r (%s) was specified multiple times! "
+                "Please make sure that this is what you want.",
+                adapter.sequence, ADAPTER_TYPE_NAMES[adapter.where])
+        d[key] = adapter.name

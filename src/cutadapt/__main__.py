@@ -56,13 +56,15 @@ See https://cutadapt.readthedocs.io/ for full documentation.
 
 import sys
 import time
-from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 import logging
 import platform
+from argparse import ArgumentParser, SUPPRESS, HelpFormatter
+
 from xopen import xopen
 import dnaio
 
 from cutadapt import __version__
+from cutadapt.adapters import warn_duplicate_adapters
 from cutadapt.parser import AdapterParser
 from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
@@ -610,6 +612,8 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
         raise CommandLineError(e)
     except ValueError as e:
         raise CommandLineError(e)
+    warn_duplicate_adapters(adapters)
+    warn_duplicate_adapters(adapters2)
     if args.debug:
         for adapter in adapters + adapters2:
             adapter.enable_debug()
