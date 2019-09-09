@@ -5,7 +5,7 @@ import sys
 from io import StringIO
 from contextlib import contextmanager
 import textwrap
-from .adapters import Where, EndStatistics
+from .adapters import Where, EndStatistics, ADAPTER_TYPE_NAMES
 from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter, PairedAdapterCutter
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
     PairedDemultiplexer, CombinatorialDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter,
@@ -165,18 +165,6 @@ class Statistics:
     @property
     def too_many_n_fraction(self):
         return safe_divide(self.too_many_n, self.n)
-
-
-ADAPTER_TYPES = {
-    Where.BACK: "regular 3'",
-    Where.BACK_NOT_INTERNAL: "non-internal 3'",
-    Where.FRONT: "regular 5'",
-    Where.FRONT_NOT_INTERNAL: "non-internal 5'",
-    Where.PREFIX: "anchored 5'",
-    Where.SUFFIX: "anchored 3'",
-    Where.ANYWHERE: "variable 5'/3'",
-    Where.LINKED: "linked",
-}
 
 
 def error_ranges(adapter_statistics: EndStatistics):
@@ -356,7 +344,7 @@ def full_report(stats, time, gc_content) -> str:
                         total_front, total_back))
             else:
                 print_s("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times.".
-                    format(adapter_statistics.front.sequence, ADAPTER_TYPES[adapter_statistics.where],
+                    format(adapter_statistics.front.sequence, ADAPTER_TYPE_NAMES[adapter_statistics.where],
                         len(adapter_statistics.front.sequence), total))
             if total == 0:
                 print_s()

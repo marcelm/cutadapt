@@ -40,6 +40,18 @@ WHERE_TO_REMOVE_MAP = {
 }
 
 
+ADAPTER_TYPE_NAMES = {
+    Where.BACK: "regular 3'",
+    Where.BACK_NOT_INTERNAL: "non-internal 3'",
+    Where.FRONT: "regular 5'",
+    Where.FRONT_NOT_INTERNAL: "non-internal 5'",
+    Where.PREFIX: "anchored 5'",
+    Where.SUFFIX: "anchored 3'",
+    Where.ANYWHERE: "variable 5'/3'",
+    Where.LINKED: "linked",
+}
+
+
 def returns_defaultdict_int():
     # We need this function to make EndStatistics picklable.
     # Even a @staticmethod of EndStatistics is not sufficient
