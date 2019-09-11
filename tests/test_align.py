@@ -9,6 +9,8 @@ from cutadapt.align import (
 )
 from cutadapt.adapters import Where
 
+from utils import binomial
+
 
 # convenience function (to avoid having to instantiate an Aligner manually)
 def locate(reference, query, max_error_rate, flags=SEMIGLOBAL, wildcard_ref=False,
@@ -216,31 +218,6 @@ def test_wildcards_in_both():
 def test_no_match():
     a = locate('CTGATCTGGCCG', 'AAAAGGG', 0.1, Where.BACK.value)
     assert a is None, a
-
-
-def binomial(n, k):
-    """
-    Return binomial coefficient ('n choose k').
-    This implementation does not use factorials.
-    """
-    k = min(k, n - k)
-    if k < 0:
-        return 0
-    r = 1
-    for j in range(k):
-        r *= n - j
-        r //= j + 1
-    return r
-
-
-def test_binomial():
-    assert binomial(0, 0) == 1
-    assert binomial(0, 1) == 0
-    assert binomial(0, -1) == 0
-    assert binomial(1, 0) == 1
-    assert binomial(1, 1) == 1
-    assert binomial(1, 2) == 0
-    assert binomial(10, 5) == 10 * 9 * 8 * 7 * 6 // (2 * 3 * 4 * 5)
 
 
 def test_hamming_sphere_explicit():
