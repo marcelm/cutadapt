@@ -208,8 +208,6 @@ def test_wildcards_in_read():
 def test_wildcards_in_both():
     for a in WILDCARD_SEQUENCES:
         for s in WILDCARD_SEQUENCES:
-            if 'X' in s or 'X' in a:
-                continue
             r = 'CATCTGTCC' + s + 'GCCAGGGTTGATTCGGCTGATCTGGCCG'
             result = locate(a, r, 0.0, Where.BACK.value, wildcard_ref=True, wildcard_query=True)
             assert result == (0, 10, 9, 19, 10, 0), result
