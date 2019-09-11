@@ -10,14 +10,12 @@ def cores(request):
 
 @pytest.fixture
 def run(tmpdir):
-    def _run(params, expected, inpath, inpath2=None):
+    def _run(params, expected, inpath):
         if type(params) is str:
             params = params.split()
         tmp_fastaq = str(tmpdir.join(expected))
         params += ['-o', tmp_fastaq]
         params += [datapath(inpath)]
-        if inpath2:
-            params += [datapath(inpath2)]
         assert main(params) is None
         # TODO redirect standard output
         assert_files_equal(cutpath(expected), tmp_fastaq)
