@@ -233,6 +233,16 @@ def binomial(n, k):
     return r
 
 
+def test_binomial():
+    assert binomial(0, 0) == 1
+    assert binomial(0, 1) == 0
+    assert binomial(0, -1) == 0
+    assert binomial(1, 0) == 1
+    assert binomial(1, 1) == 1
+    assert binomial(1, 2) == 0
+    assert binomial(10, 5) == 10 * 9 * 8 * 7 * 6 // (2 * 3 * 4 * 5)
+
+
 def test_hamming_sphere_explicit():
     assert list(hamming_sphere('', 0)) == ['']
     assert list(hamming_sphere('A', 0)) == ['A']
