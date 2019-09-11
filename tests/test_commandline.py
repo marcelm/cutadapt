@@ -3,6 +3,7 @@
 import os
 import shutil
 import subprocess
+import lzma
 import sys
 import tempfile
 from io import StringIO
@@ -15,7 +16,7 @@ from utils import assert_files_equal, datapath, cutpath, redirect_stderr
 # pytest.mark.timeout will not fail even if pytest-timeout is not installed
 try:
     import pytest_timeout as _unused
-except ImportError:
+except ImportError:  # pragma: no cover
     raise ImportError("pytest_timeout needs to be installed")
 del _unused
 
@@ -350,13 +351,8 @@ if sys.version_info[:2] >= (3, 3):
         run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'multiblock.fastq.bz2')
 
 
-try:
-    import lzma
-
-    def test_xz(run):
-        run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.xz')
-except ImportError:
-    pass
+def test_xz(run):
+    run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.xz')
 
 
 def test_no_args():
