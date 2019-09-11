@@ -1,7 +1,10 @@
 from cutadapt.utils import raise_open_files_limit, Progress
 
 def test_raise_open_files_limit():
-    raise_open_files_limit(1)
+    try:
+        raise_open_files_limit(1)
+    except ValueError:
+        pass
 
 
 def test_progress():
