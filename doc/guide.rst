@@ -1554,7 +1554,7 @@ to use ``{name1}}`` and ``{name2}`` in both output file name templates. For exam
         -e 0.15 --no-indels \
         -g file:barcodes_fwd.fasta \
         -G file:barcodes_rev.fasta \
-        -o trimmed-{name1}-{name2}.1.fastq.gz -p trimmed-{name1}-{name2}.2.fastq.gz \
+        -o {name1}-{name2}.1.fastq.gz -p {name1}-{name2}.2.fastq.gz \
         input.1.fastq.gz input.2.fastq.gz
 
 The ``{name1}`` will be replaced with the name of the best-matching R1 adapter and ``{name2}}`` will
@@ -1569,6 +1569,26 @@ The ``--untrimmed-output`` and ``--untrimmed-paired-output`` options cannot be u
 Read the :ref:`demultiplexing <demultiplexing>` section for how to choose the error rate etc.
 Also, the tips below about how to speed up demultiplexing apply even with combinatorial
 demultiplexing.
+
+When doing the above, you will end up with lots of files named ``first-second.x.fastq.gz``, where
+*first* is the name of the first indexed adapter and *second* is the name of the second indexed
+adapter, and *x* is 1 or 2. Each indexed adapter combination may correspond to a sample name and
+you may want to name your files according to the sample name, not the name of the adapters.
+Cutadapt does not have built-in functionality to achieve this, but you can use an external
+tool such as ``mmv`` (“multiple move”). First, create a list of patterns in ``patterns.txt``::
+
+    fwdindex1-revindex1.[12].fastq.gz sampleA.#1.fastq.gz
+    fwdindex1-revindex2.[12].fastq.gz sampleB.#1.fastq.gz
+    fwdindex1-revindex3.[12].fastq.gz sampleC.#1.fastq.gz
+    fwdindex2-revindex1.[12].fastq.gz sampleD.#1.fastq.gz
+    fwdindex2-revindex2.[12].fastq.gz sampleE.#1.fastq.gz
+    ...
+
+Here, *fwdindex1*/*revindex1* etc. are the names of indexes, and *sampleA* etc.
+are your sample names. Then rename all files at once with ::
+
+    mmv < patterns.txt
+
 
 .. versionadded:: 2.4
 
