@@ -196,7 +196,7 @@ def test_wildcards_in_adapter():
 
 def test_wildcards_in_read():
     a = WILDCARD_SEQUENCES[0]
-    for s in WILDCARD_SEQUENCES:
+    for s in WILDCARD_SEQUENCES + ['CCCXTTXATC']:
         r = 'CATCTGTCC' + s + 'GCCAGGGTTGATTCGGCTGATCTGGCCG'
         result = locate(a, r, 0.0, Where.BACK.value, wildcard_query=True)
         if 'X' in s:
