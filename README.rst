@@ -10,6 +10,11 @@
     :target: https://codecov.io/gh/marcelm/cutadapt
     :alt:
 
+.. image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat
+    :target: http://bioconda.github.io/recipes/cutadapt/README.html
+    :alt: install with bioconda
+
+
 ========
 Cutadapt
 ========
