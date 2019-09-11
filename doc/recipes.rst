@@ -274,10 +274,28 @@ By prefixing the adapter sequence with ``NN``, the bases will be automatically
 stripped during adapter trimming.
 
 
+.. _file-format-conversion:
+
+File format conversion
+----------------------
+
+You can use Cutadapt to convert FASTQ to FASTA format::
+
+    cutadapt -o output.fasta.gz input.fastq.gz
+
+Cutadapt detects that the file name extension of the output file is ``.fasta``
+and writes in FASTA format, omitting the qualities.
+
+When writing to standard output, you need to use the ``--fasta`` option::
+
+    cutadapt --fasta input.fastq.gz > out.fasta
+
+Without the option, Cutadapt writes in FASTQ format.
+
+
 Other things (unfinished)
 -------------------------
 
 * How to detect adapters
 * Use Cutadapt for quality-trimming only
 * Use it for minimum/maximum length filtering
-* Use it for conversion to FASTQ

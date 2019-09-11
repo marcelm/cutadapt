@@ -20,9 +20,8 @@ Compressed in- and output files are also supported::
 Cutadapt searches for the adapter in all reads and removes it when it finds it.
 Unless you use a filtering option, all reads that were present in the input file
 will also be present in the output file, some of them trimmed, some of them not.
-Even reads that were trimmed entirely (because the adapter was found in the very
-beginning) are output. All of this can be changed with command-line options,
-explained further down.
+Even reads that were trimmed to a length of zero are output. All of this can be
+changed with command-line options, explained further down.
 
 :ref:`Trimming of paired-end data <paired-end>` is also supported.
 
@@ -30,30 +29,18 @@ explained further down.
 Input and output file formats
 -----------------------------
 
-Input and output files need to be in FASTA or FASTQ format. Reading and writing
-compressed file formats ``.gz``, ``.bz2`` or ``.xz`` is also supported. Cutadapt
-uses ``pigz`` internally if possible to speed up writing and reading of
-gzipped files.
+The supported input and output file formats are FASTA and FASTQ, with
+optional compression.
 
 The input file format is recognized from the file name extension. If the
 extension was not recognized or when Cutadapt reads from standard input,
 the contents are inspected instead.
 
 The output file format is also recognized from the file name extension. If the
-extensions was not recognized or when Cutadapt writes to standard input, the
+extensions was not recognized or when Cutadapt writes to standard output, the
 same format as the input is used for the output.
 
-You can use this to convert from FASTQ to FASTA (without doing any adapter
-trimming)::
-
-    cutadapt -o output.fasta.gz input.fastq.gz
-
-When you want to do the same (read FASTQ, write FASTA), but want to write to
-standard output, you need to use ``--fasta`` instead because there is no
-output file name::
-
-    cutadapt --fasta input.fastq.gz > out.fasta
-
+See also :ref:`file format conversion <file-format-conversion>`.
 
 .. _compressed-files:
 
@@ -76,13 +63,15 @@ The default compression level for gzip output is 6. Use option ``-Z`` to
 change this to level 1. The files need more space, but it is faster and
 therefore a good choice for short-lived intermediate files.
 
+If available, Cutadapt uses `pigz <https://zlib.net/pigz/>`_ to speed up
+writing and reading of gzipped files.
+
 
 Standard input and output
 -------------------------
 
 If no output file is specified via the ``-o`` option, then the output is sent to
-the standard output stream. Instead of the example command line from above, you
-can therefore also write::
+the standard output stream. Example::
 
     cutadapt -a AACCGGTT input.fastq > output.fastq
 
@@ -142,17 +131,15 @@ the output will be done in a single thread and therefore be a bottleneck.
 
 There are some limitations at the moment:
 
-* Multi-core Cutadapt can only write to output files given by ``-o`` and ``-p``.
-  This implies that the following command-line arguments are not compatible with
+* The following command-line arguments are not compatible with
   multi-core:
 
       - ``--info-file``
       - ``--rest-file``
       - ``--wildcard-file``
+      - ``--format``
 
-* Multi-core is also not compatible with ``--format``
-
-* Multi-core is also not available when you use Cutadapt for demultiplexing.
+* Multi-core is not available when you use Cutadapt for demultiplexing.
 
 If you try to use multiple cores with an incompatible commandline option, you
 will get an error message.
@@ -171,7 +158,7 @@ Some of these limitations will be lifted in the future, as time allows.
 Speed-up tricks
 ---------------
 
-There are several tricks for limiting wall-clock time while using cutadapt.
+There are several tricks for limiting wall-clock time while using Cutadapt.
 
 ``-Z`` (alternatively ``--compression-level=1``) can be used to limit the
 amount of CPU time which is spent on the compression of output files.

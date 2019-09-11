@@ -29,13 +29,11 @@ Poly-A tails are useful for pulling out RNA from your sample, but often you
 don’t want them to be in your reads.
 
 Cutadapt helps with these trimming tasks by finding the adapter or primer
-sequences in an error-tolerant way. It can also modify and filter reads in
-various ways. Adapter sequences can contain IUPAC wildcard characters. Also,
-paired-end reads and even colorspace data is supported. If you want, you can
-also just demultiplex your input data, without removing adapter sequences at all.
+sequences in an error-tolerant way. It can also modify and filter single-end
+and paired-end reads in various ways. Adapter sequences can contain IUPAC
+wildcard characters. Cutadapt can also demultiplex your reads.
 
-Cutadapt comes with an extensive suite of automated tests and is available under
-the terms of the MIT license.
+Cutadapt is available under the terms of the MIT license.
 
 If you use Cutadapt, please cite
 `DOI:10.14806/ej.17.1.200 <http://dx.doi.org/10.14806/ej.17.1.200>`_ .
