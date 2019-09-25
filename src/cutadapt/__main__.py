@@ -554,7 +554,11 @@ def check_arguments(args, paired, is_interleaved_output):
     if not paired:
         if args.untrimmed_paired_output:
             raise CommandLineError("Option --untrimmed-paired-output can only be used when "
-                "trimming paired-end reads (with option -p).")
+                "trimming paired-end reads.")
+
+        if args.pair_adapters:
+            raise CommandLineError("Option --pair-adapters can only be used when trimming "
+                "paired-end reads")
 
     if paired:
         if not is_interleaved_output:
@@ -586,6 +590,9 @@ def check_arguments(args, paired, is_interleaved_output):
     if not (0 <= args.gc_content <= 100):
         raise CommandLineError("GC content must be given as percentage between 0 and 100")
 
+    if args.pair_adapters and args.times != 1:
+        raise CommandLineError("--pair-adapters cannot be used with --times")
+
 
 def pipeline_from_parsed_args(args, paired, is_interleaved_output):
     """
@@ -609,9 +616,7 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
     try:
         adapters = adapter_parser.parse_multi(args.adapters)
         adapters2 = adapter_parser.parse_multi(args.adapters2)
-    except FileNotFoundError as e:
-        raise CommandLineError(e)
-    except ValueError as e:
+    except (FileNotFoundError, ValueError) as e:
         raise CommandLineError(e)
     warn_duplicate_adapters(adapters)
     warn_duplicate_adapters(adapters2)
@@ -632,7 +637,59 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
             args.discard_untrimmed or args.untrimmed_output or args.untrimmed_paired_output):
         pipeline.override_untrimmed_pair_filter = True
 
-    for i, cut_arg in enumerate([args.cut, args.cut2]):
+    add_unconditional_cutters(pipeline, args.cut, args.cut2, paired)
+
+    pipeline_add = pipeline.add_both if paired else pipeline.add
+
+    if args.nextseq_trim is not None:
+        pipeline_add(NextseqQualityTrimmer(args.nextseq_trim, args.quality_base))
+    if args.quality_cutoff is not None:
+        cutoffs = parse_cutoffs(args.quality_cutoff)
+        pipeline_add(QualityTrimmer(cutoffs[0], cutoffs[1], args.quality_base))
+
+    if args.pair_adapters:
+        try:
+            cutter = PairedAdapterCutter(adapters, adapters2, args.action)
+        except PairedAdapterCutterError as e:
+            raise CommandLineError("--pair-adapters: " + str(e))
+        pipeline.add_paired_modifier(cutter)
+    else:
+        adapter_cutter, adapter_cutter2 = None, None
+        if adapters:
+            adapter_cutter = AdapterCutter(adapters, args.times, args.action)
+        if adapters2:
+            adapter_cutter2 = AdapterCutter(adapters2, args.times, args.action)
+        if paired:
+            if adapter_cutter or adapter_cutter2:
+                pipeline.add(adapter_cutter, adapter_cutter2)
+        else:
+            if adapter_cutter:
+                pipeline.add(adapter_cutter)
+
+    for modifier in modifiers_applying_to_both_ends_if_paired(args):
+        pipeline_add(modifier)
+
+    # Set filtering parameters
+    # Minimum/maximum length
+    for attr in 'minimum_length', 'maximum_length':
+        param = getattr(args, attr)
+        if param is not None:
+            lengths = parse_lengths(param)
+            if not paired and len(lengths) == 2:
+                raise CommandLineError('Two minimum or maximum lengths given for single-end data')
+            if paired and len(lengths) == 1:
+                lengths = (lengths[0], lengths[0])
+            setattr(pipeline, attr, lengths)
+    pipeline.max_n = args.max_n
+    pipeline.discard_casava = args.discard_casava
+    pipeline.discard_trimmed = args.discard_trimmed
+    pipeline.discard_untrimmed = args.discard_untrimmed
+
+    return pipeline
+
+
+def add_unconditional_cutters(pipeline, cut1, cut2, paired):
+    for i, cut_arg in enumerate([cut1, cut2]):
         # cut_arg is a list
         if not cut_arg:
             continue
@@ -653,69 +710,20 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
                 assert isinstance(pipeline, PairedEndPipeline)
                 pipeline.add(None, UnconditionalCutter(c))
 
-    pipeline_add = pipeline.add_both if paired else pipeline.add
 
-    if args.nextseq_trim is not None:
-        pipeline_add(NextseqQualityTrimmer(args.nextseq_trim, args.quality_base))
-    if args.quality_cutoff is not None:
-        cutoffs = parse_cutoffs(args.quality_cutoff)
-        pipeline_add(QualityTrimmer(cutoffs[0], cutoffs[1], args.quality_base))
-
-    if args.pair_adapters:
-        if not paired:
-            raise CommandLineError("Option --pair-adapters can only be used when trimming "
-                "paired-end reads")
-        if args.times != 1:
-            raise CommandLineError("--pair-adapters cannot be used with --times")
-        try:
-            cutter = PairedAdapterCutter(adapters, adapters2, args.action)
-        except PairedAdapterCutterError as e:
-            raise CommandLineError("--pair-adapters: " + str(e))
-        pipeline.add_paired_modifier(cutter)
-    else:
-        adapter_cutter, adapter_cutter2 = None, None
-        if adapters:
-            adapter_cutter = AdapterCutter(adapters, args.times, args.action)
-        if adapters2:
-            adapter_cutter2 = AdapterCutter(adapters2, args.times, args.action)
-        if paired:
-            if adapter_cutter or adapter_cutter2:
-                pipeline.add(adapter_cutter, adapter_cutter2)
-        else:
-            if adapter_cutter:
-                pipeline.add(adapter_cutter)
-
-    # Remaining modifiers that apply to both reads of paired-end reads
+def modifiers_applying_to_both_ends_if_paired(args):
     if args.length is not None:
-        pipeline_add(Shortener(args.length))
+        yield Shortener(args.length)
     if args.trim_n:
-        pipeline_add(NEndTrimmer())
+        yield NEndTrimmer()
     if args.length_tag:
-        pipeline_add(LengthTagModifier(args.length_tag))
+        yield LengthTagModifier(args.length_tag)
     for suffix in args.strip_suffix:
-        pipeline_add(SuffixRemover(suffix))
+        yield SuffixRemover(suffix)
     if args.prefix or args.suffix:
-        pipeline_add(PrefixSuffixAdder(args.prefix, args.suffix))
+        yield PrefixSuffixAdder(args.prefix, args.suffix)
     if args.zero_cap:
-        pipeline_add(ZeroCapper(quality_base=args.quality_base))
-
-    # Set filtering parameters
-    # Minimum/maximum length
-    for attr in 'minimum_length', 'maximum_length':
-        param = getattr(args, attr)
-        if param is not None:
-            lengths = parse_lengths(param)
-            if not paired and len(lengths) == 2:
-                raise CommandLineError('Two minimum or maximum lengths given for single-end data')
-            if paired and len(lengths) == 1:
-                lengths = (lengths[0], lengths[0])
-            setattr(pipeline, attr, lengths)
-    pipeline.max_n = args.max_n
-    pipeline.discard_casava = args.discard_casava
-    pipeline.discard_trimmed = args.discard_trimmed
-    pipeline.discard_untrimmed = args.discard_untrimmed
-
-    return pipeline
+        yield ZeroCapper(quality_base=args.quality_base)
 
 
 def log_header(cmdlineargs):
