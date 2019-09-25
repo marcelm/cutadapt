@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class AdapterSpecification:
-    """
+    """  # noqa: E501
     Description of a single non-linked adapter.
 
     These are the attributes:

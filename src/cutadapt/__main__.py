@@ -110,6 +110,7 @@ class CommandLineError(Exception):
 
 
 def get_argument_parser():
+    # noqa: E131
     parser = CutadaptArgumentParser(usage=__doc__, add_help=False)
     group = parser.add_argument_group("Options")
     group.add_argument("-h", "--help", action="help", help="Show this help message and exit")

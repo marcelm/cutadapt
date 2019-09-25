@@ -2,7 +2,6 @@ import pytest
 
 from dnaio import Sequence
 from cutadapt.adapters import Adapter, Match, Where, LinkedAdapter
-from cutadapt.modifiers import AdapterCutter
 
 
 def test_issue_52():
@@ -100,9 +99,9 @@ def test_info_record():
         'GAACTACAGTCCCGGC',
         '',
         'Foo',
-        '', 
-        '', 
-        ''
+        '',
+        '',
+        '',
     )
 
 

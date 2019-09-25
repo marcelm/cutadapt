@@ -173,12 +173,15 @@ class Pipeline(ABC):
             # --discard-untrimmed and --untrimmed-output. These options
             # are mutually exclusive in order to avoid brain damage.
             if self.discard_trimmed:
-                self._filters.append(filter_wrapper(None, DiscardTrimmedFilter(), DiscardTrimmedFilter()))
+                self._filters.append(
+                    filter_wrapper(None, DiscardTrimmedFilter(), DiscardTrimmedFilter()))
             elif self.discard_untrimmed:
-                self._filters.append(untrimmed_filter_wrapper(None, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
+                self._filters.append(
+                    untrimmed_filter_wrapper(None, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
             elif outfiles.untrimmed:
                 untrimmed_writer = self._open_writer(outfiles.untrimmed, outfiles.untrimmed2)
-                self._filters.append(untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
+                self._filters.append(
+                    untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
             self._filters.append(self._final_filter(outfiles))
 
     def close(self):

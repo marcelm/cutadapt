@@ -2,8 +2,6 @@
 # test reading from standard input
 import os
 import shutil
-import subprocess
-import lzma
 import sys
 import tempfile
 from io import StringIO
@@ -374,7 +372,8 @@ def test_anchored_no_indels(run):
 
 def test_anchored_no_indels_wildcard_read(run):
     """anchored 5' adapter, mismatches only (no indels), but wildcards in the read count as matches"""
-    run('-g ^TTAGACATAT --match-read-wildcards --no-indels -e 0.1', 'anchored_no_indels_wildcard.fasta', 'anchored_no_indels.fasta')
+    run('-g ^TTAGACATAT --match-read-wildcards --no-indels -e 0.1',
+        'anchored_no_indels_wildcard.fasta', 'anchored_no_indels.fasta')
 
 
 def test_anchored_no_indels_wildcard_adapt(run):

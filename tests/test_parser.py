@@ -2,7 +2,7 @@ from textwrap import dedent
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import Adapter, Where, LinkedAdapter
+from cutadapt.adapters import Where, LinkedAdapter
 from cutadapt.parser import AdapterParser, AdapterSpecification
 
 

@@ -1,6 +1,7 @@
 import pytest
 
-from utils import assert_files_equal, FilesDifferent, datapath, binomial
+from utils import assert_files_equal, FilesDifferent, binomial
+
 
 def test_files_different():
     with pytest.raises(FilesDifferent):

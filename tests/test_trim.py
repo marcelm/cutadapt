@@ -7,7 +7,7 @@ def test_statistics():
     read = Sequence('name', 'AAAACCCCAAAA')
     adapters = [Adapter('CCCC', Where.BACK, max_error_rate=0.1)]
     cutter = AdapterCutter(adapters, times=3)
-    trimmed_read = cutter(read, [])
+    cutter(read, [])
     # TODO make this a lot simpler
     trimmed_bp = 0
     for adapter in adapters:

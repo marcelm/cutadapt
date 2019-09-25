@@ -1,9 +1,7 @@
 """
 Routines for printing a report.
 """
-import sys
 from io import StringIO
-from contextlib import contextmanager
 import textwrap
 from .adapters import Where, EndStatistics, ADAPTER_TYPE_NAMES
 from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter, PairedAdapterCutter
@@ -322,9 +320,11 @@ def full_report(stats, time, gc_content) -> str:
             total_back = sum(adapter_statistics.back.lengths.values())
             total = total_front + total_back
             where = adapter_statistics.where
+            where_backs = (Where.BACK, Where.BACK_NOT_INTERNAL, Where.SUFFIX)
+            where_fronts = (Where.FRONT, Where.FRONT_NOT_INTERNAL, Where.PREFIX)
             assert (where in (Where.ANYWHERE, Where.LINKED)
-                or (where in (Where.BACK, Where.BACK_NOT_INTERNAL, Where.SUFFIX) and total_front == 0)
-                or (where in (Where.FRONT, Where.FRONT_NOT_INTERNAL, Where.PREFIX) and total_back == 0)), (where, total_front)
+                or (where in where_backs and total_front == 0)
+                or (where in where_fronts and total_back == 0)), (where, total_front, total_back)
 
             if stats.paired:
                 extra = 'First read: ' if which_in_pair == 0 else 'Second read: '
