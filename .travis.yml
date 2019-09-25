@@ -45,6 +45,11 @@ jobs:
           ls -l dist/
           python3 -m twine upload dist/*
 
+    - name: flake8
+      python: "3.6"
+      install: python3 -m pip install flake8
+      script: flake8 src/ tests/
+
   allow_failures:
     - python: "nightly"
     - python: "3.8-dev"
