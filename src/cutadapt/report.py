@@ -17,6 +17,14 @@ def safe_divide(numerator, denominator):
         return numerator / denominator
 
 
+def add_if_not_none(a, b):
+    if a is None:
+        return b
+    if b is None:
+        return a
+    return a + b
+
+
 class Statistics:
     def __init__(self):
         """
@@ -47,12 +55,6 @@ class Statistics:
         elif self.did_quality_trimming != other.did_quality_trimming:
             raise ValueError('Incompatible Statistics: did_quality_trimming is not equal')
 
-        def add_if_not_none(a, b):
-            if a is None:
-                return b
-            if b is None:
-                return a
-            return a + b
         self.too_short = add_if_not_none(self.too_short, other.too_short)
         self.too_long = add_if_not_none(self.too_long, other.too_long)
         self.too_many_n = add_if_not_none(self.too_many_n, other.too_many_n)
