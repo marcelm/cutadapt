@@ -337,19 +337,21 @@ def get_argument_parser():
 
 
 def parse_cutoffs(s):
-    """Parse a string INT[,INT] into a two-element list of integers"""
-    cutoffs = s.split(',')
+    """Parse a string INT[,INT] into a two-element list of integers
+
+    >>> parse_cutoffs("5")
+    [0, 5]
+    >>> parse_cutoffs("6,7")
+    [6, 7]
+    """
+    try:
+        cutoffs = [int(value) for value in s.split(",")]
+    except ValueError as e:
+        raise CommandLineError("Quality cutoff value not recognized: {}".format(e))
+
     if len(cutoffs) == 1:
-        try:
-            cutoffs = [0, int(cutoffs[0])]
-        except ValueError as e:
-            raise CommandLineError("Quality cutoff value not recognized: {}".format(e))
-    elif len(cutoffs) == 2:
-        try:
-            cutoffs = [int(cutoffs[0]), int(cutoffs[1])]
-        except ValueError as e:
-            raise CommandLineError("Quality cutoff value not recognized: {}".format(e))
-    else:
+        cutoffs = [0, cutoffs[0]]
+    elif len(cutoffs) != 2:
         raise CommandLineError("Expected one value or two values separated by comma for "
             "the quality cutoff")
     return cutoffs

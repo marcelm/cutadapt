@@ -399,6 +399,16 @@ def test_unconditional_cut_both(run):
     run('-u -5 -u 5', 'unconditional-both.fastq', 'small.fastq')
 
 
+def test_unconditional_cut_too_many_commas():
+    with pytest.raises(SystemExit):
+        main(["-u", "5,7,8", datapath("small.fastq")])
+
+
+def test_unconditional_cut_invalid_number():
+    with pytest.raises(SystemExit):
+        main(["-u", "a,b", datapath("small.fastq")])
+
+
 def test_untrimmed_output(run, cores, tmpdir):
     path = str(tmpdir.join("untrimmed.fastq"))
     run(["--cores", str(cores), "-a", "TTAGACATATCTCCGTCG", "--untrimmed-output", path],
