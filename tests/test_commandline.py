@@ -707,3 +707,17 @@ def test_print_progress_to_tty(tmpdir, mocker):
 def test_adapter_order(run):
     run("-g ^AAACC -a CCGGG", "adapterorder-ga.fasta", "adapterorder.fasta")
     run("-a CCGGG -g ^AAACC", "adapterorder-ag.fasta", "adapterorder.fasta")
+
+
+@pytest.mark.skip(reason="Not implemented")
+def test_reverse_complement_not_normalized(run):
+    run("--rc=yes -g ^TTATTTGTCT -g ^TCCGCACTGG",
+        "revcomp-notnormalized-single.fastq", "revcomp.1.fastq")
+
+
+def test_reverse_complement_normalized(run):
+    run(
+        "--revcomp -g ^TTATTTGTCT -g ^TCCGCACTGG",
+        "revcomp-single-normalize.fastq",
+        "revcomp.1.fastq",
+    )
