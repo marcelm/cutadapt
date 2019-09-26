@@ -85,44 +85,47 @@ class Statistics:
             self.paired = True
             self.total_bp[1] = total_bp2
 
-        # Collect statistics from writers/filters
-        for w in writers:
-            if isinstance(w, (InfoFileWriter, RestFileWriter, WildcardFileWriter)):
-                pass
-            elif isinstance(w, (NoFilter, PairedNoFilter, PairedDemultiplexer,
-                    CombinatorialDemultiplexer, Demultiplexer)):
-                self.written += w.written
-                self.written_bp[0] += w.written_bp[0]
-                self.written_bp[1] += w.written_bp[1]
-            elif isinstance(w.filter, TooShortReadFilter):
-                self.too_short = w.filtered
-            elif isinstance(w.filter, TooLongReadFilter):
-                self.too_long = w.filtered
-            elif isinstance(w.filter, NContentFilter):
-                self.too_many_n = w.filtered
+        for writer in writers:
+            self._collect_writer(writer)
         assert self.written is not None
-
-        # Collect statistics from modifiers
-        for m in modifiers:
-            if isinstance(m, PairedAdapterCutter):
-                for i in 0, 1:
-                    self.with_adapters[i] += m.with_adapters
-                    self.adapter_stats[i] = list(m.adapter_statistics[i].values())
-                continue
-            if getattr(m, 'paired', False):
-                modifiers_list = [(0, m._modifier1), (1, m._modifier2)]
-            else:
-                modifiers_list = [(0, m)]
-            for i, modifier in modifiers_list:
-                if isinstance(modifier, (QualityTrimmer, NextseqQualityTrimmer)):
-                    self.quality_trimmed_bp[i] = modifier.trimmed_bases
-                    self.did_quality_trimming = True
-                elif isinstance(modifier, AdapterCutter):
-                    self.with_adapters[i] += modifier.with_adapters
-                    self.adapter_stats[i] = list(modifier.adapter_statistics.values())
+        for modifier in modifiers:
+            self._collect_modifier(modifier)
 
         # For chaining
         return self
+
+    def _collect_writer(self, w):
+        if isinstance(w, (InfoFileWriter, RestFileWriter, WildcardFileWriter)):
+            return
+        elif isinstance(w, (NoFilter, PairedNoFilter, PairedDemultiplexer,
+                CombinatorialDemultiplexer, Demultiplexer)):
+            self.written += w.written
+            self.written_bp[0] += w.written_bp[0]
+            self.written_bp[1] += w.written_bp[1]
+        elif isinstance(w.filter, TooShortReadFilter):
+            self.too_short = w.filtered
+        elif isinstance(w.filter, TooLongReadFilter):
+            self.too_long = w.filtered
+        elif isinstance(w.filter, NContentFilter):
+            self.too_many_n = w.filtered
+
+    def _collect_modifier(self, m):
+        if isinstance(m, PairedAdapterCutter):
+            for i in 0, 1:
+                self.with_adapters[i] += m.with_adapters
+                self.adapter_stats[i] = list(m.adapter_statistics[i].values())
+            return
+        if getattr(m, 'paired', False):
+            modifiers_list = [(0, m._modifier1), (1, m._modifier2)]
+        else:
+            modifiers_list = [(0, m)]
+        for i, modifier in modifiers_list:
+            if isinstance(modifier, (QualityTrimmer, NextseqQualityTrimmer)):
+                self.quality_trimmed_bp[i] = modifier.trimmed_bases
+                self.did_quality_trimming = True
+            elif isinstance(modifier, AdapterCutter):
+                self.with_adapters[i] += modifier.with_adapters
+                self.adapter_stats[i] = list(modifier.adapter_statistics.values())
 
     @property
     def total(self):

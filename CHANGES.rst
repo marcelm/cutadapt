@@ -11,6 +11,7 @@ development version
   line. Previously, the priority was: All 3' adapters, all 5' adapters,
   all anywhere adapters, which may in rare cases lead to different results.
 
+
 v2.5 (2019-09-04)
 -----------------
 
