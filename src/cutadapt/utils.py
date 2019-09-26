@@ -40,20 +40,13 @@ def raise_open_files_limit(n):
 
 class Progress:
     """
-    Write progress
+    Print an animated progress report to sys.stderr
     """
 
     def __init__(self, every=1):
         """
-        :param every: minimum time to wait in seconds between progress updates
+        every: minimum time to wait in seconds between progress updates
         """
-        if not sys.stderr.isatty():
-            # Disable progress
-            self.update = self.do_nothing
-            self._show = False
-        else:
-            self._show = True
-
         self._every = every
         self._n = 0
         # Time at which the progress was last updated
@@ -76,12 +69,7 @@ class Progress:
                             sc = "8<" if is_open else "8="
                         yield "[" + left + sc + right + "]"
 
-    def do_nothing(self, total, _final=False):
-        pass
-
     def update(self, total, _final=False):
-        """
-        """
         current_time = time.time()
         if _final:
             time_delta = current_time - self._start_time
@@ -122,5 +110,15 @@ class Progress:
         Print final progress reflecting the final total
         """
         self.update(total, _final=True)
-        if self._show:
-            print(file=sys.stderr)
+        print(file=sys.stderr)
+
+
+class DummyProgress:
+    """
+    Has the same interface as Progress, but does not print anything
+    """
+    def update(self, total, _final=False):
+        pass
+
+    def stop(self, total):
+        pass

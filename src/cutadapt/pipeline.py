@@ -197,7 +197,6 @@ class Pipeline(ABC):
         return self._reader.delivers_qualities
 
     @abstractmethod
-    # TODO progress shouldn’t be a parameter
     def process_reads(self, progress: Progress = None):
         pass
 
@@ -556,9 +555,9 @@ class PipelineRunner(ABC):
     """
     A read processing pipeline
     """
-    def __init__(self, pipeline):
+    def __init__(self, pipeline, progress):
         self._pipeline = pipeline
-        self._progress = Progress()
+        self._progress = progress
 
     @abstractmethod
     def run(self):
@@ -597,10 +596,11 @@ class ParallelPipelineRunner(PipelineRunner):
         pipeline: Pipeline,
         infiles: InputFiles,
         outfiles: OutputFiles,
+        progress: Progress,
         n_workers: int,
-        buffer_size=4*1024**2
+        buffer_size=4*1024**2,
     ):
-        super().__init__(pipeline)
+        super().__init__(pipeline, progress)
         self._pipes = []  # the workers read from these
         self._reader_process = None
         self._outfiles = None
@@ -732,8 +732,14 @@ class SerialPipelineRunner(PipelineRunner):
     Run a Pipeline on a single core
     """
 
-    def __init__(self, pipeline: Pipeline, infiles: InputFiles, outfiles: OutputFiles):
-        super().__init__(pipeline)
+    def __init__(
+        self,
+        pipeline: Pipeline,
+        infiles: InputFiles,
+        outfiles: OutputFiles,
+        progress: Progress,
+    ):
+        super().__init__(pipeline, progress)
         self._pipeline.connect_io(infiles, outfiles)
 
     def run(self):

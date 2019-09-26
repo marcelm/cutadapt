@@ -72,7 +72,7 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 from cutadapt.report import full_report, minimal_report
 from cutadapt.pipeline import (SingleEndPipeline, PairedEndPipeline, InputFiles, OutputFiles,
     SerialPipelineRunner, ParallelPipelineRunner)
-from cutadapt.utils import available_cpu_count
+from cutadapt.utils import available_cpu_count, Progress, DummyProgress
 from cutadapt.log import setup_logging, REPORT
 
 logger = logging.getLogger()
@@ -782,7 +782,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         pipeline = pipeline_from_parsed_args(args, paired, is_interleaved_output)
         outfiles = open_output_files(args, default_outfile, is_interleaved_output)
     except CommandLineError as e:
-        parser.error(e)
+        parser.error(str(e))
         return  # avoid IDE warnings below
 
     if args.cores < 0:
@@ -805,8 +805,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         runner_kwargs = dict()
     infiles = InputFiles(input_filename, file2=input_paired_filename,
             interleaved=is_interleaved_input)
+    if sys.stderr.isatty() and not args.quiet:
+        progress = Progress()
+    else:
+        progress = DummyProgress()
     try:
-        runner = runner_class(pipeline, infiles, outfiles, **runner_kwargs)
+        runner = runner_class(pipeline, infiles, outfiles, progress, **runner_kwargs)
     except (dnaio.UnknownFileFormat, IOError) as e:
         parser.error(e)
         return  # avoid IDE warnings below
