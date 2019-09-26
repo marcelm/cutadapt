@@ -3,6 +3,8 @@ import sys
 import time
 import multiprocessing
 
+import dnaio
+
 
 def available_cpu_count():
     """
@@ -122,3 +124,21 @@ class DummyProgress:
 
     def stop(self, total):
         pass
+
+
+_REVCOMP_TRANS = str.maketrans(
+    "ACGTUMRWSYKVHDBNacgtumrwsykvhdbn",
+    "TGCAAKYWSRMBDHVNtgcaakywsrmbdhvn",
+)
+
+
+def reverse_complement(s: str):
+    return s.translate(_REVCOMP_TRANS)[::-1]
+
+
+def reverse_complemented_sequence(sequence: dnaio.Sequence):
+    if sequence.qualities is None:
+        qualities = None
+    else:
+        qualities = sequence.qualities[::-1]
+    return dnaio.Sequence(sequence.name, reverse_complement(sequence.sequence), qualities)
