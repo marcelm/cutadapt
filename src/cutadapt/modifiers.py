@@ -161,7 +161,16 @@ class AdapterCutter(Modifier):
         trimmed_read.qualities = matches[0].read.qualities
         return trimmed_read
 
-    def __call__(self, read, matches):
+    def __call__(self, read, inmatches):
+        trimmed_read, matches = self.match_and_trim(read)
+        if matches:
+            self.with_adapters += 1
+            for match in matches:
+                match.update_statistics(self.adapter_statistics[match.adapter])
+        inmatches.extend(matches)
+        return trimmed_read
+
+    def match_and_trim(self, read):
         """
         Search for the best-matching adapter in a read, perform the requested action
         ('trim', 'mask', 'lowercase' or None as determined by self.action) and return the
@@ -171,9 +180,9 @@ class AdapterCutter(Modifier):
         only the best-matching adapter is trimmed. If no adapter was found in a round,
         no further rounds are attempted.
 
-        The 'matches' parameter needs to be a list. Every time an adapter is found,
-        a Match object describing the match will be appended to it.
+        Return a pair (trimmed_read, matches), where matches is a list of Match instances.
         """
+        matches = []
         trimmed_read = read
         if self.action == 'lowercase':
             trimmed_read.sequence = trimmed_read.sequence.upper()
@@ -184,10 +193,9 @@ class AdapterCutter(Modifier):
                 break
             matches.append(match)
             trimmed_read = match.trimmed()
-            match.update_statistics(self.adapter_statistics[match.adapter])
 
         if not matches:
-            return trimmed_read
+            return trimmed_read, []
 
         if self.action == 'trim':
             # read is already trimmed, nothing to do
@@ -200,8 +208,7 @@ class AdapterCutter(Modifier):
         elif self.action is None:  # --no-trim
             trimmed_read = read[:]
 
-        self.with_adapters += 1
-        return trimmed_read
+        return trimmed_read, matches
 
 
 class PairedAdapterCutterError(Exception):
