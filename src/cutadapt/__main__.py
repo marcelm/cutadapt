@@ -647,32 +647,16 @@ def pipeline_from_parsed_args(args, paired, file_opener) -> Pipeline:
         cutoffs = parse_cutoffs(args.quality_cutoff)
         pipeline_add(QualityTrimmer(cutoffs[0], cutoffs[1], args.quality_base))
 
-    if args.pair_adapters:
-        if args.reverse_complement:
-            raise CommandLineError("Cannot use --revcomp with --pair-adapters")
-        try:
-            cutter = PairedAdapterCutter(adapters, adapters2, args.action)
-        except PairedAdapterCutterError as e:
-            raise CommandLineError("--pair-adapters: " + str(e))
-        pipeline.add_paired_modifier(cutter)
-    else:
-        adapter_cutter, adapter_cutter2 = None, None
-        if adapters:
-            adapter_cutter = AdapterCutter(adapters, args.times, args.action)
-        if adapters2:
-            adapter_cutter2 = AdapterCutter(adapters2, args.times, args.action)
-        if paired:
-            if args.reverse_complement:
-                raise CommandLineError("--revcomp not implemented for paired-end reads")
-            if adapter_cutter or adapter_cutter2:
-                pipeline.add(adapter_cutter, adapter_cutter2)
-        else:
-            if adapter_cutter:
-                if args.reverse_complement:
-                    modifier = ReverseComplementer(adapter_cutter)
-                else:
-                    modifier = adapter_cutter
-                pipeline.add(modifier)
+    add_adapter_cutter(
+        pipeline,
+        adapters,
+        adapters2,
+        paired,
+        args.pair_adapters,
+        args.action,
+        args.times,
+        args.reverse_complement,
+    )
 
     for modifier in modifiers_applying_to_both_ends_if_paired(args):
         pipeline_add(modifier)
@@ -740,6 +724,44 @@ def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[in
                 # R2
                 assert isinstance(pipeline, PairedEndPipeline)
                 pipeline.add(None, UnconditionalCutter(c))
+
+
+def add_adapter_cutter(
+    pipeline,
+    adapters,
+    adapters2,
+    paired: bool,
+    pair_adapters: bool,
+    action: str,
+    times: int,
+    reverse_complement: bool,
+):
+    if pair_adapters:
+        if reverse_complement:
+            raise CommandLineError("Cannot use --revcomp with --pair-adapters")
+        try:
+            cutter = PairedAdapterCutter(adapters, adapters2, action)
+        except PairedAdapterCutterError as e:
+            raise CommandLineError("--pair-adapters: " + str(e))
+        pipeline.add_paired_modifier(cutter)
+    else:
+        adapter_cutter, adapter_cutter2 = None, None
+        if adapters:
+            adapter_cutter = AdapterCutter(adapters, times, action)
+        if adapters2:
+            adapter_cutter2 = AdapterCutter(adapters2, times, action)
+        if paired:
+            if reverse_complement:
+                raise CommandLineError("--revcomp not implemented for paired-end reads")
+            if adapter_cutter or adapter_cutter2:
+                pipeline.add(adapter_cutter, adapter_cutter2)
+        else:
+            if adapter_cutter:
+                if reverse_complement:
+                    modifier = ReverseComplementer(adapter_cutter)
+                else:
+                    modifier = adapter_cutter
+                pipeline.add(modifier)
 
 
 def modifiers_applying_to_both_ends_if_paired(args) -> Iterator[Modifier]:
