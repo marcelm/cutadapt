@@ -387,13 +387,12 @@ def open_output_files(args, default_outfile, interleaved):
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
     """
     compression_level = args.compression_level
-    rest_file = info_file = wildcard = None
-    if args.rest_file is not None:
-        rest_file = xopen(args.rest_file, 'w', compresslevel=compression_level)
-    if args.info_file is not None:
-        info_file = xopen(args.info_file, 'w', compresslevel=compression_level)
-    if args.wildcard_file is not None:
-        wildcard = xopen(args.wildcard_file, 'w', compresslevel=compression_level)
+
+    def open1(path):
+        """Return opened file (or None if path is None)"""
+        if path is None:
+            return None
+        return xopen(path, "w", compresslevel=compression_level)
 
     def open2(path1, path2):
         file1 = file2 = None
@@ -402,6 +401,10 @@ def open_output_files(args, default_outfile, interleaved):
             if path2 is not None:
                 file2 = xopen(path2, 'wb', compresslevel=compression_level)
         return file1, file2
+
+    rest_file = open1(args.rest_file)
+    info_file = open1(args.info_file)
+    wildcard = open1(args.wildcard_file)
 
     too_short = too_short2 = None
     if args.minimum_length is not None:
