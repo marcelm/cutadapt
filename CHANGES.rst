@@ -5,11 +5,13 @@ Changes
 development version
 -------------------
 
+* :issue:`395`: Do not show animated progress when ``--quiet`` is used.
 * :issue:`399`: When two adapters align to a read equally well (in terms
   of the number of matches), prefer the alignment that has fewer errors.
 * :issue:`401` Give priority to adapters given earlier on the command
   line. Previously, the priority was: All 3' adapters, all 5' adapters,
   all anywhere adapters, which may in rare cases lead to different results.
+* :issue:`404`: Fix an issue preventing Cutadapt from being used on Windows.
 
 
 v2.5 (2019-09-04)
