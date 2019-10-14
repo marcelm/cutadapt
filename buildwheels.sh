@@ -36,7 +36,6 @@ rm /opt/python/cp27*
 PYBINS="/opt/python/*/bin"
 HAS_CYTHON=0
 for PYBIN in ${PYBINS}; do
-    ${PYBIN}/pip install Cython
 #    ${PYBIN}/pip install -r /io/requirements.txt
     ${PYBIN}/pip wheel /io/ -w wheelhouse/
 done
