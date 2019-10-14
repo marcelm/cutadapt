@@ -83,7 +83,7 @@ class SDist(_sdist):
         super().run()
 
 
-encoding_arg = {'encoding': 'utf-8'} if sys.version > '3' else dict()
+encoding_arg = {'encoding': 'utf-8'} if sys.version_info[0] >= 3 else dict()
 with open('README.rst', **encoding_arg) as f:
     long_description = f.read()
 
