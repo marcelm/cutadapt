@@ -15,12 +15,14 @@
 
 set -xeuo pipefail
 
+MANYLINUX=quay.io/pypa/manylinux2010_x86_64
+
 # For convenience, if this script is called from outside of a docker container,
 # it starts a container and runs itself inside of it.
 if ! grep -q docker /proc/1/cgroup; then
   # We are not inside a container
-  docker pull quay.io/pypa/manylinux1_x86_64
-  exec docker run --rm -v $(pwd):/io quay.io/pypa/manylinux1_x86_64 /io/$0
+  docker pull ${MANYLINUX}
+  exec docker run --rm -v $(pwd):/io ${MANYLINUX} /io/$0
 fi
 
 # Strip binaries (copied from multibuild)
@@ -41,7 +43,7 @@ done
 
 # Bundle external shared libraries into the wheels
 for whl in wheelhouse/cutadapt-*.whl; do
-    auditwheel repair "$whl" -w repaired/
+    auditwheel repair "$whl" --plat manylinux1_x86_64 -w repaired/
 done
 
 # Created files are owned by root, so fix permissions.
