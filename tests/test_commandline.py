@@ -31,9 +31,9 @@ def test_small(run):
     run('-a TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq')
 
 
-def test_empty(run):
+def test_empty(run, cores):
     """empty input"""
-    run('-a TTAGACATATCTCCGTCG', 'empty.fastq', 'empty.fastq')
+    run("--cores {} -a TTAGACATATCTCCGTCG".format(cores), "empty.fastq", "empty.fastq")
 
 
 def test_newlines(run):
