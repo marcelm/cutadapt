@@ -12,6 +12,7 @@ development version
   line. Previously, the priority was: All 3' adapters, all 5' adapters,
   all anywhere adapters, which may in rare cases lead to different results.
 * :issue:`404`: Fix an issue preventing Cutadapt from being used on Windows.
+* This release no longer supports Python 3.4 (which has reached end of life).
 
 
 v2.5 (2019-09-04)

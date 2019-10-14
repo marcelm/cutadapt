@@ -11,8 +11,8 @@ from distutils.command.build_ext import build_ext as _build_ext
 
 MIN_CYTHON_VERSION = '0.28'
 
-if sys.version_info[:2] < (3, 4):
-    sys.stdout.write('You need at least Python 3.4\n')
+if sys.version_info[:2] < (3, 5):
+    sys.stdout.write('You need at least Python 3.5\n')
     sys.exit(1)
 
 
@@ -109,7 +109,7 @@ setup(
     extras_require={
         'dev': ['Cython', 'pytest', 'pytest-timeout', 'sphinx', 'sphinx_issues'],
     },
-    python_requires='>=3.4',
+    python_requires='>=3.5',
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",

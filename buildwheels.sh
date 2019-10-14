@@ -30,8 +30,8 @@ STRIP_FLAGS=${STRIP_FLAGS:-"-Wl,-strip-all"}
 export CFLAGS="${CFLAGS:-$STRIP_FLAGS}"
 export CXXFLAGS="${CXXFLAGS:-$STRIP_FLAGS}"
 
-# We don’t support Python 2.7
-rm /opt/python/cp27*
+# We require Python 3.5+
+rm /opt/python/cp27* /opt/python/cp34*
 
 PYBINS="/opt/python/*/bin"
 HAS_CYTHON=0
