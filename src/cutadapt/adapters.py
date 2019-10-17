@@ -73,6 +73,15 @@ class EndStatistics:
         self._remove = adapter.remove
         self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
 
+    def __repr__(self):
+        errors = {k: dict(v) for k, v in self.errors.items()}
+        return "EndStatistics(where={}, max_error_rate={}, errors={}, adjacent_bases={})".format(
+            self.where,
+            self.max_error_rate,
+            errors,
+            self.adjacent_bases,
+        )
+
     def __iadd__(self, other):
         if not isinstance(other, self.__class__):
             raise ValueError("Cannot compare")
@@ -139,6 +148,14 @@ class AdapterStatistics:
             self.back = EndStatistics(adapter)
         else:
             self.back = EndStatistics(adapter2)
+
+    def __repr__(self):
+        return "AdapterStatistics(name={}, where={}, front={}, back={})".format(
+            self.name,
+            self.where,
+            self.front,
+            self.back,
+        )
 
     def __iadd__(self, other):
         if self.where != other.where:  # TODO self.name != other.name or
