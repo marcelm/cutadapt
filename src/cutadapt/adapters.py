@@ -297,7 +297,7 @@ class Adapter:
         self.name = _generate_adapter_name() if name is None else name
         self.sequence = sequence.upper().replace('U', 'T')
         if not self.sequence:
-            raise ValueError('Sequence is empty')
+            raise ValueError("Adapter sequence is empty")
         self.where = where
         if remove not in (None, 'prefix', 'suffix', 'auto'):
             raise ValueError('remove parameter must be "prefix", "suffix", "auto" or None')
