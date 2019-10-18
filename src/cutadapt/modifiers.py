@@ -201,31 +201,44 @@ class AdapterCutter(Modifier):
 class ReverseComplementer(Modifier):
     """Trim adapters from a read and its reverse complement"""
 
-    def __init__(self, adapter_cutter: AdapterCutter):
-        self._adapter_cutter = adapter_cutter
+    def __init__(self, adapter_cutter: AdapterCutter, rc_suffix: Optional[str] = " rc"):
+        """
+        rc_suffix -- suffix to add to the read name if sequence was reverse-complemented
+        """
+        self.adapter_cutter = adapter_cutter
         self.n_reverse_complemented = 0
+        self._suffix = rc_suffix
         self.not_reverse_complemented = 0  # TODO remove, only for debugging
 
-    def __call__(self, read, matches):
+    def __call__(self, read, inmatches: List[Match]):
         reverse_read = reverse_complemented_sequence(read)
 
-        forward_trimmed_read, forward_matches = self._adapter_cutter.match_and_trim(read)
-        reverse_trimmed_read, reverse_matches = self._adapter_cutter.match_and_trim(reverse_read)
+        forward_trimmed_read, forward_matches = self.adapter_cutter.match_and_trim(read)
+        reverse_trimmed_read, reverse_matches = self.adapter_cutter.match_and_trim(reverse_read)
 
         forward_match_count = sum(m.matches for m in forward_matches)
         reverse_match_count = sum(m.matches for m in reverse_matches)
+        use_reverse_complement = reverse_match_count > forward_match_count
 
-        if forward_match_count >= reverse_match_count:
-            self.not_reverse_complemented += 1
-            trimmed_read, matches = forward_trimmed_read, forward_matches
-        else:
+        if use_reverse_complement:
             self.n_reverse_complemented += 1
+            assert reverse_matches
             trimmed_read, matches = reverse_trimmed_read, reverse_matches
+            if self._suffix:
+                trimmed_read.name += self._suffix
+        else:
+            if forward_match_count > 0:
+                assert forward_matches
+                self.not_reverse_complemented += 1
+            trimmed_read, matches = forward_trimmed_read, forward_matches
 
         if matches:
-            self._adapter_cutter.with_adapters += 1
+            self.adapter_cutter.with_adapters += 1
             for match in matches:
-                match.update_statistics(self._adapter_cutter.adapter_statistics[match.adapter])
+                stats = self.adapter_cutter.adapter_statistics[match.adapter]
+                match.update_statistics(stats)
+                stats.reverse_complemented_reads += bool(use_reverse_complement)
+            inmatches.extend(matches)
         return trimmed_read
 
 
