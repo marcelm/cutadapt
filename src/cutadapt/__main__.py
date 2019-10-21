@@ -268,7 +268,8 @@ def get_argument_parser():
     group.add_argument("--fasta", default=False, action='store_true',
         help="Output FASTA to standard output even on FASTQ input.")
     group.add_argument("-Z", action="store_const", const=1, dest="compression_level",
-        help=SUPPRESS)  # This is deprecated as it is now the default. Original message: "Use compression level 1 for gzipped output files (faster, but uses more space)"
+        help=SUPPRESS)  # This is deprecated as it is now the default.
+    # Original message: "Use compression level 1 for gzipped output files (faster, but uses more space)"
     group.add_argument("--info-file", metavar="FILE",
         help="Write information about each read and its adapter matches into FILE. "
             "See the documentation for the file format.")
