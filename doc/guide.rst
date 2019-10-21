@@ -154,6 +154,38 @@ Some of these limitations will be lifted in the future, as time allows.
 .. versionadded:: 2.5
     Multicore works with ``--untrimmed/too-short/too-long-(paired)-output``
 
+Core usage
+----------
+
+Cutadapt is heavily parallelized in order to take full advantage of the
+available resources. It opens compressed input files in separate threads in
+order to decrease the runtime. It does the same for writing compressed output
+files.
+
+The formula to calculate the number of threads used by cutadapt is
+
+.. code-block:: text
+
+    number_of_input_files +
+    number_of_output_files *
+    <compression threads set by the compression-threads flag (default = 4)> +
+    <cores set by the core flag>`
+
+
+Example: reading two input files which are gzipped and outputting to two
+gzipped output files, while setting cutadapt cores to 4 will use ``2 + 2 * 4 + 4 = 14``
+threads. This does not mean that 14 cores are fully utilized as the decompression
+and compression threads are mostly waiting for cutadapt to finish.
+
+Limiting the number of cores used
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The easiest way to limit the number of cores used by cutadapt is to write to
+uncompressed files. This means output files will not need extra threads for
+compression.
+
+If compressed output files are required the ``-Z`` flag can be used. This will
+default to 1 thread per output file.
 
 Speed-up tricks
 ---------------
