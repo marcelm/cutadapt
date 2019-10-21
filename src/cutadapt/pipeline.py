@@ -383,9 +383,9 @@ class PairedEndPipeline(Pipeline):
         self._maximum_length = value
 
 
-def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
+def reader_process(file1, file2, connections, queue, buffer_size, stdin_fd, threads):
     """
-    Read chunks of FASTA or FASTQ data from *file* and send to a worker.
+    Read chunks of FASTA or FASTQ data from *file1* and send to a worker.
 
     queue -- a Queue of worker indices. A worker writes its own index into this
         queue to notify the reader that it is ready to receive more data.
@@ -412,9 +412,9 @@ def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
         sys.stdin.close()
         sys.stdin = os.fdopen(stdin_fd)
     try:
-        with xopen(file, 'rb') as f:
+        with xopen(file1, 'rb', threads=threads) as f:
             if file2:
-                with xopen(file2, 'rb') as f2:
+                with xopen(file2, 'rb', threads=threads) as f2:
                     for chunk_index, (chunk1, chunk2) in enumerate(dnaio.read_paired_chunks(f, f2, buffer_size)):
                         send_to_worker(chunk_index, chunk1, chunk2)
             else:
@@ -626,7 +626,7 @@ class ParallelPipelineRunner(PipelineRunner):
             # that does not have a file descriptor.
             fileno = -1
         self._reader_process = Process(target=reader_process, args=(file1, file2, connw,
-            self._need_work_queue, self._buffer_size, fileno))
+            self._need_work_queue, self._buffer_size, fileno, self._n_workers))
         self._reader_process.daemon = True
         self._reader_process.start()
 

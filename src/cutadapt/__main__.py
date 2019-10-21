@@ -387,19 +387,20 @@ def open_output_files(args, default_outfile, interleaved):
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
     """
     compression_level = args.compression_level
+    threads = args.cores
 
     def open1(path):
         """Return opened file (or None if path is None)"""
         if path is None:
             return None
-        return xopen(path, "w", compresslevel=compression_level)
+        return xopen(path, "w", compresslevel=compression_level, threads=threads)
 
     def open2(path1, path2):
         file1 = file2 = None
         if path1 is not None:
-            file1 = xopen(path1, 'wb', compresslevel=compression_level)
+            file1 = xopen(path1, 'wb', compresslevel=compression_level, threads=threads)
             if path2 is not None:
-                file2 = xopen(path2, 'wb', compresslevel=compression_level)
+                file2 = xopen(path2, 'wb', compresslevel=compression_level, threads=threads)
         return file1, file2
 
     rest_file = open1(args.rest_file)
