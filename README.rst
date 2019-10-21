@@ -35,6 +35,11 @@ wildcard characters. Cutadapt can also demultiplex your reads.
 
 Cutadapt is available under the terms of the MIT license.
 
+Cutadapt development was started at `TU Dortmund University <https://www.tu-dortmund.de>`_
+in the group of `Prof. Dr. Sven Rahmann <https://www.rahmannlab.de/>`_.
+It is currently being developed within
+`NBIS (National Bioinformatics Infrastructure Sweden) <https://nbis.se/>`_.
+
 If you use Cutadapt, please cite
 `DOI:10.14806/ej.17.1.200 <http://dx.doi.org/10.14806/ej.17.1.200>`_ .
 
