@@ -393,7 +393,7 @@ def open_output_files(args, default_outfile, interleaved):
     # Use user-defined compression threads, or choose a number based on
     # compression level.
     compression_threads = args.compression_threads or (
-        1 if compression_level==1 else 4)
+        1 if compression_level == 1 else 4)
 
     def open1(path):
         """Return opened file (or None if path is None)"""
