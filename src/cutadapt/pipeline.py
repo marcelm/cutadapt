@@ -412,9 +412,10 @@ def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
         sys.stdin.close()
         sys.stdin = os.fdopen(stdin_fd)
     try:
-        with xopen(file, 'rb') as f:
+        # use 1 decompression thread by default. This reduces a lot of cpu overhead in pigz.
+        with xopen(file, 'rb', threads=1) as f:
             if file2:
-                with xopen(file2, 'rb') as f2:
+                with xopen(file2, 'rb', threads=1) as f2:
                     for chunk_index, (chunk1, chunk2) in enumerate(dnaio.read_paired_chunks(f, f2, buffer_size)):
                         send_to_worker(chunk_index, chunk1, chunk2)
             else:

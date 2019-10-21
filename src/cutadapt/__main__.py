@@ -129,9 +129,13 @@ def get_argument_parser():
     # Buffer size for the reader process when running in parallel
     group.add_argument("--buffer-size", type=int, default=4000000,
         help=SUPPRESS)
-    # Compression level for gzipped output files. Not exposed since we have -Z
-    group.add_argument("--compression-level", type=int, default=6,
-        help=SUPPRESS)
+    # Compression level for gzipped output files.
+    group.add_argument("--compression-level", type=int, default=1,
+                       help="Compression level for output files. Uses '1' by default for fast "
+                            "speeds.")
+    group.add_argument("--compression-threads", type=int, default=1,
+                       help="The number of threads that should be used for compressing the output files. "
+                            "Uses '1' by default as using multiple threads will cause cpu overhead.")
     # Deprecated: The input format is always auto-detected
     group.add_argument("-f", "--format", help=SUPPRESS)
 
@@ -264,7 +268,7 @@ def get_argument_parser():
     group.add_argument("--fasta", default=False, action='store_true',
         help="Output FASTA to standard output even on FASTQ input.")
     group.add_argument("-Z", action="store_const", const=1, dest="compression_level",
-        help="Use compression level 1 for gzipped output files (faster, but uses more space)")
+        help=SUPPRESS)  # This is deprecated as it is now the default. Original message: "Use compression level 1 for gzipped output files (faster, but uses more space)"
     group.add_argument("--info-file", metavar="FILE",
         help="Write information about each read and its adapter matches into FILE. "
             "See the documentation for the file format.")
@@ -387,6 +391,7 @@ def open_output_files(args, default_outfile, interleaved):
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
     """
     compression_level = args.compression_level
+    compression_threads = args.compression_threads
 
     def open1(path):
         """Return opened file (or None if path is None)"""
@@ -397,9 +402,9 @@ def open_output_files(args, default_outfile, interleaved):
     def open2(path1, path2):
         file1 = file2 = None
         if path1 is not None:
-            file1 = xopen(path1, 'wb', compresslevel=compression_level)
+            file1 = xopen(path1, 'wb', compresslevel=compression_level, threads=compression_threads)
             if path2 is not None:
-                file2 = xopen(path2, 'wb', compresslevel=compression_level)
+                file2 = xopen(path2, 'wb', compresslevel=compression_level, threads=compression_threads)
         return file1, file2
 
     rest_file = open1(args.rest_file)
