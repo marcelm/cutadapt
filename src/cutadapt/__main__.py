@@ -132,9 +132,9 @@ def get_argument_parser():
     # Compression level for gzipped output files. Not exposed since we have -Z
     group.add_argument("--compression-level", type=int, default=6,
         help=SUPPRESS)
-    group.add_argument("--compression-threads", type=int, default=1,
-                       help="The number of threads that should be used for compressing the output files. "
-                            "Uses '1' by default as using multiple threads will cause cpu overhead.")
+    # The number of threads that should be used for compressing the output files.
+    group.add_argument("--compression-threads", type=int, default=None,
+                       help=SUPPRESS)
     # Deprecated: The input format is always auto-detected
     group.add_argument("-f", "--format", help=SUPPRESS)
 
@@ -390,7 +390,10 @@ def open_output_files(args, default_outfile, interleaved):
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
     """
     compression_level = args.compression_level
-    compression_threads = args.compression_threads
+    # Use user-defined compression threads, or choose a number based on
+    # compression level.
+    compression_threads = args.compression_threads or (
+        1 if compression_level==1 else 4)
 
     def open1(path):
         """Return opened file (or None if path is None)"""
