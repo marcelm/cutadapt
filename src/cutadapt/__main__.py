@@ -396,7 +396,7 @@ def open_output_files(args, default_outfile, interleaved):
         """Return opened file (or None if path is None)"""
         if path is None:
             return None
-        return xopen(path, "w", compresslevel=compression_level)
+        return xopen(path, "w", compresslevel=compression_level, threads=compression_threads)
 
     def open2(path1, path2):
         file1 = file2 = None
