@@ -538,6 +538,7 @@ class LinkedAdapter:
         self.where = Where.LINKED
         self.name = _generate_adapter_name() if name is None else name
         self.front_adapter = front_adapter
+        self.front_adapter.name = self.name
         self.back_adapter = back_adapter
 
     def enable_debug(self):
