@@ -38,6 +38,24 @@ Then install Cutadapt like this::
 If neither ``pip`` nor ``conda`` installation works, keep reading.
 
 
+Installation on a Debian-based Linux distribution
+-------------------------------------------------
+
+Cutadapt is also included in Debian-based Linux distributions, such as Ubuntu.
+Simply use your favorite package manager to install Cutadapt. On the
+command-line, this should work ::
+
+    sudo apt install cutadapt
+
+or possibly ::
+
+    sudo apt install python3-cutadapt
+
+Please be aware that this will likely give you an old version of Cutadapt. If
+you encounter unexpected behavior, please use one of the other installation
+methods to get an up-to-date version before reporting bugs.
+
+
 .. _dependencies:
 
 Dependencies
