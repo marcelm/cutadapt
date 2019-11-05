@@ -185,7 +185,7 @@ def get_argument_parser():
             "mask: replace with 'N' characters; "
             "lowercase: convert to lowercase; "
             "none: leave unchanged (useful with "
-            "--discard-untrimmed). Default: trim")
+            "--discard-untrimmed). Default: %(default)s")
     group.add_argument("--no-trim", dest='action', action='store_const', const='none',
         help=SUPPRESS)  # Deprecated, use --action=none
     group.add_argument("--mask-adapter", dest='action', action='store_const', const='mask',
