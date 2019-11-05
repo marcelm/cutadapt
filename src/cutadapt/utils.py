@@ -1,8 +1,10 @@
 import re
 import sys
 import time
+import errno
 import multiprocessing
 
+from xopen import xopen
 import dnaio
 
 
@@ -142,3 +144,31 @@ def reverse_complemented_sequence(sequence: dnaio.Sequence):
     else:
         qualities = sequence.qualities[::-1]
     return dnaio.Sequence(sequence.name, reverse_complement(sequence.sequence), qualities)
+
+
+class FileOpener:
+    def __init__(self, compression_level: int = 6, threads: int = None):
+        self.compression_level = compression_level
+        self.threads = threads
+
+    def xopen(self, path, mode):
+        return xopen(path, mode, compresslevel=self.compression_level, threads=self.threads)
+
+    def dnaio_open(self, *args, **kwargs):
+        kwargs["opener"] = self.xopen
+        return dnaio.open(*args, **kwargs)
+
+    def dnaio_open_raise_limit(self, path, qualities):
+        """
+        Open a FASTA/FASTQ file for writing. If it fails because the number of open files
+        would be exceeded, try to raise the soft limit and re-try.
+        """
+        try:
+            f = self.dnaio_open(path, mode="w", qualities=qualities)
+        except OSError as e:
+            if e.errno == errno.EMFILE:  # Too many open files
+                raise_open_files_limit(8)
+                f = self.dnaio_open(path, mode="w", qualities=qualities)
+            else:
+                raise
+        return f

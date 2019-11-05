@@ -6,13 +6,14 @@ import logging
 import functools
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe, Queue
+from pathlib import Path
 import multiprocessing.connection
 import traceback
 
 from xopen import xopen
 import dnaio
 
-from .utils import Progress
+from .utils import Progress, FileOpener
 from .modifiers import PairedModifier
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
@@ -93,7 +94,7 @@ class Pipeline(ABC):
     """
     n_adapters = 0
 
-    def __init__(self):
+    def __init__(self, file_opener: FileOpener):
         self._close_files = []
         self._reader = None
         self._filters = None
@@ -108,6 +109,7 @@ class Pipeline(ABC):
         self.discard_casava = False
         self.discard_trimmed = False
         self.discard_untrimmed = False
+        self.file_opener = file_opener
 
     def connect_io(self, infiles: InputFiles, outfiles: OutputFiles):
         self._reader = dnaio.open(infiles.file1, file2=infiles.file2,
@@ -119,6 +121,10 @@ class Pipeline(ABC):
         # for all outputs
         if force_fasta:
             kwargs['fileformat'] = 'fasta'
+        # file and file2 must already be file-like objects because we don’t want to
+        # take care of threads and compression levels here.
+        for f in (file, file2):
+            assert not (f is None and isinstance(f, (str, bytes, Path)))
         return dnaio.open(file, file2=file2, mode='w', qualities=self.uses_qualities,
             **kwargs)
 
@@ -223,8 +229,8 @@ class SingleEndPipeline(Pipeline):
     """
     paired = False
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, file_opener: FileOpener):
+        super().__init__(file_opener)
         self._modifiers = []
 
     def add(self, modifier):
@@ -261,7 +267,8 @@ class SingleEndPipeline(Pipeline):
         return NoFilter(writer)
 
     def _create_demultiplexer(self, outfiles):
-        return Demultiplexer(outfiles.out, outfiles.untrimmed, qualities=self.uses_qualities)
+        return Demultiplexer(outfiles.out, outfiles.untrimmed, qualities=self.uses_qualities,
+            file_opener=self.file_opener)
 
     @property
     def minimum_length(self):
@@ -288,8 +295,8 @@ class PairedEndPipeline(Pipeline):
     """
     paired = True
 
-    def __init__(self, pair_filter_mode):
-        super().__init__()
+    def __init__(self, pair_filter_mode, file_opener: FileOpener):
+        super().__init__(file_opener)
         self._pair_filter_mode = pair_filter_mode
         self._reader = None
         # Whether to ignore pair_filter mode for discard-untrimmed filter
@@ -359,10 +366,11 @@ class PairedEndPipeline(Pipeline):
     def _create_demultiplexer(self, outfiles):
         if '{name1}' in outfiles.out and '{name2}' in outfiles.out:
             return CombinatorialDemultiplexer(outfiles.out, outfiles.out2,
-                outfiles.untrimmed, qualities=self.uses_qualities)
+                outfiles.untrimmed, qualities=self.uses_qualities, file_opener=self.file_opener)
         else:
             return PairedDemultiplexer(outfiles.out, outfiles.out2,
-            outfiles.untrimmed, outfiles.untrimmed2, qualities=self.uses_qualities)
+                outfiles.untrimmed, outfiles.untrimmed2, qualities=self.uses_qualities,
+                file_opener=self.file_opener)
 
     @property
     def minimum_length(self):

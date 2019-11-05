@@ -3,6 +3,7 @@ Parse adapter specifications
 """
 import re
 import logging
+from xopen import xopen
 from dnaio.readers import FastaReader
 from .adapters import Where, WHERE_TO_REMOVE_MAP, Adapter, BackOrFrontAdapter, LinkedAdapter
 
@@ -397,7 +398,8 @@ class AdapterParser:
         """
         if spec.startswith('file:'):
             # read adapter sequences from a file
-            with FastaReader(spec[5:]) as fasta:
+            with xopen(spec[5:], mode="rb", threads=0) as f:
+                fasta = FastaReader(f)
                 for record in fasta:
                     name = record.name.split(None, 1)
                     name = name[0] if name else None

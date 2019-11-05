@@ -2,6 +2,14 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`290`: When running on a single core, Cutadapt no longer spawns
+  external ``pigz`` processes for writing gzip-compressed files. This is a first
+  step towards ensuring that using ``--cores=n`` uses only at most *n* CPU
+  cores.
+
 v2.6 (2019-10-26)
 -----------------
 

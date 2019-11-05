@@ -60,7 +60,6 @@ import logging
 import platform
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
-from xopen import xopen
 import dnaio
 
 from cutadapt import __version__
@@ -72,7 +71,7 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
 from cutadapt.report import full_report, minimal_report
 from cutadapt.pipeline import (SingleEndPipeline, PairedEndPipeline, InputFiles, OutputFiles,
     SerialPipelineRunner, ParallelPipelineRunner)
-from cutadapt.utils import available_cpu_count, Progress, DummyProgress
+from cutadapt.utils import available_cpu_count, Progress, DummyProgress, FileOpener
 from cutadapt.log import setup_logging, REPORT
 
 logger = logging.getLogger()
@@ -381,25 +380,24 @@ def parse_lengths(s):
     return tuple(values)
 
 
-def open_output_files(args, default_outfile, interleaved):
+def open_output_files(args, default_outfile, interleaved, file_opener):
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
     """
-    compression_level = args.compression_level
 
     def open1(path):
         """Return opened file (or None if path is None)"""
         if path is None:
             return None
-        return xopen(path, "w", compresslevel=compression_level)
+        return file_opener.xopen(path, "w")
 
     def open2(path1, path2):
         file1 = file2 = None
         if path1 is not None:
-            file1 = xopen(path1, 'wb', compresslevel=compression_level)
+            file1 = file_opener.xopen(path1, "wb")
             if path2 is not None:
-                file2 = xopen(path2, 'wb', compresslevel=compression_level)
+                file2 = file_opener.xopen(path2, "wb")
         return file1, file2
 
     rest_file = open1(args.rest_file)
@@ -599,7 +597,7 @@ def check_arguments(args, paired, is_interleaved_output):
         raise CommandLineError("--pair-adapters cannot be used with --times")
 
 
-def pipeline_from_parsed_args(args, paired, is_interleaved_output):
+def pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener):
     """
     Setup a processing pipeline from parsed command-line arguments.
 
@@ -632,9 +630,9 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output):
     # Create the processing pipeline
     if paired:
         pair_filter_mode = 'any' if args.pair_filter is None else args.pair_filter
-        pipeline = PairedEndPipeline(pair_filter_mode)
+        pipeline = PairedEndPipeline(pair_filter_mode, file_opener)
     else:
-        pipeline = SingleEndPipeline()
+        pipeline = SingleEndPipeline(file_opener)
 
     # When adapters are being trimmed only in R1 or R2, override the pair filter mode
     # as using the default of 'any' would regard all read pairs as untrimmed.
@@ -780,19 +778,22 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
 
     # Print the header now because some of the functions below create logging output
     log_header(cmdlineargs)
+    if args.cores < 0:
+        parser.error('Value for --cores cannot be negative')
+
+    cores = available_cpu_count() if args.cores == 0 else args.cores
+    file_opener = FileOpener(
+        compression_level=args.compression_level, threads=0 if cores == 1 else None)
     try:
         is_interleaved_input, is_interleaved_output = determine_interleaved(args)
         input_filename, input_paired_filename = input_files_from_parsed_args(args.inputs,
             paired, is_interleaved_input)
-        pipeline = pipeline_from_parsed_args(args, paired, is_interleaved_output)
-        outfiles = open_output_files(args, default_outfile, is_interleaved_output)
+        pipeline = pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener)
+        outfiles = open_output_files(args, default_outfile, is_interleaved_output, file_opener)
     except CommandLineError as e:
         parser.error(str(e))
         return  # avoid IDE warnings below
 
-    if args.cores < 0:
-        parser.error('Value for --cores cannot be negative')
-    cores = available_cpu_count() if args.cores == 0 else args.cores
     if cores > 1:
         if ParallelPipelineRunner.can_output_to(outfiles):
             runner_class = ParallelPipelineRunner

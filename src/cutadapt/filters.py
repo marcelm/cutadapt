@@ -14,11 +14,6 @@ The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded).
 """
 from abc import ABC, abstractmethod
-import errno
-
-import dnaio
-
-from .utils import raise_open_files_limit
 
 
 # Constants used when returning from a Filter’s __call__ method to improve
@@ -230,29 +225,13 @@ class CasavaFilter(SingleEndFilter):
         return right[1:4] == ':Y:'  # discard if :Y: found
 
 
-def _open_raise_limit(path, qualities):
-    """
-    Open a FASTA/FASTQ file for writing. If it fails because the number of open files
-    would be exceeded, try to raise the soft limit and re-try.
-    """
-    try:
-        f = dnaio.open(path, mode="w", qualities=qualities)
-    except OSError as e:
-        if e.errno == errno.EMFILE:  # Too many open files
-            raise_open_files_limit(8)
-            f = dnaio.open(path, mode="w", qualities=qualities)
-        else:
-            raise
-    return f
-
-
 class Demultiplexer(SingleEndFilter):
     """
     Demultiplex trimmed reads. Reads are written to different output files
     depending on which adapter matches. Files are created when the first read
     is written to them.
     """
-    def __init__(self, path_template, untrimmed_path, qualities):
+    def __init__(self, path_template, untrimmed_path, qualities, file_opener):
         """
         path_template must contain the string '{name}', which will be replaced
         with the name of the adapter to form the final output path.
@@ -267,6 +246,7 @@ class Demultiplexer(SingleEndFilter):
         self.written = 0
         self.written_bp = [0, 0]
         self.qualities = qualities
+        self.file_opener = file_opener
 
     def __call__(self, read, matches):
         """
@@ -275,14 +255,14 @@ class Demultiplexer(SingleEndFilter):
         if matches:
             name = matches[-1].adapter.name
             if name not in self.writers:
-                self.writers[name] = _open_raise_limit(
+                self.writers[name] = self.file_opener.dnaio_open_raise_limit(
                     self.template.replace('{name}', name), self.qualities)
             self.written += 1
             self.written_bp[0] += len(read)
             self.writers[name].write(read)
         else:
             if self.untrimmed_writer is None and self.untrimmed_path is not None:
-                self.untrimmed_writer = _open_raise_limit(
+                self.untrimmed_writer = self.file_opener.dnaio_open_raise_limit(
                     self.untrimmed_path, self.qualities)
             if self.untrimmed_writer is not None:
                 self.written += 1
@@ -303,16 +283,16 @@ class PairedDemultiplexer(PairedEndFilter):
     depending on which adapter (in read 1) matches.
     """
     def __init__(self, path_template, path_paired_template, untrimmed_path, untrimmed_paired_path,
-            qualities):
+            qualities, file_opener):
         """
         The path templates must contain the string '{name}', which will be replaced
         with the name of the adapter to form the final output path.
         Read pairs without an adapter match are written to the files named by
         untrimmed_path.
         """
-        self._demultiplexer1 = Demultiplexer(path_template, untrimmed_path, qualities)
+        self._demultiplexer1 = Demultiplexer(path_template, untrimmed_path, qualities, file_opener)
         self._demultiplexer2 = Demultiplexer(path_paired_template, untrimmed_paired_path,
-            qualities)
+            qualities, file_opener)
 
     @property
     def written(self):
@@ -337,7 +317,7 @@ class CombinatorialDemultiplexer(PairedEndFilter):
     Demultiplex reads depending on which adapter matches, taking into account both matches
     on R1 and R2.
     """
-    def __init__(self, path_template, path_paired_template, untrimmed_name, qualities):
+    def __init__(self, path_template, path_paired_template, untrimmed_name, qualities, file_opener):
         """
         path_template must contain the string '{name1}' and '{name2}', which will be replaced
         with the name of the adapters found on R1 and R2, respectively to form the final output
@@ -355,6 +335,7 @@ class CombinatorialDemultiplexer(PairedEndFilter):
         self.written = 0
         self.written_bp = [0, 0]
         self.qualities = qualities
+        self.file_opener = file_opener
 
     @staticmethod
     def _make_path(template, name1, name2):
@@ -379,8 +360,8 @@ class CombinatorialDemultiplexer(PairedEndFilter):
             path1 = self._make_path(self.template, name1, name2)
             path2 = self._make_path(self.paired_template, name1, name2)
             self.writers[key] = (
-                _open_raise_limit(path1, qualities=self.qualities),
-                _open_raise_limit(path2, qualities=self.qualities),
+                self.file_opener.dnaio_open_raise_limit(path1, qualities=self.qualities),
+                self.file_opener.dnaio_open_raise_limit(path2, qualities=self.qualities),
             )
         writer1, writer2 = self.writers[key]
         self.written += 1
