@@ -1047,23 +1047,22 @@ them entirely or by redirecting them to other files. When redirecting reads,
 the basic rule is that *each read is written to at most one file*. You cannot
 write reads to more than one output file.
 
-In the following, the term "processed read" refers to a read to which all
-modifications have been applied (adapter removal, quality trimming etc.). A
-processed read can be identical to the input read if no modifications were done.
-
+Filters are applied to *all* processed reads, no matter whether they have been
+modified by adapter- or quality trimming.
 
 ``--minimum-length LENGTH`` or ``-m LENGTH``
-    Discard processed reads that are shorter than LENGTH. Reads that are too
-    short even before adapter removal are also discarded. Without this option,
-    reads that have a length of zero (empty reads) are kept in the output.
+    Discard processed reads that are shorter than LENGTH.
+
+    If you do not use this option, reads that have a length of zero (empty
+    reads) are kept in the output. Some downstream tools may have problems
+    with zero-length sequences. In that case, specify at least ``-m 1``.
 
 ``--too-short-output FILE``
     Instead of discarding the reads that are too short according to ``-m``,
     write them to *FILE* (in FASTA/FASTQ format).
 
 ``--maximum-length LENGTH`` or ``-M LENGTH``
-    Discard processed reads that are longer than LENGTH. Reads that are too
-    long even before adapter removal are also discarded.
+    Discard processed reads that are longer than LENGTH.
 
 ``--too-long-output FILE``
     Instead of discarding reads that are too long (according to ``-M``),
@@ -1074,11 +1073,11 @@ processed read can be identical to the input read if no modifications were done.
     of writing them to the regular output file.
 
 ``--discard-trimmed``
-   Discard reads in which an adapter was found.
+    Discard reads in which an adapter was found.
 
 ``--discard-untrimmed``
-   Discard reads in which *no* adapter was found. This has the same effect as
-   specifying ``--untrimmed-output /dev/null``.
+    Discard reads in which *no* adapter was found. This has the same effect as
+    specifying ``--untrimmed-output /dev/null``.
 
 The options ``--too-short-output`` and ``--too-long-output`` are applied first.
 This means, for example, that a read that is too long will never end up in the
@@ -1089,11 +1088,11 @@ The options ``--untrimmed-output``, ``--discard-trimmed`` and ``-discard-untrimm
 are mutually exclusive.
 
 The following filtering options do not have a corresponding option for redirecting
-reads. They always discard reads for which the filtering criterion applies.
+reads. They always discard those reads for which the filtering criterion applies.
 
 ``--max-n COUNT_or_FRACTION``
-    Discard reads with more than COUNT ``N`` bases. If ``COUNT_or_FRACTION`` is an
-    number between 0 and 1, it is interpreted as a fraction of the read length
+    Discard reads with more than COUNT ``N`` bases. If ``COUNT_or_FRACTION`` is
+    a number between 0 and 1, it is interpreted as a fraction of the read length
 
 ``--discard-casava``
     Discard reads that did not pass CASAVA filtering. Illumina’s CASAVA pipeline in
