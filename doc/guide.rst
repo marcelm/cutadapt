@@ -1037,7 +1037,7 @@ each read. Steps not requested on the command-line are skipped.
 Filtering reads
 ===============
 
-By default, all processed reads, no matter whether they were trimmed are not,
+By default, all processed reads, no matter whether they were trimmed or not,
 are written to the output file specified by the ``-o`` option (or to standard
 output if ``-o`` was not provided). For paired-end reads, the second read in a
 pair is always written to the file specified by the ``-p`` option.
