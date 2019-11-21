@@ -107,7 +107,7 @@ setup(
         'xopen~=0.8.4',
     ],
     extras_require={
-        'dev': ['Cython', 'pytest', 'pytest-timeout', 'sphinx', 'sphinx_issues'],
+        'dev': ['Cython', 'pytest', 'pytest-timeout', 'pytest-mock', 'sphinx', 'sphinx_issues'],
     },
     python_requires='>=3.5',
     classifiers=[
