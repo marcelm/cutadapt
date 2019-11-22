@@ -46,10 +46,10 @@ def test_lowercase(run):
     run('-a ttagacatatctccgtcg', 'lowercase.fastq', 'small.fastq')
 
 
-def test_rest(run, tmpdir):
+def test_rest(run, tmpdir, cores):
     """-r/--rest-file"""
     rest = str(tmpdir.join("rest.tmp"))
-    run(['-b', 'ADAPTER', '-N', '-r', rest], "rest.fa", "rest.fa")
+    run(['--cores', str(cores), '-b', 'ADAPTER', '-N', '-r', rest], "rest.fa", "rest.fa")
     assert_files_equal(datapath('rest.txt'), rest)
 
 
@@ -228,11 +228,14 @@ def test_read_wildcard(run):
     ("-a", "wildcard_adapter.fa"),
     ("-b", "wildcard_adapter_anywhere.fa"),
 ])
-def test_adapter_wildcard(adapter_type, expected, run, tmpdir):
+def test_adapter_wildcard(adapter_type, expected, run, tmpdir, cores):
     """wildcards in adapter"""
     wildcard_path = str(tmpdir.join("wildcards.txt"))
-    run("--wildcard-file {} {} ACGTNNNACGT".format(wildcard_path, adapter_type),
-        expected, "wildcard_adapter.fa")
+    run([
+            "--cores", str(cores),
+            "--wildcard-file", wildcard_path,
+            adapter_type, "ACGTNNNACGT"
+        ],  expected, "wildcard_adapter.fa")
     with open(wildcard_path) as wct:
         lines = wct.readlines()
     lines = [line.strip() for line in lines]
@@ -309,26 +312,26 @@ def test_strip_suffix(run):
     run("--strip-suffix _sequence -a XXXXXXX", "stripped.fasta", "simple.fasta")
 
 
-def test_info_file(run, tmpdir):
+def test_info_file(run, tmpdir, cores):
     # The true adapter sequence in the illumina.fastq.gz data set is
     # GCCTAACTTCTTAGACTGCCTTAAGGACGT (fourth base is different from the sequence shown here)
     info_path = str(tmpdir.join("info.txt"))
-    run(["--info-file", info_path, "-a", "adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT"],
+    run(["--cores", str(cores), "--info-file", info_path, "-a", "adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT"],
         "illumina.fastq", "illumina.fastq.gz")
     assert_files_equal(cutpath("illumina.info.txt"), info_path)
 
 
-def test_info_file_times(run, tmpdir):
+def test_info_file_times(run, tmpdir, cores):
     info_path = str(tmpdir.join("info.txt"))
-    run(["--info-file", info_path, "--times", "2", "-a", "adapt=GCCGAACTTCTTA",
+    run(["--cores", str(cores), "--info-file", info_path, "--times", "2", "-a", "adapt=GCCGAACTTCTTA",
         "-a", "adapt2=GACTGCCTTAAGGACGT"], "illumina5.fastq", "illumina5.fastq")
     assert_files_equal(cutpath('illumina5.info.txt'), info_path)
 
 
-def test_info_file_fasta(run, tmpdir):
+def test_info_file_fasta(run, tmpdir, cores):
     info_path = str(tmpdir.join("info.txt"))
     # Just make sure that it runs
-    run(["--info-file", info_path, "-a", "TTAGACATAT", "-g", "GAGATTGCCA", "--no-indels"],
+    run(["--cores", str(cores), "--info-file", info_path, "-a", "TTAGACATAT", "-g", "GAGATTGCCA", "--no-indels"],
         "no_indels.fasta", "no_indels.fasta")
 
 

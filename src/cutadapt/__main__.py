@@ -390,7 +390,7 @@ def open_output_files(args, default_outfile, interleaved, file_opener):
         """Return opened file (or None if path is None)"""
         if path is None:
             return None
-        return file_opener.xopen(path, "w")
+        return file_opener.xopen(path, "wb")
 
     def open2(path1, path2):
         file1 = file2 = None
@@ -799,12 +799,9 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
             runner_class = ParallelPipelineRunner
             runner_kwargs = dict(n_workers=cores, buffer_size=args.buffer_size)
         else:
-            parser.error('Running in parallel is currently not supported for '
-                'the given combination of command-line parameters.\nThese '
-                'options are not supported: --info-file, --rest-file, '
-                '--wildcard-file, --format\n'
-                'Also, demultiplexing is not supported.\n'
-                'Omit --cores/-j to continue.')
+            parser.error("Running in parallel is currently not supported "
+                "when using --format or when demultiplexing.\n"
+                "Omit --cores/-j to continue.")
             return  # avoid IDE warnings below
     else:
         runner_class = SerialPipelineRunner

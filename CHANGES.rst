@@ -5,6 +5,9 @@ Changes
 development version
 -------------------
 
+* :issue:`427`: Multicore is now supported even when using ``--info-file``,
+  ``--rest-file`` or ``--wildcard-file``. The only remaining feature that
+  still does not work with multicore is now demultiplexing.
 * :issue:`290`: When running on a single core, Cutadapt no longer spawns
   external ``pigz`` processes for writing gzip-compressed files. This is a first
   step towards ensuring that using ``--cores=n`` uses only at most *n* CPU

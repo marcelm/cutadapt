@@ -129,22 +129,9 @@ Make also sure that you have ``pigz`` (parallel gzip) installed if you use
 multiple cores and write to a ``.gz`` output file. Otherwise, compression of
 the output will be done in a single thread and therefore be a bottleneck.
 
-There are some limitations at the moment:
-
-* The following command-line arguments are not compatible with
-  multi-core:
-
-      - ``--info-file``
-      - ``--rest-file``
-      - ``--wildcard-file``
-      - ``--format``
-
-* Multi-core is not available when you use Cutadapt for demultiplexing.
-
-If you try to use multiple cores with an incompatible commandline option, you
-will get an error message.
-
-Some of these limitations will be lifted in the future, as time allows.
+Currently, multi-core support is not available when demultiplexing. You
+will get an error message if you try to use it. This limitations may be
+lifted in the future.
 
 .. versionadded:: 1.15
 
@@ -153,6 +140,9 @@ Some of these limitations will be lifted in the future, as time allows.
 
 .. versionadded:: 2.5
     Multicore works with ``--untrimmed/too-short/too-long-(paired)-output``
+
+.. versionadded:: 2.7
+    Muticore works with ``--info-file``, ``--rest-file``, ``--wildcard-file``
 
 
 Speed-up tricks

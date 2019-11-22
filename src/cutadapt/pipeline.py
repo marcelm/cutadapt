@@ -101,6 +101,7 @@ class Pipeline(ABC):
         self._modifiers = []
         self._outfiles = None
         self._demultiplexer = None
+        self._textiowrappers = []
 
         # Filter settings
         self._minimum_length = None
@@ -139,7 +140,9 @@ class Pipeline(ABC):
             (WildcardFileWriter, outfiles.wildcard),
         ):
             if outfile:
-                self._filters.append(filter_wrapper(None, filter_class(outfile), None))
+                textiowrapper = io.TextIOWrapper(outfile)
+                self._textiowrappers.append(textiowrapper)
+                self._filters.append(filter_wrapper(None, filter_class(textiowrapper), None))
 
         # minimum length and maximum length
         for lengths, file1, file2, filter_class in (
@@ -190,7 +193,16 @@ class Pipeline(ABC):
                     untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
             self._filters.append(self._final_filter(outfiles))
 
+    def flush(self):
+        for f in self._textiowrappers:
+            f.flush()
+        for f in self._outfiles:
+            if f is not None:
+                f.flush()
+
     def close(self):
+        for f in self._textiowrappers:
+            f.close()  # This also closes the underlying files; a second close occurs below
         for f in self._outfiles:
             # TODO do not use hasattr
             if f is not None and f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
@@ -480,6 +492,7 @@ class WorkerProcess(Process):
                 outfiles = self._make_output_files()
                 self._pipeline.connect_io(infiles, outfiles)
                 (n, bp1, bp2) = self._pipeline.process_reads()
+                self._pipeline.flush()
                 cur_stats = Statistics().collect(n, bp1, bp2, [], self._pipeline._filters)
                 stats += cur_stats
                 self._send_outfiles(outfiles, chunk_index, n)
@@ -510,7 +523,6 @@ class WorkerProcess(Process):
         that has BytesIO instances for each non-None output file
         """
         output_files = copy.copy(self._orig_outfiles)
-        # TODO info, rest, wildcard need to be StringIO()
         for attr in (
             "out", "out2", "untrimmed", "untrimmed2", "too_short", "too_short2", "too_long",
             "too_long2", "info", "rest", "wildcard"
@@ -640,13 +652,7 @@ class ParallelPipelineRunner(PipelineRunner):
 
     @staticmethod
     def can_output_to(outfiles):
-        return (
-            outfiles.out is not None
-            and outfiles.rest is None
-            and outfiles.info is None
-            and outfiles.wildcard is None
-            and not outfiles.demultiplex
-        )
+        return outfiles.out is not None and not outfiles.demultiplex
 
     def _assign_output(self, outfiles):
         if not self.can_output_to(outfiles):
