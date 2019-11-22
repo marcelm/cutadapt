@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v2.7 (2019-11-22)
+-----------------
 
 * :issue:`427`: Multicore is now supported even when using ``--info-file``,
   ``--rest-file`` or ``--wildcard-file``. The only remaining feature that
@@ -12,6 +12,7 @@ development version
   external ``pigz`` processes for writing gzip-compressed files. This is a first
   step towards ensuring that using ``--cores=n`` uses only at most *n* CPU
   cores.
+* This release adds support for Python 3.8.
 
 v2.6 (2019-10-26)
 -----------------
