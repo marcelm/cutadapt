@@ -403,53 +403,65 @@ class PairedEndPipeline(Pipeline):
         self._maximum_length = value
 
 
-def reader_process(file, file2, connections, queue, buffer_size, stdin_fd):
+class ReaderProcess(Process):
     """
-    Read chunks of FASTA or FASTQ data from *file* and send to a worker.
+    Read chunks of FASTA or FASTQ data (single-end or paired) and send to a worker.
 
-    queue -- a Queue of worker indices. A worker writes its own index into this
-        queue to notify the reader that it is ready to receive more data.
-    connections -- a list of Connection objects, one for each worker.
+    The reader repeatedly
 
-    The function repeatedly
-
-    - reads a chunk from the file
+    - reads a chunk from the file(s)
     - reads a worker index from the Queue
     - sends the chunk to connections[index]
 
-    and finally sends "poison pills" (the value -1) to all connections.
+    and finally sends the stop token -1 ("poison pills") to all connections.
     """
 
-    def send_to_worker(chunk_index, chunk1, chunk2=None):
-        worker_index = queue.get()
-        connection = connections[worker_index]
+    def __init__(self, file, file2, connections, queue, buffer_size, stdin_fd):
+        """
+        queue -- a Queue of worker indices. A worker writes its own index into this
+            queue to notify the reader that it is ready to receive more data.
+        connections -- a list of Connection objects, one for each worker.
+        """
+        super().__init__()
+        self.file = file
+        self.file2 = file2
+        self.connections = connections
+        self.queue = queue
+        self.buffer_size = buffer_size
+        self.stdin_fd = stdin_fd
+
+    def run(self):
+        if self.stdin_fd != -1:
+            sys.stdin.close()
+            sys.stdin = os.fdopen(self.stdin_fd)
+        try:
+            with xopen(self.file, 'rb') as f:
+                if self.file2:
+                    with xopen(self.file2, 'rb') as f2:
+                        for chunk_index, (chunk1, chunk2) in enumerate(
+                                dnaio.read_paired_chunks(f, f2, self.buffer_size)):
+                            self.send_to_worker(chunk_index, chunk1, chunk2)
+                else:
+                    for chunk_index, chunk in enumerate(dnaio.read_chunks(f, self.buffer_size)):
+                        self.send_to_worker(chunk_index, chunk)
+
+            # Send poison pills to all workers
+            for _ in range(len(self.connections)):
+                worker_index = self.queue.get()
+                self.connections[worker_index].send(-1)
+        except Exception as e:
+            # TODO better send this to a common "something went wrong" Queue
+            for connection in self.connections:
+                connection.send(-2)
+                connection.send((e, traceback.format_exc()))
+
+    def send_to_worker(self, chunk_index, chunk1, chunk2=None):
+        worker_index = self.queue.get()
+        connection = self.connections[worker_index]
         connection.send(chunk_index)
         connection.send_bytes(chunk1)
         if chunk2 is not None:
             connection.send_bytes(chunk2)
-
-    if stdin_fd != -1:
-        sys.stdin.close()
-        sys.stdin = os.fdopen(stdin_fd)
-    try:
-        with xopen(file, 'rb') as f:
-            if file2:
-                with xopen(file2, 'rb') as f2:
-                    for chunk_index, (chunk1, chunk2) in enumerate(dnaio.read_paired_chunks(f, f2, buffer_size)):
-                        send_to_worker(chunk_index, chunk1, chunk2)
-            else:
-                for chunk_index, chunk in enumerate(dnaio.read_chunks(f, buffer_size)):
-                    send_to_worker(chunk_index, chunk)
-
-        # Send poison pills to all workers
-        for _ in range(len(connections)):
-            worker_index = queue.get()
-            connections[worker_index].send(-1)
-    except Exception as e:
-        # TODO better send this to a common "something went wrong" Queue
-        for worker_index in range(len(connections)):
-            connections[worker_index].send(-2)
-            connections[worker_index].send((e, traceback.format_exc()))
 
 
 class WorkerProcess(Process):
@@ -645,8 +657,8 @@ class ParallelPipelineRunner(PipelineRunner):
             # This happens during tests: pytest sets sys.stdin to an object
             # that does not have a file descriptor.
             fileno = -1
-        self._reader_process = Process(target=reader_process, args=(file1, file2, connw,
-            self._need_work_queue, self._buffer_size, fileno))
+        self._reader_process = ReaderProcess(file1, file2, connw,
+            self._need_work_queue, self._buffer_size, fileno)
         self._reader_process.daemon = True
         self._reader_process.start()
 
