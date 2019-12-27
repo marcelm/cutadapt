@@ -4,6 +4,7 @@ import sys
 import copy
 import logging
 import functools
+from typing import List, IO, Optional, BinaryIO, TextIO, Any
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe, Queue
 from pathlib import Path
@@ -14,7 +15,7 @@ from xopen import xopen
 import dnaio
 
 from .utils import Progress, FileOpener
-from .modifiers import PairedModifier
+from .modifiers import PairedModifier, Modifier
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
@@ -25,7 +26,7 @@ logger = logging.getLogger()
 
 
 class InputFiles:
-    def __init__(self, file1, file2=None, interleaved=False):
+    def __init__(self, file1: BinaryIO, file2: Optional[BinaryIO] = None, interleaved: bool = False):
         self.file1 = file1
         self.file2 = file2
         self.interleaved = interleaved
@@ -52,12 +53,12 @@ class OutputFiles:
         too_short2=None,
         too_long=None,
         too_long2=None,
-        info=None,
-        rest=None,
-        wildcard=None,
-        demultiplex=False,
-        interleaved=False,
-        force_fasta=None,
+        info: Optional[BinaryIO] = None,
+        rest: Optional[BinaryIO] = None,
+        wildcard: Optional[BinaryIO] = None,
+        demultiplex: bool = False,
+        interleaved: bool = False,
+        force_fasta: Optional[bool] = None,
     ):
         self.out = out
         self.out2 = out2
@@ -95,13 +96,13 @@ class Pipeline(ABC):
     n_adapters = 0
 
     def __init__(self, file_opener: FileOpener):
-        self._close_files = []
+        self._close_files = []  # type: List[IO]
         self._reader = None
-        self._filters = None
-        self._modifiers = []
-        self._outfiles = None
+        self._filters = []  # type: List[Any]
+        self._modifiers = []  # type: List[Modifier]
+        self._outfiles = None  # type: Optional[OutputFiles]
         self._demultiplexer = None
-        self._textiowrappers = []
+        self._textiowrappers = []  # type: List[TextIO]
 
         # Filter settings
         self._minimum_length = None
@@ -117,7 +118,13 @@ class Pipeline(ABC):
             interleaved=infiles.interleaved, mode='r')
         self._set_output(outfiles)
 
-    def _open_writer(self, file, file2=None, force_fasta=None, **kwargs):
+    def _open_writer(
+        self,
+        file: BinaryIO,
+        file2: Optional[BinaryIO] = None,
+        force_fasta: Optional[bool] = None,
+        **kwargs
+    ):
         # TODO backwards-incompatible change (?) would be to use outfiles.interleaved
         # for all outputs
         if force_fasta:
@@ -125,7 +132,7 @@ class Pipeline(ABC):
         # file and file2 must already be file-like objects because we don’t want to
         # take care of threads and compression levels here.
         for f in (file, file2):
-            assert not (f is None and isinstance(f, (str, bytes, Path)))
+            assert not isinstance(f, (str, bytes, Path))
         return dnaio.open(file, file2=file2, mode='w', qualities=self.uses_qualities,
             **kwargs)
 
@@ -193,16 +200,18 @@ class Pipeline(ABC):
                     untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
             self._filters.append(self._final_filter(outfiles))
 
-    def flush(self):
+    def flush(self) -> None:
         for f in self._textiowrappers:
             f.flush()
+        assert self._outfiles is not None
         for f in self._outfiles:
             if f is not None:
                 f.flush()
 
-    def close(self):
+    def close(self) -> None:
         for f in self._textiowrappers:
             f.close()  # This also closes the underlying files; a second close occurs below
+        assert self._outfiles is not None
         for f in self._outfiles:
             # TODO do not use hasattr
             if f is not None and f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
@@ -211,7 +220,8 @@ class Pipeline(ABC):
             self._demultiplexer.close()
 
     @property
-    def uses_qualities(self):
+    def uses_qualities(self) -> bool:
+        assert self._reader is not None
         return self._reader.delivers_qualities
 
     @abstractmethod
@@ -254,6 +264,7 @@ class SingleEndPipeline(Pipeline):
         """Run the pipeline. Return statistics"""
         n = 0  # no. of processed reads  # TODO turn into attribute
         total_bp = 0
+        assert self._reader is not None
         for read in self._reader:
             n += 1
             if n % 10000 == 0 and progress:
@@ -273,12 +284,12 @@ class SingleEndPipeline(Pipeline):
     def _untrimmed_filter_wrapper(self):
         return Redirector
 
-    def _final_filter(self, outfiles):
+    def _final_filter(self, outfiles: OutputFiles):
         assert outfiles.out2 is None
         writer = self._open_writer(outfiles.out, force_fasta=outfiles.force_fasta)
         return NoFilter(writer)
 
-    def _create_demultiplexer(self, outfiles):
+    def _create_demultiplexer(self, outfiles: OutputFiles):
         return Demultiplexer(outfiles.out, outfiles.untrimmed, qualities=self.uses_qualities,
             file_opener=self.file_opener)
 
@@ -338,6 +349,7 @@ class PairedEndPipeline(Pipeline):
         n = 0  # no. of processed reads
         total1_bp = 0
         total2_bp = 0
+        assert self._reader is not None
         for read1, read2 in self._reader:
             n += 1
             if n % 10000 == 0 and progress:
@@ -547,7 +559,7 @@ class WorkerProcess(Process):
 
         return output_files
 
-    def _send_outfiles(self, outfiles, chunk_index, n_reads):
+    def _send_outfiles(self, outfiles: OutputFiles, chunk_index: int, n_reads: int):
         self._write_pipe.send(chunk_index)
         self._write_pipe.send(n_reads)
 
@@ -555,6 +567,7 @@ class WorkerProcess(Process):
             if f is None:
                 continue
             f.flush()
+            assert isinstance(f, io.BytesIO)
             processed_chunk = f.getvalue()
             self._write_pipe.send_bytes(processed_chunk)
 
@@ -633,13 +646,14 @@ class ParallelPipelineRunner(PipelineRunner):
         buffer_size=4*1024**2,
     ):
         super().__init__(pipeline, progress)
-        self._pipes = []  # the workers read from these
+        # the workers read from these
+        self._connections = []  # type: List[multiprocessing.connection.Connection]
         self._reader_process = None
         self._outfiles = None
         self._two_input_files = None
         self._interleaved_input = None
         self._n_workers = n_workers
-        self._need_work_queue = Queue()
+        self._need_work_queue = Queue()  # type: Queue
         self._buffer_size = buffer_size
         self._assign_input(infiles.file1, infiles.file2, infiles.interleaved)
         self._assign_output(outfiles)
@@ -650,7 +664,7 @@ class ParallelPipelineRunner(PipelineRunner):
         self._two_input_files = file2 is not None
         self._interleaved_input = interleaved
         connections = [Pipe(duplex=False) for _ in range(self._n_workers)]
-        self._pipes, connw = zip(*connections)
+        self._connections, connw = zip(*connections)
         try:
             fileno = sys.stdin.fileno()
         except io.UnsupportedOperation:
@@ -681,7 +695,7 @@ class ParallelPipelineRunner(PipelineRunner):
                 index, self._pipeline,
                 self._two_input_files,
                 self._interleaved_input, self._outfiles,
-                self._pipes[index], conn_w, self._need_work_queue)
+                self._connections[index], conn_w, self._need_work_queue)
             worker.daemon = True
             worker.start()
             workers.append(worker)
