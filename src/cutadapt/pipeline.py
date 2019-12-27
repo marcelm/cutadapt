@@ -4,11 +4,12 @@ import sys
 import copy
 import logging
 import functools
-from typing import List, IO, Optional, BinaryIO, TextIO, Any
+from typing import List, IO, Optional, BinaryIO, TextIO, Any, Tuple, Union
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe, Queue
 from pathlib import Path
 import multiprocessing.connection
+from multiprocessing.connection import Connection
 import traceback
 
 from xopen import xopen
@@ -45,14 +46,14 @@ class OutputFiles:
     # TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?
     def __init__(
         self,
-        out=None,
-        out2=None,
-        untrimmed=None,
-        untrimmed2=None,
-        too_short=None,
-        too_short2=None,
-        too_long=None,
-        too_long2=None,
+        out: Optional[BinaryIO] = None,
+        out2: Optional[BinaryIO] = None,
+        untrimmed: Optional[BinaryIO] = None,
+        untrimmed2: Optional[BinaryIO] = None,
+        too_short: Optional[BinaryIO] = None,
+        too_short2: Optional[BinaryIO] = None,
+        too_long: Optional[BinaryIO] = None,
+        too_long2: Optional[BinaryIO] = None,
         info: Optional[BinaryIO] = None,
         rest: Optional[BinaryIO] = None,
         wildcard: Optional[BinaryIO] = None,
@@ -99,7 +100,8 @@ class Pipeline(ABC):
         self._close_files = []  # type: List[IO]
         self._reader = None
         self._filters = []  # type: List[Any]
-        self._modifiers = []  # type: List[Modifier]
+        # TODO type should be Union[List[Modifier], List[PairedModifier]]
+        self._modifiers = []  # type: List[Union[Modifier, PairedModifier]]
         self._outfiles = None  # type: Optional[OutputFiles]
         self._demultiplexer = None
         self._textiowrappers = []  # type: List[TextIO]
@@ -237,11 +239,11 @@ class Pipeline(ABC):
         pass
 
     @abstractmethod
-    def _final_filter(self, outfiles):
+    def _final_filter(self, outfiles: OutputFiles):
         pass
 
     @abstractmethod
-    def _create_demultiplexer(self, outfiles):
+    def _create_demultiplexer(self, outfiles: OutputFiles):
         pass
 
 
@@ -255,7 +257,7 @@ class SingleEndPipeline(Pipeline):
         super().__init__(file_opener)
         self._modifiers = []
 
-    def add(self, modifier):
+    def add(self, modifier: Modifier):
         if modifier is None:
             raise ValueError("Modifier must not be None")
         self._modifiers.append(modifier)
@@ -285,7 +287,7 @@ class SingleEndPipeline(Pipeline):
         return Redirector
 
     def _final_filter(self, outfiles: OutputFiles):
-        assert outfiles.out2 is None
+        assert outfiles.out2 is None and outfiles.out is not None
         writer = self._open_writer(outfiles.out, force_fasta=outfiles.force_fasta)
         return NoFilter(writer)
 
@@ -325,7 +327,7 @@ class PairedEndPipeline(Pipeline):
         # Whether to ignore pair_filter mode for discard-untrimmed filter
         self.override_untrimmed_pair_filter = False
 
-    def add(self, modifier1, modifier2):
+    def add(self, modifier1: Modifier, modifier2: Modifier):
         """
         Add a modifier for R1 and R2. One of them can be None, in which case the modifier
         will only be added for the respective read.
@@ -334,7 +336,7 @@ class PairedEndPipeline(Pipeline):
             raise ValueError("Not both modifiers can be None")
         self._modifiers.append(PairedModifier(modifier1, modifier2))
 
-    def add_both(self, modifier):
+    def add_both(self, modifier: Modifier):
         """
         Add one modifier for both R1 and R2
         """
@@ -600,7 +602,7 @@ class PipelineRunner(ABC):
     """
     A read processing pipeline
     """
-    def __init__(self, pipeline, progress):
+    def __init__(self, pipeline: Pipeline, progress: Progress):
         self._pipeline = pipeline
         self._progress = progress
 
@@ -643,26 +645,24 @@ class ParallelPipelineRunner(PipelineRunner):
         outfiles: OutputFiles,
         progress: Progress,
         n_workers: int,
-        buffer_size=4*1024**2,
+        buffer_size: int = 4 * 1024**2,
     ):
         super().__init__(pipeline, progress)
-        # the workers read from these
-        self._connections = []  # type: List[multiprocessing.connection.Connection]
-        self._reader_process = None
-        self._outfiles = None
-        self._two_input_files = None
-        self._interleaved_input = None
         self._n_workers = n_workers
         self._need_work_queue = Queue()  # type: Queue
         self._buffer_size = buffer_size
         self._assign_input(infiles.file1, infiles.file2, infiles.interleaved)
         self._assign_output(outfiles)
 
-    def _assign_input(self, file1, file2=None, interleaved=False):
-        if self._reader_process is not None:
-            raise RuntimeError('Do not call connect_io more than once')
+    def _assign_input(
+        self,
+        file1: BinaryIO,
+        file2: Optional[BinaryIO] = None,
+        interleaved: bool = False,
+    ):
         self._two_input_files = file2 is not None
         self._interleaved_input = interleaved
+        # the workers read from these connections
         connections = [Pipe(duplex=False) for _ in range(self._n_workers)]
         self._connections, connw = zip(*connections)
         try:
@@ -677,15 +677,15 @@ class ParallelPipelineRunner(PipelineRunner):
         self._reader_process.start()
 
     @staticmethod
-    def can_output_to(outfiles):
+    def can_output_to(outfiles: OutputFiles) -> bool:
         return outfiles.out is not None and not outfiles.demultiplex
 
-    def _assign_output(self, outfiles):
+    def _assign_output(self, outfiles: OutputFiles):
         if not self.can_output_to(outfiles):
             raise ValueError()
         self._outfiles = outfiles
 
-    def _start_workers(self):
+    def _start_workers(self) -> Tuple[List[WorkerProcess], List[Connection]]:
         workers = []
         connections = []
         for index in range(self._n_workers):
