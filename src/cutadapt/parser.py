@@ -3,9 +3,10 @@ Parse adapter specifications
 """
 import re
 import logging
+from typing import Type, Optional
 from xopen import xopen
 from dnaio.readers import FastaReader
-from .adapters import Where, WHERE_TO_REMOVE_MAP, Adapter, BackOrFrontAdapter, LinkedAdapter
+from .adapters import Where, WHERE_TO_REMOVE_MAP, Adapter, SingleAdapter, BackOrFrontAdapter, LinkedAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,14 @@ class AdapterSpecification:
     AdapterSpecification(name='a_name', restriction=None, sequence='ACGT', parameters={'anywhere': True}, cmdline_type='back')
     """
 
-    def __init__(self, name, restriction, sequence, parameters, cmdline_type):
+    def __init__(
+        self,
+        name: str,
+        restriction: Optional[str],
+        sequence: str,
+        parameters,
+        cmdline_type: str,
+    ):
         assert restriction in (None, "anchored", "noninternal")
         assert cmdline_type in ("front", "back", "anywhere")
         self.name = name
@@ -318,23 +326,23 @@ class AdapterParser:
             raise ValueError("Expected either spec1 or spec2")
         return spec, cmdline_type
 
-    def _parse_not_linked(self, spec: str, name, cmdline_type):
-        spec = AdapterSpecification.parse(spec, cmdline_type)
-        where = spec.where()
+    def _parse_not_linked(self, spec: str, name, cmdline_type) -> Adapter:
+        aspec = AdapterSpecification.parse(spec, cmdline_type)
+        where = aspec.where()
         if not name:
-            name = spec.name
-        if spec.parameters.pop('anywhere', False):
-            spec.parameters['remove'] = WHERE_TO_REMOVE_MAP[where]
+            name = aspec.name
+        if aspec.parameters.pop('anywhere', False):
+            aspec.parameters['remove'] = WHERE_TO_REMOVE_MAP[where]
             where = Where.ANYWHERE
         parameters = self.default_parameters.copy()
-        parameters.update(spec.parameters)
+        parameters.update(aspec.parameters)
         if where in (Where.FRONT, Where.BACK):
-            adapter_class = BackOrFrontAdapter
+            adapter_class = BackOrFrontAdapter  # type: Type[Adapter]
         else:
-            adapter_class = Adapter
-        return adapter_class(sequence=spec.sequence, where=where, name=name, **parameters)
+            adapter_class = SingleAdapter
+        return adapter_class(sequence=aspec.sequence, where=where, name=name, **parameters)
 
-    def _parse_linked(self, spec1: str, spec2: str, name, cmdline_type):
+    def _parse_linked(self, spec1: str, spec2: str, name: str, cmdline_type: str) -> LinkedAdapter:
         """Return a linked adapter from two specification strings"""
 
         if cmdline_type == 'anywhere':
@@ -375,9 +383,9 @@ class AdapterParser:
         front_required = front_parameters.pop('required', front_required)
         back_required = back_parameters.pop('required', back_required)
 
-        front_adapter = Adapter(front_spec.sequence, where=front_spec.where(), name=None,
+        front_adapter = SingleAdapter(front_spec.sequence, where=front_spec.where(), name=None,
             **front_parameters)
-        back_adapter = Adapter(back_spec.sequence, where=back_spec.where(), name=None,
+        back_adapter = SingleAdapter(back_spec.sequence, where=back_spec.where(), name=None,
             **back_parameters)
 
         return LinkedAdapter(

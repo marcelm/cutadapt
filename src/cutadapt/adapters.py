@@ -7,6 +7,8 @@ The ...Match classes trim the reads.
 import logging
 from enum import Enum
 from collections import defaultdict
+from typing import Optional
+from abc import ABC, abstractmethod
 
 from . import align
 
@@ -122,13 +124,13 @@ class EndStatistics:
         if self._remove == 'prefix':
             seq = seq[::-1]
         allowed_bases = 'CGRYSKMBDHVN' if self.has_wildcards else 'GC'
-        p = 1
+        p = 1.
         probabilities = [p]
         for i, c in enumerate(seq):
             if c in allowed_bases:
                 p *= gc_content / 2.
             else:
-                p *= (1 - gc_content) / 2
+                p *= (1. - gc_content) / 2.
             probabilities.append(p)
         return probabilities
 
@@ -268,13 +270,26 @@ class Match:
                 statistics.back.adjacent_bases[''] = 1
 
 
-def _generate_adapter_name(_start=[1]):
+def _generate_adapter_name(_start=[1]) -> str:
     name = str(_start[0])
     _start[0] += 1
     return name
 
 
-class Adapter:
+class Adapter(ABC):
+    def __init__(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def enable_debug(self):
+        pass
+
+    @abstractmethod
+    def match_to(self, read):
+        pass
+
+
+class SingleAdapter(Adapter):
     """
     This class can find a single adapter characterized by sequence, error rate,
     type etc. within reads.
@@ -308,8 +323,19 @@ class Adapter:
         unique number.
     """
 
-    def __init__(self, sequence, where, remove=None, max_error_rate=0.1, min_overlap=3,
-            read_wildcards=False, adapter_wildcards=True, name=None, indels=True):
+    def __init__(
+        self,
+        sequence: str,
+        where,
+        remove: Optional[str] = None,
+        max_error_rate: float = 0.1,
+        min_overlap: int = 3,
+        read_wildcards: bool = False,
+        adapter_wildcards: bool = True,
+        name: Optional[str] = None,
+        indels: bool = True,
+    ):
+        super().__init__()
         self._debug = False
         self.name = _generate_adapter_name() if name is None else name
         self.sequence = sequence.upper().replace('U', 'T')
@@ -357,7 +383,7 @@ class Adapter:
             )
 
     def __repr__(self):
-        return '<Adapter(name={name!r}, sequence={sequence!r}, where={where}, '\
+        return '<SingleAdapter(name={name!r}, sequence={sequence!r}, where={where}, '\
             'remove={remove}, max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
             'read_wildcards={read_wildcards}, '\
             'adapter_wildcards={adapter_wildcards}, '\
@@ -437,7 +463,7 @@ class Adapter:
         return AdapterStatistics(self)
 
 
-class BackOrFrontAdapter(Adapter):
+class BackOrFrontAdapter(SingleAdapter):
     """A 5' or 3' adapter.
 
     This is separate from the Adapter class so that a specialized match_to
@@ -486,9 +512,7 @@ class LinkedMatch:
     Represent a match of a LinkedAdapter
     """
     def __init__(self, front_match, back_match, adapter):
-        """
-        One of front_match and back_match must be not None!
-        """
+        assert front_match is not None or back_match is not None
         self.front_match = front_match
         self.back_match = back_match
         self.adapter = adapter
@@ -537,7 +561,7 @@ class LinkedMatch:
             statistics.back.errors[len(self.back_match.read) - self.back_match.rstart][self.back_match.errors] += 1
 
 
-class LinkedAdapter:
+class LinkedAdapter(Adapter):
     """
     """
     def __init__(
@@ -548,6 +572,7 @@ class LinkedAdapter:
         back_required,
         name,
     ):
+        super().__init__()
         self.front_required = front_required
         self.back_required = back_required
 
@@ -592,7 +617,7 @@ class LinkedAdapter:
         return None
 
 
-class MultiAdapter:
+class MultiAdapter(Adapter):
     """
     Represent multiple adapters of the same type at once and use an index data structure
     to speed up matching. This acts like a "normal" Adapter as it provides a match_to
@@ -610,6 +635,7 @@ class MultiAdapter:
 
     def __init__(self, adapters):
         """All given adapters must be of the same type, either Where.PREFIX or Where.SUFFIX"""
+        super().__init__()
         if not adapters:
             raise ValueError("Adapter list is empty")
         self._where = adapters[0].where
@@ -734,6 +760,9 @@ class MultiAdapter:
                 adapter=best_adapter,
                 read=read
             )
+
+    def enable_debug(self):
+        pass
 
 
 def warn_duplicate_adapters(adapters):
