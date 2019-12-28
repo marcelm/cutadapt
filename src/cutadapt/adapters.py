@@ -7,7 +7,7 @@ The ...Match classes trim the reads.
 import logging
 from enum import Enum
 from collections import defaultdict
-from typing import Optional
+from typing import Optional, Tuple, Sequence
 from abc import ABC, abstractmethod
 
 from . import align
@@ -167,7 +167,13 @@ class AdapterStatistics:
         return self
 
 
-class Match:
+class Match(ABC):
+    @abstractmethod
+    def remainder_interval(self) -> Tuple[int, int]:
+        pass
+
+
+class SingleMatch(Match):
     """
     Representation of a single adapter matched to a single read.
     """
@@ -202,7 +208,7 @@ class Match:
         self.length = astop - astart
 
     def __repr__(self):
-        return 'Match(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
+        return 'SingleMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
             self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
 
     def wildcards(self, wildcard_char='N'):
@@ -230,6 +236,16 @@ class Match:
             return self.read.sequence[:self.rstart]
         else:
             return self.read.sequence[self.rstop:]
+
+    def remainder_interval(self) -> Tuple[int, int]:
+        """
+        Return an interval (start, stop) that describes the part of the read that would
+        remain after trimming
+        """
+        if self.remove_before:
+            return self.rstop, len(self.read.sequence)
+        else:
+            return 0, self.rstart
 
     def get_info_record(self):
         seq = self.read.sequence
@@ -451,7 +467,7 @@ class SingleAdapter(Adapter):
             remove_before = match_args[2] == 0  # index 2 is rstart
         else:
             remove_before = self.remove == 'prefix'
-        match = Match(*match_args, remove_before=remove_before, adapter=self, read=read)
+        match = SingleMatch(*match_args, remove_before=remove_before, adapter=self, read=read)
 
         assert match.length >= self.min_overlap
         return match
@@ -503,19 +519,19 @@ class BackOrFrontAdapter(SingleAdapter):
         if alignment is None:
             return None
 
-        match = Match(*alignment, remove_before=self._remove_before, adapter=self, read=read)
+        match = SingleMatch(*alignment, remove_before=self._remove_before, adapter=self, read=read)
         return match
 
 
-class LinkedMatch:
+class LinkedMatch(Match):
     """
     Represent a match of a LinkedAdapter
     """
-    def __init__(self, front_match, back_match, adapter):
+    def __init__(self, front_match: SingleMatch, back_match: SingleMatch, adapter: SingleAdapter):
         assert front_match is not None or back_match is not None
-        self.front_match = front_match
-        self.back_match = back_match
-        self.adapter = adapter
+        self.front_match = front_match  # type: SingleMatch
+        self.back_match = back_match  # type: SingleMatch
+        self.adapter = adapter  # type: SingleAdapter
 
     def __repr__(self):
         return '<LinkedMatch(front_match={!r}, back_match={}, adapter={})>'.format(
@@ -559,6 +575,10 @@ class LinkedMatch:
             statistics.front.errors[self.front_match.rstop][self.front_match.errors] += 1
         if self.back_match:
             statistics.back.errors[len(self.back_match.read) - self.back_match.rstart][self.back_match.errors] += 1
+
+    def remainder_interval(self) -> Tuple[int, int]:
+        matches = [match for match in [self.front_match, self.back_match] if match is not None]
+        return remainder(matches)
 
 
 class LinkedAdapter(Adapter):
@@ -749,7 +769,7 @@ class MultiAdapter(Adapter):
             else:
                 assert self._where is Where.SUFFIX
                 rstart, rstop = len(read) - best_length, len(read)
-            return Match(
+            return SingleMatch(
                 astart=0,
                 astop=len(best_adapter.sequence),
                 rstart=rstart,
@@ -774,3 +794,20 @@ def warn_duplicate_adapters(adapters):
                 "Please make sure that this is what you want.",
                 adapter.sequence, ADAPTER_TYPE_NAMES[adapter.where])
         d[key] = adapter.name
+
+
+def remainder(matches: Sequence[Match]) -> Tuple[int, int]:
+    """
+    Determine which section of the read would not be trimmed. Return a tuple (start, stop)
+    that gives the interval of the untrimmed part relative to the original read.
+
+    matches must be non-empty
+    """
+    if not matches:
+        raise ValueError("matches must not be empty")
+    start = 0
+    for match in matches:
+        match_start, match_stop = match.remainder_interval()
+        start += match_start
+    length = match_stop - match_start
+    return (start, start + length)

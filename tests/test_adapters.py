@@ -1,7 +1,7 @@
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import SingleAdapter, Match, Where, LinkedAdapter
+from cutadapt.adapters import SingleAdapter, SingleMatch, Where, LinkedAdapter
 
 
 def test_issue_52():
@@ -14,7 +14,7 @@ def test_issue_52():
         read_wildcards=False,
         adapter_wildcards=True)
     read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
-    am = Match(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2,
+    am = SingleMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2,
         remove_before=False, adapter=adapter, read=read)
     assert am.wildcards() == 'GGC'
     """
@@ -88,7 +88,7 @@ def test_info_record():
         adapter_wildcards=True,
         name="Foo")
     read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
-    am = Match(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, remove_before=False,
+    am = SingleMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, remove_before=False,
         adapter=adapter, read=read)
     assert am.get_info_record() == (
         "abc",

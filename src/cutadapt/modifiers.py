@@ -4,16 +4,17 @@ A modifier must be callable and typically implemented as a class with a
 __call__ method.
 """
 import re
-from typing import Sequence
+from typing import Sequence, List
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+
 from .qualtrim import quality_trim_index, nextseq_trim_index
-from .adapters import Where, MultiAdapter, Match
+from .adapters import Where, MultiAdapter, Match, remainder
 
 
 class Modifier(ABC):
     @abstractmethod
-    def __call__(self, read, matches):
+    def __call__(self, read, matches: List[Match]):
         pass
 
 
@@ -117,30 +118,8 @@ class AdapterCutter(Modifier):
         return best_match
 
     @staticmethod
-    def remainder(matches: Sequence[Match]):
-        """
-        Determine which part of the read was not trimmed. Return a tuple (start, stop)
-        that gives the interval of the untrimmed part relative to the original read.
-
-        matches is a list of Match objects. The original read is assumed to be
-        matches[0].read
-        """
-        # Start with the full read
-        read = matches[0].read
-        start, stop = 0, len(read)
-        for match in matches:
-            if match.remove_before:
-                # Length of the prefix that was removed
-                start += match.rstop
-            else:
-                # Length of the suffix that was removed
-                stop -= len(match.read) - match.rstart
-        return (start, stop)
-
-    @staticmethod
-    def masked_read(trimmed_read, matches: Sequence[Match]):
-        start, stop = AdapterCutter.remainder(matches)
-        read = matches[0].read
+    def masked_read(read, trimmed_read, matches: Sequence[Match]):
+        start, stop = remainder(matches)
         # TODO modification in place
         trimmed_read.sequence = (
             'N' * start
@@ -150,19 +129,19 @@ class AdapterCutter(Modifier):
         return trimmed_read
 
     @staticmethod
-    def lowercased_read(trimmed_read, matches: Sequence[Match]):
-        start, stop = AdapterCutter.remainder(matches)
-        read_sequence = matches[0].read.sequence
+    def lowercased_read(read, trimmed_read, matches: Sequence[Match]):
+        start, stop = remainder(matches)
+        read_sequence = read.sequence
         # TODO modification in place
         trimmed_read.sequence = (
             read_sequence[:start].lower()
             + read_sequence[start:stop].upper()
             + read_sequence[stop:].lower()
         )
-        trimmed_read.qualities = matches[0].read.qualities
+        trimmed_read.qualities = read.qualities
         return trimmed_read
 
-    def __call__(self, read, inmatches):
+    def __call__(self, read, inmatches: List[Match]):
         trimmed_read, matches = self.match_and_trim(read)
         if matches:
             self.with_adapters += 1
@@ -184,9 +163,9 @@ class AdapterCutter(Modifier):
         Return a pair (trimmed_read, matches), where matches is a list of Match instances.
         """
         matches = []
-        trimmed_read = read
         if self.action == 'lowercase':
-            trimmed_read.sequence = trimmed_read.sequence.upper()
+            read.sequence = read.sequence.upper()
+        trimmed_read = read
         for _ in range(self.times):
             match = AdapterCutter.best_match(self.adapters, trimmed_read)
             if match is None:
@@ -202,9 +181,9 @@ class AdapterCutter(Modifier):
             # read is already trimmed, nothing to do
             pass
         elif self.action == 'mask':
-            trimmed_read = self.masked_read(trimmed_read, matches)
+            trimmed_read = self.masked_read(read, trimmed_read, matches)
         elif self.action == 'lowercase':
-            trimmed_read = self.lowercased_read(trimmed_read, matches)
+            trimmed_read = self.lowercased_read(read, trimmed_read, matches)
             assert len(trimmed_read.sequence) == len(read)
         elif self.action is None:  # --no-trim
             trimmed_read = read[:]

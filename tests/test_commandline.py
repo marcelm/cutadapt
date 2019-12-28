@@ -530,6 +530,11 @@ def test_linked_discard_untrimmed_g(run):
     run('-g AAAAAAAAAA...TTTTTTTTTT --discard-untrimmed', 'linked-discard-g.fasta', 'linked.fasta')
 
 
+def test_linked_lowercase(run):
+    run('-a ^AACCGGTTTT...GGGGGGG$ -a ^AAAA...TTTT$ --times=2 --action=lowercase',
+        'linked-lowercase.fasta', 'linked.fasta')
+
+
 def test_linked_anywhere():
     with pytest.raises(SystemExit):
         with redirect_stderr():

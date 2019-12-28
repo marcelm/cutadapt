@@ -2,6 +2,11 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`430`: ``--action=lowercase`` now works with linked adapters
+
 v2.7 (2019-11-22)
 -----------------
 
