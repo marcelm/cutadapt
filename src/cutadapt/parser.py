@@ -3,7 +3,7 @@ Parse adapter specifications
 """
 import re
 import logging
-from typing import Type, Optional
+from typing import Type, Optional, List, Tuple, Iterator, Any, Dict
 from xopen import xopen
 from dnaio.readers import FastaReader
 from .adapters import Where, WHERE_TO_REMOVE_MAP, Adapter, SingleAdapter, BackOrFrontAdapter, LinkedAdapter
@@ -63,7 +63,7 @@ class AdapterSpecification:
         )
 
     @staticmethod
-    def expand_braces(sequence):
+    def expand_braces(sequence: str) -> str:
         """
         Replace all occurrences of ``x{n}`` (where x is any character) with n
         occurrences of x. Raise ValueError if the expression cannot be parsed.
@@ -103,16 +103,15 @@ class AdapterSpecification:
         return result
 
     @staticmethod
-    def _extract_name(spec):
+    def _extract_name(spec: str) -> Tuple[Optional[str], str]:
         """
         Parse an adapter specification given as 'name=adapt' into 'name' and 'adapt'.
         """
         fields = spec.split('=', 1)
+        name = None  # type: Optional[str]
         if len(fields) > 1:
             name, spec = fields
             name = name.strip()
-        else:
-            name = None
         spec = spec.strip()
         return name, spec
 
@@ -131,16 +130,16 @@ class AdapterSpecification:
     }
 
     @classmethod
-    def _parse_parameters(cls, spec):
+    def _parse_parameters(cls, spec: str):
         """Parse key=value;key=value;key=value into a dict"""
 
         fields = spec.split(';')
-        result = dict()
+        result = dict()  # type: Dict[str,Any]
         for field in fields:
             field = field.strip()
             if not field:
                 continue
-            key, equals, value = field.partition('=')
+            key, equals, value = field.partition('=')  # type: (str, str, Any)
             if equals == '=' and value == '':
                 raise ValueError('No value given')
             key = key.strip()
@@ -148,7 +147,7 @@ class AdapterSpecification:
                 raise KeyError('Unknown parameter {}'.format(key))
             # unabbreviate
             while cls.allowed_parameters[key] is not None:
-                key = cls.allowed_parameters[key]
+                key = cls.allowed_parameters[key]  # type: ignore
             value = value.strip()
             if value == '':
                 value = True
@@ -282,7 +281,7 @@ class AdapterParser:
         # kwargs: max_error_rate, min_overlap, read_wildcards, adapter_wildcards, indels
         self.default_parameters = kwargs
 
-    def _parse(self, spec: str, cmdline_type='back', name=None):
+    def _parse(self, spec: str, cmdline_type: str = "back", name: Optional[str] = None) -> Adapter:
         """
         Parse an adapter specification not using ``file:`` notation and return
         an object of an appropriate Adapter class.
@@ -306,7 +305,7 @@ class AdapterParser:
         return self._parse_not_linked(spec, name, cmdline_type)
 
     @staticmethod
-    def _normalize_ellipsis(spec1: str, spec2: str, cmdline_type):
+    def _normalize_ellipsis(spec1: str, spec2: str, cmdline_type) -> Tuple[str, str]:
         if not spec1:
             if cmdline_type == 'back':
                 # -a ...ADAPTER
@@ -326,7 +325,7 @@ class AdapterParser:
             raise ValueError("Expected either spec1 or spec2")
         return spec, cmdline_type
 
-    def _parse_not_linked(self, spec: str, name, cmdline_type) -> Adapter:
+    def _parse_not_linked(self, spec: str, name: Optional[str], cmdline_type: str) -> Adapter:
         aspec = AdapterSpecification.parse(spec, cmdline_type)
         where = aspec.where()
         if not name:
@@ -342,7 +341,7 @@ class AdapterParser:
             adapter_class = SingleAdapter
         return adapter_class(sequence=aspec.sequence, where=where, name=name, **parameters)
 
-    def _parse_linked(self, spec1: str, spec2: str, name: str, cmdline_type: str) -> LinkedAdapter:
+    def _parse_linked(self, spec1: str, spec2: str, name: Optional[str], cmdline_type: str) -> LinkedAdapter:
         """Return a linked adapter from two specification strings"""
 
         if cmdline_type == 'anywhere':
@@ -396,7 +395,7 @@ class AdapterParser:
             name=name,
         )
 
-    def parse(self, spec, cmdline_type='back'):
+    def parse(self, spec: str, cmdline_type: str = 'back') -> Iterator[Adapter]:
         """
         Parse an adapter specification and yield appropriate Adapter classes.
         This works like the _parse_no_file() function above, but also supports the
@@ -415,7 +414,7 @@ class AdapterParser:
         else:
             yield self._parse(spec, cmdline_type, name=None)
 
-    def parse_multi(self, type_spec_pairs):
+    def parse_multi(self, type_spec_pairs: List[Tuple[str, str]]) -> List[Adapter]:
         """
         Parse all three types of commandline options that can be used to
         specify adapters. adapters must be a list of (str, str) pairs, where the first is
@@ -424,7 +423,7 @@ class AdapterParser:
 
         Return a list of appropriate Adapter classes.
         """
-        adapters = []
+        adapters = []  # type: List[Adapter]
         for cmdline_type, spec in type_spec_pairs:
             if cmdline_type not in {'front', 'back', 'anywhere'}:
                 raise ValueError('adapter type must be front, back or anywhere')

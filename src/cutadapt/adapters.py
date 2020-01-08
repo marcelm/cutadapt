@@ -7,7 +7,7 @@ The ...Match classes trim the reads.
 import logging
 from enum import Enum
 from collections import defaultdict
-from typing import Optional, Tuple, Sequence
+from typing import Optional, Tuple, Sequence, Dict, Any
 from abc import ABC, abstractmethod
 
 from . import align
@@ -30,18 +30,24 @@ class Where(Enum):
     LINKED = 'linked'
 
 
-# TODO put this in some kind of "list of pre-defined adapter types" along with the info above
+class WhereToRemove(Enum):
+    PREFIX = 1
+    SUFFIX = 2
+    AUTO = 3
+
+
 WHERE_TO_REMOVE_MAP = {
-    Where.PREFIX: 'prefix',
-    Where.FRONT_NOT_INTERNAL: 'prefix',
-    Where.FRONT: 'prefix',
-    Where.BACK: 'suffix',
-    Where.SUFFIX: 'suffix',
-    Where.BACK_NOT_INTERNAL: 'suffix',
-    Where.ANYWHERE: 'auto',
+    Where.PREFIX: WhereToRemove.PREFIX,
+    Where.FRONT_NOT_INTERNAL: WhereToRemove.PREFIX,
+    Where.FRONT: WhereToRemove.PREFIX,
+    Where.BACK: WhereToRemove.SUFFIX,
+    Where.SUFFIX: WhereToRemove.SUFFIX,
+    Where.BACK_NOT_INTERNAL: WhereToRemove.SUFFIX,
+    Where.ANYWHERE: WhereToRemove.AUTO,
 }
 
 
+# TODO could become a property/attribute of the Adapter classes
 ADAPTER_TYPE_NAMES = {
     Where.BACK: "regular 3'",
     Where.BACK_NOT_INTERNAL: "non-internal 3'",
@@ -64,15 +70,15 @@ def returns_defaultdict_int():
 class EndStatistics:
     """Statistics about the 5' or 3' end"""
 
-    def __init__(self, adapter):
-        self.where = adapter.where
-        self.max_error_rate = adapter.max_error_rate
-        self.sequence = adapter.sequence
-        self.effective_length = adapter.effective_length
-        self.has_wildcards = adapter.adapter_wildcards
+    def __init__(self, adapter: "SingleAdapter"):
+        self.where = adapter.where  # type: Where
+        self.max_error_rate = adapter.max_error_rate  # type: float
+        self.sequence = adapter.sequence  # type: str
+        self.effective_length = adapter.effective_length  # type: int
+        self.has_wildcards = adapter.adapter_wildcards  # type: bool
         # self.errors[l][e] == n iff n times a sequence of length l matching at e errors was removed
-        self.errors = defaultdict(returns_defaultdict_int)
-        self._remove = adapter.remove
+        self.errors = defaultdict(returns_defaultdict_int)  # type: Dict[int, Dict[int, int]]
+        self._remove = adapter.remove  # type: Optional[WhereToRemove]
         self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
 
     def __repr__(self):
@@ -84,7 +90,7 @@ class EndStatistics:
             self.adjacent_bases,
         )
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: Any):
         if not isinstance(other, self.__class__):
             raise ValueError("Cannot compare")
         if (
@@ -121,7 +127,7 @@ class EndStatistics:
         """
         seq = self.sequence
         # FIXME this is broken for self._remove == 'auto'
-        if self._remove == 'prefix':
+        if self._remove == WhereToRemove.PREFIX:
             seq = seq[::-1]
         allowed_bases = 'CGRYSKMBDHVN' if self.has_wildcards else 'GC'
         p = 1.
@@ -142,7 +148,12 @@ class AdapterStatistics:
     separately.
     """
 
-    def __init__(self, adapter, adapter2=None, where=None):
+    def __init__(
+        self,
+        adapter: "SingleAdapter",
+        adapter2: Optional["SingleAdapter"] = None,
+        where: Optional[Where] = None,
+    ):
         self.name = adapter.name
         self.where = where if where is not None else adapter.where
         self.front = EndStatistics(adapter)
@@ -181,37 +192,48 @@ class SingleMatch(Match):
         'adapter', 'read', 'length', '_trimmed_read', 'adjacent_base']
 
     # TODO Can remove_before be removed from the constructor parameters?
-    def __init__(self, astart, astop, rstart, rstop, matches, errors, remove_before, adapter, read):
+    def __init__(
+        self,
+        astart: int,
+        astop: int,
+        rstart: int,
+        rstop: int,
+        matches: int,
+        errors: int,
+        remove_before: bool,
+        adapter: "SingleAdapter",
+        read,
+    ):
         """
         remove_before -- True: remove bases before adapter. False: remove after
         """
-        self.astart = astart
-        self.astop = astop
-        self.rstart = rstart
-        self.rstop = rstop
-        self.matches = matches
-        self.errors = errors
-        self.adapter = adapter
+        self.astart = astart  # type: int
+        self.astop = astop  # type: int
+        self.rstart = rstart  # type: int
+        self.rstop = rstop  # type: int
+        self.matches = matches  # type: int
+        self.errors = errors  # type: int
+        self.adapter = adapter  # type: SingleAdapter
         self.read = read
         if remove_before:
             # Compute the trimmed read, assuming it’s a 'front' adapter
             self._trimmed_read = read[rstop:]
-            self.adjacent_base = ''
+            self.adjacent_base = ""  # type: str
         else:
             # Compute the trimmed read, assuming it’s a 'back' adapter
             self.adjacent_base = read.sequence[rstart - 1:rstart]
             self._trimmed_read = read[:rstart]
-        self.remove_before = remove_before
+        self.remove_before = remove_before  # type: bool
         # Number of aligned characters in the adapter. If there are
         # indels, this may be different from the number of characters
         # in the read.
-        self.length = astop - astart
+        self.length = astop - astart  # type: int
 
     def __repr__(self):
         return 'SingleMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
             self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
 
-    def wildcards(self, wildcard_char='N'):
+    def wildcards(self, wildcard_char: str = "N") -> str:
         """
         Return a string that contains, for each wildcard character,
         the character that it matches. For example, if the adapter
@@ -225,7 +247,7 @@ class SingleMatch(Match):
                 self.rstart + i < len(self.read.sequence)]
         return ''.join(wildcards)
 
-    def rest(self):
+    def rest(self) -> str:
         """
         Return the part of the read before this match if this is a
         'front' (5') adapter,
@@ -247,10 +269,10 @@ class SingleMatch(Match):
         else:
             return 0, self.rstart
 
-    def get_info_record(self):
+    def get_info_record(self) -> Sequence:
         seq = self.read.sequence
         qualities = self.read.qualities
-        info = (
+        info = [
             self.read.name,
             self.errors,
             self.rstart,
@@ -258,16 +280,16 @@ class SingleMatch(Match):
             seq[0:self.rstart],
             seq[self.rstart:self.rstop],
             seq[self.rstop:],
-            self.adapter.name
-        )
+            self.adapter.name,
+        ]
         if qualities:
-            info += (
+            info += [
                 qualities[0:self.rstart],
                 qualities[self.rstart:self.rstop],
                 qualities[self.rstop:]
-            )
+            ]
         else:
-            info += ('', '', '')
+            info += ["", "", ""]
 
         return info
 
@@ -313,11 +335,12 @@ class SingleAdapter(Adapter):
     where --  A Where enum value. This influences where the adapter is allowed to appear within the
         read.
 
-    remove -- describes which part of the read to remove if the adapter was found:
-          * "prefix" (for a 3' adapter)
-          * "suffix" (for a 5' adapter)
-          * "auto" for a 5'/3' mixed adapter (if the match involves the first base of the read, it
-            is assumed to be a 5' adapter and a 3' otherwise)
+    remove -- a WhereToRemove enum value. This describes which part of the read to remove if the
+        adapter was found:
+          * WhereToRemove.PREFIX (for a 3' adapter)
+          * WhereToRemove.SUFFIX (for a 5' adapter)
+          * WhereToRemove.AUTO for a 5'/3' mixed adapter (if the match involves the first base of
+            the read, it is assumed to be a 5' adapter and a 3' otherwise)
           * None: One of the above is chosen depending on the 'where' parameter
 
     sequence -- The adapter sequence as string. Will be converted to uppercase.
@@ -342,8 +365,8 @@ class SingleAdapter(Adapter):
     def __init__(
         self,
         sequence: str,
-        where,
-        remove: Optional[str] = None,
+        where: Where,
+        remove: Optional[WhereToRemove] = None,
         max_error_rate: float = 0.1,
         min_overlap: int = 3,
         read_wildcards: bool = False,
@@ -352,17 +375,15 @@ class SingleAdapter(Adapter):
         indels: bool = True,
     ):
         super().__init__()
-        self._debug = False
-        self.name = _generate_adapter_name() if name is None else name
-        self.sequence = sequence.upper().replace('U', 'T')
+        self._debug = False  # type: bool
+        self.name = _generate_adapter_name() if name is None else name  # type: str
+        self.sequence = sequence.upper().replace("U", "T")  # type: str
         if not self.sequence:
             raise ValueError("Adapter sequence is empty")
-        self.where = where
-        if remove not in (None, 'prefix', 'suffix', 'auto'):
-            raise ValueError('remove parameter must be "prefix", "suffix", "auto" or None')
-        self.remove = WHERE_TO_REMOVE_MAP[where] if remove is None else remove
-        self.max_error_rate = max_error_rate
-        self.min_overlap = min(min_overlap, len(self.sequence))
+        self.where = where  # type: Where
+        self.remove = WHERE_TO_REMOVE_MAP[where] if remove is None else remove  # type: WhereToRemove
+        self.max_error_rate = max_error_rate  # type: float
+        self.min_overlap = min(min_overlap, len(self.sequence))  # type: int
         iupac = frozenset('XACGTURYSWKMBDHVN')
         if adapter_wildcards and not set(self.sequence) <= iupac:
             for c in self.sequence:
@@ -371,9 +392,9 @@ class SingleAdapter(Adapter):
                         'not a valid IUPAC code. Use only characters '
                         'XACGTURYSWKMBDHVN.'.format(c, self.sequence))
         # Optimization: Use non-wildcard matching if only ACGT is used
-        self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set('ACGT')
-        self.read_wildcards = read_wildcards
-        self.indels = indels
+        self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set("ACGT")  # type: bool
+        self.read_wildcards = read_wildcards  # type: bool
+        self.indels = indels  # type: bool
         if self.is_anchored and not self.indels:
             aligner_class = align.PrefixComparer if self.where is Where.PREFIX else align.SuffixComparer
             self.aligner = aligner_class(
@@ -462,11 +483,11 @@ class SingleAdapter(Adapter):
 
         if match_args is None:
             return None
-        if self.remove == 'auto':
+        if self.remove == WhereToRemove.AUTO:
             # guess: if alignment starts at pos 0, it’s a 5' adapter
             remove_before = match_args[2] == 0  # index 2 is rstart
         else:
-            remove_before = self.remove == 'prefix'
+            remove_before = self.remove == WhereToRemove.PREFIX
         match = SingleMatch(*match_args, remove_before=remove_before, adapter=self, read=read)
 
         assert match.length >= self.min_overlap
@@ -492,7 +513,7 @@ class BackOrFrontAdapter(SingleAdapter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert self.where is Where.BACK or self.where is Where.FRONT
-        self._remove_before = self.remove == 'prefix'
+        self._remove_before = self.remove is WhereToRemove.PREFIX
 
     def match_to(self, read):
         """
@@ -776,7 +797,7 @@ class MultiAdapter(Adapter):
                 rstop=rstop,
                 matches=best_m,
                 errors=best_e,
-                remove_before=best_adapter.remove == 'prefix',
+                remove_before=best_adapter.remove is WhereToRemove.PREFIX,
                 adapter=best_adapter,
                 read=read
             )

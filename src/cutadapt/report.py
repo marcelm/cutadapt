@@ -3,8 +3,10 @@ Routines for printing a report.
 """
 from io import StringIO
 import textwrap
-from .adapters import Where, EndStatistics, ADAPTER_TYPE_NAMES
-from .modifiers import QualityTrimmer, NextseqQualityTrimmer, AdapterCutter, PairedAdapterCutter
+from typing import Any, Optional, List
+from .adapters import Where, EndStatistics, AdapterStatistics, ADAPTER_TYPE_NAMES
+from .modifiers import (Modifier, PairedModifier, QualityTrimmer, NextseqQualityTrimmer,
+    AdapterCutter, PairedAdapterCutter)
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
     PairedDemultiplexer, CombinatorialDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter,
     WildcardFileWriter, RestFileWriter)
@@ -26,23 +28,23 @@ def add_if_not_none(a, b):
 
 
 class Statistics:
-    def __init__(self):
+    def __init__(self) -> None:
         """
         """
-        self.paired = None
+        self.paired = None  # type: Optional[bool]
         self.too_short = None
         self.too_long = None
         self.too_many_n = None
-        self.did_quality_trimming = None
+        self.did_quality_trimming = None  # type: Optional[bool]
         self.n = 0
         self.written = 0
         self.total_bp = [0, 0]
         self.written_bp = [0, 0]
         self.with_adapters = [0, 0]
         self.quality_trimmed_bp = [0, 0]
-        self.adapter_stats = [[], []]
+        self.adapter_stats = [[], []]  # type: List[List[AdapterStatistics]]
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: Any):
         self.n += other.n
         self.written += other.written
 
@@ -111,13 +113,13 @@ class Statistics:
         elif isinstance(w.filter, NContentFilter):
             self.too_many_n = w.filtered
 
-    def _collect_modifier(self, m):
+    def _collect_modifier(self, m: Modifier):
         if isinstance(m, PairedAdapterCutter):
             for i in 0, 1:
                 self.with_adapters[i] += m.with_adapters
                 self.adapter_stats[i] = list(m.adapter_statistics[i].values())
             return
-        if getattr(m, 'paired', False):
+        if isinstance(m, PairedModifier):
             modifiers_list = [(0, m._modifier1), (1, m._modifier2)]
         else:
             modifiers_list = [(0, m)]
@@ -262,7 +264,7 @@ class AdjacentBaseStatistics:
         return sio.getvalue()
 
 
-def full_report(stats, time, gc_content) -> str:
+def full_report(stats: Statistics, time: float, gc_content: float) -> str:
     """Print report to standard output."""
     if stats.n == 0:
         return "No reads processed!"
@@ -396,7 +398,7 @@ def full_report(stats, time, gc_content) -> str:
     return sio.getvalue().rstrip()
 
 
-def minimal_report(stats, time, gc_content) -> str:
+def minimal_report(stats, _time, _gc_content) -> str:
     """Create a minimal tabular report suitable for concatenation"""
 
     def none(value):

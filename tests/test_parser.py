@@ -2,7 +2,7 @@ from textwrap import dedent
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import Where, LinkedAdapter
+from cutadapt.adapters import Where, WhereToRemove, LinkedAdapter, SingleAdapter
 from cutadapt.parser import AdapterParser, AdapterSpecification
 
 
@@ -164,6 +164,7 @@ def test_linked_adapter_parameters():
 def test_linked_adapter_name():
     # issue #414
     a = AdapterParser()._parse("the_name=^ACG...TGT")
+    assert isinstance(a, LinkedAdapter)
     assert a.create_statistics().name == "the_name"
 
 
@@ -171,7 +172,8 @@ def test_anywhere_parameter():
     parser = AdapterParser(max_error_rate=0.2, min_overlap=4, read_wildcards=False,
         adapter_wildcards=False, indels=True)
     adapter = list(parser.parse('CTGAAGTGAAGTACACGGTT;anywhere', 'back'))[0]
-    assert adapter.remove == 'suffix'
+    assert isinstance(adapter, SingleAdapter)
+    assert adapter.remove == WhereToRemove.SUFFIX
     assert adapter.where is Where.ANYWHERE
     read = Sequence('foo1', 'TGAAGTACACGGTTAAAAAAAAAA')
     from cutadapt.modifiers import AdapterCutter
