@@ -535,6 +535,13 @@ def test_linked_lowercase(run):
         'linked-lowercase.fasta', 'linked.fasta')
 
 
+def test_linked_info_file(tmpdir):
+    info_path = str(tmpdir.join('info.txt'))
+    main(['-a linkedadapter=^AAAAAAAAAA...TTTTTTTTTT', '--info-file', info_path,
+        '-o', str(tmpdir.join('out.fasta')), datapath('linked.fasta')])
+    assert_files_equal(cutpath('linked-info.txt'), info_path)
+
+
 def test_linked_anywhere():
     with pytest.raises(SystemExit):
         with redirect_stderr():

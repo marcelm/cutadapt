@@ -1,0 +1,9 @@
+r1 5' adapter and 3' adapter	0	0	10		AAAAAAAAAA	CCCCCCCCCCTTTTTTTTTTGGGGGGG	linkedadapter;1			
+r1 5' adapter and 3' adapter	0	10	20	CCCCCCCCCC	TTTTTTTTTT	GGGGGGG	linkedadapter;2			
+r2 without any adapter	-1	GGGGGGGGGGGGGGGGGGG	
+r3 5' adapter, partial 3' adapter	0	0	10		AAAAAAAAAA	CCCGGCCCCCTTTTT	linkedadapter;1			
+r3 5' adapter, partial 3' adapter	0	10	15	CCCGGCCCCC	TTTTT		linkedadapter;2			
+r4 only 3' adapter	-1	GGGGGGGGGGCCCCCCCCCCTTTTTTTTTTGGGGGGG	
+r5 only 5' adapter	0	0	10		AAAAAAAAAA	CCCCCCCCCCGGGGGGG	linkedadapter;1			
+r6 partial 5' adapter	-1	AAAAAACCCCCCCCCCTTTTTTTTTTGGGGGGG	
+r7 5' adapter plus preceding bases	-1	AACCGGTTTTAAAAAAAAAACCCCCCCCCCTTTTTTTTTTGGGGGGG	

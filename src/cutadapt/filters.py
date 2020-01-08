@@ -14,6 +14,8 @@ The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded).
 """
 from abc import ABC, abstractmethod
+from typing import List
+from .adapters import Match
 
 
 # Constants used when returning from a Filter’s __call__ method to improve
@@ -403,11 +405,11 @@ class InfoFileWriter(SingleEndFilter):
     def __init__(self, file):
         self.file = file
 
-    def __call__(self, read, matches):
+    def __call__(self, read, matches: List[Match]):
         if matches:
             for match in matches:
-                info_record = match.get_info_record()
-                print(*info_record, sep='\t', file=self.file)
+                for info_record in match.get_info_records():
+                    print(*info_record, sep='\t', file=self.file)
         else:
             seq = read.sequence
             qualities = read.qualities if read.qualities is not None else ''

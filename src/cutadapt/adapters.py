@@ -7,7 +7,7 @@ The ...Match classes trim the reads.
 import logging
 from enum import Enum
 from collections import defaultdict
-from typing import Optional, Tuple, Sequence, Dict, Any
+from typing import Optional, Tuple, Sequence, Dict, Any, List
 from abc import ABC, abstractmethod
 
 from . import align
@@ -183,6 +183,10 @@ class Match(ABC):
     def remainder_interval(self) -> Tuple[int, int]:
         pass
 
+    @abstractmethod
+    def get_info_records(self) -> List[List]:
+        pass
+
 
 class SingleMatch(Match):
     """
@@ -269,7 +273,7 @@ class SingleMatch(Match):
         else:
             return 0, self.rstart
 
-    def get_info_record(self) -> Sequence:
+    def get_info_records(self) -> List[List]:
         seq = self.read.sequence
         qualities = self.read.qualities
         info = [
@@ -291,7 +295,7 @@ class SingleMatch(Match):
         else:
             info += ["", "", ""]
 
-        return info
+        return [info]
 
     def trimmed(self):
         return self._trimmed_read
@@ -548,11 +552,11 @@ class LinkedMatch(Match):
     """
     Represent a match of a LinkedAdapter
     """
-    def __init__(self, front_match: SingleMatch, back_match: SingleMatch, adapter: SingleAdapter):
+    def __init__(self, front_match: SingleMatch, back_match: SingleMatch, adapter: "LinkedAdapter"):
         assert front_match is not None or back_match is not None
         self.front_match = front_match  # type: SingleMatch
         self.back_match = back_match  # type: SingleMatch
-        self.adapter = adapter  # type: SingleAdapter
+        self.adapter = adapter  # type: LinkedAdapter
 
     def __repr__(self):
         return '<LinkedMatch(front_match={!r}, back_match={}, adapter={})>'.format(
@@ -600,6 +604,19 @@ class LinkedMatch(Match):
     def remainder_interval(self) -> Tuple[int, int]:
         matches = [match for match in [self.front_match, self.back_match] if match is not None]
         return remainder(matches)
+
+    def get_info_records(self) -> List[List]:
+        records = []
+        for match, namesuffix in [
+            (self.front_match, ";1"),
+            (self.back_match, ";2"),
+        ]:
+            if match is None:
+                continue
+            record = match.get_info_records()[0]
+            record[7] = self.adapter.name + namesuffix
+            records.append(record)
+        return records
 
 
 class LinkedAdapter(Adapter):

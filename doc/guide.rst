@@ -1934,13 +1934,20 @@ Format of the info file
 -----------------------
 
 When the ``--info-file`` command-line parameter is given, detailed
-information about the found adapters is written to the given file. The
-output is a tab-separated text file. Each line corresponds to one read
-of the input file (unless `--times` is used, see below). A row is written
-for *all* reads, even those that are discarded from the final output
-FASTA/FASTQ due to filtering options (such as ``--minimum-length``).
+information about where adapters were found in each read are written
+to the given file. It is a tab-separated text file that contains at
+least one row per input read. Normally, there is exactly one row per
+input read, but in the following cases, multiple rows may be output:
 
-The fields in each row are:
+  * The option ``--times`` is in use.
+  * A linked adapter is used.
+
+A row is written for *all* input reads, even those that are discarded
+from the final FASTA/FASTQ output due to filtering options
+(such as ``--minimum-length``). Which fields are output in each row
+depends on whether an adapter match was found in the read or not.
+
+The fields in a row that describes a match are:
 
 1. Read name
 2. Number of errors
@@ -1963,12 +1970,12 @@ Concatenating them yields the full sequence of quality values.
 If no adapter was found, the format is as follows:
 
 1. Read name
-2. The value -1
+2. The value -1 (use this to distinguish between match and non-match)
 3. The read sequence
 4. Quality values
 
 When parsing the file, be aware that additional columns may be added in
-the future. Note also that some fields can be empty, resulting in
+the future. Also, some fields can be empty, resulting in
 consecutive tabs within a line.
 
 If the ``--times`` option is used and greater than 1, each read can appear
@@ -1979,5 +1986,16 @@ accordingly for columns 9-11). For subsequent lines, the shown sequence are the
 ones that were used in subsequent rounds of adapter trimming, that is, they get
 successively shorter.
 
+Linked adapters appear with up to two rows for each read, one for each constituent
+adapter for which a match has been found. To be able to see which of the two
+adapters a row describes, the adapter name in column 8 is modified: If the row
+describes a match of the 5' adapter, the string ``;1`` is added. If it describes
+a match of the 3' adapter, the string ``;2`` is added. If there are two rows, the
+5' match always comes first.
+
+
 .. versionadded:: 1.9
     Columns 9-11 were added.
+
+.. versionadded:: 2.8
+    Linked adapters in info files work.
