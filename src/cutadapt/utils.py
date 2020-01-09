@@ -154,6 +154,23 @@ class FileOpener:
     def xopen(self, path, mode):
         return xopen(path, mode, compresslevel=self.compression_level, threads=self.threads)
 
+    def xopen_or_none(self, path, mode):
+        """Return opened file or None if the path is None"""
+        if path is None:
+            return None
+        return self.xopen(path, mode)
+
+    def xopen_pair(self, path1, path2, mode):
+        file1 = file2 = None
+        if path1 is not None:
+            file1 = self.xopen(path1, mode)
+            if path2 is not None:
+                file2 = self.xopen(path2, mode)
+        elif path2 is not None:
+            raise ValueError("When giving paths for paired-end files, only providing the second"
+                " file is not supported")
+        return file1, file2
+
     def dnaio_open(self, *args, **kwargs):
         kwargs["opener"] = self.xopen
         return dnaio.open(*args, **kwargs)

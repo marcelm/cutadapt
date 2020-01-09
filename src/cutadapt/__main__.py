@@ -64,7 +64,7 @@ from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 import dnaio
 
 from cutadapt import __version__
-from cutadapt.adapters import warn_duplicate_adapters
+from cutadapt.adapters import warn_duplicate_adapters, Adapter
 from cutadapt.parser import AdapterParser
 from cutadapt.modifiers import (Modifier, LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
@@ -382,37 +382,27 @@ def parse_lengths(s: str) -> Tuple[Optional[int], ...]:
     return tuple(values)
 
 
-def open_output_files(args, default_outfile, interleaved: bool, file_opener) -> OutputFiles:
+def open_output_files(
+    args, default_outfile, interleaved: bool, file_opener: FileOpener
+) -> OutputFiles:
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
     """
 
-    def open1(path):
-        """Return opened file (or None if path is None)"""
-        if path is None:
-            return None
-        return file_opener.xopen(path, "wb")
-
-    def open2(path1, path2):
-        file1 = file2 = None
-        if path1 is not None:
-            file1 = file_opener.xopen(path1, "wb")
-            if path2 is not None:
-                file2 = file_opener.xopen(path2, "wb")
-        return file1, file2
-
-    rest_file = open1(args.rest_file)
-    info_file = open1(args.info_file)
-    wildcard = open1(args.wildcard_file)
+    rest_file = file_opener.xopen_or_none(args.rest_file, "wb")
+    info_file = file_opener.xopen_or_none(args.info_file, "wb")
+    wildcard = file_opener.xopen_or_none(args.wildcard_file, "wb")
 
     too_short = too_short2 = None
     if args.minimum_length is not None:
-        too_short, too_short2 = open2(args.too_short_output, args.too_short_paired_output)
+        too_short, too_short2 = file_opener.xopen_pair(
+            args.too_short_output, args.too_short_paired_output, "wb")
 
     too_long = too_long2 = None
     if args.maximum_length is not None:
-        too_long, too_long2 = open2(args.too_long_output, args.too_long_paired_output)
+        too_long, too_long2 = file_opener.xopen_pair(
+            args.too_long_output, args.too_long_paired_output, "wb")
 
     if int(args.discard_trimmed) + int(args.discard_untrimmed) + int(
             args.untrimmed_output is not None) > 1:
@@ -470,8 +460,9 @@ def open_output_files(args, default_outfile, interleaved: bool, file_opener) -> 
         else:
             untrimmed = untrimmed2 = 'unknown'
     else:
-        untrimmed, untrimmed2 = open2(args.untrimmed_output, args.untrimmed_paired_output)
-        out, out2 = open2(args.output, args.paired_output)
+        untrimmed, untrimmed2 = file_opener.xopen_pair(
+            args.untrimmed_output, args.untrimmed_paired_output, "wb")
+        out, out2 = file_opener.xopen_pair(args.output, args.paired_output, "wb")
         if out is None:
             out = default_outfile
 
@@ -493,7 +484,7 @@ def open_output_files(args, default_outfile, interleaved: bool, file_opener) -> 
     )
 
 
-def determine_paired_mode(args) -> bool:
+def determine_paired(args) -> bool:
     """
     Determine whether we should work in paired-end mode.
     """
@@ -613,23 +604,7 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener) 
     if args.action == 'none':
         args.action = None
 
-    adapter_parser = AdapterParser(
-        max_error_rate=args.error_rate,
-        min_overlap=args.overlap,
-        read_wildcards=args.match_read_wildcards,
-        adapter_wildcards=args.match_adapter_wildcards,
-        indels=args.indels,
-    )
-    try:
-        adapters = adapter_parser.parse_multi(args.adapters)
-        adapters2 = adapter_parser.parse_multi(args.adapters2)
-    except (FileNotFoundError, ValueError) as e:
-        raise CommandLineError(e)
-    warn_duplicate_adapters(adapters)
-    warn_duplicate_adapters(adapters2)
-    if args.debug:
-        for adapter in adapters + adapters2:
-            adapter.enable_debug()
+    adapters, adapters2 = adapters_from_args(args)
 
     # Create the processing pipeline
     if paired:
@@ -695,6 +670,27 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener) 
     pipeline.discard_untrimmed = args.discard_untrimmed
 
     return pipeline
+
+
+def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
+    adapter_parser = AdapterParser(
+        max_error_rate=args.error_rate,
+        min_overlap=args.overlap,
+        read_wildcards=args.match_read_wildcards,
+        adapter_wildcards=args.match_adapter_wildcards,
+        indels=args.indels,
+    )
+    try:
+        adapters = adapter_parser.parse_multi(args.adapters)
+        adapters2 = adapter_parser.parse_multi(args.adapters2)
+    except (FileNotFoundError, ValueError) as e:
+        raise CommandLineError(e)
+    warn_duplicate_adapters(adapters)
+    warn_duplicate_adapters(adapters2)
+    if args.debug:
+        for adapter in adapters + adapters2:
+            adapter.enable_debug()
+    return adapters, adapters2
 
 
 def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[int], paired: bool):
@@ -783,7 +779,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
             "--strip-f3, --maq, --bwa, --no-zero-cap. "
             "Use Cutadapt 1.18 or earlier to work with colorspace data.")
 
-    paired = determine_paired_mode(args)
+    paired = determine_paired(args)
     assert paired in (False, True)
 
     # Print the header now because some of the functions below create logging output
