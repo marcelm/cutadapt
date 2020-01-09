@@ -58,7 +58,7 @@ import sys
 import time
 import logging
 import platform
-from typing import Tuple, Optional, Sequence, List, Any, Iterator
+from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
@@ -409,27 +409,11 @@ def open_output_files(
         raise CommandLineError("Only one of the --discard-trimmed, --discard-untrimmed "
             "and --untrimmed-output options can be used at the same time.")
 
-    demultiplex = args.output is not None and '{name}' in args.output
-
-    if args.paired_output is not None and (demultiplex != ('{name}' in args.paired_output)):
-        raise CommandLineError('When demultiplexing paired-end data, "{name}" must appear in '
-            'both output file names (-o and -p)')
-
-    demultiplex_combinatorial = (
-        args.output is not None
-        and args.paired_output is not None
-        and '{name1}' in args.output
-        and '{name2}' in args.output
-        and '{name1}' in args.paired_output
-        and '{name2}' in args.paired_output
-    )
-    if (demultiplex or demultiplex_combinatorial) and args.discard_trimmed:
+    demultiplex_mode = determine_demultiplex_mode(args)
+    if demultiplex_mode and args.discard_trimmed:
         raise CommandLineError("Do not use --discard-trimmed when demultiplexing.")
 
-    if demultiplex:
-        if demultiplex_combinatorial:
-            raise CommandLineError("You cannot combine {name} with {name1} and {name2}")
-
+    if demultiplex_mode == "normal":
         out = args.output
         untrimmed = args.output.replace('{name}', 'unknown')
         if args.untrimmed_output:
@@ -444,12 +428,11 @@ def open_output_files(
                 untrimmed2 = args.untrimmed_paired_output
             if args.discard_untrimmed:
                 untrimmed2 = None
-
         else:
             untrimmed2 = out2 = None
 
         assert out is not None and '{name}' in out and (out2 is None or '{name}' in out2)
-    elif demultiplex_combinatorial:
+    elif demultiplex_mode == "combinatorial":
         out = args.output
         out2 = args.paired_output
         if args.untrimmed_output or args.untrimmed_paired_output:
@@ -478,10 +461,38 @@ def open_output_files(
         untrimmed2=untrimmed2,
         out=out,
         out2=out2,
-        demultiplex=demultiplex or demultiplex_combinatorial,
+        demultiplex=bool(demultiplex_mode),
         interleaved=interleaved,
         force_fasta=args.fasta,
     )
+
+
+def determine_demultiplex_mode(args) -> Union[str, bool]:
+    """Return one of "normal", "combinatorial" or False"""
+
+    demultiplex = args.output is not None and '{name}' in args.output
+
+    if args.paired_output is not None and (demultiplex != ('{name}' in args.paired_output)):
+        raise CommandLineError('When demultiplexing paired-end data, "{name}" must appear in '
+                               'both output file names (-o and -p)')
+
+    demultiplex_combinatorial = (
+        args.output is not None
+        and args.paired_output is not None
+        and '{name1}' in args.output
+        and '{name2}' in args.output
+        and '{name1}' in args.paired_output
+        and '{name2}' in args.paired_output
+    )
+    if demultiplex and demultiplex_combinatorial:
+        raise CommandLineError("You cannot combine {name} with {name1} and {name2}")
+
+    if demultiplex:
+        return "normal"
+    elif demultiplex_combinatorial:
+        return "combinatorial"
+    else:
+        return False
 
 
 def determine_paired(args) -> bool:
@@ -511,7 +522,7 @@ def determine_interleaved(args) -> Tuple[bool, bool]:
     return is_interleaved_input, is_interleaved_output
 
 
-def input_files_from_parsed_args(
+def setup_input_files(
     inputs: Sequence[str], paired: bool, interleaved: bool
 ) -> Tuple[str, Optional[str]]:
     """
@@ -592,7 +603,7 @@ def check_arguments(args, paired: bool, is_interleaved_output: bool) -> None:
         raise CommandLineError("--pair-adapters cannot be used with --times")
 
 
-def pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener) -> Pipeline:
+def pipeline_from_parsed_args(args, paired, file_opener) -> Pipeline:
     """
     Setup a processing pipeline from parsed command-line arguments.
 
@@ -600,7 +611,6 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener) 
 
     Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
     """
-    check_arguments(args, paired, is_interleaved_output)
     if args.action == 'none':
         args.action = None
 
@@ -792,9 +802,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         compression_level=args.compression_level, threads=0 if cores == 1 else None)
     try:
         is_interleaved_input, is_interleaved_output = determine_interleaved(args)
-        input_filename, input_paired_filename = input_files_from_parsed_args(args.inputs,
+        input_filename, input_paired_filename = setup_input_files(args.inputs,
             paired, is_interleaved_input)
-        pipeline = pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener)
+        check_arguments(args, paired, is_interleaved_output)
+        pipeline = pipeline_from_parsed_args(args, paired, file_opener)
         outfiles = open_output_files(args, default_outfile, is_interleaved_output, file_opener)
     except CommandLineError as e:
         parser.error(str(e))
