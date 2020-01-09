@@ -18,7 +18,13 @@ class Modifier(ABC):
         pass
 
 
-class PairedModifier:
+class PairedModifier(ABC):
+    @abstractmethod
+    def __call__(self, read1, read2, matches1, matches2):
+        pass
+
+
+class PairedModifierWrapper(PairedModifier):
     """
     Wrapper for modifiers that work on both reads in a paired-end read
     """
@@ -210,6 +216,7 @@ class PairedAdapterCutter(PairedModifier):
 
         action -- What to do with a found adapter: None, 'trim', or 'mask'
         """
+        super().__init__()
         if len(adapters1) != len(adapters2):
             raise PairedAdapterCutterError(
                 "The number of reads to trim from R1 and R2 must be the same. "

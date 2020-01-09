@@ -58,7 +58,7 @@ import sys
 import time
 import logging
 import platform
-from typing import Tuple, Optional, Sequence, List, Any
+from typing import Tuple, Optional, Sequence, List, Any, Iterator
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
@@ -66,12 +66,12 @@ import dnaio
 from cutadapt import __version__
 from cutadapt.adapters import warn_duplicate_adapters
 from cutadapt.parser import AdapterParser
-from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
+from cutadapt.modifiers import (Modifier, LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
     PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener)
 from cutadapt.report import full_report, minimal_report
-from cutadapt.pipeline import (Pipeline, SingleEndPipeline, PairedEndPipeline, InputFiles, OutputFiles,
-    SerialPipelineRunner, ParallelPipelineRunner)
+from cutadapt.pipeline import (Pipeline, SingleEndPipeline, PairedEndPipeline, InputFiles,
+    OutputFiles, SerialPipelineRunner, ParallelPipelineRunner)
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress, FileOpener
 from cutadapt.log import setup_logging, REPORT
 
@@ -722,7 +722,7 @@ def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[in
                 pipeline.add(None, UnconditionalCutter(c))
 
 
-def modifiers_applying_to_both_ends_if_paired(args):
+def modifiers_applying_to_both_ends_if_paired(args) -> Iterator[Modifier]:
     if args.length is not None:
         yield Shortener(args.length)
     if args.trim_n:
@@ -770,6 +770,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         import cProfile
         profiler = cProfile.Profile()
         profiler.enable()
+    else:
+        profiler = None
 
     if args.quiet and args.report:
         parser.error("Options --quiet and --report cannot be used at the same time")
@@ -846,7 +848,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     else:
         report = full_report
     logger.log(REPORT, '%s', report(stats, elapsed, args.gc_content / 100))
-    if args.profile:
+    if profiler is not None:
         import pstats
         profiler.disable()
         pstats.Stats(profiler).sort_stats('time').print_stats(20)

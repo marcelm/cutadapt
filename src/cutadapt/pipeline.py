@@ -16,7 +16,7 @@ from xopen import xopen
 import dnaio
 
 from .utils import Progress, FileOpener
-from .modifiers import PairedModifier, Modifier
+from .modifiers import Modifier, PairedModifier, PairedModifierWrapper
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
@@ -334,17 +334,17 @@ class PairedEndPipeline(Pipeline):
         """
         if modifier1 is None and modifier2 is None:
             raise ValueError("Not both modifiers can be None")
-        self._modifiers.append(PairedModifier(modifier1, modifier2))
+        self._modifiers.append(PairedModifierWrapper(modifier1, modifier2))
 
     def add_both(self, modifier: Modifier):
         """
         Add one modifier for both R1 and R2
         """
         assert modifier is not None
-        self._modifiers.append(PairedModifier(modifier, copy.copy(modifier)))
+        self._modifiers.append(PairedModifierWrapper(modifier, copy.copy(modifier)))
 
-    def add_paired_modifier(self, paired_modifier):
-        """Add a Modifier without wrapping it in a PairedModifier"""
+    def add_paired_modifier(self, paired_modifier: PairedModifier):
+        """Add a Modifier (without wrapping it in a PairedModifierWrapper)"""
         self._modifiers.append(paired_modifier)
 
     def process_reads(self, progress: Progress = None):
