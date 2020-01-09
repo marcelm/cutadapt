@@ -4,7 +4,7 @@ A modifier must be callable and typically implemented as a class with a
 __call__ method.
 """
 import re
-from typing import Sequence, List
+from typing import Sequence, List, Optional
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 
@@ -24,7 +24,7 @@ class PairedModifier:
     """
     paired = True
 
-    def __init__(self, modifier1: Modifier, modifier2: Modifier):
+    def __init__(self, modifier1: Optional[Modifier], modifier2: Optional[Modifier]):
         """Set one of the modifiers to None to work on R1 or R2 only"""
         self._modifier1 = modifier1
         self._modifier2 = modifier2
@@ -195,7 +195,7 @@ class PairedAdapterCutterError(Exception):
     pass
 
 
-class PairedAdapterCutter:
+class PairedAdapterCutter(PairedModifier):
     """
     A Modifier that trims adapter pairs from R1 and R2.
     """
@@ -274,10 +274,10 @@ class UnconditionalCutter(Modifier):
     If the length is positive, the bases are removed from the beginning of the read.
     If the length is negative, the bases are removed from the end of the read.
     """
-    def __init__(self, length):
+    def __init__(self, length: int):
         self.length = length
 
-    def __call__(self, read, matches):
+    def __call__(self, read, matches: List[Match]):
         if self.length > 0:
             return read[self.length:]
         elif self.length < 0:

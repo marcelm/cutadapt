@@ -327,7 +327,7 @@ class PairedEndPipeline(Pipeline):
         # Whether to ignore pair_filter mode for discard-untrimmed filter
         self.override_untrimmed_pair_filter = False
 
-    def add(self, modifier1: Modifier, modifier2: Modifier):
+    def add(self, modifier1: Optional[Modifier], modifier2: Optional[Modifier]):
         """
         Add a modifier for R1 and R2. One of them can be None, in which case the modifier
         will only be added for the respective read.

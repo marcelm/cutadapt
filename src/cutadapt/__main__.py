@@ -58,6 +58,7 @@ import sys
 import time
 import logging
 import platform
+from typing import Tuple, Optional, Sequence, List, Any
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
@@ -69,7 +70,7 @@ from cutadapt.modifiers import (LengthTagModifier, SuffixRemover, PrefixSuffixAd
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
     PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener)
 from cutadapt.report import full_report, minimal_report
-from cutadapt.pipeline import (SingleEndPipeline, PairedEndPipeline, InputFiles, OutputFiles,
+from cutadapt.pipeline import (Pipeline, SingleEndPipeline, PairedEndPipeline, InputFiles, OutputFiles,
     SerialPipelineRunner, ParallelPipelineRunner)
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress, FileOpener
 from cutadapt.log import setup_logging, REPORT
@@ -108,7 +109,7 @@ class CommandLineError(Exception):
     pass
 
 
-def get_argument_parser():
+def get_argument_parser() -> ArgumentParser:
     # noqa: E131
     parser = CutadaptArgumentParser(usage=__doc__, add_help=False)
     group = parser.add_argument_group("Options")
@@ -335,13 +336,13 @@ def get_argument_parser():
     return parser
 
 
-def parse_cutoffs(s):
-    """Parse a string INT[,INT] into a two-element list of integers
+def parse_cutoffs(s: str) -> Tuple[int, int]:
+    """Parse a string INT[,INT] into a pair of integers
 
     >>> parse_cutoffs("5")
-    [0, 5]
+    (0, 5)
     >>> parse_cutoffs("6,7")
-    [6, 7]
+    (6, 7)
     """
     try:
         cutoffs = [int(value) for value in s.split(",")]
@@ -353,10 +354,11 @@ def parse_cutoffs(s):
     elif len(cutoffs) != 2:
         raise CommandLineError("Expected one value or two values separated by comma for "
             "the quality cutoff")
-    return cutoffs
+
+    return (cutoffs[0], cutoffs[1])
 
 
-def parse_lengths(s):
+def parse_lengths(s: str) -> Tuple[Optional[int], ...]:
     """Parse [INT][:[INT]] into a pair of integers. If a value is omitted, use None
 
     >>> parse_lengths('25')
@@ -380,7 +382,7 @@ def parse_lengths(s):
     return tuple(values)
 
 
-def open_output_files(args, default_outfile, interleaved, file_opener):
+def open_output_files(args, default_outfile, interleaved: bool, file_opener) -> OutputFiles:
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
@@ -491,7 +493,7 @@ def open_output_files(args, default_outfile, interleaved, file_opener):
     )
 
 
-def determine_paired_mode(args):
+def determine_paired_mode(args) -> bool:
     """
     Determine whether we should work in paired-end mode.
     """
@@ -506,7 +508,7 @@ def determine_paired_mode(args):
         or args.too_long_paired_output)
 
 
-def determine_interleaved(args):
+def determine_interleaved(args) -> Tuple[bool, bool]:
     is_interleaved_input = False
     is_interleaved_output = False
     if args.interleaved:
@@ -518,7 +520,9 @@ def determine_interleaved(args):
     return is_interleaved_input, is_interleaved_output
 
 
-def input_files_from_parsed_args(inputs, paired, interleaved):
+def input_files_from_parsed_args(
+    inputs: Sequence[str], paired: bool, interleaved: bool
+) -> Tuple[str, Optional[str]]:
     """
     Return tuple (input_filename, input_paired_filename)
     """
@@ -541,7 +545,7 @@ def input_files_from_parsed_args(inputs, paired, interleaved):
                 "but then you also need to provide two input files (you provided one) or "
                 "use --interleaved.")
         else:
-            input_paired_filename = inputs[1]
+            input_paired_filename = inputs[1]  # type: Optional[str]
     else:
         if len(inputs) == 2:
             raise CommandLineError(
@@ -553,7 +557,7 @@ def input_files_from_parsed_args(inputs, paired, interleaved):
     return input_filename, input_paired_filename
 
 
-def check_arguments(args, paired, is_interleaved_output):
+def check_arguments(args, paired: bool, is_interleaved_output: bool) -> None:
     if not paired:
         if args.untrimmed_paired_output:
             raise CommandLineError("Option --untrimmed-paired-output can only be used when "
@@ -597,7 +601,7 @@ def check_arguments(args, paired, is_interleaved_output):
         raise CommandLineError("--pair-adapters cannot be used with --times")
 
 
-def pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener):
+def pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener) -> Pipeline:
     """
     Setup a processing pipeline from parsed command-line arguments.
 
@@ -630,13 +634,15 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener):
     # Create the processing pipeline
     if paired:
         pair_filter_mode = 'any' if args.pair_filter is None else args.pair_filter
-        pipeline = PairedEndPipeline(pair_filter_mode, file_opener)
+        pipeline = PairedEndPipeline(
+            pair_filter_mode, file_opener
+        )  # type: Any
     else:
         pipeline = SingleEndPipeline(file_opener)
 
     # When adapters are being trimmed only in R1 or R2, override the pair filter mode
     # as using the default of 'any' would regard all read pairs as untrimmed.
-    if paired and (not adapters2 or not adapters) and (
+    if isinstance(pipeline, PairedEndPipeline) and (not adapters2 or not adapters) and (
             args.discard_untrimmed or args.untrimmed_output or args.untrimmed_paired_output):
         pipeline.override_untrimmed_pair_filter = True
 
@@ -691,7 +697,7 @@ def pipeline_from_parsed_args(args, paired, is_interleaved_output, file_opener):
     return pipeline
 
 
-def add_unconditional_cutters(pipeline, cut1, cut2, paired):
+def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[int], paired: bool):
     for i, cut_arg in enumerate([cut1, cut2]):
         # cut_arg is a list
         if not cut_arg:
@@ -705,8 +711,10 @@ def add_unconditional_cutters(pipeline, cut1, cut2, paired):
                 continue
             if i == 0:  # R1
                 if paired:
+                    assert isinstance(pipeline, PairedEndPipeline)
                     pipeline.add(UnconditionalCutter(c), None)
                 else:
+                    assert isinstance(pipeline, SingleEndPipeline)
                     pipeline.add(UnconditionalCutter(c))
             else:
                 # R2
