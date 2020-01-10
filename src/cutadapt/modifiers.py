@@ -233,7 +233,7 @@ class ReverseComplementer(Modifier):
             for match in matches:
                 stats = self.adapter_cutter.adapter_statistics[match.adapter]
                 match.update_statistics(stats)
-                stats.reverse_complemented_reads += bool(use_reverse_complement)
+                stats.reverse_complemented += bool(use_reverse_complement)
             inmatches.extend(matches)
         return trimmed_read
 

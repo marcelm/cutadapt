@@ -157,7 +157,7 @@ class AdapterStatistics:
         self.name = adapter.name
         self.where = where if where is not None else adapter.where
         self.front = EndStatistics(adapter)
-        self.reverse_complemented_reads = 0
+        self.reverse_complemented = 0
         if adapter2 is None:
             self.back = EndStatistics(adapter)
         else:
@@ -176,7 +176,7 @@ class AdapterStatistics:
             raise ValueError('incompatible objects')
         self.front += other.front
         self.back += other.back
-        self.reverse_complemented_reads += other.reverse_complemented_reads
+        self.reverse_complemented += other.reverse_complemented
         return self
 
 

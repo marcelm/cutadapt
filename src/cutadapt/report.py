@@ -339,6 +339,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:
             total_front = sum(adapter_statistics.front.lengths.values())
             total_back = sum(adapter_statistics.back.lengths.values())
             total = total_front + total_back
+            reverse_complemented = adapter_statistics.reverse_complemented
             where = adapter_statistics.where
             where_backs = (Where.BACK, Where.BACK_NOT_INTERNAL, Where.SUFFIX)
             where_fronts = (Where.FRONT, Where.FRONT_NOT_INTERNAL, Where.PREFIX)
@@ -363,9 +364,13 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:
                         len(adapter_statistics.back.sequence),
                         total_front, total_back))
             else:
-                print_s("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times.".
+                print_s("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times".
                     format(adapter_statistics.front.sequence, ADAPTER_TYPE_NAMES[adapter_statistics.where],
-                        len(adapter_statistics.front.sequence), total))
+                        len(adapter_statistics.front.sequence), total), end="")
+            if reverse_complemented is not None:
+                print_s("; Reverse-complemented: {}".format(reverse_complemented))
+            else:
+                print_s()
             if total == 0:
                 print_s()
                 continue
