@@ -36,7 +36,7 @@ class Statistics:
         self.too_short = None
         self.too_long = None
         self.too_many_n = None
-        self.reverse_complemented = None
+        self.reverse_complemented = None  # type: Optional[int]
         self.n = 0
         self.written = 0
         self.total_bp = [0, 0]
@@ -275,7 +275,7 @@ class AdjacentBaseStatistics:
         return sio.getvalue()
 
 
-def full_report(stats: Statistics, time: float, gc_content: float) -> str:
+def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # noqa: C901
     """Print report to standard output."""
     if stats.n == 0:
         return "No reads processed!"
@@ -302,7 +302,8 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:
         Reads with adapters:             {o.with_adapters[0]:13,d} ({o.with_adapters_fraction[0]:.1%})
         """)
     if stats.reverse_complemented is not None:
-        report += "Reverse-complemented:            {o.reverse_complemented:13,d} ({o.reverse_complemented_fraction:.1%})\n"
+        report += "Reverse-complemented:            " \
+                  "{o.reverse_complemented:13,d} ({o.reverse_complemented_fraction:.1%})\n"
     if stats.too_short is not None:
         report += "{pairs_or_reads} that were too short:       {o.too_short:13,d} ({o.too_short_fraction:.1%})\n"
     if stats.too_long is not None:
