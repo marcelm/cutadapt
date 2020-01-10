@@ -755,13 +755,14 @@ def add_adapter_cutter(
                 raise CommandLineError("--revcomp not implemented for paired-end reads")
             if adapter_cutter or adapter_cutter2:
                 pipeline.add(adapter_cutter, adapter_cutter2)
-        else:
-            if adapter_cutter:
-                if reverse_complement:
-                    modifier = ReverseComplementer(adapter_cutter)
-                else:
-                    modifier = adapter_cutter
-                pipeline.add(modifier)
+        elif adapter_cutter:
+            if reverse_complement:
+                modifier = ReverseComplementer(
+                    adapter_cutter
+                )  # type: Union[AdapterCutter,ReverseComplementer]
+            else:
+                modifier = adapter_cutter
+            pipeline.add(modifier)
 
 
 def modifiers_applying_to_both_ends_if_paired(args) -> Iterator[Modifier]:
