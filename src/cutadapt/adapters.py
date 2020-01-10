@@ -145,7 +145,7 @@ class AdapterStatistics:
     """
     Statistics about an adapter. An adapter can work on the 5' end (front)
     or 3' end (back) of a read, and statistics for that are captured
-    separately.
+    separately in EndStatistics objects.
     """
 
     def __init__(
@@ -157,6 +157,7 @@ class AdapterStatistics:
         self.name = adapter.name
         self.where = where if where is not None else adapter.where
         self.front = EndStatistics(adapter)
+        self.reverse_complemented = 0
         if adapter2 is None:
             self.back = EndStatistics(adapter)
         else:
@@ -170,11 +171,12 @@ class AdapterStatistics:
             self.back,
         )
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: "AdapterStatistics"):
         if self.where != other.where:  # TODO self.name != other.name or
             raise ValueError('incompatible objects')
         self.front += other.front
         self.back += other.back
+        self.reverse_complemented += other.reverse_complemented
         return self
 
 
@@ -300,7 +302,7 @@ class SingleMatch(Match):
     def trimmed(self):
         return self._trimmed_read
 
-    def update_statistics(self, statistics):
+    def update_statistics(self, statistics: AdapterStatistics):
         """Update AdapterStatistics in place"""
         if self.remove_before:
             statistics.front.errors[self.rstop][self.errors] += 1

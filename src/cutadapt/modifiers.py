@@ -10,6 +10,7 @@ from collections import OrderedDict
 
 from .qualtrim import quality_trim_index, nextseq_trim_index
 from .adapters import Where, MultiAdapter, Match, remainder
+from .utils import reverse_complemented_sequence
 
 
 class Modifier(ABC):
@@ -195,6 +196,46 @@ class AdapterCutter(Modifier):
             trimmed_read = read[:]
 
         return trimmed_read, matches
+
+
+class ReverseComplementer(Modifier):
+    """Trim adapters from a read and its reverse complement"""
+
+    def __init__(self, adapter_cutter: AdapterCutter, rc_suffix: Optional[str] = " rc"):
+        """
+        rc_suffix -- suffix to add to the read name if sequence was reverse-complemented
+        """
+        self.adapter_cutter = adapter_cutter
+        self.reverse_complemented = 0
+        self._suffix = rc_suffix
+
+    def __call__(self, read, inmatches: List[Match]):
+        reverse_read = reverse_complemented_sequence(read)
+
+        forward_trimmed_read, forward_matches = self.adapter_cutter.match_and_trim(read)
+        reverse_trimmed_read, reverse_matches = self.adapter_cutter.match_and_trim(reverse_read)
+
+        forward_match_count = sum(m.matches for m in forward_matches)
+        reverse_match_count = sum(m.matches for m in reverse_matches)
+        use_reverse_complement = reverse_match_count > forward_match_count
+
+        if use_reverse_complement:
+            self.reverse_complemented += 1
+            assert reverse_matches
+            trimmed_read, matches = reverse_trimmed_read, reverse_matches
+            if self._suffix:
+                trimmed_read.name += self._suffix
+        else:
+            trimmed_read, matches = forward_trimmed_read, forward_matches
+
+        if matches:
+            self.adapter_cutter.with_adapters += 1
+            for match in matches:
+                stats = self.adapter_cutter.adapter_statistics[match.adapter]
+                match.update_statistics(stats)
+                stats.reverse_complemented += bool(use_reverse_complement)
+            inmatches.extend(matches)
+        return trimmed_read
 
 
 class PairedAdapterCutterError(Exception):

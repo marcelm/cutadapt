@@ -34,11 +34,10 @@ For paired-end reads:
     cutadapt -a ADAPT1 -A ADAPT2 [options] -o out1.fastq -p out2.fastq in1.fastq in2.fastq
 
 Replace "ADAPTER" with the actual sequence of your 3' adapter. IUPAC wildcard
-characters are supported. The reverse complement is *not* automatically
-searched. All reads from input.fastq will be written to output.fastq with the
-adapter sequence removed. Adapter matching is error-tolerant. Multiple adapter
-sequences can be given (use further -a options), but only the best-matching
-adapter will be removed.
+characters are supported. All reads from input.fastq will be written to
+output.fastq with the adapter sequence removed. Adapter matching is
+error-tolerant. Multiple adapter sequences can be given (use further -a
+options), but only the best-matching adapter will be removed.
 
 Input may also be in FASTA format. Compressed input and output is supported and
 auto-detected from the file name (.gz, .xz, .bz2). Use the file name '-' for
@@ -68,7 +67,8 @@ from cutadapt.adapters import warn_duplicate_adapters, Adapter
 from cutadapt.parser import AdapterParser
 from cutadapt.modifiers import (Modifier, LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
-    PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener)
+    PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener,
+    ReverseComplementer)
 from cutadapt.report import full_report, minimal_report
 from cutadapt.pipeline import (Pipeline, SingleEndPipeline, PairedEndPipeline, InputFiles,
     OutputFiles, SerialPipelineRunner, ParallelPipelineRunner)
@@ -186,6 +186,11 @@ def get_argument_parser() -> ArgumentParser:
             "lowercase: convert to lowercase; "
             "none: leave unchanged (useful with "
             "--discard-untrimmed). Default: %(default)s")
+    group.add_argument("--rc", "--revcomp", dest="reverse_complement", default=False,
+        action="store_true",
+        help="Check both the read and its reverse complement for adapter matches. If "
+            "match is on reverse-complemented version, output that one. "
+            "Default: check only read")
     group.add_argument("--no-trim", dest='action', action='store_const', const='none',
         help=SUPPRESS)  # Deprecated, use --action=none
     group.add_argument("--mask-adapter", dest='action', action='store_const', const='mask',
@@ -641,24 +646,16 @@ def pipeline_from_parsed_args(args, paired, file_opener) -> Pipeline:
         cutoffs = parse_cutoffs(args.quality_cutoff)
         pipeline_add(QualityTrimmer(cutoffs[0], cutoffs[1], args.quality_base))
 
-    if args.pair_adapters:
-        try:
-            cutter = PairedAdapterCutter(adapters, adapters2, args.action)
-        except PairedAdapterCutterError as e:
-            raise CommandLineError("--pair-adapters: " + str(e))
-        pipeline.add_paired_modifier(cutter)
-    else:
-        adapter_cutter, adapter_cutter2 = None, None
-        if adapters:
-            adapter_cutter = AdapterCutter(adapters, args.times, args.action)
-        if adapters2:
-            adapter_cutter2 = AdapterCutter(adapters2, args.times, args.action)
-        if paired:
-            if adapter_cutter or adapter_cutter2:
-                pipeline.add(adapter_cutter, adapter_cutter2)
-        else:
-            if adapter_cutter:
-                pipeline.add(adapter_cutter)
+    add_adapter_cutter(
+        pipeline,
+        adapters,
+        adapters2,
+        paired,
+        args.pair_adapters,
+        args.action,
+        args.times,
+        args.reverse_complement,
+    )
 
     for modifier in modifiers_applying_to_both_ends_if_paired(args):
         pipeline_add(modifier)
@@ -726,6 +723,45 @@ def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[in
                 # R2
                 assert isinstance(pipeline, PairedEndPipeline)
                 pipeline.add(None, UnconditionalCutter(c))
+
+
+def add_adapter_cutter(
+    pipeline,
+    adapters,
+    adapters2,
+    paired: bool,
+    pair_adapters: bool,
+    action: str,
+    times: int,
+    reverse_complement: bool,
+):
+    if pair_adapters:
+        if reverse_complement:
+            raise CommandLineError("Cannot use --revcomp with --pair-adapters")
+        try:
+            cutter = PairedAdapterCutter(adapters, adapters2, action)
+        except PairedAdapterCutterError as e:
+            raise CommandLineError("--pair-adapters: " + str(e))
+        pipeline.add_paired_modifier(cutter)
+    else:
+        adapter_cutter, adapter_cutter2 = None, None
+        if adapters:
+            adapter_cutter = AdapterCutter(adapters, times, action)
+        if adapters2:
+            adapter_cutter2 = AdapterCutter(adapters2, times, action)
+        if paired:
+            if reverse_complement:
+                raise CommandLineError("--revcomp not implemented for paired-end reads")
+            if adapter_cutter or adapter_cutter2:
+                pipeline.add(adapter_cutter, adapter_cutter2)
+        elif adapter_cutter:
+            if reverse_complement:
+                modifier = ReverseComplementer(
+                    adapter_cutter
+                )  # type: Union[AdapterCutter,ReverseComplementer]
+            else:
+                modifier = adapter_cutter
+            pipeline.add(modifier)
 
 
 def modifiers_applying_to_both_ends_if_paired(args) -> Iterator[Modifier]:

@@ -225,8 +225,9 @@ Adapter sequences :ref:`may also contain any IUPAC wildcard
 character <wildcards>` (such as ``N``).
 
 In addition, it is possible to :ref:`remove a fixed number of
-bases <cut-bases>` from the beginning or end of each read, and to :ref:`remove
-low-quality bases (quality trimming) <quality-trimming>` from the 3' and 5' ends.
+bases <cut-bases>` from the beginning or end of each read, to :ref:`remove
+low-quality bases (quality trimming) <quality-trimming>` from the 3' and 5' ends,
+and to :ref:`search for adapters also in the reverse-complemented reads <reverse-complement>`.
 
 
 Overview of adapter types
@@ -798,6 +799,43 @@ at both ends, use ``-g "ADAPTER;anywhere"``.
     to be matched will result in empty reads! This means that short random
     matches have a much greater detrimental effect and you should
     :ref:`increase the minimum overlap length <random-matches>`.
+
+
+.. _reverse-complement:
+
+Searching reverse complements
+-----------------------------
+
+.. note::
+    Option ``--revcomp`` is added on a tentative basis. Its behaviour
+
+
+By default, Cutadapt expects adapters to be given in the same orientation (5' to 3') as the reads.
+
+To change this, use option ``--revcomp`` or its abbreviation ``--rc``. If given, Cutadapt searches
+both the read and its reverse complement for adapters. If the reverse complemented read yields
+a better match, then that version of the read is kept. That is, the output file will contain the
+reverse-complemented sequence. This can be used to “normalize” read orientation/strandedness.
+
+To determine which version of the read yields the better match, the full adapter search (possibly
+multiple rounds if ``--times`` is used) is done independently on both versions, and the version that
+results in the higher number of matching nucleotides is considered to be the better one.
+
+The name of a reverse-complemented read is changed by adding a space and ``rc`` to it. (Please
+file an issue if you would like this to be configurable.)
+
+The report will show the number of reads that were reverse-complemented, like this::
+
+    Total reads processed:  60
+    Reads with adapters:    50 (83.3%)
+    Reverse-complemented:   20 (33.3%)
+
+Here, 20 reverse-complemented reads contain an adapter and 50 - 20 = 30 reads that did not need to
+be reverse-complemented contain an adapter.
+
+Option ``--revcomp`` is currently available only for single-end data.
+
+.. versionadded:: 2.8
 
 
 Specifying adapter sequences
@@ -1850,7 +1888,10 @@ starts with something like this::
 
     Sequence: 'ACGTACGTACGTTAGCTAGC'; Length: 20; Trimmed: 2402 times.
 
-The meaning of this should be obvious.
+The meaning of this should be obvious. If option ``--revcomp`` was used,
+this line will additionally contain something like ``Reverse-complemented:
+984 times``. This describes how many times of the 2402 total times the
+adapter was found on the reverse complement of the read.
 
 The next piece of information is this::
 
