@@ -5,6 +5,9 @@ Changes
 development version
 -------------------
 
+* :issue:`220`: With option ``--revcomp``, Cutadapt now searches both the read
+  and its reverse complement for adapters. The version that matches best is
+  kept. This can be used to “normalize” sequence orientation.
 * :issue:`430`: ``--action=lowercase`` now works with linked adapters
 
 v2.7 (2019-11-22)

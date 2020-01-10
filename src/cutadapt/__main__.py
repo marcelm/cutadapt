@@ -34,11 +34,10 @@ For paired-end reads:
     cutadapt -a ADAPT1 -A ADAPT2 [options] -o out1.fastq -p out2.fastq in1.fastq in2.fastq
 
 Replace "ADAPTER" with the actual sequence of your 3' adapter. IUPAC wildcard
-characters are supported. The reverse complement is *not* automatically
-searched. All reads from input.fastq will be written to output.fastq with the
-adapter sequence removed. Adapter matching is error-tolerant. Multiple adapter
-sequences can be given (use further -a options), but only the best-matching
-adapter will be removed.
+characters are supported. All reads from input.fastq will be written to
+output.fastq with the adapter sequence removed. Adapter matching is
+error-tolerant. Multiple adapter sequences can be given (use further -a
+options), but only the best-matching adapter will be removed.
 
 Input may also be in FASTA format. Compressed input and output is supported and
 auto-detected from the file name (.gz, .xz, .bz2). Use the file name '-' for

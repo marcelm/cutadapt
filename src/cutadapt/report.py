@@ -368,7 +368,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:
                     format(adapter_statistics.front.sequence, ADAPTER_TYPE_NAMES[adapter_statistics.where],
                         len(adapter_statistics.front.sequence), total), end="")
             if reverse_complemented is not None:
-                print_s("; Reverse-complemented: {}".format(reverse_complemented))
+                print_s("; Reverse-complemented: {} times".format(reverse_complemented))
             else:
                 print_s()
             if total == 0:
