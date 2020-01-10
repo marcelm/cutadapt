@@ -145,7 +145,7 @@ class AdapterStatistics:
     """
     Statistics about an adapter. An adapter can work on the 5' end (front)
     or 3' end (back) of a read, and statistics for that are captured
-    separately.
+    separately in EndStatistics objects.
     """
 
     def __init__(
