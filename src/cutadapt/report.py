@@ -6,7 +6,7 @@ import textwrap
 from typing import Any, Optional, List
 from .adapters import Where, EndStatistics, AdapterStatistics, ADAPTER_TYPE_NAMES
 from .modifiers import (Modifier, PairedModifier, QualityTrimmer, NextseqQualityTrimmer,
-    AdapterCutter, PairedAdapterCutter)
+    AdapterCutter, PairedAdapterCutter, ReverseComplementer)
 from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
     PairedDemultiplexer, CombinatorialDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter,
     WildcardFileWriter, RestFileWriter)
@@ -32,10 +32,11 @@ class Statistics:
         """
         """
         self.paired = None  # type: Optional[bool]
+        self.did_quality_trimming = None  # type: Optional[bool]
         self.too_short = None
         self.too_long = None
         self.too_many_n = None
-        self.did_quality_trimming = None  # type: Optional[bool]
+        self.reverse_complemented = None
         self.n = 0
         self.written = 0
         self.total_bp = [0, 0]
@@ -57,6 +58,8 @@ class Statistics:
         elif self.did_quality_trimming != other.did_quality_trimming:
             raise ValueError('Incompatible Statistics: did_quality_trimming is not equal')
 
+        self.reverse_complemented = add_if_not_none(
+            self.reverse_complemented, other.reverse_complemented)
         self.too_short = add_if_not_none(self.too_short, other.too_short)
         self.too_long = add_if_not_none(self.too_long, other.too_long)
         self.too_many_n = add_if_not_none(self.too_many_n, other.too_many_n)
@@ -130,6 +133,10 @@ class Statistics:
             elif isinstance(modifier, AdapterCutter):
                 self.with_adapters[i] += modifier.with_adapters
                 self.adapter_stats[i] = list(modifier.adapter_statistics.values())
+            elif isinstance(modifier, ReverseComplementer):
+                self.with_adapters[i] += modifier.adapter_cutter.with_adapters
+                self.adapter_stats[i] = list(modifier.adapter_cutter.adapter_statistics.values())
+                self.reverse_complemented = modifier.reverse_complemented
 
     @property
     def total(self):
@@ -158,6 +165,10 @@ class Statistics:
     @property
     def total_written_bp_fraction(self):
         return safe_divide(self.total_written_bp, self.total)
+
+    @property
+    def reverse_complemented_fraction(self):
+        return safe_divide(self.reverse_complemented, self.n)
 
     @property
     def too_short_fraction(self):
@@ -290,6 +301,8 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:
         Total reads processed:           {o.n:13,d}
         Reads with adapters:             {o.with_adapters[0]:13,d} ({o.with_adapters_fraction[0]:.1%})
         """)
+    if stats.reverse_complemented is not None:
+        report += "Reverse-complemented:            {o.reverse_complemented:13,d} ({o.reverse_complemented_fraction:.1%})\n"
     if stats.too_short is not None:
         report += "{pairs_or_reads} that were too short:       {o.too_short:13,d} ({o.too_short_fraction:.1%})\n"
     if stats.too_long is not None:

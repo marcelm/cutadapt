@@ -206,9 +206,8 @@ class ReverseComplementer(Modifier):
         rc_suffix -- suffix to add to the read name if sequence was reverse-complemented
         """
         self.adapter_cutter = adapter_cutter
-        self.n_reverse_complemented = 0
+        self.reverse_complemented = 0
         self._suffix = rc_suffix
-        self.not_reverse_complemented = 0  # TODO remove, only for debugging
 
     def __call__(self, read, inmatches: List[Match]):
         reverse_read = reverse_complemented_sequence(read)
@@ -221,15 +220,12 @@ class ReverseComplementer(Modifier):
         use_reverse_complement = reverse_match_count > forward_match_count
 
         if use_reverse_complement:
-            self.n_reverse_complemented += 1
+            self.reverse_complemented += 1
             assert reverse_matches
             trimmed_read, matches = reverse_trimmed_read, reverse_matches
             if self._suffix:
                 trimmed_read.name += self._suffix
         else:
-            if forward_match_count > 0:
-                assert forward_matches
-                self.not_reverse_complemented += 1
             trimmed_read, matches = forward_trimmed_read, forward_matches
 
         if matches:

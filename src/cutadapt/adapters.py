@@ -157,6 +157,7 @@ class AdapterStatistics:
         self.name = adapter.name
         self.where = where if where is not None else adapter.where
         self.front = EndStatistics(adapter)
+        self.reverse_complemented_reads = 0
         if adapter2 is None:
             self.back = EndStatistics(adapter)
         else:
@@ -170,11 +171,12 @@ class AdapterStatistics:
             self.back,
         )
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: "AdapterStatistics"):
         if self.where != other.where:  # TODO self.name != other.name or
             raise ValueError('incompatible objects')
         self.front += other.front
         self.back += other.back
+        self.reverse_complemented_reads += other.reverse_complemented_reads
         return self
 
 
@@ -300,7 +302,7 @@ class SingleMatch(Match):
     def trimmed(self):
         return self._trimmed_read
 
-    def update_statistics(self, statistics):
+    def update_statistics(self, statistics: AdapterStatistics):
         """Update AdapterStatistics in place"""
         if self.remove_before:
             statistics.front.errors[self.rstop][self.errors] += 1
