@@ -13,8 +13,9 @@ filters is created and each redirector is called in turn until one returns True.
 The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded).
 """
+from collections import Counter
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Tuple
 from .adapters import Match
 
 
@@ -36,14 +37,51 @@ class PairedEndFilter(ABC):
         pass
 
 
-class NoFilter(SingleEndFilter):
+class WithStatistics(ABC):
+    def __init__(self) -> None:
+        self._written = 0  # no. of written reads or read pairs
+        self._written_bp = [0, 0]
+        self._written_lengths = [Counter(), Counter()]  # type: List[Counter]
+
+    def written_reads(self) -> int:
+        return self._written
+
+    def written_bp(self) -> Tuple[int, ...]:
+        return tuple(self._written_bp)
+
+    def written_lengths(self) -> Tuple[Counter, Counter]:
+        return (self._written_lengths[0].copy(), self._written_lengths[1].copy())
+
+
+class SingleEndFilterWithStatistics(SingleEndFilter, WithStatistics, ABC):
+    def __init__(self):
+        super().__init__()
+
+    def update_statistics(self, read) -> None:
+        self._written += 1
+        self._written_bp[0] += len(read)
+        self._written_lengths[0][len(read)] += 1
+
+
+class PairedEndFilterWithStatistics(PairedEndFilter, WithStatistics, ABC):
+    def __init__(self):
+        super().__init__()
+
+    def update_statistics(self, read1, read2):
+        self._written += 1
+        self._written_bp[0] += len(read1)
+        self._written_bp[1] += len(read2)
+        self._written_lengths[0][len(read1)] += 1
+        self._written_lengths[1][len(read2)] += 1
+
+
+class NoFilter(SingleEndFilterWithStatistics):
     """
     No filtering, just send each read to the given writer.
     """
     def __init__(self, writer):
+        super().__init__()
         self.writer = writer
-        self.written = 0  # no of written reads  TODO move to writer
-        self.written_bp = [0, 0]
 
     @property
     def filtered(self):
@@ -51,19 +89,17 @@ class NoFilter(SingleEndFilter):
 
     def __call__(self, read, matches):
         self.writer.write(read)
-        self.written += 1
-        self.written_bp[0] += len(read)
+        self.update_statistics(read)
         return DISCARD
 
 
-class PairedNoFilter(PairedEndFilter):
+class PairedNoFilter(PairedEndFilterWithStatistics):
     """
     No filtering, just send each paired-end read to the given writer.
     """
     def __init__(self, writer):
+        super().__init__()
         self.writer = writer
-        self.written = 0  # no of written reads or read pairs  TODO move to writer
-        self.written_bp = [0, 0]
 
     @property
     def filtered(self):
@@ -71,36 +107,33 @@ class PairedNoFilter(PairedEndFilter):
 
     def __call__(self, read1, read2, matches1, matches2):
         self.writer.write(read1, read2)
-        self.written += 1
-        self.written_bp[0] += len(read1)
-        self.written_bp[1] += len(read2)
+        self.update_statistics(read1, read2)
+
         return DISCARD
 
 
-class Redirector(SingleEndFilter):
+class Redirector(SingleEndFilterWithStatistics):
     """
     Redirect discarded reads to the given writer. This is for single-end reads.
     """
     def __init__(self, writer, filter: SingleEndFilter, filter2=None):
+        super().__init__()
         # TODO filter2 should really not be here
         self.filtered = 0
         self.writer = writer
         self.filter = filter
-        self.written = 0  # no of written reads  TODO move to writer
-        self.written_bp = [0, 0]
 
     def __call__(self, read, matches):
         if self.filter(read, matches):
             self.filtered += 1
             if self.writer is not None:
                 self.writer.write(read)
-                self.written += 1
-                self.written_bp[0] += len(read)
+                self.update_statistics(read)
             return DISCARD
         return KEEP
 
 
-class PairedRedirector(PairedEndFilter):
+class PairedRedirector(PairedEndFilterWithStatistics):
     """
     Redirect paired-end reads matching a filtering criterion to a writer.
     Different filtering styles are supported, differing by which of the
@@ -113,14 +146,13 @@ class PairedRedirector(PairedEndFilter):
             'both': The pair is discarded if both reads match.
             'first': The pair is discarded if the first read matches.
         """
+        super().__init__()
         if pair_filter_mode not in ('any', 'both', 'first'):
             raise ValueError("pair_filter_mode must be 'any', 'both' or 'first'")
         self.filtered = 0
         self.writer = writer
         self.filter = filter
         self.filter2 = filter2
-        self.written = 0  # no of written reads or read pairs  TODO move to writer
-        self.written_bp = [0, 0]
         if filter2 is None:
             self._is_filtered = self._is_filtered_first
         elif filter is None:
@@ -149,9 +181,7 @@ class PairedRedirector(PairedEndFilter):
             self.filtered += 1
             if self.writer is not None:
                 self.writer.write(read1, read2)
-                self.written += 1
-                self.written_bp[0] += len(read1)
-                self.written_bp[1] += len(read2)
+                self.update_statistics(read1, read2)
             return DISCARD
         return KEEP
 
@@ -227,7 +257,7 @@ class CasavaFilter(SingleEndFilter):
         return right[1:4] == ':Y:'  # discard if :Y: found
 
 
-class Demultiplexer(SingleEndFilter):
+class Demultiplexer(SingleEndFilterWithStatistics):
     """
     Demultiplex trimmed reads. Reads are written to different output files
     depending on which adapter matches. Files are created when the first read
@@ -240,13 +270,12 @@ class Demultiplexer(SingleEndFilter):
         Reads without an adapter match are written to the file named by
         untrimmed_path.
         """
+        super().__init__()
         assert '{name}' in path_template
         self.template = path_template
         self.untrimmed_path = untrimmed_path
         self.untrimmed_writer = None
         self.writers = dict()
-        self.written = 0
-        self.written_bp = [0, 0]
         self.qualities = qualities
         self.file_opener = file_opener
 
@@ -259,16 +288,14 @@ class Demultiplexer(SingleEndFilter):
             if name not in self.writers:
                 self.writers[name] = self.file_opener.dnaio_open_raise_limit(
                     self.template.replace('{name}', name), self.qualities)
-            self.written += 1
-            self.written_bp[0] += len(read)
+            self.update_statistics(read)
             self.writers[name].write(read)
         else:
             if self.untrimmed_writer is None and self.untrimmed_path is not None:
                 self.untrimmed_writer = self.file_opener.dnaio_open_raise_limit(
                     self.untrimmed_path, self.qualities)
             if self.untrimmed_writer is not None:
-                self.written += 1
-                self.written_bp[0] += len(read)
+                self.update_statistics(read)
                 self.untrimmed_writer.write(read)
         return DISCARD
 
@@ -279,7 +306,7 @@ class Demultiplexer(SingleEndFilter):
             self.untrimmed_writer.close()
 
 
-class PairedDemultiplexer(PairedEndFilter):
+class PairedDemultiplexer(PairedEndFilterWithStatistics):
     """
     Demultiplex trimmed paired-end reads. Reads are written to different output files
     depending on which adapter (in read 1) matches.
@@ -292,17 +319,16 @@ class PairedDemultiplexer(PairedEndFilter):
         Read pairs without an adapter match are written to the files named by
         untrimmed_path.
         """
+        super().__init__()
         self._demultiplexer1 = Demultiplexer(path_template, untrimmed_path, qualities, file_opener)
         self._demultiplexer2 = Demultiplexer(path_paired_template, untrimmed_paired_path,
             qualities, file_opener)
 
-    @property
-    def written(self):
-        return self._demultiplexer1.written + self._demultiplexer2.written
+    def written(self) -> int:
+        return self._demultiplexer1._written + self._demultiplexer2._written
 
-    @property
-    def written_bp(self):
-        return [self._demultiplexer1.written_bp[0], self._demultiplexer2.written_bp[0]]
+    def written_bp(self) -> Tuple[int, int]:
+        return (self._demultiplexer1._written_bp[0], self._demultiplexer2._written_bp[0])
 
     def __call__(self, read1, read2, matches1, matches2):
         assert read2 is not None
@@ -314,7 +340,7 @@ class PairedDemultiplexer(PairedEndFilter):
         self._demultiplexer2.close()
 
 
-class CombinatorialDemultiplexer(PairedEndFilter):
+class CombinatorialDemultiplexer(PairedEndFilterWithStatistics):
     """
     Demultiplex reads depending on which adapter matches, taking into account both matches
     on R1 and R2.
@@ -328,14 +354,13 @@ class CombinatorialDemultiplexer(PairedEndFilter):
         case, read pairs for which at least one read does not have an adapter match are
         discarded.
         """
+        super().__init__()
         assert '{name1}' in path_template and '{name2}' in path_template
         assert '{name1}' in path_paired_template and '{name2}' in path_paired_template
         self.template = path_template
         self.paired_template = path_paired_template
         self.untrimmed_name = untrimmed_name
         self.writers = dict()
-        self.written = 0
-        self.written_bp = [0, 0]
         self.qualities = qualities
         self.file_opener = file_opener
 
@@ -366,9 +391,7 @@ class CombinatorialDemultiplexer(PairedEndFilter):
                 self.file_opener.dnaio_open_raise_limit(path2, qualities=self.qualities),
             )
         writer1, writer2 = self.writers[key]
-        self.written += 1
-        self.written_bp[0] += len(read1)
-        self.written_bp[1] += len(read2)
+        self.update_statistics(read1, read2)
         writer1.write(read1)
         writer2.write(read2)
         return DISCARD

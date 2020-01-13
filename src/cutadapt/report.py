@@ -3,13 +3,13 @@ Routines for printing a report.
 """
 from io import StringIO
 import textwrap
+from collections import Counter
 from typing import Any, Optional, List
 from .adapters import Where, EndStatistics, AdapterStatistics, ADAPTER_TYPE_NAMES
 from .modifiers import (Modifier, PairedModifier, QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer)
-from .filters import (NoFilter, PairedNoFilter, TooShortReadFilter, TooLongReadFilter,
-    PairedDemultiplexer, CombinatorialDemultiplexer, Demultiplexer, NContentFilter, InfoFileWriter,
-    WildcardFileWriter, RestFileWriter)
+from .filters import (WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter,
+    InfoFileWriter, WildcardFileWriter, RestFileWriter)
 
 
 def safe_divide(numerator, denominator):
@@ -41,6 +41,7 @@ class Statistics:
         self.written = 0
         self.total_bp = [0, 0]
         self.written_bp = [0, 0]
+        self.written_lengths = [Counter(), Counter()]  # type: List[Counter]
         self.with_adapters = [0, 0]
         self.quality_trimmed_bp = [0, 0]
         self.adapter_stats = [[], []]  # type: List[List[AdapterStatistics]]
@@ -66,6 +67,7 @@ class Statistics:
         for i in (0, 1):
             self.total_bp[i] += other.total_bp[i]
             self.written_bp[i] += other.written_bp[i]
+            self.written_lengths[i] += other.written_lengths[i]
             self.with_adapters[i] += other.with_adapters[i]
             self.quality_trimmed_bp[i] += other.quality_trimmed_bp[i]
             if self.adapter_stats[i] and other.adapter_stats[i]:
@@ -104,11 +106,13 @@ class Statistics:
     def _collect_writer(self, w):
         if isinstance(w, (InfoFileWriter, RestFileWriter, WildcardFileWriter)):
             return
-        elif isinstance(w, (NoFilter, PairedNoFilter, PairedDemultiplexer,
-                CombinatorialDemultiplexer, Demultiplexer)):
-            self.written += w.written
-            self.written_bp[0] += w.written_bp[0]
-            self.written_bp[1] += w.written_bp[1]
+        elif isinstance(w, WithStatistics):
+            self.written += w.written_reads()
+            written_bp = w.written_bp()
+            written_lengths = w.written_lengths()
+            for i in 0, 1:
+                self.written_bp[i] += written_bp[i]
+                self.written_lengths[i] += written_lengths[i]
         elif isinstance(w.filter, TooShortReadFilter):
             self.too_short = w.filtered
         elif isinstance(w.filter, TooLongReadFilter):
