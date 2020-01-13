@@ -807,10 +807,12 @@ Searching reverse complements
 -----------------------------
 
 .. note::
-    Option ``--revcomp`` is added on a tentative basis. Its behaviour
+    Option ``--revcomp`` is added on a tentative basis. Its behaviour may change in the next
+    releases.
 
 
 By default, Cutadapt expects adapters to be given in the same orientation (5' to 3') as the reads.
+That is, neither reads nor adapters are reverse-complemented.
 
 To change this, use option ``--revcomp`` or its abbreviation ``--rc``. If given, Cutadapt searches
 both the read and its reverse complement for adapters. If the reverse complemented read yields
