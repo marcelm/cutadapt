@@ -415,12 +415,6 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
         print_s('    One or more of your adapter sequences may be incomplete.')
         print_s('    Please see the detailed output above.')
 
-    empty_reads = stats.written_lengths[0][0] + stats.written_lengths[0][1]
-    if empty_reads > 0:
-        print_s("NOTE:")
-        print_s("   ", empty_reads, "empty reads in output. Some tools have "
-            " problems processing these (use -m 1 to filter)")
-
     return sio.getvalue().rstrip()
 
 
