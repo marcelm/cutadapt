@@ -8,8 +8,7 @@ from typing import Any, Optional, List
 from .adapters import Where, EndStatistics, AdapterStatistics, ADAPTER_TYPE_NAMES
 from .modifiers import (Modifier, PairedModifier, QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer)
-from .filters import (WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter,
-    InfoFileWriter, WildcardFileWriter, RestFileWriter)
+from .filters import WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter
 
 
 def safe_divide(numerator, denominator):
@@ -104,9 +103,7 @@ class Statistics:
         return self
 
     def _collect_writer(self, w):
-        if isinstance(w, (InfoFileWriter, RestFileWriter, WildcardFileWriter)):
-            return
-        elif isinstance(w, WithStatistics):
+        if isinstance(w, WithStatistics):
             self.written += w.written_reads()
             written_bp = w.written_bp()
             written_lengths = w.written_lengths()
