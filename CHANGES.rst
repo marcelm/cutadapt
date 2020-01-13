@@ -2,13 +2,14 @@
 Changes
 =======
 
-development version
--------------------
+v2.8 (2020-01-13)
+-----------------
 
 * :issue:`220`: With option ``--revcomp``, Cutadapt now searches both the read
   and its reverse complement for adapters. The version that matches best is
-  kept. This can be used to “normalize” sequence orientation.
+  kept. This can be used to “normalize” strandedness.
 * :issue:`430`: ``--action=lowercase`` now works with linked adapters
+* :issue:`431`: Info files can now be written even for linked adapters.
 
 v2.7 (2019-11-22)
 -----------------
