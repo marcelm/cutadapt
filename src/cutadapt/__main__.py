@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2010-2019 Marcel Martin <marcel.martin@scilifelab.se>
+# Copyright (c) 2010-2020 Marcel Martin <marcel.martin@scilifelab.se>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
 """
 cutadapt version {version}
 
-Copyright (C) 2010-2019 Marcel Martin <marcel.martin@scilifelab.se>
+Copyright (C) 2010-2020 Marcel Martin <marcel.martin@scilifelab.se>
 
 cutadapt removes adapter sequences from high-throughput sequencing reads.
 
