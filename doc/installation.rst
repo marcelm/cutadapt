@@ -11,7 +11,7 @@ Quick installation
 
 The easiest way to install Cutadapt is to use ``pip3`` on the command line::
 
-    pip3 install --user --upgrade cutadapt
+    python3 -m pip install --user --upgrade cutadapt
 
 This will download the software from `PyPI (the Python packaging
 index) <https://pypi.python.org/pypi/cutadapt/>`_, and
