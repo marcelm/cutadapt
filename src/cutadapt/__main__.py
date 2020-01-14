@@ -57,7 +57,7 @@ import sys
 import time
 import logging
 import platform
-from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union
+from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Type
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
@@ -71,7 +71,7 @@ from cutadapt.modifiers import (Modifier, LengthTagModifier, SuffixRemover, Pref
     ReverseComplementer)
 from cutadapt.report import full_report, minimal_report
 from cutadapt.pipeline import (Pipeline, SingleEndPipeline, PairedEndPipeline, InputFiles,
-    OutputFiles, SerialPipelineRunner, ParallelPipelineRunner)
+    OutputFiles, PipelineRunner, SerialPipelineRunner, ParallelPipelineRunner)
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress, FileOpener
 from cutadapt.log import setup_logging, REPORT
 
@@ -836,6 +836,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     cores = available_cpu_count() if args.cores == 0 else args.cores
     file_opener = FileOpener(
         compression_level=args.compression_level, threads=0 if cores == 1 else None)
+    if sys.stderr.isatty() and not args.quiet:
+        progress = Progress()
+    else:
+        progress = DummyProgress()
+
     try:
         is_interleaved_input, is_interleaved_output = determine_interleaved(args)
         input_filename, input_paired_filename = setup_input_files(args.inputs,
@@ -843,32 +848,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         check_arguments(args, paired, is_interleaved_output)
         pipeline = pipeline_from_parsed_args(args, paired, file_opener)
         outfiles = open_output_files(args, default_outfile, is_interleaved_output, file_opener)
+        infiles = InputFiles(input_filename, file2=input_paired_filename,
+            interleaved=is_interleaved_input)
+        runner = setup_runner(pipeline, infiles, outfiles, progress, cores, args.buffer_size)
     except CommandLineError as e:
         parser.error(str(e))
-        return  # avoid IDE warnings below
-
-    if cores > 1:
-        if ParallelPipelineRunner.can_output_to(outfiles):
-            runner_class = ParallelPipelineRunner
-            runner_kwargs = dict(n_workers=cores, buffer_size=args.buffer_size)
-        else:
-            parser.error("Running in parallel is currently not supported "
-                "when using --format or when demultiplexing.\n"
-                "Omit --cores/-j to continue.")
-            return  # avoid IDE warnings below
-    else:
-        runner_class = SerialPipelineRunner
-        runner_kwargs = dict()
-    infiles = InputFiles(input_filename, file2=input_paired_filename,
-            interleaved=is_interleaved_input)
-    if sys.stderr.isatty() and not args.quiet:
-        progress = Progress()
-    else:
-        progress = DummyProgress()
-    try:
-        runner = runner_class(pipeline, infiles, outfiles, progress, **runner_kwargs)
-    except (dnaio.UnknownFileFormat, IOError) as e:
-        parser.error(e)
         return  # avoid IDE warnings below
 
     logger.info("Processing reads on %d core%s in %s mode ...",
@@ -895,6 +879,27 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         import pstats
         profiler.disable()
         pstats.Stats(profiler).sort_stats('time').print_stats(20)
+
+
+def setup_runner(pipeline: Pipeline, infiles, outfiles, progress, cores, buffer_size):
+    if cores > 1:
+        if ParallelPipelineRunner.can_output_to(outfiles):
+            runner_class = ParallelPipelineRunner  # type: Type[PipelineRunner]
+            runner_kwargs = dict(n_workers=cores, buffer_size=buffer_size)
+        else:
+            raise CommandLineError("Running in parallel is currently not supported "
+                 "when using --format or when demultiplexing.\n"
+                 "Omit --cores/-j to continue.")
+            # return  # avoid IDE warnings below
+    else:
+        runner_class = SerialPipelineRunner
+        runner_kwargs = dict()
+    try:
+        runner = runner_class(pipeline, infiles, outfiles, progress, **runner_kwargs)
+    except (dnaio.UnknownFileFormat, IOError) as e:
+        raise CommandLineError(e)
+
+    return runner
 
 
 if __name__ == '__main__':

@@ -602,7 +602,7 @@ class PipelineRunner(ABC):
     """
     A read processing pipeline
     """
-    def __init__(self, pipeline: Pipeline, progress: Progress):
+    def __init__(self, pipeline: Pipeline, progress: Progress, *args, **kwargs):
         self._pipeline = pipeline
         self._progress = progress
 
