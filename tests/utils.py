@@ -1,16 +1,5 @@
 import os.path
 import subprocess
-import sys
-from contextlib import contextmanager
-
-
-@contextmanager
-def redirect_stderr():
-    """Send stderr to stdout. Nose doesn't capture stderr, yet."""
-    old_stderr = sys.stderr
-    sys.stderr = sys.stdout
-    yield
-    sys.stderr = old_stderr
 
 
 def datapath(path):

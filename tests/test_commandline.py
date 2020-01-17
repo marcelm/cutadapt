@@ -9,7 +9,7 @@ import pytest
 import subprocess
 
 from cutadapt.__main__ import main
-from utils import assert_files_equal, datapath, cutpath, redirect_stderr
+from utils import assert_files_equal, datapath, cutpath
 
 # pytest.mark.timeout will not fail even if pytest-timeout is not installed
 try:
@@ -358,14 +358,12 @@ def test_xz(run):
 
 def test_no_args():
     with pytest.raises(SystemExit):
-        with redirect_stderr():
-            main([])
+        main([])
 
 
 def test_two_fastqs():
     with pytest.raises(SystemExit):
-        with redirect_stderr():
-            main([datapath('paired.1.fastq'), datapath('paired.2.fastq')])
+        main([datapath('paired.1.fastq'), datapath('paired.2.fastq')])
 
 
 def test_anchored_no_indels(run):
@@ -386,8 +384,7 @@ def test_anchored_no_indels_wildcard_adapt(run):
 
 def test_non_iupac_characters(run):
     with pytest.raises(SystemExit):
-        with redirect_stderr():
-            main(['-a', 'ZACGT', datapath('small.fastq')])
+        main(['-a', 'ZACGT', datapath('small.fastq')])
 
 
 def test_unconditional_cut_front(run):
@@ -544,20 +541,17 @@ def test_linked_info_file(tmpdir):
 
 def test_linked_anywhere():
     with pytest.raises(SystemExit):
-        with redirect_stderr():
-            main(['-b', 'AAA...TTT', datapath('linked.fasta')])
+        main(['-b', 'AAA...TTT', datapath('linked.fasta')])
 
 
 def test_anywhere_anchored_5p():
     with pytest.raises(SystemExit):
-        with redirect_stderr():
-            main(['-b', '^AAA', datapath('small.fastq')])
+        main(['-b', '^AAA', datapath('small.fastq')])
 
 
 def test_anywhere_anchored_3p():
     with pytest.raises(SystemExit):
-        with redirect_stderr():
-            main(['-b', 'TTT$', datapath('small.fastq')])
+        main(['-b', 'TTT$', datapath('small.fastq')])
 
 
 def test_fasta(run):

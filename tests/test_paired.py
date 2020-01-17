@@ -5,7 +5,7 @@ from itertools import product
 import pytest
 
 from cutadapt.__main__ import main
-from utils import assert_files_equal, datapath, cutpath, redirect_stderr
+from utils import assert_files_equal, datapath, cutpath
 
 
 @pytest.fixture
@@ -131,9 +131,8 @@ def test_no_trimming():
 
 
 def test_missing_file(tmpdir):
-    with redirect_stderr():
-        with pytest.raises(SystemExit):
-            main(["--paired-output", str(tmpdir.join("out.fastq")), datapath("paired.1.fastq")])
+    with pytest.raises(SystemExit):
+        main(["--paired-output", str(tmpdir.join("out.fastq")), datapath("paired.1.fastq")])
 
 
 def test_first_too_short(tmpdir, cores):
@@ -144,14 +143,13 @@ def test_first_too_short(tmpdir, cores):
         lines = lines[:-4]
     trunc1.write("".join(lines))
 
-    with redirect_stderr():
-        with pytest.raises(SystemExit):
-            main([
-                "-o", "/dev/null",
-                "--paired-output", str(tmpdir.join("out.fastq")),
-                "--cores", str(cores),
-                str(trunc1), datapath("paired.2.fastq")
-            ])
+    with pytest.raises(SystemExit):
+        main([
+            "-o", "/dev/null",
+            "--paired-output", str(tmpdir.join("out.fastq")),
+            "--cores", str(cores),
+            str(trunc1), datapath("paired.2.fastq")
+        ])
 
 
 def test_second_too_short(tmpdir, cores):
@@ -162,14 +160,13 @@ def test_second_too_short(tmpdir, cores):
         lines = lines[:-4]
     trunc2.write("".join(lines))
 
-    with redirect_stderr():
-        with pytest.raises(SystemExit):
-            main([
-                "-o", "/dev/null",
-                "--paired-output", str(tmpdir.join("out.fastq")),
-                "--cores", str(cores),
-                datapath("paired.1.fastq"), str(trunc2)
-            ])
+    with pytest.raises(SystemExit):
+        main([
+            "-o", "/dev/null",
+            "--paired-output", str(tmpdir.join("out.fastq")),
+            "--cores", str(cores),
+            datapath("paired.1.fastq"), str(trunc2)
+        ])
 
 
 def test_unmatched_read_names(tmpdir, cores):
@@ -327,10 +324,9 @@ def test_interleaved_neither_nor(tmpdir):
     p1 = str(tmpdir.join("temp-paired.1.fastq"))
     p2 = str(tmpdir.join("temp-paired.2.fastq"))
     params = "-a XX --interleaved".split()
-    with redirect_stderr():
-        params += ["-o", p1, "-p1", p2, "paired.1.fastq", "paired.2.fastq"]
-        with pytest.raises(SystemExit):
-            main(params)
+    params += ["-o", p1, "-p1", p2, "paired.1.fastq", "paired.2.fastq"]
+    with pytest.raises(SystemExit):
+        main(params)
 
 
 def test_pair_filter_both(run_paired, cores):
