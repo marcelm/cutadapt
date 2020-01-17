@@ -211,6 +211,7 @@ class Pipeline(ABC):
                 f.flush()
 
     def close(self) -> None:
+        self._reader.close()
         for f in self._textiowrappers:
             f.close()  # This also closes the underlying files; a second close occurs below
         assert self._outfiles is not None
