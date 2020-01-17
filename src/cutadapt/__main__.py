@@ -859,8 +859,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         cores, 's' if cores > 1 else '',
         {False: 'single-end', True: 'paired-end'}[pipeline.paired])
     try:
-        stats = runner.run()
-        runner.close()
+        with runner as r:
+            stats = r.run()
     except KeyboardInterrupt:
         print("Interrupted", file=sys.stderr)
         sys.exit(130)
