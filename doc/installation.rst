@@ -28,14 +28,30 @@ If you want to avoid typing the full path, add the directory
 Installation with conda
 -----------------------
 
-Alternatively, Cutadapt is available as a conda package from the
-`bioconda channel <https://bioconda.github.io/>`_. If you do not have conda,
-`install miniconda <http://conda.pydata.org/miniconda.html>`_ first.
-Then install Cutadapt like this::
+Alternatively, Cutadapt is available as a Conda package from the
+`bioconda channel <https://bioconda.github.io/>`_.
+`Install miniconda <http://conda.pydata.org/miniconda.html>`_ if
+you don’t have Conda. Then follow the `Bioconda installation
+instructions <https://bioconda.github.io/user/install.html>`_ (in particular,
+make sure you have both `bioconda` and `conda-forge` in your channels list).
 
-    conda install -c bioconda cutadapt
+To then install Cutadapt into a new Conda environment, use this command::
 
-If neither ``pip`` nor ``conda`` installation works, keep reading.
+    conda create -n cutadaptenv cutadapt
+
+Here, ``cutadaptenv`` is the name of the Conda environment. (You can
+choose a different name.)
+
+An environment needs to be activated every time you want to use the
+programs in it::
+
+    conda activate cutadaptenv
+
+Finally, check whether it worked::
+
+    cutadapt --version
+
+This should show the Cutadapt version number.
 
 
 Installation on a Debian-based Linux distribution
