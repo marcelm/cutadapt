@@ -15,7 +15,9 @@ somewhere or filtered (should be discarded).
 """
 from collections import Counter
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Dict, Any
+
+from .utils import FileOpener
 from .adapters import Match
 
 
@@ -345,7 +347,14 @@ class CombinatorialDemultiplexer(PairedEndFilterWithStatistics):
     Demultiplex reads depending on which adapter matches, taking into account both matches
     on R1 and R2.
     """
-    def __init__(self, path_template, path_paired_template, untrimmed_name, qualities, file_opener):
+    def __init__(
+        self,
+        path_template: str,
+        path_paired_template: str,
+        untrimmed_name: Optional[str],
+        qualities: bool,
+        file_opener: FileOpener,
+    ):
         """
         path_template must contain the string '{name1}' and '{name2}', which will be replaced
         with the name of the adapters found on R1 and R2, respectively to form the final output
@@ -353,6 +362,9 @@ class CombinatorialDemultiplexer(PairedEndFilterWithStatistics):
         specified by untrimmed_name. Alternatively, untrimmed_name can be set to None; in that
         case, read pairs for which at least one read does not have an adapter match are
         discarded.
+
+        untrimmed_name -- what to replace the templates with when one or both of the reads
+            do not contain an adapter (use "unknown"). Set to None to discard these read pairs.
         """
         super().__init__()
         assert '{name1}' in path_template and '{name2}' in path_template
@@ -360,7 +372,7 @@ class CombinatorialDemultiplexer(PairedEndFilterWithStatistics):
         self.template = path_template
         self.paired_template = path_paired_template
         self.untrimmed_name = untrimmed_name
-        self.writers = dict()
+        self.writers = dict()  # type: Dict[Tuple[str, str], Any]
         self.qualities = qualities
         self.file_opener = file_opener
 
@@ -378,6 +390,7 @@ class CombinatorialDemultiplexer(PairedEndFilterWithStatistics):
         name2 = matches2[-1].adapter.name if matches2 else None
         key = (name1, name2)
         if key not in self.writers:
+            # Open writer on first use
             if name1 is None:
                 name1 = self.untrimmed_name
             if name2 is None:
