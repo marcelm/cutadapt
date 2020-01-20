@@ -1,6 +1,6 @@
 import pytest
 
-from cutadapt.__main__ import main, parse_cutoffs, parse_lengths, CommandLineError
+from cutadapt.__main__ import main, parse_cutoffs, parse_lengths, CommandLineError, setup_logging
 
 
 def test_help():
@@ -37,3 +37,10 @@ def test_parse_lengths():
         parse_lengths("2:a")
     with pytest.raises(CommandLineError):
         parse_lengths(":")
+
+
+def test_setup_logging():
+    import logging
+    logger = logging.getLogger(__name__)
+    setup_logging(logger, stdout=True, quiet=False, minimal=False, debug=False)
+    logger.info("Log message")
