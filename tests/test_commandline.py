@@ -69,19 +69,6 @@ def test_discard_untrimmed(run):
     run('-b CAAGAT --discard-untrimmed', 'discard-untrimmed.fastq', 'small.fastq')
 
 
-@pytest.mark.skip(reason='Regression since switching to dnaio')
-def test_second_header_retained(run, cores):
-    """test if sequence name after the "+" is retained"""
-    run("--cores {} -e 0.12 -b TTAGACATATCTCCGTCG".format(cores), "plus.fastq", "plus.fastq")
-
-
-@pytest.mark.skip(reason='Regression since switching to dnaio')
-def test_length_tag_second_header(run, cores):
-    """Ensure --length-tag= also modifies the second header line"""
-    run("--cores {} -a GGCTTC --length-tag=length=".format(cores),
-        'SRR2040271_1.fastq', 'SRR2040271_1.fastq')
-
-
 def test_extensiontxtgz(run):
     """automatic recognition of "_sequence.txt.gz" extension"""
     run("-b TTAGACATATCTCCGTCG", "s_1_sequence.txt", "s_1_sequence.txt.gz")
@@ -701,12 +688,6 @@ def test_print_progress_to_tty(tmpdir, mocker):
 def test_adapter_order(run):
     run("-g ^AAACC -a CCGGG", "adapterorder-ga.fasta", "adapterorder.fasta")
     run("-a CCGGG -g ^AAACC", "adapterorder-ag.fasta", "adapterorder.fasta")
-
-
-@pytest.mark.skip(reason="Not implemented")
-def test_reverse_complement_not_normalized(run):
-    run("--rc=yes -g ^TTATTTGTCT -g ^TCCGCACTGG",
-        "revcomp-notnormalized-single.fastq", "revcomp.1.fastq")
 
 
 def test_reverse_complement_normalized(run):
