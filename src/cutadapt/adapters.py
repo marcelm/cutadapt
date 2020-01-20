@@ -381,6 +381,7 @@ class SingleAdapter(Adapter):
         indels: bool = True,
     ):
         super().__init__()
+        assert not isinstance(remove, str)
         self._debug = False  # type: bool
         self.name = _generate_adapter_name() if name is None else name  # type: str
         self.sequence = sequence.upper().replace("U", "T")  # type: str

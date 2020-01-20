@@ -1,14 +1,14 @@
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import SingleAdapter, SingleMatch, Where, LinkedAdapter
+from cutadapt.adapters import SingleAdapter, SingleMatch, Where, LinkedAdapter, WhereToRemove
 
 
 def test_issue_52():
     adapter = SingleAdapter(
         sequence='GAACTCCAGTCACNNNNN',
         where=Where.BACK,
-        remove='suffix',
+        remove=WhereToRemove.SUFFIX,
         max_error_rate=0.12,
         min_overlap=5,
         read_wildcards=False,
@@ -45,7 +45,7 @@ def test_issue_80():
     adapter = SingleAdapter(
         sequence="TCGTATGCCGTCTTC",
         where=Where.BACK,
-        remove='suffix',
+        remove=WhereToRemove.SUFFIX,
         max_error_rate=0.2,
         min_overlap=3,
         read_wildcards=False,
@@ -58,7 +58,7 @@ def test_issue_80():
 
 
 def test_str():
-    a = SingleAdapter('ACGT', where=Where.BACK, remove='suffix', max_error_rate=0.1)
+    a = SingleAdapter('ACGT', where=Where.BACK, remove=WhereToRemove.SUFFIX, max_error_rate=0.1)
     str(a)
     str(a.match_to(Sequence(name='seq', sequence='TTACGT')))
 
