@@ -4,7 +4,7 @@ import sys
 import copy
 import logging
 import functools
-from typing import List, IO, Optional, BinaryIO, TextIO, Any, Tuple, Union
+from typing import List, IO, Optional, BinaryIO, TextIO, Any, Tuple
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe, Queue
 from pathlib import Path
@@ -16,7 +16,7 @@ from xopen import xopen
 import dnaio
 
 from .utils import Progress, FileOpener
-from .modifiers import Modifier, PairedModifier, PairedModifierWrapper
+from .modifiers import SingleEndModifier, PairedModifier, PairedModifierWrapper
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
@@ -98,10 +98,8 @@ class Pipeline(ABC):
 
     def __init__(self, file_opener: FileOpener):
         self._close_files = []  # type: List[IO]
-        self._reader = None
+        self._reader = None  # type: Any
         self._filters = []  # type: List[Any]
-        # TODO type should be Union[List[Modifier], List[PairedModifier]]
-        self._modifiers = []  # type: List[Union[Modifier, PairedModifier]]
         self._outfiles = None  # type: Optional[OutputFiles]
         self._demultiplexer = None
         self._textiowrappers = []  # type: List[TextIO]
@@ -256,9 +254,9 @@ class SingleEndPipeline(Pipeline):
 
     def __init__(self, file_opener: FileOpener):
         super().__init__(file_opener)
-        self._modifiers = []
+        self._modifiers = []  # type: List[SingleEndModifier]
 
-    def add(self, modifier: Modifier):
+    def add(self, modifier: SingleEndModifier):
         if modifier is None:
             raise ValueError("Modifier must not be None")
         self._modifiers.append(modifier)
@@ -273,7 +271,7 @@ class SingleEndPipeline(Pipeline):
             if n % 10000 == 0 and progress:
                 progress.update(n)
             total_bp += len(read.sequence)
-            matches = []
+            matches = []  # type: List[Any]
             for modifier in self._modifiers:
                 read = modifier(read, matches)
             for filter_ in self._filters:
@@ -323,12 +321,13 @@ class PairedEndPipeline(Pipeline):
 
     def __init__(self, pair_filter_mode, file_opener: FileOpener):
         super().__init__(file_opener)
+        self._modifiers = []  # type: List[PairedModifier]
         self._pair_filter_mode = pair_filter_mode
         self._reader = None
         # Whether to ignore pair_filter mode for discard-untrimmed filter
         self.override_untrimmed_pair_filter = False
 
-    def add(self, modifier1: Optional[Modifier], modifier2: Optional[Modifier]):
+    def add(self, modifier1: Optional[SingleEndModifier], modifier2: Optional[SingleEndModifier]):
         """
         Add a modifier for R1 and R2. One of them can be None, in which case the modifier
         will only be added for the respective read.
@@ -337,7 +336,7 @@ class PairedEndPipeline(Pipeline):
             raise ValueError("Not both modifiers can be None")
         self._modifiers.append(PairedModifierWrapper(modifier1, modifier2))
 
-    def add_both(self, modifier: Modifier):
+    def add_both(self, modifier: SingleEndModifier):
         """
         Add one modifier for both R1 and R2
         """
@@ -359,8 +358,8 @@ class PairedEndPipeline(Pipeline):
                 progress.update(n)
             total1_bp += len(read1.sequence)
             total2_bp += len(read2.sequence)
-            matches1 = []
-            matches2 = []
+            matches1 = []  # type: List[Any]
+            matches2 = []  # type: List[Any]
             for modifier in self._modifiers:
                 read1, read2 = modifier(read1, read2, matches1, matches2)
             for filter_ in self._filters:

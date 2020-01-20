@@ -6,7 +6,7 @@ import textwrap
 from collections import Counter
 from typing import Any, Optional, List
 from .adapters import Where, EndStatistics, AdapterStatistics, ADAPTER_TYPE_NAMES
-from .modifiers import (Modifier, PairedModifier, QualityTrimmer, NextseqQualityTrimmer,
+from .modifiers import (SingleEndModifier, PairedModifier, QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer)
 from .filters import WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter
 
@@ -117,7 +117,7 @@ class Statistics:
         elif isinstance(w.filter, NContentFilter):
             self.too_many_n = w.filtered
 
-    def _collect_modifier(self, m: Modifier):
+    def _collect_modifier(self, m: SingleEndModifier):
         if isinstance(m, PairedAdapterCutter):
             for i in 0, 1:
                 self.with_adapters[i] += m.with_adapters

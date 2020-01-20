@@ -13,7 +13,7 @@ from .adapters import Where, MultiAdapter, Match, remainder
 from .utils import reverse_complemented_sequence
 
 
-class Modifier(ABC):
+class SingleEndModifier(ABC):
     @abstractmethod
     def __call__(self, read, matches: List[Match]):
         pass
@@ -31,7 +31,7 @@ class PairedModifierWrapper(PairedModifier):
     """
     paired = True
 
-    def __init__(self, modifier1: Optional[Modifier], modifier2: Optional[Modifier]):
+    def __init__(self, modifier1: Optional[SingleEndModifier], modifier2: Optional[SingleEndModifier]):
         """Set one of the modifiers to None to work on R1 or R2 only"""
         self._modifier1 = modifier1
         self._modifier2 = modifier2
@@ -48,7 +48,7 @@ class PairedModifierWrapper(PairedModifier):
         return self._modifier1(read1, matches1), self._modifier2(read2, matches2)
 
 
-class AdapterCutter(Modifier):
+class AdapterCutter(SingleEndModifier):
     """
     Repeatedly find one of multiple adapters in reads.
     The number of times the search is repeated is specified by the
@@ -198,7 +198,7 @@ class AdapterCutter(Modifier):
         return trimmed_read, matches
 
 
-class ReverseComplementer(Modifier):
+class ReverseComplementer(SingleEndModifier):
     """Trim adapters from a read and its reverse complement"""
 
     def __init__(self, adapter_cutter: AdapterCutter, rc_suffix: Optional[str] = " rc"):
@@ -315,7 +315,7 @@ class PairedAdapterCutter(PairedModifier):
         return result
 
 
-class UnconditionalCutter(Modifier):
+class UnconditionalCutter(SingleEndModifier):
     """
     A modifier that unconditionally removes the first n or the last n bases from a read.
 
@@ -332,7 +332,7 @@ class UnconditionalCutter(Modifier):
             return read[:self.length]
 
 
-class LengthTagModifier(Modifier):
+class LengthTagModifier(SingleEndModifier):
     """
     Replace "length=..." strings in read names.
     """
@@ -347,7 +347,7 @@ class LengthTagModifier(Modifier):
         return read
 
 
-class SuffixRemover(Modifier):
+class SuffixRemover(SingleEndModifier):
     """
     Remove a given suffix from read names.
     """
@@ -361,7 +361,7 @@ class SuffixRemover(Modifier):
         return read
 
 
-class PrefixSuffixAdder(Modifier):
+class PrefixSuffixAdder(SingleEndModifier):
     """
     Add a suffix and a prefix to read names
     """
@@ -377,7 +377,7 @@ class PrefixSuffixAdder(Modifier):
         return read
 
 
-class ZeroCapper(Modifier):
+class ZeroCapper(SingleEndModifier):
     """
     Change negative quality values of a read to zero
     """
@@ -391,7 +391,7 @@ class ZeroCapper(Modifier):
         return read
 
 
-class NextseqQualityTrimmer(Modifier):
+class NextseqQualityTrimmer(SingleEndModifier):
     def __init__(self, cutoff, base):
         self.cutoff = cutoff
         self.base = base
@@ -403,7 +403,7 @@ class NextseqQualityTrimmer(Modifier):
         return read[:stop]
 
 
-class QualityTrimmer(Modifier):
+class QualityTrimmer(SingleEndModifier):
     def __init__(self, cutoff_front, cutoff_back, base):
         self.cutoff_front = cutoff_front
         self.cutoff_back = cutoff_back
@@ -416,7 +416,7 @@ class QualityTrimmer(Modifier):
         return read[start:stop]
 
 
-class Shortener(Modifier):
+class Shortener(SingleEndModifier):
     """Unconditionally shorten a read to the given length
 
     If the length is positive, the bases are removed from the end of the read.
@@ -432,7 +432,7 @@ class Shortener(Modifier):
             return read[self.length:]
 
 
-class NEndTrimmer(Modifier):
+class NEndTrimmer(SingleEndModifier):
     """Trims Ns from the 3' and 5' end of reads"""
     def __init__(self):
         self.start_trim = re.compile(r'^N+')

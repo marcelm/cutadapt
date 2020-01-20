@@ -65,7 +65,7 @@ import dnaio
 from cutadapt import __version__
 from cutadapt.adapters import warn_duplicate_adapters, Adapter
 from cutadapt.parser import AdapterParser
-from cutadapt.modifiers import (Modifier, LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
+from cutadapt.modifiers import (SingleEndModifier, LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
     PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener,
     ReverseComplementer)
@@ -764,7 +764,7 @@ def add_adapter_cutter(
             pipeline.add(modifier)
 
 
-def modifiers_applying_to_both_ends_if_paired(args) -> Iterator[Modifier]:
+def modifiers_applying_to_both_ends_if_paired(args) -> Iterator[SingleEndModifier]:
     if args.length is not None:
         yield Shortener(args.length)
     if args.trim_n:
