@@ -28,13 +28,21 @@ KEEP = False
 class SingleEndFilter(ABC):
     @abstractmethod
     def __call__(self, read, matches):
-        pass
+        """
+        Called to process a single-end read
+
+        Any adapter matches are append to the matches list.
+        """
 
 
 class PairedEndFilter(ABC):
     @abstractmethod
     def __call__(self, read1, matches1, read2, matches2):
-        pass
+        """
+        Called to process the read pair (read1, read2)
+
+        Any adapter matches are append to the matches list.
+        """
 
 
 class WithStatistics(ABC):
@@ -83,10 +91,6 @@ class NoFilter(SingleEndFilterWithStatistics):
         super().__init__()
         self.writer = writer
 
-    @property
-    def filtered(self):
-        return 0
-
     def __call__(self, read, matches):
         self.writer.write(read)
         self.update_statistics(read)
@@ -100,10 +104,6 @@ class PairedNoFilter(PairedEndFilterWithStatistics):
     def __init__(self, writer):
         super().__init__()
         self.writer = writer
-
-    @property
-    def filtered(self):
-        return 0
 
     def __call__(self, read1, read2, matches1, matches2):
         self.writer.write(read1, read2)
