@@ -1,7 +1,5 @@
 language: python
 
-dist: xenial
-
 cache:
   directories:
     - $HOME/.cache/pip
