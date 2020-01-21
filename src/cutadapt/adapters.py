@@ -705,7 +705,7 @@ class MultiAdapter(Adapter):
             if adapter.where is not self._where:
                 raise ValueError("All adapters must have identical 'where' attributes")
         self._adapters = adapters
-        self._longest, self._index = self._make_index()
+        self._lengths, self._index = self._make_index()
 
     def __repr__(self):
         return 'MultiAdapter(adapters={!r}, where={})'.format(self._adapters, self._where)
@@ -742,7 +742,7 @@ class MultiAdapter(Adapter):
     def _make_index(self):
         logger.info('Building index of %s adapters ...', len(self._adapters))
         index = dict()
-        longest = 0
+        lengths = set()
         has_warned = False
         for adapter in self._adapters:
             sequence = adapter.sequence
@@ -763,10 +763,10 @@ class MultiAdapter(Adapter):
                         has_warned = True
                 else:
                     index[s] = (adapter, errors, matches)
-                longest = max(longest, len(s))
+                lengths.add(len(s))
         logger.info('Built an index containing %s strings.', len(index))
 
-        return longest, index
+        return sorted(lengths, reverse=True), index
 
     def match_to(self, read):
         """
@@ -785,8 +785,7 @@ class MultiAdapter(Adapter):
         best_length = 0
         best_m = -1
         best_e = 1000
-        # TODO do not go through all the lengths, only those that actually exist in the index
-        for length in range(self._longest, -1, -1):
+        for length in self._lengths:
             if length < best_m:
                 # No chance of getting the same or a higher number of matches, so we can stop early
                 break
