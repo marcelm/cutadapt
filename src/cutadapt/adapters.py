@@ -704,8 +704,16 @@ class MultiAdapter(Adapter):
             self._accept(adapter)
             if adapter.where is not self._where:
                 raise ValueError("All adapters must have identical 'where' attributes")
+        assert self._where in (Where.PREFIX, Where.SUFFIX)
         self._adapters = adapters
         self._lengths, self._index = self._make_index()
+        if self._where is Where.PREFIX:
+            def make_affix(read, n):
+                return read.sequence[:n]
+        else:
+            def make_affix(read, n):
+                return read.sequence[-n:]
+        self._make_affix = make_affix
 
     def __repr__(self):
         return 'MultiAdapter(adapters={!r}, where={})'.format(self._adapters, self._where)
@@ -773,14 +781,7 @@ class MultiAdapter(Adapter):
         Match the adapters against the read and return a Match that represents
         the best match or None if no match was found
         """
-        if self._where is Where.PREFIX:
-            def make_affix(n):
-                return read.sequence[:n]
-        else:
-            def make_affix(n):
-                return read.sequence[-n:]
-
-        # Check all the prefixes of the read that could match
+        # Check all the prefixes or suffixes (affixes) of the read that could match
         best_adapter = None
         best_length = 0
         best_m = -1
@@ -790,7 +791,7 @@ class MultiAdapter(Adapter):
                 # No chance of getting the same or a higher number of matches, so we can stop early
                 break
 
-            affix = make_affix(length)
+            affix = self._make_affix(read, length)
             try:
                 adapter, e, m = self._index[affix]
             except KeyError:
