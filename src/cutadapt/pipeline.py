@@ -270,7 +270,7 @@ class SingleEndPipeline(Pipeline):
             n += 1
             if n % 10000 == 0 and progress:
                 progress.update(n)
-            total_bp += len(read.sequence)
+            total_bp += len(read)
             matches = []  # type: List[Any]
             for modifier in self._modifiers:
                 read = modifier(read, matches)
@@ -356,8 +356,8 @@ class PairedEndPipeline(Pipeline):
             n += 1
             if n % 10000 == 0 and progress:
                 progress.update(n)
-            total1_bp += len(read1.sequence)
-            total2_bp += len(read2.sequence)
+            total1_bp += len(read1)
+            total2_bp += len(read2)
             matches1 = []  # type: List[Any]
             matches2 = []  # type: List[Any]
             for modifier in self._modifiers:
