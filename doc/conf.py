@@ -14,6 +14,7 @@
 
 import sys
 import os
+import time
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -46,8 +47,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Cutadapt'
-copyright = u'2010-2020, Marcel Martin'
+project = 'Cutadapt'
+copyright = '2010-{}, Marcel Martin'.format(time.gmtime().tm_year)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
