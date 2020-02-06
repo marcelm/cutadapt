@@ -181,6 +181,7 @@ class AdapterStatistics:
 
 
 class Match(ABC):
+
     @abstractmethod
     def remainder_interval(self) -> Tuple[int, int]:
         pass

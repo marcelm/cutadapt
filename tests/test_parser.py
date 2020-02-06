@@ -4,6 +4,7 @@ import pytest
 from dnaio import Sequence
 from cutadapt.adapters import Where, WhereToRemove, LinkedAdapter, SingleAdapter
 from cutadapt.parser import AdapterParser, AdapterSpecification
+from cutadapt.modifiers import ModificationInfo
 
 
 def test_expand_braces():
@@ -178,5 +179,5 @@ def test_anywhere_parameter():
     read = Sequence('foo1', 'TGAAGTACACGGTTAAAAAAAAAA')
     from cutadapt.modifiers import AdapterCutter
     cutter = AdapterCutter([adapter])
-    trimmed_read = cutter(read, [])
+    trimmed_read = cutter(read, ModificationInfo())
     assert trimmed_read.sequence == ''

@@ -16,7 +16,7 @@ from xopen import xopen
 import dnaio
 
 from .utils import Progress, FileOpener
-from .modifiers import SingleEndModifier, PairedModifier, PairedModifierWrapper
+from .modifiers import SingleEndModifier, PairedModifier, PairedModifierWrapper, ModificationInfo
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
@@ -271,11 +271,11 @@ class SingleEndPipeline(Pipeline):
             if n % 10000 == 0 and progress:
                 progress.update(n)
             total_bp += len(read)
-            matches = []  # type: List[Any]
+            info = ModificationInfo()
             for modifier in self._modifiers:
-                read = modifier(read, matches)
+                read = modifier(read, info)
             for filter_ in self._filters:
-                if filter_(read, matches):
+                if filter_(read, info):
                     break
         return (n, total_bp, None)
 
@@ -358,13 +358,13 @@ class PairedEndPipeline(Pipeline):
                 progress.update(n)
             total1_bp += len(read1)
             total2_bp += len(read2)
-            matches1 = []  # type: List[Any]
-            matches2 = []  # type: List[Any]
+            info1 = ModificationInfo()
+            info2 = ModificationInfo()
             for modifier in self._modifiers:
-                read1, read2 = modifier(read1, read2, matches1, matches2)
+                read1, read2 = modifier(read1, read2, info1, info2)
             for filter_ in self._filters:
                 # Stop writing as soon as one of the filters was successful.
-                if filter_(read1, read2, matches1, matches2):
+                if filter_(read1, read2, info1, info2):
                     break
         return (n, total1_bp, total2_bp)
 

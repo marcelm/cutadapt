@@ -19,6 +19,7 @@ from typing import List, Tuple, Optional, Dict, Any
 
 from .utils import FileOpener
 from .adapters import Match
+from .modifiers import ModificationInfo
 
 
 # Constants used when returning from a Filter’s __call__ method to improve
@@ -29,7 +30,7 @@ KEEP = False
 
 class SingleEndFilter(ABC):
     @abstractmethod
-    def __call__(self, read, matches):
+    def __call__(self, read, info: ModificationInfo):
         """
         Called to process a single-end read
 
@@ -39,11 +40,11 @@ class SingleEndFilter(ABC):
 
 class PairedEndFilter(ABC):
     @abstractmethod
-    def __call__(self, read1, matches1, read2, matches2):
+    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         """
         Called to process the read pair (read1, read2)
 
-        Any adapter matches are append to the matches list.
+        Any adapter matches are append to the info.matches list.
         """
 
 
@@ -93,7 +94,7 @@ class NoFilter(SingleEndFilterWithStatistics):
         super().__init__()
         self.writer = writer
 
-    def __call__(self, read, matches):
+    def __call__(self, read, info: ModificationInfo):
         self.writer.write(read)
         self.update_statistics(read)
         return DISCARD
@@ -107,7 +108,7 @@ class PairedNoFilter(PairedEndFilterWithStatistics):
         super().__init__()
         self.writer = writer
 
-    def __call__(self, read1, read2, matches1, matches2):
+    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         self.writer.write(read1, read2)
         self.update_statistics(read1, read2)
 
@@ -125,8 +126,8 @@ class Redirector(SingleEndFilterWithStatistics):
         self.writer = writer
         self.filter = filter
 
-    def __call__(self, read, matches):
-        if self.filter(read, matches):
+    def __call__(self, read, info: ModificationInfo):
+        if self.filter(read, info):
             self.filtered += 1
             if self.writer is not None:
                 self.writer.write(read)
@@ -166,20 +167,20 @@ class PairedRedirector(PairedEndFilterWithStatistics):
         else:
             self._is_filtered = self._is_filtered_first
 
-    def _is_filtered_any(self, read1, read2, matches1, matches2):
-        return self.filter(read1, matches1) or self.filter2(read2, matches2)
+    def _is_filtered_any(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+        return self.filter(read1, info1) or self.filter2(read2, info2)
 
-    def _is_filtered_both(self, read1, read2, matches1, matches2):
-        return self.filter(read1, matches1) and self.filter2(read2, matches2)
+    def _is_filtered_both(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+        return self.filter(read1, info1) and self.filter2(read2, info2)
 
-    def _is_filtered_first(self, read1, read2, matches1, matches2):
-        return self.filter(read1, matches1)
+    def _is_filtered_first(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+        return self.filter(read1, info1)
 
-    def _is_filtered_second(self, read1, read2, matches1, matches2):
-        return self.filter2(read2, matches2)
+    def _is_filtered_second(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+        return self.filter2(read2, info2)
 
-    def __call__(self, read1, read2, matches1, matches2):
-        if self._is_filtered(read1, read2, matches1, matches2):
+    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+        if self._is_filtered(read1, read2, info1, info2):
             self.filtered += 1
             if self.writer is not None:
                 self.writer.write(read1, read2)
@@ -192,7 +193,7 @@ class TooShortReadFilter(SingleEndFilter):
     def __init__(self, minimum_length):
         self.minimum_length = minimum_length
 
-    def __call__(self, read, matches):
+    def __call__(self, read, info: ModificationInfo):
         return len(read) < self.minimum_length
 
 
@@ -200,7 +201,7 @@ class TooLongReadFilter(SingleEndFilter):
     def __init__(self, maximum_length):
         self.maximum_length = maximum_length
 
-    def __call__(self, read, matches):
+    def __call__(self, read, info: ModificationInfo):
         return len(read) > self.maximum_length
 
 
@@ -219,7 +220,7 @@ class NContentFilter(SingleEndFilter):
         self.is_proportion = count < 1.0
         self.cutoff = count
 
-    def __call__(self, read, matches):
+    def __call__(self, read, info: ModificationInfo):
         """Return True when the read should be discarded"""
         n_count = read.sequence.lower().count('n')
         if self.is_proportion:
@@ -234,16 +235,16 @@ class DiscardUntrimmedFilter(SingleEndFilter):
     """
     Return True if read is untrimmed.
     """
-    def __call__(self, read, matches):
-        return not matches
+    def __call__(self, read, info: ModificationInfo):
+        return not info.matches
 
 
 class DiscardTrimmedFilter(SingleEndFilter):
     """
     Return True if read is trimmed.
     """
-    def __call__(self, read, matches):
-        return bool(matches)
+    def __call__(self, read, info: ModificationInfo):
+        return bool(info.matches)
 
 
 class CasavaFilter(SingleEndFilter):
@@ -254,7 +255,7 @@ class CasavaFilter(SingleEndFilter):
 
     Reads with unrecognized headers are kept.
     """
-    def __call__(self, read, matches):
+    def __call__(self, read, info: ModificationInfo):
         _, _, right = read.name.partition(' ')
         return right[1:4] == ':Y:'  # discard if :Y: found
 
@@ -281,12 +282,12 @@ class Demultiplexer(SingleEndFilterWithStatistics):
         self.qualities = qualities
         self.file_opener = file_opener
 
-    def __call__(self, read, matches):
+    def __call__(self, read, info):
         """
         Write the read to the proper output file according to the most recent match
         """
-        if matches:
-            name = matches[-1].adapter.name
+        if info.matches:
+            name = info.matches[-1].adapter.name
             if name not in self.writers:
                 self.writers[name] = self.file_opener.dnaio_open_raise_limit(
                     self.template.replace('{name}', name), self.qualities)
@@ -332,10 +333,10 @@ class PairedDemultiplexer(PairedEndFilterWithStatistics):
     def written_bp(self) -> Tuple[int, int]:
         return (self._demultiplexer1._written_bp[0], self._demultiplexer2._written_bp[0])
 
-    def __call__(self, read1, read2, matches1, matches2):
+    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         assert read2 is not None
-        self._demultiplexer1(read1, matches1)
-        self._demultiplexer2(read2, matches1)
+        self._demultiplexer1(read1, info1)
+        self._demultiplexer2(read2, info1)
 
     def close(self):
         self._demultiplexer1.close()
@@ -380,14 +381,14 @@ class CombinatorialDemultiplexer(PairedEndFilterWithStatistics):
     def _make_path(template, name1, name2):
         return template.replace('{name1}', name1).replace('{name2}', name2)
 
-    def __call__(self, read1, read2, matches1, matches2):
+    def __call__(self, read1, read2, info1, info2):
         """
         Write the read to the proper output file according to the most recent matches both on
         R1 and R2
         """
         assert read2 is not None
-        name1 = matches1[-1].adapter.name if matches1 else None
-        name2 = matches2[-1].adapter.name if matches2 else None
+        name1 = info1.matches[-1].adapter.name if info1.matches else None
+        name2 = info2.matches[-1].adapter.name if info2.matches else None
         key = (name1, name2)
         if key not in self.writers:
             # Open writer on first use
@@ -419,9 +420,10 @@ class RestFileWriter(SingleEndFilter):
     def __init__(self, file):
         self.file = file
 
-    def __call__(self, read, matches):
-        if matches:
-            rest = matches[-1].rest()
+    def __call__(self, read, info):
+        # TODO this fails with linked adapters
+        if info.matches:
+            rest = info.matches[-1].rest()
             if len(rest) > 0:
                 print(rest, read.name, file=self.file)
         return KEEP
@@ -431,9 +433,10 @@ class WildcardFileWriter(SingleEndFilter):
     def __init__(self, file):
         self.file = file
 
-    def __call__(self, read, matches):
-        if matches:
-            print(matches[-1].wildcards(), read.name, file=self.file)
+    def __call__(self, read, info):
+        # TODO this fails with linked adapters
+        if info.matches:
+            print(info.matches[-1].wildcards(), read.name, file=self.file)
         return KEEP
 
 
@@ -441,9 +444,9 @@ class InfoFileWriter(SingleEndFilter):
     def __init__(self, file):
         self.file = file
 
-    def __call__(self, read, matches: List[Match]):
-        if matches:
-            for match in matches:
+    def __call__(self, read, info: ModificationInfo):
+        if info.matches:
+            for match in info.matches:
                 for info_record in match.get_info_records():
                     print(*info_record, sep='\t', file=self.file)
         else:
