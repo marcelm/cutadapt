@@ -448,7 +448,8 @@ class InfoFileWriter(SingleEndFilter):
         if info.matches:
             for match in info.matches:
                 for info_record in match.get_info_records():
-                    print(*info_record, sep='\t', file=self.file)
+                    # info_record[0] is the read name suffix
+                    print(read.name + info_record[0], *info_record[1:], sep='\t', file=self.file)
         else:
             seq = read.sequence
             qualities = read.qualities if read.qualities is not None else ''

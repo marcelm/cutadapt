@@ -280,7 +280,7 @@ class SingleMatch(Match):
         seq = self.read.sequence
         qualities = self.read.qualities
         info = [
-            self.read.name,
+            "",
             self.errors,
             self.rstart,
             self.rstop,

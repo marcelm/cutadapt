@@ -91,7 +91,7 @@ def test_info_record():
     am = SingleMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, remove_before=False,
         adapter=adapter, read=read)
     assert am.get_info_records() == [[
-        "abc",
+        "",
         2,
         5,
         21,

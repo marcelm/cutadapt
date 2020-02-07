@@ -2,6 +2,12 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`438`: The info file now contains the `` rc`` suffix added to
+  the names of reverse-complemented reads (with ``--revcomp``).
+
 v2.8 (2020-01-13)
 -----------------
 

@@ -696,3 +696,25 @@ def test_reverse_complement_normalized(run):
         "revcomp-single-normalize.fastq",
         "revcomp.1.fastq",
     )
+
+
+def test_reverse_complement_and_info_file(run, tmp_path, cores):
+    info_path = tmp_path / "info.txt"
+    run(
+        [
+            "--revcomp",
+            "-g",
+            "^TTATTTGTCT",
+            "-g",
+            "^TCCGCACTGG",
+            "--info-file",
+            str(info_path),
+        ],
+        "revcomp-single-normalize.fastq",
+        "revcomp.1.fastq",
+    )
+    with open(info_path) as f:
+        lines = f.readlines()
+    assert len(lines) == 6
+    assert lines[0].split("\t")[0] == "read1/1"
+    assert lines[1].split("\t")[0] == "read2/1 rc"
