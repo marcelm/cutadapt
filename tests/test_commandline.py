@@ -699,7 +699,7 @@ def test_reverse_complement_normalized(run):
 
 
 def test_reverse_complement_and_info_file(run, tmp_path, cores):
-    info_path = tmp_path / "info.txt"
+    info_path = str(tmp_path / "info.txt")
     run(
         [
             "--revcomp",
@@ -708,7 +708,7 @@ def test_reverse_complement_and_info_file(run, tmp_path, cores):
             "-g",
             "^TCCGCACTGG",
             "--info-file",
-            str(info_path),
+            info_path,
         ],
         "revcomp-single-normalize.fastq",
         "revcomp.1.fastq",

@@ -18,7 +18,6 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional, Dict, Any
 
 from .utils import FileOpener
-from .adapters import Match
 from .modifiers import ModificationInfo
 
 
