@@ -82,3 +82,25 @@ def nextseq_trim_index(sequence, int cutoff, int base=33):
             max_qual = s
             max_i = i
     return max_i
+
+
+def expected_errors(str qualities, int base=33):
+    """
+    Return the number of expected errors (as double) from a read’s
+    qualities.
+
+    This uses the formula in Edgar et al. (2015),
+    see Section 2.2 in <https://academic.oup.com/bioinformatics/article/31/21/3476/194979>.
+
+    qualities -- ASCII-encoded qualities (chr(qual + base))
+    """
+    cdef:
+        int i, q
+        bytes quals = qualities.encode()
+        char* cq = quals
+        double e = 0.0
+
+    for i in range(len(qualities)):
+        q = cq[i] - base
+        e += 10 ** (-q / 10)
+    return e

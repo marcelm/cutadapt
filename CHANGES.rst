@@ -5,6 +5,10 @@ Changes
 development version
 -------------------
 
+* :issue:`441`: Add a ``--max-ee`` (or ``--max-expected-errors``) option
+  for filtering reads whose number of expected errors exceeds the given
+  threshold. The idea comes from
+  `Edgar et al. (2015) <https://academic.oup.com/bioinformatics/article/31/21/3476/194979>`_.
 * :issue:`438`: The info file now contains the `` rc`` suffix added to
   the names of reverse-complemented reads (with ``--revcomp``).
 

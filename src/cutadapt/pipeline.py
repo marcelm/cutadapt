@@ -20,6 +20,7 @@ from .modifiers import SingleEndModifier, PairedModifier, PairedModifierWrapper,
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
+    MaximumExpectedErrorsFilter,
     CasavaFilter, DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer,
     PairedDemultiplexer, CombinatorialDemultiplexer)
 
@@ -108,6 +109,7 @@ class Pipeline(ABC):
         self._minimum_length = None
         self._maximum_length = None
         self.max_n = None
+        self.max_expected_errors = None
         self.discard_casava = False
         self.discard_trimmed = False
         self.discard_untrimmed = False
@@ -169,6 +171,13 @@ class Pipeline(ABC):
         if self.max_n is not None:
             f1 = f2 = NContentFilter(self.max_n)
             self._filters.append(filter_wrapper(None, f1, f2))
+
+        if self.max_expected_errors is not None:
+            if not self._reader.delivers_qualities:
+                logger.warning("Ignoring option --max-ee as input does not contain quality values")
+            else:
+                f1 = f2 = MaximumExpectedErrorsFilter(self.max_expected_errors)
+                self._filters.append(filter_wrapper(None, f1, f2))
 
         if self.discard_casava:
             f1 = f2 = CasavaFilter()

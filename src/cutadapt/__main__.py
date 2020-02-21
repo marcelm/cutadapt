@@ -248,6 +248,10 @@ def get_argument_parser() -> ArgumentParser:
     group.add_argument("--max-n", type=float, default=None, metavar="COUNT",
         help="Discard reads with more than COUNT 'N' bases. If COUNT is a number "
              "between 0 and 1, it is interpreted as a fraction of the read length.")
+    group.add_argument("--max-expected-errors", "--max-ee", type=float, default=None,
+        metavar="ERRORS",
+        help="Discard reads whose expected number of errors (computed "
+            "from quality values) exceeds ERRORS.")
     group.add_argument("--discard-trimmed", "--discard", action='store_true', default=False,
         help="Discard reads that contain an adapter. Use also -O to avoid "
             "discarding too many randomly matching reads.")
@@ -672,6 +676,7 @@ def pipeline_from_parsed_args(args, paired, file_opener) -> Pipeline:
                 lengths = (lengths[0], lengths[0])
             setattr(pipeline, attr, lengths)
     pipeline.max_n = args.max_n
+    pipeline.max_expected_errors = args.max_expected_errors
     pipeline.discard_casava = args.discard_casava
     pipeline.discard_trimmed = args.discard_trimmed
     pipeline.discard_untrimmed = args.discard_untrimmed

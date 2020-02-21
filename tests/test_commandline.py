@@ -718,3 +718,13 @@ def test_reverse_complement_and_info_file(run, tmp_path, cores):
     assert len(lines) == 6
     assert lines[0].split("\t")[0] == "read1/1"
     assert lines[1].split("\t")[0] == "read2/1 rc"
+
+
+def test_max_expected_errors(run, cores):
+    run("--max-ee=0.9", "maxee.fastq", "maxee.fastq")
+
+
+def test_max_expected_errors_fasta(tmp_path):
+    path = tmp_path / "input.fasta"
+    path.write_text(">read\nACGTACGT\n")
+    main(["--max-ee=0.001", "-o", "/dev/null", str(path)])

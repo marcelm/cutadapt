@@ -17,6 +17,7 @@ from collections import Counter
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional, Dict, Any
 
+from .qualtrim import expected_errors
 from .utils import FileOpener
 from .modifiers import ModificationInfo
 
@@ -204,9 +205,25 @@ class TooLongReadFilter(SingleEndFilter):
         return len(read) > self.maximum_length
 
 
+class MaximumExpectedErrorsFilter(SingleEndFilter):
+    """
+    Discard reads whose expected number of errors, according to the quality
+    values, exceeds a threshold.
+
+    The idea comes from usearch's -fastq_maxee parameter
+    (http://drive5.com/usearch/).
+    """
+    def __init__(self, max_errors):
+        self.max_errors = max_errors
+
+    def __call__(self, read, info: ModificationInfo):
+        """Return True when the read should be discarded"""
+        return expected_errors(read.qualities) > self.max_errors
+
+
 class NContentFilter(SingleEndFilter):
     """
-    Discards a reads that has a number of 'N's over a given threshold. It handles both raw counts
+    Discard a read if it has too many 'N' bases. It handles both raw counts
     of Ns as well as proportions. Note, for raw counts, it is a 'greater than' comparison,
     so a cutoff of '1' will keep reads with a single N in it.
     """

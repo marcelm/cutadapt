@@ -1124,6 +1124,12 @@ reads. They always discard those reads for which the filtering criterion applies
     Discard reads with more than COUNT ``N`` bases. If ``COUNT_or_FRACTION`` is
     a number between 0 and 1, it is interpreted as a fraction of the read length
 
+``--max-expected-errors ERRORS`` or ``--max-ee ERRORS``
+    Discard reads with more than ERRORS expected errors. The number of expected
+    errors is computed as described in
+    `Edgar et al. (2015) <https://academic.oup.com/bioinformatics/article/31/21/3476/194979>`_,
+    (Section 2.2).
+
 ``--discard-casava``
     Discard reads that did not pass CASAVA filtering. Illumina’s CASAVA pipeline in
     version 1.8 adds an *is_filtered* header field to each read. Specifying this
