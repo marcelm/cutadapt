@@ -565,7 +565,6 @@ class WorkerProcess(Process):
             orig_outfile = getattr(self._orig_outfiles, attr)
             if orig_outfile is not None:
                 output = io.BytesIO()
-                output.name = orig_outfile.name
                 setattr(output_files, attr, output)
 
         return output_files

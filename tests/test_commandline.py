@@ -330,8 +330,16 @@ def test_adapter_with_u(run):
     run("-a GCCGAACUUCUUAGACUGCCUUAAGGACGU", "illumina.fastq", "illumina.fastq.gz")
 
 
-def test_bzip2(run):
-    run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq.bz2')
+def test_bzip2_input(run, cores):
+    run(["--cores", str(cores), "-a", "TTAGACATATCTCCGTCG"], "small.fastq", "small.fastq.bz2")
+
+
+@pytest.mark.parametrize("extension", ["bz2", "xz", "gz"])
+def test_compressed_output(tmp_path, cores, extension):
+    out_path = str(tmp_path / ("small.fastq." + extension))
+    params = [
+        "--cores", str(cores), "-a", "TTAGACATATCTCCGTCG", "-o", out_path, datapath("small.fastq")]
+    assert main(params) is None
 
 
 if sys.version_info[:2] >= (3, 3):
