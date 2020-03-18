@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v2.9 (2020-03-18)
+-----------------
 
 * :issue:`441`: Add a ``--max-ee`` (or ``--max-expected-errors``) option
   for filtering reads whose number of expected errors exceeds the given
