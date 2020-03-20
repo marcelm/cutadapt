@@ -317,9 +317,9 @@ class PairedAdapterCutter(PairedModifier):
                 # read is already trimmed, nothing to do
                 pass
             elif self.action == 'mask':
-                trimmed_read = AdapterCutter.masked_read(trimmed_read, [match])
+                trimmed_read = AdapterCutter.masked_read(read, trimmed_read, [match])
             elif self.action == 'lowercase':
-                trimmed_read = AdapterCutter.lowercased_read(trimmed_read, [match])
+                trimmed_read = AdapterCutter.lowercased_read(read, trimmed_read, [match])
                 assert len(trimmed_read.sequence) == len(read)
             elif self.action is None:  # --no-trim
                 trimmed_read = read[:]
