@@ -269,7 +269,7 @@ class PairedAdapterCutter(PairedModifier):
         Both lists must have the same, non-zero length.
          read pair is trimmed if adapters1[i] is found in R1 and adapters2[i] in R2.
 
-        action -- What to do with a found adapter: None, 'trim', or 'mask'
+        action -- What to do with a found adapter: None, 'trim', 'lowercase' or 'mask'
         """
         super().__init__()
         if len(adapters1) != len(adapters2):

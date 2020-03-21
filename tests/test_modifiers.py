@@ -1,6 +1,8 @@
+import pytest
+
 from dnaio import Sequence
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
-    Shortener, AdapterCutter)
+    Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo)
 
 
 def test_unconditional_cutter():
@@ -57,3 +59,23 @@ def test_adapter_cutter():
     a2 = SingleAdapter('GTAGTCCCCC', where=Where.BACK)
     match = AdapterCutter.best_match([a1, a2], Sequence("name", "ATACCCCTGTAGTCCCC"))
     assert match.adapter is a2
+
+
+@pytest.mark.parametrize("action,expected_trimmed1,expected_trimmed2", [
+    (None, "CCCCGGTTAACCCC", "TTTTAACCGGTTTT"),
+    ("trim", "CCCC", "TTTT"),
+    ("lowercase", "CCCCggttaacccc", "TTTTaaccggtttt"),
+    ("mask", "CCCCNNNNNNNNNN", "TTTTNNNNNNNNNN")
+])
+def test_paired_adapter_cutter_actions(action, expected_trimmed1, expected_trimmed2):
+    from cutadapt.adapters import SingleAdapter, Where
+    a1 = SingleAdapter("GGTTAA", where=Where.BACK)
+    a2 = SingleAdapter("AACCGG", where=Where.BACK)
+    s1 = Sequence("name", "CCCCGGTTAACCCC")
+    s2 = Sequence("name", "TTTTAACCGGTTTT")
+    pac = PairedAdapterCutter([a1], [a2], action=action)
+    info1 = ModificationInfo()
+    info2 = ModificationInfo()
+    trimmed1, trimmed2 = pac(s1, s2, info1, info2)
+    assert expected_trimmed1 == trimmed1.sequence
+    assert expected_trimmed2 == trimmed2.sequence

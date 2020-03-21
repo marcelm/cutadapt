@@ -2,6 +2,12 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :pr:`449`: ``--action=`` could not be used with ``--pair-adapters``.
+  Fix contributed by wlokhorst.
+
 v2.9 (2020-03-18)
 -----------------
 
