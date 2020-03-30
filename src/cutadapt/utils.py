@@ -3,9 +3,12 @@ import sys
 import time
 import errno
 import multiprocessing
+import logging
 
 from xopen import xopen
 import dnaio
+
+logger = logging.getLogger(__name__)
 
 
 def available_cpu_count():
@@ -152,6 +155,7 @@ class FileOpener:
         self.threads = threads
 
     def xopen(self, path, mode):
+        logger.debug("Opening file '%s', mode '%s' with xopen", path, mode)
         return xopen(path, mode, compresslevel=self.compression_level, threads=self.threads)
 
     def xopen_or_none(self, path, mode):
@@ -172,6 +176,7 @@ class FileOpener:
         return file1, file2
 
     def dnaio_open(self, *args, **kwargs):
+        logger.debug("Opening file '%s', mode '%s' with dnaio", args[0], kwargs['mode'])
         kwargs["opener"] = self.xopen
         return dnaio.open(*args, **kwargs)
 

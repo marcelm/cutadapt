@@ -116,8 +116,9 @@ def get_argument_parser() -> ArgumentParser:
     group.add_argument("-h", "--help", action="help", help="Show this help message and exit")
     group.add_argument("--version", action="version", help="Show version number and exit",
         version=__version__)
-    group.add_argument("--debug", action='store_true', default=False,
-        help="Print debugging information.")
+    group.add_argument("--debug", nargs="?", const=True, default=False,
+        choices=("trace",),
+        help="Print debug log. 'trace' prints also DP matrices")
     group.add_argument("--profile", action="store_true", default=False, help=SUPPRESS)
     group.add_argument('-j', '--cores', type=int, default=1,
         help='Number of CPU cores to use. Use 0 to auto-detect. Default: %(default)s')
@@ -699,7 +700,7 @@ def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
         raise CommandLineError(e)
     warn_duplicate_adapters(adapters)
     warn_duplicate_adapters(adapters2)
-    if args.debug:
+    if args.debug == "trace":
         for adapter in adapters + adapters2:
             adapter.enable_debug()
     return adapters, adapters2
