@@ -40,11 +40,8 @@ class OutputFiles:
     untrimmed, untrimmed2, out and out2 are file names or templates
     as required by the used demultiplexer ('{name}' etc.).
 
-    If interleaved is True, then out is written interleaved.
-
     Files may also be None.
     """
-    # TODO interleaving for the other file pairs (too_short, too_long, untrimmed)?
     def __init__(
         self,
         out: Optional[BinaryIO] = None,
@@ -59,7 +56,6 @@ class OutputFiles:
         rest: Optional[BinaryIO] = None,
         wildcard: Optional[BinaryIO] = None,
         demultiplex: bool = False,
-        interleaved: bool = False,
         force_fasta: Optional[bool] = None,
     ):
         self.out = out
@@ -74,7 +70,6 @@ class OutputFiles:
         self.rest = rest
         self.wildcard = wildcard
         self.demultiplex = demultiplex
-        self.interleaved = interleaved
         self.force_fasta = force_fasta
 
     def __iter__(self):
@@ -394,7 +389,7 @@ class PairedEndPipeline(Pipeline):
 
     def _final_filter(self, outfiles):
         writer = self._open_writer(
-            outfiles.out, outfiles.out2, interleaved=outfiles.interleaved,
+            outfiles.out, outfiles.out2, interleaved=outfiles.out2 is None,
             force_fasta=outfiles.force_fasta)
         return PairedNoFilter(writer)
 

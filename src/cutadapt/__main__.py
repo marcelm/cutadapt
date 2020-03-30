@@ -393,7 +393,7 @@ def parse_lengths(s: str) -> Tuple[Optional[int], ...]:
 
 
 def open_output_files(
-    args, default_outfile, interleaved: bool, file_opener: FileOpener
+    args, default_outfile, file_opener: FileOpener
 ) -> OutputFiles:
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
@@ -472,7 +472,6 @@ def open_output_files(
         out=out,
         out2=out2,
         demultiplex=bool(demultiplex_mode),
-        interleaved=interleaved,
         force_fasta=args.fasta,
     )
 
@@ -853,7 +852,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
             paired, is_interleaved_input)
         check_arguments(args, paired, is_interleaved_output)
         pipeline = pipeline_from_parsed_args(args, paired, file_opener)
-        outfiles = open_output_files(args, default_outfile, is_interleaved_output, file_opener)
+        outfiles = open_output_files(args, default_outfile, file_opener)
         infiles = InputFiles(input_filename, file2=input_paired_filename,
             interleaved=is_interleaved_input)
         runner = setup_runner(pipeline, infiles, outfiles, progress, cores, args.buffer_size)
