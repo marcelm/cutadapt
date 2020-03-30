@@ -329,6 +329,21 @@ def test_interleaved_neither_nor(tmpdir):
         main(params)
 
 
+def test_interleaved_untrimmed_output(tmpdir):
+    o1 = str(tmpdir.join("out.1.fastq"))
+    o2 = str(tmpdir.join("out.2.fastq"))
+    untrimmed = str(tmpdir.join("untrimmed.interleaved.fastq"))
+    main([
+        "--interleaved",
+        "-a", "XXXX",
+        "-o", o1,
+        "-p", o2,
+        "--untrimmed-output", untrimmed,
+        datapath("interleaved.fastq")
+    ])
+    assert_files_equal(datapath("interleaved.fastq"), untrimmed)
+
+
 def test_pair_filter_both(run_paired, cores):
     run_paired(
         "--pair-filter=both -a TTAGACATAT -A GGAGTA -m 14",

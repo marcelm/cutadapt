@@ -321,7 +321,7 @@ def get_argument_parser() -> ArgumentParser:
             "filtering criterion in order for the pair to be filtered. "
             "Default: any")
     group.add_argument("--interleaved", action='store_true', default=False,
-        help="Read and write interleaved paired-end reads.")
+        help="Read and/or write interleaved paired-end reads.")
     group.add_argument("--untrimmed-paired-output", metavar="FILE",
         help="Write second read in a pair to this FILE when no adapter "
             "was found. Use with --untrimmed-output. Default: output "
@@ -515,20 +515,9 @@ def determine_paired(args) -> bool:
         or args.adapters2
         or args.cut2
         or args.pair_filter
+        or args.untrimmed_paired_output
         or args.too_short_paired_output
         or args.too_long_paired_output)
-
-
-def determine_interleaved(args) -> Tuple[bool, bool]:
-    is_interleaved_input = False
-    is_interleaved_output = False
-    if args.interleaved:
-        is_interleaved_input = len(args.inputs) == 1
-        is_interleaved_output = not args.paired_output
-        if not is_interleaved_input and not is_interleaved_output:
-            raise CommandLineError("When --interleaved is used, you cannot provide both two "
-                "input files and two output files")
-    return is_interleaved_input, is_interleaved_output
 
 
 def setup_input_files(
@@ -545,7 +534,7 @@ def setup_input_files(
             "You provided {} input file names, but either one or two are expected. ".format(
                 len(inputs))
             + "The file names were:\n - "
-            + "\n - ".join("{!r}".format(p) for p in inputs)
+            + "\n - ".join("'{}'".format(p) for p in inputs)
             + "\nHint: If your path contains spaces, you need to enclose it in quotes")
     input_filename = inputs[0]
     if paired and not interleaved:
@@ -568,7 +557,7 @@ def setup_input_files(
     return input_filename, input_paired_filename
 
 
-def check_arguments(args, paired: bool, is_interleaved_output: bool) -> None:
+def check_arguments(args, paired: bool) -> None:
     if not paired:
         if args.untrimmed_paired_output:
             raise CommandLineError("Option --untrimmed-paired-output can only be used when "
@@ -578,24 +567,23 @@ def check_arguments(args, paired: bool, is_interleaved_output: bool) -> None:
             raise CommandLineError("Option --pair-adapters can only be used when trimming "
                 "paired-end reads")
 
-    if paired:
-        if not is_interleaved_output:
-            if not args.paired_output:
-                raise CommandLineError("When a paired-end trimming option such as -A/-G/-B/-U, "
-                    "is used, a second output file needs to be specified via -p (--paired-output).")
-            if not args.output:
-                raise CommandLineError("When you use -p or --paired-output, you must also "
-                    "use the -o option.")
-
-        if bool(args.untrimmed_output) != bool(args.untrimmed_paired_output):
-            raise CommandLineError("When trimming paired-end reads, you must use either none "
-                "or both of the --untrimmed-output/--untrimmed-paired-output options.")
-        if args.too_short_output and not args.too_short_paired_output:
-            raise CommandLineError("When using --too-short-output with paired-end "
-                "reads, you also need to use --too-short-paired-output")
-        if args.too_long_output and not args.too_long_paired_output:
-            raise CommandLineError("When using --too-long-output with paired-end "
-                "reads, you also need to use --too-long-paired-output")
+    if paired and not args.interleaved:
+        if not args.paired_output:
+            raise CommandLineError("When a paired-end trimming option such as -A/-G/-B/-U, "
+                "is used, a second output file needs to be specified via -p (--paired-output).")
+        if not args.output:
+            raise CommandLineError("When you use -p or --paired-output, you must also "
+                "use the -o option.")
+        for out, paired_out, argname in [
+            (args.untrimmed_output, args.untrimmed_paired_output, "untrimmed"),
+            (args.too_short_output, args.too_short_paired_output, "too-short"),
+            (args.too_long_output, args.too_long_paired_output, "too-long"),
+        ]:
+            if bool(out) != bool(paired_out):
+                raise CommandLineError(
+                    "When trimming paired-end data, you must use either none or both of the"
+                    " --{name}-output/--{name}-paired-output options.".format(name=argname)
+                )
 
     if args.format is not None:
         logger.warning("Option --format is deprecated and ignored because the input file format is "
@@ -847,10 +835,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         progress = DummyProgress()
 
     try:
-        is_interleaved_input, is_interleaved_output = determine_interleaved(args)
+        is_interleaved_input = args.interleaved and len(args.inputs) == 1
         input_filename, input_paired_filename = setup_input_files(args.inputs,
             paired, is_interleaved_input)
-        check_arguments(args, paired, is_interleaved_output)
+        check_arguments(args, paired)
         pipeline = pipeline_from_parsed_args(args, paired, file_opener)
         outfiles = open_output_files(args, default_outfile, file_opener)
         infiles = InputFiles(input_filename, file2=input_paired_filename,

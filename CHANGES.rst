@@ -7,6 +7,8 @@ development version
 
 * :pr:`449`: ``--action=`` could not be used with ``--pair-adapters``.
   Fix contributed by wlokhorst.
+* :issue:`450`: ``--untrimmed-output``, ``--too-short-output`` and ``--too-long-output`` can
+  now be written interleaved.
 
 v2.9 (2020-03-18)
 -----------------

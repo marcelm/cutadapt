@@ -33,6 +33,10 @@ class InputFiles:
         self.file2 = file2
         self.interleaved = interleaved
 
+    def open(self):
+        return dnaio.open(self.file1, file2=self.file2,
+            interleaved=self.interleaved, mode="r")
+
 
 class OutputFiles:
     """
@@ -111,27 +115,17 @@ class Pipeline(ABC):
         self.file_opener = file_opener
 
     def connect_io(self, infiles: InputFiles, outfiles: OutputFiles):
-        self._reader = dnaio.open(infiles.file1, file2=infiles.file2,
-            interleaved=infiles.interleaved, mode='r')
+        self._reader = infiles.open()
         self._set_output(outfiles)
 
+    @abstractmethod
     def _open_writer(
         self,
         file: BinaryIO,
         file2: Optional[BinaryIO] = None,
         force_fasta: Optional[bool] = None,
-        **kwargs
     ):
-        # TODO backwards-incompatible change (?) would be to use outfiles.interleaved
-        # for all outputs
-        if force_fasta:
-            kwargs['fileformat'] = 'fasta'
-        # file and file2 must already be file-like objects because we don’t want to
-        # take care of threads and compression levels here.
-        for f in (file, file2):
-            assert not isinstance(f, (str, bytes, Path))
-        return dnaio.open(file, file2=file2, mode='w', qualities=self.uses_qualities,
-            **kwargs)
+        pass
 
     def _set_output(self, outfiles: OutputFiles):
         self._filters = []
@@ -283,6 +277,17 @@ class SingleEndPipeline(Pipeline):
                     break
         return (n, total_bp, None)
 
+    def _open_writer(
+        self,
+        file: BinaryIO,
+        file2: Optional[BinaryIO] = None,
+        force_fasta: Optional[bool] = None,
+    ):
+        assert file2 is None
+        assert not isinstance(file, (str, bytes, Path))
+        return dnaio.open(
+            file, mode="w", qualities=self.uses_qualities, fileformat="fasta" if force_fasta else None)
+
     def _filter_wrapper(self):
         return Redirector
 
@@ -372,6 +377,25 @@ class PairedEndPipeline(Pipeline):
                     break
         return (n, total1_bp, total2_bp)
 
+    def _open_writer(
+        self,
+        file: BinaryIO,
+        file2: Optional[BinaryIO] = None,
+        force_fasta: Optional[bool] = None,
+    ):
+        # file and file2 must already be file-like objects because we don’t want to
+        # take care of threads and compression levels here.
+        for f in (file, file2):
+            assert not isinstance(f, (str, bytes, Path))
+        return dnaio.open(
+            file,
+            file2=file2,
+            mode="w",
+            qualities=self.uses_qualities,
+            fileformat="fasta" if force_fasta else None,
+            interleaved=file2 is None,
+        )
+
     def _filter_wrapper(self, pair_filter_mode=None):
         if pair_filter_mode is None:
             pair_filter_mode = self._pair_filter_mode
@@ -388,9 +412,7 @@ class PairedEndPipeline(Pipeline):
             return self._filter_wrapper()
 
     def _final_filter(self, outfiles):
-        writer = self._open_writer(
-            outfiles.out, outfiles.out2, interleaved=outfiles.out2 is None,
-            force_fasta=outfiles.force_fasta)
+        writer = self._open_writer(outfiles.out, outfiles.out2, force_fasta=outfiles.force_fasta)
         return PairedNoFilter(writer)
 
     def _create_demultiplexer(self, outfiles):

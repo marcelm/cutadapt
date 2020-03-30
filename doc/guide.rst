@@ -1355,15 +1355,19 @@ fit as well would have a partner that *can* be found. Some read pairs may theref
 Interleaved paired-end reads
 ----------------------------
 
-Paired-end reads can be read from a single FASTQ file in which the entries for
-the first and second read from each pair alternate. The first read in each pair
-comes before the second. Enable this file format by adding the ``--interleaved``
-option to the command-line. For example::
+Cutadapt supports reading and writing paired-end reads from a single FASTQ file
+in which the entries for the first and second read from each pair alternate.
+The first read in each pair comes before the second. This is called “interleaved”
+format. Enable this file format by adding the ``--interleaved`` option to the
+command-line. Then, if you provide only a single file where usually two would be
+expected, reads are automatically read or written interleaved.
+
+For example, to read interleaved from ``reads.fastq`` and to write interleaved to ``trimmed.fastq``::
 
     cutadapt --interleaved -q 20 -a ACGT -A TGCA -o trimmed.fastq reads.fastq
 
-To read from an interleaved file, but write regular two-file output, provide the
-second output file as usual with the ``-p`` option::
+In the following example, the input ``reads.fastq`` is interleaved, but output is
+written to two files ``trimmed.1.fastq`` and ``trimmed.2.fastq``::
 
     cutadapt --interleaved -q 20 -a ACGT -A TGCA -o trimmed.1.fastq -p trimmed.2.fastq reads.fastq
 
@@ -1371,6 +1375,14 @@ Reading two-file input and writing interleaved is also possible by providing
 a second input file::
 
     cutadapt --interleaved -q 20 -a ACGT -A TGCA -o trimmed.1.fastq reads.1.fastq reads.2.fastq
+
+The following options also supported interleaved output::
+
+  * ``--untrimmed-output`` (omit ``--untrimmed-paired-output``)
+  * ``--too-short-output`` (omit ``--too-short-paired-output``)
+  * ``--too-long-output`` (omit ``--too-long-paired-output``)
+
+If you omit ``--interleaved`` but trim paired-end files, the above options must be used in pairs.
 
 Cutadapt will detect if an input file is not properly interleaved by checking
 whether read names match and whether the file contains an even number of entries.
