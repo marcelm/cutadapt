@@ -165,14 +165,11 @@ class FileOpener:
         return self.xopen(path, mode)
 
     def xopen_pair(self, path1, path2, mode):
-        file1 = file2 = None
-        if path1 is not None:
-            file1 = self.xopen(path1, mode)
-            if path2 is not None:
-                file2 = self.xopen(path2, mode)
-        elif path2 is not None:
+        if path1 is None and path2 is not None:
             raise ValueError("When giving paths for paired-end files, only providing the second"
                 " file is not supported")
+        file1 = self.xopen_or_none(path1, mode)
+        file2 = self.xopen_or_none(path2, mode)
         return file1, file2
 
     def dnaio_open(self, *args, **kwargs):
