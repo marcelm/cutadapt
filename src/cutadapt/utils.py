@@ -12,7 +12,7 @@ try:
     import resource
 except ImportError:
     # Windows
-    resource = None
+    resource = None  # type: ignore
 
 
 logger = logging.getLogger(__name__)
