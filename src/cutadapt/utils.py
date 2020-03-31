@@ -8,6 +8,13 @@ import logging
 from xopen import xopen
 import dnaio
 
+try:
+    import resource
+except ImportError:
+    # Windows
+    resource = None
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,13 +42,10 @@ def available_cpu_count():
 
 
 def raise_open_files_limit(n):
-    try:
-        import resource
-    except ImportError:
-        # Windows
+    if resource is None:
         return
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    soft += n
+    soft = min(soft + n, hard)
     resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
 
 
