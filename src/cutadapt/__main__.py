@@ -889,7 +889,7 @@ def setup_runner(pipeline: Pipeline, infiles, outfiles, progress, cores, buffer_
         runner_kwargs = dict()
     try:
         runner = runner_class(pipeline, infiles, outfiles, progress, **runner_kwargs)
-    except (dnaio.UnknownFileFormat, IOError) as e:
+    except (dnaio.UnknownFileFormat, OSError) as e:
         raise CommandLineError(e)
 
     return runner

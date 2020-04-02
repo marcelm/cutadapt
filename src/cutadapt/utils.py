@@ -35,7 +35,7 @@ def available_cpu_count():
             res = bin(int(m.group(1).replace(",", ""), 16)).count("1")
             if res > 0:
                 return min(res, multiprocessing.cpu_count())
-    except IOError:
+    except OSError:
         pass
 
     return multiprocessing.cpu_count()
