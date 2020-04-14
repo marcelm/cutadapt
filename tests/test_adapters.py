@@ -1,7 +1,7 @@
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import SingleAdapter, SingleMatch, Where, LinkedAdapter, WhereToRemove
+from cutadapt.adapters import SingleAdapter, SingleMatch, Where, LinkedAdapter, WhereToRemove, MultiAdapter
 
 
 def test_issue_52():
@@ -176,3 +176,15 @@ def test_no_indels_empty_read(where):
     adapter = SingleAdapter('ACGT', where=where, indels=False)
     empty = Sequence('name', '')
     adapter.match_to(empty)
+
+
+def test_multi_adapter():
+    adapters = [
+        SingleAdapter("GAAC", where=Where.PREFIX, indels=False),
+        SingleAdapter("TGCT", where=Where.PREFIX, indels=False),
+    ]
+    ma = MultiAdapter(adapters)
+    match = ma.match_to(Sequence("r", "GAACTT"))
+    assert match.adapter is adapters[0]
+    match = ma.match_to(Sequence("r", "TGCTAA"))
+    assert match.adapter is adapters[1]

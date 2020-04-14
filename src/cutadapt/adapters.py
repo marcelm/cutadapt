@@ -728,9 +728,9 @@ class MultiAdapter(Adapter):
             raise ValueError("Wildcards in the read not supported")
         if adapter.adapter_wildcards:
             raise ValueError("Wildcards in the adapter not supported")
-        if adapter.indels:
-            raise ValueError("Indels not allowed")
         k = int(len(adapter) * adapter.max_error_rate)
+        if k > 0 and adapter.indels:
+            raise ValueError("Indels not allowed")
         if k > 2:
             raise ValueError("Error rate too high")
 
