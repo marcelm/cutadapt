@@ -263,7 +263,6 @@ class SingleEndPipeline(Pipeline):
         """Run the pipeline. Return statistics"""
         n = 0  # no. of processed reads  # TODO turn into attribute
         total_bp = 0
-        assert self._reader is not None
         for read in self._reader:
             n += 1
             if n % 10000 == 0 and progress:
