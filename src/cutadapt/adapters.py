@@ -276,6 +276,13 @@ class SingleMatch(Match):
         else:
             return 0, self.rstart
 
+    def trim_slice(self):
+        # Same as remainder_interval, but as a slice() object
+        if self.remove_before:
+            return slice(self.rstop, None)
+        else:
+            return slice(None, self.rstart)
+
     def get_info_records(self, read) -> List[List]:
         seq = read.sequence
         qualities = read.qualities
@@ -333,7 +340,7 @@ class Adapter(ABC):
         pass
 
     @abstractmethod
-    def match_to(self, read):
+    def match_to(self, sequence: str):
         pass
 
 
@@ -454,7 +461,7 @@ class SingleAdapter(Adapter):
         self._debug = True
         self.aligner.enable_debug()
 
-    def match_to(self, read):
+    def match_to(self, sequence: str):
         """
         Attempt to match this adapter to the given read.
 
@@ -462,7 +469,7 @@ class SingleAdapter(Adapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        read_seq = read.sequence
+        read_seq = sequence
         pos = -1
 
         # try to find an exact match first unless wildcards are allowed
@@ -475,7 +482,7 @@ class SingleAdapter(Adapter):
         if pos >= 0:
             match_args = (
                 0, len(self.sequence), pos, pos + len(self.sequence),
-                len(self.sequence), 0)
+                len(self.sequence), 0)  # type: Optional[Tuple[int,int,int,int,int,int]]
         else:
             # try approximate matching
             alignment = self.aligner.locate(read_seq)
@@ -497,7 +504,7 @@ class SingleAdapter(Adapter):
             remove_before = match_args[2] == 0  # index 2 is rstart
         else:
             remove_before = self.remove == WhereToRemove.PREFIX
-        match = SingleMatch(*match_args, remove_before=remove_before, adapter=self, sequence=read.sequence)
+        match = SingleMatch(*match_args, remove_before=remove_before, adapter=self, sequence=sequence)
 
         assert match.length >= self.min_overlap
         return match
@@ -524,7 +531,7 @@ class BackOrFrontAdapter(SingleAdapter):
         assert self.where is Where.BACK or self.where is Where.FRONT
         self._remove_before = self.remove is WhereToRemove.PREFIX
 
-    def match_to(self, read):
+    def match_to(self, sequence: str):
         """
         Attempt to match this adapter to the given read.
 
@@ -532,13 +539,13 @@ class BackOrFrontAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        alignment = self.aligner.locate(read.sequence.upper())
+        alignment = self.aligner.locate(sequence.upper())  # type: Optional[Tuple[int,int,int,int,int,int]]
         if self._debug:
             print(self.aligner.dpmatrix)  # pragma: no cover
         if alignment is None:
             return None
         return SingleMatch(
-            *alignment, remove_before=self._remove_before, adapter=self, sequence=read.sequence)
+            *alignment, remove_before=self._remove_before, adapter=self, sequence=sequence)
 
 
 class LinkedMatch(Match):
@@ -638,20 +645,16 @@ class LinkedAdapter(Adapter):
         self.front_adapter.enable_debug()
         self.back_adapter.enable_debug()
 
-    def match_to(self, read):
+    def match_to(self, sequence: str) -> Optional[LinkedMatch]:
         """
-        Match the linked adapters against the given read. Any anchored adapters are
-        required to exist for a successful match. If both adapters are unanchored,
-        both need to match.
+        Match the two linked adapters against a string
         """
-        front_match = self.front_adapter.match_to(read)
+        front_match = self.front_adapter.match_to(sequence)
         if self.front_required and front_match is None:
             return None
-
         if front_match is not None:
-            # TODO statistics
-            read = front_match.trimmed(read)
-        back_match = self.back_adapter.match_to(read)
+            sequence = sequence[front_match.trim_slice()]
+        back_match = self.back_adapter.match_to(sequence)
         if back_match is None and (self.back_required or front_match is None):
             return None
         return LinkedMatch(front_match, back_match, self)
@@ -698,11 +701,11 @@ class MultiAdapter(Adapter):
         self._adapters = adapters
         self._lengths, self._index = self._make_index()
         if self._where is Where.PREFIX:
-            def make_affix(read, n):
-                return read.sequence[:n]
+            def make_affix(s, n):
+                return s[:n]
         else:
-            def make_affix(read, n):
-                return read.sequence[-n:]
+            def make_affix(s, n):
+                return s[-n:]
         self._make_affix = make_affix
 
     def __repr__(self):
@@ -766,12 +769,12 @@ class MultiAdapter(Adapter):
 
         return sorted(lengths, reverse=True), index
 
-    def match_to(self, read):
+    def match_to(self, sequence: str):
         """
-        Match the adapters against the read and return a Match that represents
+        Match the adapters against a string and return a Match that represents
         the best match or None if no match was found
         """
-        # Check all the prefixes or suffixes (affixes) of the read that could match
+        # Check all the prefixes or suffixes (affixes) that could match
         best_adapter = None
         best_length = 0
         best_m = -1
@@ -781,7 +784,7 @@ class MultiAdapter(Adapter):
                 # No chance of getting the same or a higher number of matches, so we can stop early
                 break
 
-            affix = self._make_affix(read, length)
+            affix = self._make_affix(sequence, length)
             try:
                 adapter, e, m = self._index[affix]
             except KeyError:
@@ -799,7 +802,7 @@ class MultiAdapter(Adapter):
                 rstart, rstop = 0, best_length
             else:
                 assert self._where is Where.SUFFIX
-                rstart, rstop = len(read) - best_length, len(read)
+                rstart, rstop = len(sequence) - best_length, len(sequence)
             return SingleMatch(
                 astart=0,
                 astop=len(best_adapter.sequence),
@@ -809,7 +812,7 @@ class MultiAdapter(Adapter):
                 errors=best_e,
                 remove_before=best_adapter.remove is WhereToRemove.PREFIX,
                 adapter=best_adapter,
-                sequence=read.sequence,
+                sequence=sequence,
             )
 
     def enable_debug(self):

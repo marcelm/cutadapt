@@ -52,8 +52,7 @@ def test_issue_80():
         min_overlap=3,
         read_wildcards=False,
         adapter_wildcards=False)
-    read = Sequence(name="seq2", sequence="TCGTATGCCCTCC")
-    result = adapter.match_to(read)
+    result = adapter.match_to("TCGTATGCCCTCC")
     assert result.errors == 3, result
     assert result.astart == 0, result
     assert result.astop == 15, result
@@ -62,7 +61,7 @@ def test_issue_80():
 def test_str():
     a = SingleAdapter('ACGT', where=Where.BACK, remove=WhereToRemove.SUFFIX, max_error_rate=0.1)
     str(a)
-    str(a.match_to(Sequence(name='seq', sequence='TTACGT')))
+    str(a.match_to("TTACGT"))
 
 
 def test_linked_adapter():
@@ -74,8 +73,8 @@ def test_linked_adapter():
     assert linked_adapter.front_adapter.min_overlap == 4
     assert linked_adapter.back_adapter.min_overlap == 3
 
-    sequence = Sequence(name='seq', sequence='AAAACCCCCTTTT')
-    trimmed = linked_adapter.match_to(sequence).trimmed(sequence)
+    read = Sequence(name='seq', sequence='AAAACCCCCTTTT')
+    trimmed = linked_adapter.match_to(read.sequence).trimmed(read)
     assert trimmed.name == 'seq'
     assert trimmed.sequence == 'CCCCC'
 
@@ -166,34 +165,32 @@ def test_add_adapter_statistics():
 def test_linked_matches_property():
     """Accessing matches property of non-anchored linked adapters"""
     # Issue #265
-    s = Sequence('name', 'AAAATTTT')
     front_adapter = SingleAdapter('GGG', where=Where.FRONT)
     back_adapter = SingleAdapter('TTT', where=Where.BACK)
     la = LinkedAdapter(front_adapter, back_adapter, front_required=False, back_required=False, name='name')
-    assert la.match_to(s).matches == 3
+    assert la.match_to("AAAATTTT").matches == 3
 
 
 @pytest.mark.parametrize("where", [Where.PREFIX, Where.SUFFIX])
 def test_no_indels_empty_read(where):
     # Issue #376
     adapter = SingleAdapter('ACGT', where=where, indels=False)
-    empty = Sequence('name', '')
-    adapter.match_to(empty)
+    adapter.match_to("")
 
 
 def test_prefix_match_with_n_wildcard_in_read():
     adapter = SingleAdapter("NNNACGT", where=Where.PREFIX, indels=False)
-    match = adapter.match_to(Sequence("name", "TTTACGTAAAA"))
+    match = adapter.match_to("TTTACGTAAAA")
     assert match is not None and (0, 7) == (match.rstart, match.rstop)
-    match = adapter.match_to(Sequence("name", "NTTACGTAAAA"))
+    match = adapter.match_to("NTTACGTAAAA")
     assert match is not None and (0, 7) == (match.rstart, match.rstop)
 
 
 def test_suffix_match_with_n_wildcard_in_read():
     adapter = SingleAdapter("ACGTNNN", where=Where.SUFFIX, indels=False)
-    match = adapter.match_to(Sequence("name", "TTTTACGTTTT"))
+    match = adapter.match_to("TTTTACGTTTT")
     assert match is not None and (4, 11) == (match.rstart, match.rstop)
-    match = adapter.match_to(Sequence("name", "TTTTACGTCNC"))
+    match = adapter.match_to("TTTTACGTCNC")
     assert match is not None and (4, 11) == (match.rstart, match.rstop)
 
 
@@ -203,7 +200,7 @@ def test_multi_adapter():
         SingleAdapter("TGCT", where=Where.PREFIX, indels=False),
     ]
     ma = MultiAdapter(adapters)
-    match = ma.match_to(Sequence("r", "GAACTT"))
+    match = ma.match_to("GAACTT")
     assert match.adapter is adapters[0]
-    match = ma.match_to(Sequence("r", "TGCTAA"))
+    match = ma.match_to("TGCTAA")
     assert match.adapter is adapters[1]

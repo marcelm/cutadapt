@@ -128,7 +128,7 @@ class AdapterCutter(SingleEndModifier):
         """
         best_match = None
         for adapter in adapters:
-            match = adapter.match_to(read)
+            match = adapter.match_to(read.sequence)
             if match is None:
                 continue
 
@@ -297,7 +297,7 @@ class PairedAdapterCutter(PairedModifier):
             return read1, read2
         adapter1 = match1.adapter
         adapter2 = self._adapters2[self._adapter_indices[adapter1]]
-        match2 = adapter2.match_to(read2)
+        match2 = adapter2.match_to(read2.sequence)
         if match2 is None:
             return read1, read2
 
