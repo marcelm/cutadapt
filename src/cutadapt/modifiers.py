@@ -139,28 +139,25 @@ class AdapterCutter(SingleEndModifier):
         return best_match
 
     @staticmethod
-    def masked_read(read, trimmed_read, matches: Sequence[Match]):
+    def masked_read(read, matches: Sequence[Match]):
         start, stop = remainder(matches)
-        # TODO modification in place
-        trimmed_read.sequence = (
+        result = read[:]
+        result.sequence = (
             'N' * start
             + read.sequence[start:stop]
             + 'N' * (len(read) - stop))
-        trimmed_read.qualities = read.qualities
-        return trimmed_read
+        return result
 
     @staticmethod
-    def lowercased_read(read, trimmed_read, matches: Sequence[Match]):
+    def lowercased_read(read, matches: Sequence[Match]):
         start, stop = remainder(matches)
-        read_sequence = read.sequence
-        # TODO modification in place
-        trimmed_read.sequence = (
-            read_sequence[:start].lower()
-            + read_sequence[start:stop].upper()
-            + read_sequence[stop:].lower()
+        result = read[:]
+        result.sequence = (
+            read.sequence[:start].lower()
+            + read.sequence[start:stop].upper()
+            + read.sequence[stop:].lower()
         )
-        trimmed_read.qualities = read.qualities
-        return trimmed_read
+        return result
 
     def __call__(self, read, info: ModificationInfo):
         trimmed_read, matches = self.match_and_trim(read)
@@ -202,9 +199,9 @@ class AdapterCutter(SingleEndModifier):
             # read is already trimmed, nothing to do
             pass
         elif self.action == 'mask':
-            trimmed_read = self.masked_read(read, trimmed_read, matches)
+            trimmed_read = self.masked_read(read, matches)
         elif self.action == 'lowercase':
-            trimmed_read = self.lowercased_read(read, trimmed_read, matches)
+            trimmed_read = self.lowercased_read(read, matches)
             assert len(trimmed_read.sequence) == len(read)
         elif self.action is None:  # --no-trim
             trimmed_read = read[:]
@@ -317,9 +314,9 @@ class PairedAdapterCutter(PairedModifier):
                 # read is already trimmed, nothing to do
                 pass
             elif self.action == 'mask':
-                trimmed_read = AdapterCutter.masked_read(read, trimmed_read, [match])
+                trimmed_read = AdapterCutter.masked_read(read, [match])
             elif self.action == 'lowercase':
-                trimmed_read = AdapterCutter.lowercased_read(read, trimmed_read, [match])
+                trimmed_read = AdapterCutter.lowercased_read(read, [match])
                 assert len(trimmed_read.sequence) == len(read)
             elif self.action is None:  # --no-trim
                 trimmed_read = read[:]

@@ -12,6 +12,9 @@ development version
 * :issue:`453`: Fix problem that ``N`` wildcards in adapters did not match ``N`` characters
   in the read. ``N`` characters now match any character in the read, independent of whether
   ``--match-read-wildcards`` is used or not.
+* With ``--action=lowercase``/``mask``, print which sequences would have been
+  removed in the “Overview of removed sequences” statistics. Previously, it
+  would show that no sequences have been removed.
 
 v2.9 (2020-03-18)
 -----------------
