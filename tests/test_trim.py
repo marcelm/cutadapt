@@ -7,7 +7,7 @@ def test_statistics():
     read = Sequence('name', 'AAAACCCCAAAA')
     adapters = [SingleAdapter('CCCC', Where.BACK, max_error_rate=0.1)]
     cutter = AdapterCutter(adapters, times=3)
-    cutter(read, ModificationInfo())
+    cutter(read, ModificationInfo(read))
     # TODO make this a lot simpler
     trimmed_bp = 0
     for adapter in adapters:
@@ -29,7 +29,7 @@ def test_end_trim_with_mismatch():
 
     read = Sequence('foo1', 'AAAAAAAAAAATCGTCGATC')
     cutter = AdapterCutter([adapter], times=1)
-    trimmed_read = cutter(read, ModificationInfo())
+    trimmed_read = cutter(read, ModificationInfo(read))
 
     assert trimmed_read.sequence == 'AAAAAAAAAAA'
     assert cutter.adapter_statistics[adapter].back.lengths == {9: 1}
@@ -39,7 +39,7 @@ def test_end_trim_with_mismatch():
 
     read = Sequence('foo2', 'AAAAAAAAAAATCGAACGA')
     cutter = AdapterCutter([adapter], times=1)
-    trimmed_read = cutter(read, ModificationInfo())
+    trimmed_read = cutter(read, ModificationInfo(read))
 
     assert trimmed_read.sequence == read.sequence
     assert cutter.adapter_statistics[adapter].back.lengths == {}
@@ -57,5 +57,5 @@ def test_anywhere_with_errors():
     ):
         read = Sequence('foo', seq)
         cutter = AdapterCutter([adapter], times=1)
-        trimmed_read = cutter(read, ModificationInfo())
+        trimmed_read = cutter(read, ModificationInfo(read))
         assert trimmed_read.sequence == expected_trimmed

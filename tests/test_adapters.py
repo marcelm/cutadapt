@@ -15,9 +15,9 @@ def test_issue_52():
         min_overlap=5,
         read_wildcards=False,
         adapter_wildcards=True)
-    read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
+    sequence = "CCCCAGAACTACAGTCCCGGC"
     am = SingleMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2,
-        remove_before=False, adapter=adapter, read=read)
+        remove_before=False, adapter=adapter, sequence=sequence)
     assert am.wildcards() == 'GGC'
     """
     The result above should actually be 'CGGC' since the correct
@@ -75,7 +75,7 @@ def test_linked_adapter():
     assert linked_adapter.back_adapter.min_overlap == 3
 
     sequence = Sequence(name='seq', sequence='AAAACCCCCTTTT')
-    trimmed = linked_adapter.match_to(sequence).trimmed()
+    trimmed = linked_adapter.match_to(sequence).trimmed(sequence)
     assert trimmed.name == 'seq'
     assert trimmed.sequence == 'CCCCC'
 
@@ -91,8 +91,8 @@ def test_info_record():
         name="Foo")
     read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
     am = SingleMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, remove_before=False,
-        adapter=adapter, read=read)
-    assert am.get_info_records() == [[
+        adapter=adapter, sequence=read.sequence)
+    assert am.get_info_records(read) == [[
         "",
         2,
         5,

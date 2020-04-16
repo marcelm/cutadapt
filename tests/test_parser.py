@@ -179,5 +179,5 @@ def test_anywhere_parameter():
     read = Sequence('foo1', 'TGAAGTACACGGTTAAAAAAAAAA')
     from cutadapt.modifiers import AdapterCutter
     cutter = AdapterCutter([adapter])
-    trimmed_read = cutter(read, ModificationInfo())
+    trimmed_read = cutter(read, ModificationInfo(read))
     assert trimmed_read.sequence == ''

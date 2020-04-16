@@ -268,7 +268,7 @@ class SingleEndPipeline(Pipeline):
             if n % 10000 == 0 and progress:
                 progress.update(n)
             total_bp += len(read)
-            info = ModificationInfo()
+            info = ModificationInfo(read)
             for modifier in self._modifiers:
                 read = modifier(read, info)
             for filter_ in self._filters:
@@ -366,8 +366,8 @@ class PairedEndPipeline(Pipeline):
                 progress.update(n)
             total1_bp += len(read1)
             total2_bp += len(read2)
-            info1 = ModificationInfo()
-            info2 = ModificationInfo()
+            info1 = ModificationInfo(read1)
+            info2 = ModificationInfo(read2)
             for modifier in self._modifiers:
                 read1, read2 = modifier(read1, read2, info1, info2)
             for filter_ in self._filters:

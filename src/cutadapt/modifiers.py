@@ -19,10 +19,11 @@ class ModificationInfo:
     Any information (except the read itself) that needs to be passed from one modifier
     to one later in the pipeline or from one modifier to the filters is recorded here.
     """
-    __slots__ = ["matches"]
+    __slots__ = ["matches", "original_read"]
 
-    def __init__(self):
+    def __init__(self, read):
         self.matches = []  # type: List[Match]
+        self.original_read = read
 
 
 class SingleEndModifier(ABC):
@@ -190,7 +191,7 @@ class AdapterCutter(SingleEndModifier):
                 # if nothing found, attempt no further rounds
                 break
             matches.append(match)
-            trimmed_read = match.trimmed()
+            trimmed_read = match.trimmed(trimmed_read)
 
         if not matches:
             return trimmed_read, []
@@ -307,7 +308,7 @@ class PairedAdapterCutter(PairedModifier):
             if self.action == 'lowercase':
                 trimmed_read.sequence = trimmed_read.sequence.upper()
 
-            trimmed_read = match.trimmed()
+            trimmed_read = match.trimmed(trimmed_read)
             match.update_statistics(self.adapter_statistics[i][match.adapter])
 
             if self.action == 'trim':

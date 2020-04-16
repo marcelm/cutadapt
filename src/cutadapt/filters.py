@@ -461,11 +461,13 @@ class InfoFileWriter(SingleEndFilter):
         self.file = file
 
     def __call__(self, read, info: ModificationInfo):
+        current_read = info.original_read
         if info.matches:
             for match in info.matches:
-                for info_record in match.get_info_records():
+                for info_record in match.get_info_records(current_read):
                     # info_record[0] is the read name suffix
                     print(read.name + info_record[0], *info_record[1:], sep='\t', file=self.file)
+                current_read = match.trimmed(current_read)
         else:
             seq = read.sequence
             qualities = read.qualities if read.qualities is not None else ''

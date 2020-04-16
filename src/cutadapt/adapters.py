@@ -187,7 +187,11 @@ class Match(ABC):
         pass
 
     @abstractmethod
-    def get_info_records(self) -> List[List]:
+    def get_info_records(self, read) -> List[List]:
+        pass
+
+    @abstractmethod
+    def trimmed(self, read):
         pass
 
 
@@ -196,7 +200,7 @@ class SingleMatch(Match):
     Representation of a single adapter matched to a single read.
     """
     __slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'remove_before',
-        'adapter', 'read', 'length', '_trimmed_read', 'adjacent_base']
+        'adapter', 'sequence', 'length', 'adjacent_base']
 
     # TODO Can remove_before be removed from the constructor parameters?
     def __init__(
@@ -209,7 +213,7 @@ class SingleMatch(Match):
         errors: int,
         remove_before: bool,
         adapter: "SingleAdapter",
-        read,
+        sequence: str,
     ):
         """
         remove_before -- True: remove bases before adapter. False: remove after
@@ -221,15 +225,11 @@ class SingleMatch(Match):
         self.matches = matches  # type: int
         self.errors = errors  # type: int
         self.adapter = adapter  # type: SingleAdapter
-        self.read = read
+        self.sequence = sequence
         if remove_before:
-            # Compute the trimmed read, assuming it’s a 'front' adapter
-            self._trimmed_read = read[rstop:]
             self.adjacent_base = ""  # type: str
         else:
-            # Compute the trimmed read, assuming it’s a 'back' adapter
-            self.adjacent_base = read.sequence[rstart - 1:rstart]
-            self._trimmed_read = read[:rstart]
+            self.adjacent_base = sequence[rstart - 1:rstart]
         self.remove_before = remove_before  # type: bool
         # Number of aligned characters in the adapter. If there are
         # indels, this may be different from the number of characters
@@ -249,9 +249,9 @@ class SingleMatch(Match):
         If there are indels, this is not reliable as the full alignment
         is not available.
         """
-        wildcards = [self.read.sequence[self.rstart + i] for i in range(self.length)
+        wildcards = [self.sequence[self.rstart + i] for i in range(self.length)
             if self.adapter.sequence[self.astart + i] == wildcard_char and
-                self.rstart + i < len(self.read.sequence)]
+                self.rstart + i < len(self.sequence)]
         return ''.join(wildcards)
 
     def rest(self) -> str:
@@ -262,9 +262,9 @@ class SingleMatch(Match):
         This can be an empty string.
         """
         if self.remove_before:
-            return self.read.sequence[:self.rstart]
+            return self.sequence[:self.rstart]
         else:
-            return self.read.sequence[self.rstop:]
+            return self.sequence[self.rstop:]
 
     def remainder_interval(self) -> Tuple[int, int]:
         """
@@ -272,13 +272,13 @@ class SingleMatch(Match):
         remain after trimming
         """
         if self.remove_before:
-            return self.rstop, len(self.read.sequence)
+            return self.rstop, len(self.sequence)
         else:
             return 0, self.rstart
 
-    def get_info_records(self) -> List[List]:
-        seq = self.read.sequence
-        qualities = self.read.qualities
+    def get_info_records(self, read) -> List[List]:
+        seq = read.sequence
+        qualities = read.qualities
         info = [
             "",
             self.errors,
@@ -293,22 +293,25 @@ class SingleMatch(Match):
             info += [
                 qualities[0:self.rstart],
                 qualities[self.rstart:self.rstop],
-                qualities[self.rstop:]
+                qualities[self.rstop:],
             ]
         else:
             info += ["", "", ""]
 
         return [info]
 
-    def trimmed(self):
-        return self._trimmed_read
+    def trimmed(self, read):
+        if self.remove_before:
+            return read[self.rstop:]
+        else:
+            return read[:self.rstart]
 
     def update_statistics(self, statistics: AdapterStatistics):
         """Update AdapterStatistics in place"""
         if self.remove_before:
             statistics.front.errors[self.rstop][self.errors] += 1
         else:
-            statistics.back.errors[len(self.read) - len(self._trimmed_read)][self.errors] += 1
+            statistics.back.errors[len(self.sequence) - self.rstart][self.errors] += 1
             try:
                 statistics.back.adjacent_bases[self.adjacent_base] += 1
             except KeyError:
@@ -494,7 +497,7 @@ class SingleAdapter(Adapter):
             remove_before = match_args[2] == 0  # index 2 is rstart
         else:
             remove_before = self.remove == WhereToRemove.PREFIX
-        match = SingleMatch(*match_args, remove_before=remove_before, adapter=self, read=read)
+        match = SingleMatch(*match_args, remove_before=remove_before, adapter=self, sequence=read.sequence)
 
         assert match.length >= self.min_overlap
         return match
@@ -534,7 +537,8 @@ class BackOrFrontAdapter(SingleAdapter):
             print(self.aligner.dpmatrix)  # pragma: no cover
         if alignment is None:
             return None
-        return SingleMatch(*alignment, remove_before=self._remove_before, adapter=self, read=read)
+        return SingleMatch(
+            *alignment, remove_before=self._remove_before, adapter=self, sequence=read.sequence)
 
 
 class LinkedMatch(Match):
@@ -570,14 +574,12 @@ class LinkedMatch(Match):
             e += self.back_match.errors
         return e
 
-    def trimmed(self):
+    def trimmed(self, read):
+        if self.front_match:
+            read = self.front_match.trimmed(read)
         if self.back_match:
-            # back match is relative to front match, so even if a front match exists,
-            # this is correct
-            return self.back_match.trimmed()
-        else:
-            assert self.front_match
-            return self.front_match.trimmed()
+            read = self.back_match.trimmed(read)
+        return read
 
     @property
     def adjacent_base(self):
@@ -588,13 +590,14 @@ class LinkedMatch(Match):
         if self.front_match:
             statistics.front.errors[self.front_match.rstop][self.front_match.errors] += 1
         if self.back_match:
-            statistics.back.errors[len(self.back_match.read) - self.back_match.rstart][self.back_match.errors] += 1
+            length = len(self.back_match.sequence) - self.back_match.rstart
+            statistics.back.errors[length][self.back_match.errors] += 1
 
     def remainder_interval(self) -> Tuple[int, int]:
         matches = [match for match in [self.front_match, self.back_match] if match is not None]
         return remainder(matches)
 
-    def get_info_records(self) -> List[List]:
+    def get_info_records(self, read) -> List[List]:
         records = []
         for match, namesuffix in [
             (self.front_match, ";1"),
@@ -602,9 +605,10 @@ class LinkedMatch(Match):
         ]:
             if match is None:
                 continue
-            record = match.get_info_records()[0]
+            record = match.get_info_records(read)[0]
             record[7] = self.adapter.name + namesuffix
             records.append(record)
+            read = match.trimmed(read)
         return records
 
 
@@ -646,7 +650,7 @@ class LinkedAdapter(Adapter):
 
         if front_match is not None:
             # TODO statistics
-            read = front_match.trimmed()
+            read = front_match.trimmed(read)
         back_match = self.back_adapter.match_to(read)
         if back_match is None and (self.back_required or front_match is None):
             return None
@@ -805,7 +809,7 @@ class MultiAdapter(Adapter):
                 errors=best_e,
                 remove_before=best_adapter.remove is WhereToRemove.PREFIX,
                 adapter=best_adapter,
-                read=read
+                sequence=read.sequence,
             )
 
     def enable_debug(self):
