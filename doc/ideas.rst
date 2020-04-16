@@ -12,8 +12,6 @@ improvements.
   command line
 - more tests for the alignment algorithm
 - ``--detect`` prints out best guess which of the given adapters is the correct one
-- it seems the str.find optimization isn't very helpful. In any case, it should be
-  moved into the Aligner class.
 - allow to remove not the adapter itself, but the sequence before or after it
 - warn when given adapter sequence contains non-IUPAC characters
 - extensible file type detection
