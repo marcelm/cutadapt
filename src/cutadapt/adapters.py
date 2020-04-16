@@ -534,17 +534,16 @@ class BackOrFrontAdapter(SingleAdapter):
         read_seq = read.sequence.upper()  # temporary copy
         pos = -1
 
-        # try to find an exact match first unless wildcards are allowed
         if not self.adapter_wildcards:
+            # finding an exact match may be faster
             pos = read_seq.find(self.sequence)
         if pos >= 0:
-            alignment = (
-                0, len(self.sequence), pos, pos + len(self.sequence),
-                len(self.sequence), 0)
+            n = len(self.sequence)
+            alignment = (0, n, pos, pos + n, n, 0)
         else:
             alignment = self.aligner.locate(read_seq)
-        if self._debug:
-            print(self.aligner.dpmatrix)  # pragma: no cover
+            if self._debug:
+                print(self.aligner.dpmatrix)  # pragma: no cover
         if alignment is None:
             return None
 
