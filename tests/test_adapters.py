@@ -1,7 +1,9 @@
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import SingleAdapter, SingleMatch, Where, LinkedAdapter, WhereToRemove, MultiAdapter
+from cutadapt.adapters import (
+    SingleAdapter, SingleMatch, Where, LinkedAdapter, WhereToRemove,
+    MultiAdapter)
 
 
 def test_issue_52():
@@ -161,8 +163,9 @@ def test_add_adapter_statistics():
     }
 
 
-def test_issue_265():
-    """Crash when accessing the matches property of non-anchored linked adapters"""
+def test_linked_matches_property():
+    """Accessing matches property of non-anchored linked adapters"""
+    # Issue #265
     s = Sequence('name', 'AAAATTTT')
     front_adapter = SingleAdapter('GGG', where=Where.FRONT)
     back_adapter = SingleAdapter('TTT', where=Where.BACK)
@@ -176,6 +179,22 @@ def test_no_indels_empty_read(where):
     adapter = SingleAdapter('ACGT', where=where, indels=False)
     empty = Sequence('name', '')
     adapter.match_to(empty)
+
+
+def test_prefix_match_with_n_wildcard_in_read():
+    adapter = SingleAdapter("NNNACGT", where=Where.PREFIX, indels=False)
+    match = adapter.match_to(Sequence("name", "TTTACGTAAAA"))
+    assert match is not None and (0, 7) == (match.rstart, match.rstop)
+    match = adapter.match_to(Sequence("name", "NTTACGTAAAA"))
+    assert match is not None and (0, 7) == (match.rstart, match.rstop)
+
+
+def test_suffix_match_with_n_wildcard_in_read():
+    adapter = SingleAdapter("ACGTNNN", where=Where.SUFFIX, indels=False)
+    match = adapter.match_to(Sequence("name", "TTTTACGTTTT"))
+    assert match is not None and (4, 11) == (match.rstart, match.rstop)
+    match = adapter.match_to(Sequence("name", "TTTTACGTCNC"))
+    assert match is not None and (4, 11) == (match.rstart, match.rstop)
 
 
 def test_multi_adapter():

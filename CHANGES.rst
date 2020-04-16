@@ -9,6 +9,9 @@ development version
   Fix contributed by wlokhorst.
 * :issue:`450`: ``--untrimmed-output``, ``--too-short-output`` and ``--too-long-output`` can
   now be written interleaved.
+* :issue:`453`: Fix problem that ``N`` wildcards in adapters did not match ``N`` characters
+  in the read. ``N`` characters now match any character in the read, independent of whether
+  ``--match-read-wildcards`` is used or not.
 
 v2.9 (2020-03-18)
 -----------------

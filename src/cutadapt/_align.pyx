@@ -20,12 +20,12 @@ def _acgt_table():
     """
     Return a translation table that maps A, C, G, T characters to the lower
     four bits of a byte. Other characters (including possibly IUPAC characters)
-    are mapped to zero.
+    are mapped to the most significant bit (0x80).
 
     Lowercase versions are also translated, and U is treated the same as T.
     """
     d = dict(A=1, C=2, G=4, T=8, U=8)
-    t = bytearray(b'\0') * 256
+    t = bytearray([0x80]) * 256
     for c, v in d.items():
         t[ord(c)] = v
         t[ord(c.lower())] = v
@@ -39,7 +39,11 @@ def _iupac_table():
     The table maps ASCII-encoded IUPAC nucleotide characters to bytes in which
     the four least significant bits are used to represent one nucleotide each.
 
-    Whether two characters x and y match can then be checked with the
+    For the "N" wildcard, additionally the most significant bit is set (0x80),
+    which allows it to match characters that are not A, C, G or T if _acgt_table
+    was used to encode them.
+
+    Whether two encoded characters x and y match can then be checked with the
     expression "x & y != 0".
     """
     A = 1
@@ -63,7 +67,7 @@ def _iupac_table():
         D=A|G|T,
         H=A|C|T,
         V=A|C|G,
-        N=A|C|G|T
+        N=A|C|G|T + 0x80,
     )
     t = bytearray(b'\0') * 256
     for c, v in iupac.items():
@@ -72,8 +76,9 @@ def _iupac_table():
     return bytes(t)
 
 
-cdef bytes ACGT_TABLE = _acgt_table()
-cdef bytes IUPAC_TABLE = _iupac_table()
+cdef:
+    bytes ACGT_TABLE = _acgt_table()
+    bytes IUPAC_TABLE = _iupac_table()
 
 
 class DPMatrix:
