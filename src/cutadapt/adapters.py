@@ -686,6 +686,7 @@ class MultiAdapter(Adapter):
 
     Use the is_acceptable() method to check individual adapters.
     """
+    MultiAdapterIndex = Dict[str, Tuple[SingleAdapter, int, int]]
 
     def __init__(self, adapters):
         """All given adapters must be of the same type, either Where.PREFIX or Where.SUFFIX"""
@@ -740,9 +741,9 @@ class MultiAdapter(Adapter):
             return False
         return True
 
-    def _make_index(self):
+    def _make_index(self) -> Tuple[List[int], MultiAdapterIndex]:
         logger.info('Building index of %s adapters ...', len(self._adapters))
-        index = dict()
+        index = dict()  # type: MultiAdapter.MultiAdapterIndex
         lengths = set()
         has_warned = False
         for adapter in self._adapters:
@@ -775,7 +776,7 @@ class MultiAdapter(Adapter):
         the best match or None if no match was found
         """
         # Check all the prefixes or suffixes (affixes) that could match
-        best_adapter = None
+        best_adapter = None  # type: Optional[SingleAdapter]
         best_length = 0
         best_m = -1
         best_e = 1000
@@ -798,6 +799,7 @@ class MultiAdapter(Adapter):
         if best_m == -1:
             return None
         else:
+            assert best_adapter is not None
             if self._where is Where.PREFIX:
                 rstart, rstop = 0, best_length
             else:
