@@ -15,7 +15,7 @@ somewhere or filtered (should be discarded).
 """
 from collections import Counter
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Optional, Dict, Any
+from typing import Tuple, Optional, Dict, Any
 
 from .qualtrim import expected_errors
 from .utils import FileOpener
@@ -50,18 +50,25 @@ class PairedEndFilter(ABC):
 
 class WithStatistics(ABC):
     def __init__(self) -> None:
-        self._written = 0  # no. of written reads or read pairs
-        self._written_bp = [0, 0]
-        self._written_lengths = [Counter(), Counter()]  # type: List[Counter]
+        self._written_lengths1 = Counter()  # type: Counter
+        self._written_lengths2 = Counter()  # type: Counter
 
     def written_reads(self) -> int:
-        return self._written
+        """Return number of written reads or read pairs"""
+        return sum(self._written_lengths1.values())
 
-    def written_bp(self) -> Tuple[int, ...]:
-        return tuple(self._written_bp)
+    def written_bp(self) -> Tuple[int, int]:
+        return (
+            self._compute_total_bp(self._written_lengths1),
+            self._compute_total_bp(self._written_lengths2),
+        )
 
     def written_lengths(self) -> Tuple[Counter, Counter]:
-        return (self._written_lengths[0].copy(), self._written_lengths[1].copy())
+        return (self._written_lengths1.copy(), self._written_lengths2.copy())
+
+    @staticmethod
+    def _compute_total_bp(counter: Counter) -> int:
+        return sum(length * count for length, count in counter.items())
 
 
 class SingleEndFilterWithStatistics(SingleEndFilter, WithStatistics, ABC):
@@ -69,9 +76,7 @@ class SingleEndFilterWithStatistics(SingleEndFilter, WithStatistics, ABC):
         super().__init__()
 
     def update_statistics(self, read) -> None:
-        self._written += 1
-        self._written_bp[0] += len(read)
-        self._written_lengths[0][len(read)] += 1
+        self._written_lengths1[len(read)] += 1
 
 
 class PairedEndFilterWithStatistics(PairedEndFilter, WithStatistics, ABC):
@@ -79,11 +84,8 @@ class PairedEndFilterWithStatistics(PairedEndFilter, WithStatistics, ABC):
         super().__init__()
 
     def update_statistics(self, read1, read2):
-        self._written += 1
-        self._written_bp[0] += len(read1)
-        self._written_bp[1] += len(read2)
-        self._written_lengths[0][len(read1)] += 1
-        self._written_lengths[1][len(read2)] += 1
+        self._written_lengths1[len(read1)] += 1
+        self._written_lengths2[len(read2)] += 1
 
 
 class NoFilter(SingleEndFilterWithStatistics):
@@ -96,7 +98,7 @@ class NoFilter(SingleEndFilterWithStatistics):
 
     def __call__(self, read, info: ModificationInfo):
         self.writer.write(read)
-        self.update_statistics(read)
+        self.update_statistics(read)  # TODO this is responsible for almost 10% of overall runtime
         return DISCARD
 
 
@@ -111,7 +113,6 @@ class PairedNoFilter(PairedEndFilterWithStatistics):
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         self.writer.write(read1, read2)
         self.update_statistics(read1, read2)
-
         return DISCARD
 
 
@@ -344,10 +345,10 @@ class PairedDemultiplexer(PairedEndFilterWithStatistics):
             qualities, file_opener)
 
     def written(self) -> int:
-        return self._demultiplexer1._written + self._demultiplexer2._written
+        return self._demultiplexer1.written_reads()
 
     def written_bp(self) -> Tuple[int, int]:
-        return (self._demultiplexer1._written_bp[0], self._demultiplexer2._written_bp[0])
+        return (self._demultiplexer1.written_bp()[0], self._demultiplexer2.written_bp()[0])
 
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         assert read2 is not None
