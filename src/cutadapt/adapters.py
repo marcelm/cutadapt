@@ -741,7 +741,7 @@ class MultiAdapter(Adapter):
             return False
         return True
 
-    def _make_index(self) -> Tuple[List[int], MultiAdapterIndex]:
+    def _make_index(self) -> Tuple[List[int], "MultiAdapterIndex"]:
         logger.info('Building index of %s adapters ...', len(self._adapters))
         index = dict()  # type: MultiAdapter.MultiAdapterIndex
         lengths = set()
