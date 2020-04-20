@@ -15,6 +15,7 @@ development version
 * With ``--action=lowercase``/``mask``, print which sequences would have been
   removed in the “Overview of removed sequences” statistics. Previously, it
   would show that no sequences have been removed.
+* Fixed a performance regression introduced in version 2.9.
 
 v2.9 (2020-03-18)
 -----------------
