@@ -13,9 +13,9 @@ filters is created and each redirector is called in turn until one returns True.
 The read is then assumed to have been "consumed", that is, either written
 somewhere or filtered (should be discarded).
 """
-from collections import Counter
+from collections import defaultdict, Counter
 from abc import ABC, abstractmethod
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Optional, Dict, Any, DefaultDict
 
 from .qualtrim import expected_errors
 from .utils import FileOpener
@@ -33,8 +33,6 @@ class SingleEndFilter(ABC):
     def __call__(self, read, info: ModificationInfo):
         """
         Called to process a single-end read
-
-        Any adapter matches are append to the matches list.
         """
 
 
@@ -43,15 +41,14 @@ class PairedEndFilter(ABC):
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         """
         Called to process the read pair (read1, read2)
-
-        Any adapter matches are append to the info.matches list.
         """
 
 
 class WithStatistics(ABC):
     def __init__(self) -> None:
-        self._written_lengths1 = Counter()  # type: Counter
-        self._written_lengths2 = Counter()  # type: Counter
+        # A defaultdict is much faster than a Counter
+        self._written_lengths1 = defaultdict(int)  # type: DefaultDict[int, int]
+        self._written_lengths2 = defaultdict(int)  # type: DefaultDict[int, int]
 
     def written_reads(self) -> int:
         """Return number of written reads or read pairs"""
@@ -64,11 +61,11 @@ class WithStatistics(ABC):
         )
 
     def written_lengths(self) -> Tuple[Counter, Counter]:
-        return (self._written_lengths1.copy(), self._written_lengths2.copy())
+        return (Counter(self._written_lengths1), Counter(self._written_lengths2))
 
     @staticmethod
-    def _compute_total_bp(counter: Counter) -> int:
-        return sum(length * count for length, count in counter.items())
+    def _compute_total_bp(counts: DefaultDict[int, int]) -> int:
+        return sum(length * count for length, count in counts.items())
 
 
 class SingleEndFilterWithStatistics(SingleEndFilter, WithStatistics, ABC):
@@ -98,7 +95,7 @@ class NoFilter(SingleEndFilterWithStatistics):
 
     def __call__(self, read, info: ModificationInfo):
         self.writer.write(read)
-        self.update_statistics(read)  # TODO this is responsible for almost 10% of overall runtime
+        self.update_statistics(read)
         return DISCARD
 
 
