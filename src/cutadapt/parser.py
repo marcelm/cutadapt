@@ -6,7 +6,10 @@ import logging
 from typing import Type, Optional, List, Tuple, Iterator, Any, Dict
 from xopen import xopen
 from dnaio.readers import FastaReader
-from .adapters import Where, WHERE_TO_REMOVE_MAP, Adapter, SingleAdapter, BackOrFrontAdapter, LinkedAdapter
+from .adapters import (
+    Adapter, FrontAdapter, NonInternalFrontAdapter, BackAdapter, NonInternalBackAdapter,
+    AnywhereAdapter, PrefixAdapter, SuffixAdapter, LinkedAdapter
+)
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +192,7 @@ class AdapterSpecification:
         name, spec = cls._extract_name(spec)
         spec = spec.strip()
         parameters = cls._parse_parameters(parameters_spec)
-        spec = AdapterSpecification.expand_braces(spec)
+        spec = cls.expand_braces(spec)
 
         # Special case for adapters consisting of only X characters:
         # This needs to be supported for backwards-compatibilitity
@@ -240,36 +243,36 @@ class AdapterSpecification:
         return name, restriction, spec, parameters
 
     @staticmethod
-    def _restriction_to_where(cmdline_type, restriction):
+    def _restriction_to_class(cmdline_type, restriction):
         if cmdline_type == 'front':
             if restriction is None:
-                return Where.FRONT
+                return FrontAdapter
             elif restriction == 'anchored':
-                return Where.PREFIX
+                return PrefixAdapter
             elif restriction == 'noninternal':
-                return Where.FRONT_NOT_INTERNAL
+                return NonInternalFrontAdapter
             else:
                 raise ValueError(
                     'Value {} for a front restriction not allowed'.format(restriction))
         elif cmdline_type == 'back':
             if restriction is None:
-                return Where.BACK
+                return BackAdapter
             elif restriction == 'anchored':
-                return Where.SUFFIX
+                return SuffixAdapter
             elif restriction == 'noninternal':
-                return Where.BACK_NOT_INTERNAL
+                return NonInternalBackAdapter
             else:
                 raise ValueError(
                     'Value {} for a back restriction not allowed'.format(restriction))
         else:
             assert cmdline_type == 'anywhere'
             if restriction is None:
-                return Where.ANYWHERE
+                return AnywhereAdapter
             else:
                 raise ValueError('No placement may be specified for "anywhere" adapters')
 
-    def where(self):
-        return self._restriction_to_where(self.cmdline_type, self.restriction)
+    def adapter_class(self):
+        return self._restriction_to_class(self.cmdline_type, self.restriction)
 
 
 class AdapterParser:
@@ -327,19 +330,15 @@ class AdapterParser:
 
     def _parse_not_linked(self, spec: str, name: Optional[str], cmdline_type: str) -> Adapter:
         aspec = AdapterSpecification.parse(spec, cmdline_type)
-        where = aspec.where()
+        adapter_class = aspec.adapter_class()  # type: Type[Adapter]
         if not name:
             name = aspec.name
-        if aspec.parameters.pop('anywhere', False):
-            aspec.parameters['remove'] = WHERE_TO_REMOVE_MAP[where]
-            where = Where.ANYWHERE
+        if aspec.parameters.pop('anywhere', False) and adapter_class in (FrontAdapter, BackAdapter):
+            aspec.parameters['force_anywhere'] = True
         parameters = self.default_parameters.copy()
         parameters.update(aspec.parameters)
-        if where in (Where.FRONT, Where.BACK):
-            adapter_class = BackOrFrontAdapter  # type: Type[Adapter]
-        else:
-            adapter_class = SingleAdapter
-        return adapter_class(sequence=aspec.sequence, where=where, name=name, **parameters)
+
+        return adapter_class(sequence=aspec.sequence, name=name, **parameters)
 
     def _parse_linked(self, spec1: str, spec2: str, name: Optional[str], cmdline_type: str) -> LinkedAdapter:
         """Return a linked adapter from two specification strings"""
@@ -382,9 +381,9 @@ class AdapterParser:
         front_required = front_parameters.pop('required', front_required)
         back_required = back_parameters.pop('required', back_required)
 
-        front_adapter = SingleAdapter(front_spec.sequence, where=front_spec.where(), name=None,
+        front_adapter = front_spec.adapter_class()(front_spec.sequence, name=None,
             **front_parameters)
-        back_adapter = SingleAdapter(back_spec.sequence, where=back_spec.where(), name=None,
+        back_adapter = back_spec.adapter_class()(back_spec.sequence, name=None,
             **back_parameters)
 
         return LinkedAdapter(

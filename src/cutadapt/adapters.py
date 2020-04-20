@@ -30,36 +30,6 @@ class Where(Enum):
     LINKED = 'linked'
 
 
-class WhereToRemove(Enum):
-    PREFIX = 1
-    SUFFIX = 2
-    AUTO = 3
-
-
-WHERE_TO_REMOVE_MAP = {
-    Where.PREFIX: WhereToRemove.PREFIX,
-    Where.FRONT_NOT_INTERNAL: WhereToRemove.PREFIX,
-    Where.FRONT: WhereToRemove.PREFIX,
-    Where.BACK: WhereToRemove.SUFFIX,
-    Where.SUFFIX: WhereToRemove.SUFFIX,
-    Where.BACK_NOT_INTERNAL: WhereToRemove.SUFFIX,
-    Where.ANYWHERE: WhereToRemove.AUTO,
-}
-
-
-# TODO could become a property/attribute of the Adapter classes
-ADAPTER_TYPE_NAMES = {
-    Where.BACK: "regular 3'",
-    Where.BACK_NOT_INTERNAL: "non-internal 3'",
-    Where.FRONT: "regular 5'",
-    Where.FRONT_NOT_INTERNAL: "non-internal 5'",
-    Where.PREFIX: "anchored 5'",
-    Where.SUFFIX: "anchored 3'",
-    Where.ANYWHERE: "variable 5'/3'",
-    Where.LINKED: "linked",
-}
-
-
 def returns_defaultdict_int():
     # We need this function to make EndStatistics picklable.
     # Even a @staticmethod of EndStatistics is not sufficient
@@ -71,20 +41,19 @@ class EndStatistics:
     """Statistics about the 5' or 3' end"""
 
     def __init__(self, adapter: "SingleAdapter"):
-        self.where = adapter.where  # type: Where
         self.max_error_rate = adapter.max_error_rate  # type: float
         self.sequence = adapter.sequence  # type: str
         self.effective_length = adapter.effective_length  # type: int
         self.has_wildcards = adapter.adapter_wildcards  # type: bool
         # self.errors[l][e] == n iff n times a sequence of length l matching at e errors was removed
         self.errors = defaultdict(returns_defaultdict_int)  # type: Dict[int, Dict[int, int]]
-        self._remove = adapter.remove  # type: Optional[WhereToRemove]
         self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
+        # TODO avoid hard-coding the list of classes
+        self._remove_prefix = isinstance(adapter, (FrontAdapter, NonInternalFrontAdapter, PrefixAdapter))
 
     def __repr__(self):
         errors = {k: dict(v) for k, v in self.errors.items()}
-        return "EndStatistics(where={}, max_error_rate={}, errors={}, adjacent_bases={})".format(
-            self.where,
+        return "EndStatistics(max_error_rate={}, errors={}, adjacent_bases={})".format(
             self.max_error_rate,
             errors,
             self.adjacent_bases,
@@ -94,9 +63,7 @@ class EndStatistics:
         if not isinstance(other, self.__class__):
             raise ValueError("Cannot compare")
         if (
-            self.where != other.where
-            or self._remove != other._remove
-            or self.max_error_rate != other.max_error_rate
+            self.max_error_rate != other.max_error_rate
             or self.sequence != other.sequence
             or self.effective_length != other.effective_length
         ):
@@ -113,7 +80,7 @@ class EndStatistics:
         d = {length: sum(errors.values()) for length, errors in self.errors.items()}
         return d
 
-    def random_match_probabilities(self, gc_content: float):
+    def random_match_probabilities(self, gc_content: float) -> List[float]:
         """
         Estimate probabilities that this adapter end matches a
         random sequence. Indels are not taken into account.
@@ -121,13 +88,10 @@ class EndStatistics:
         Returns a list p, where p[i] is the probability that
         i bases of this adapter match a random sequence with
         GC content gc_content.
-
-        The where parameter is necessary for linked adapters to
-        specify which (front or back) of the two adapters is meant.
         """
         seq = self.sequence
-        # FIXME this is broken for self._remove == 'auto'
-        if self._remove == WhereToRemove.PREFIX:
+        # FIXME this is broken for 'anywhere' adapters
+        if self._remove_prefix:
             seq = seq[::-1]
         allowed_bases = 'CGRYSKMBDHVN' if self.has_wildcards else 'GC'
         p = 1.
@@ -150,30 +114,27 @@ class AdapterStatistics:
 
     def __init__(
         self,
-        adapter: "SingleAdapter",
-        adapter2: Optional["SingleAdapter"] = None,
-        where: Optional[Where] = None,
+        adapter: "Adapter",
+        front: "SingleAdapter",
+        back: Optional["SingleAdapter"] = None,
     ):
         self.name = adapter.name
-        self.where = where if where is not None else adapter.where
-        self.front = EndStatistics(adapter)
-        self.reverse_complemented = 0
-        if adapter2 is None:
-            self.back = EndStatistics(adapter)
+        self.adapter = adapter
+        self.front = EndStatistics(front)
+        if back is None:
+            self.back = EndStatistics(front)
         else:
-            self.back = EndStatistics(adapter2)
+            self.back = EndStatistics(back)
+        self.reverse_complemented = 0
 
     def __repr__(self):
-        return "AdapterStatistics(name={}, where={}, front={}, back={})".format(
+        return "AdapterStatistics(name={}, front={}, back={})".format(
             self.name,
-            self.where,
             self.front,
             self.back,
         )
 
     def __iadd__(self, other: "AdapterStatistics"):
-        if self.where != other.where:  # TODO self.name != other.name or
-            raise ValueError('incompatible objects')
         self.front += other.front
         self.back += other.back
         self.reverse_complemented += other.reverse_complemented
@@ -195,14 +156,13 @@ class Match(ABC):
         pass
 
 
-class SingleMatch(Match):
+class SingleMatch(Match, ABC):
     """
-    Representation of a single adapter matched to a single read.
+    Representation of a single adapter matched to a single string
     """
-    __slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors', 'remove_before',
+    __slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors',
         'adapter', 'sequence', 'length', 'adjacent_base']
 
-    # TODO Can remove_before be removed from the constructor parameters?
     def __init__(
         self,
         astart: int,
@@ -211,13 +171,10 @@ class SingleMatch(Match):
         rstop: int,
         matches: int,
         errors: int,
-        remove_before: bool,
         adapter: "SingleAdapter",
         sequence: str,
     ):
-        """
-        remove_before -- True: remove bases before adapter. False: remove after
-        """
+        self.adjacent_base = ""
         self.astart = astart  # type: int
         self.astop = astop  # type: int
         self.rstart = rstart  # type: int
@@ -226,11 +183,6 @@ class SingleMatch(Match):
         self.errors = errors  # type: int
         self.adapter = adapter  # type: SingleAdapter
         self.sequence = sequence
-        if remove_before:
-            self.adjacent_base = ""  # type: str
-        else:
-            self.adjacent_base = sequence[rstart - 1:rstart]
-        self.remove_before = remove_before  # type: bool
         # Number of aligned characters in the adapter. If there are
         # indels, this may be different from the number of characters
         # in the read.
@@ -253,35 +205,6 @@ class SingleMatch(Match):
             if self.adapter.sequence[self.astart + i] == wildcard_char and
                 self.rstart + i < len(self.sequence)]
         return ''.join(wildcards)
-
-    def rest(self) -> str:
-        """
-        Return the part of the read before this match if this is a
-        'front' (5') adapter,
-        return the part after the match if this is not a 'front' adapter (3').
-        This can be an empty string.
-        """
-        if self.remove_before:
-            return self.sequence[:self.rstart]
-        else:
-            return self.sequence[self.rstop:]
-
-    def remainder_interval(self) -> Tuple[int, int]:
-        """
-        Return an interval (start, stop) that describes the part of the read that would
-        remain after trimming
-        """
-        if self.remove_before:
-            return self.rstop, len(self.sequence)
-        else:
-            return 0, self.rstart
-
-    def trim_slice(self):
-        # Same as remainder_interval, but as a slice() object
-        if self.remove_before:
-            return slice(self.rstop, None)
-        else:
-            return slice(None, self.rstart)
 
     def get_info_records(self, read) -> List[List]:
         seq = read.sequence
@@ -307,22 +230,80 @@ class SingleMatch(Match):
 
         return [info]
 
+
+class RemoveBeforeMatch(SingleMatch):
+    """A match that removes sequence before the match"""
+
+    def __repr__(self):
+        return 'RemoveBeforeMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
+            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
+
+    def rest(self) -> str:
+        """
+        Return the part of the read before this match if this is a
+        'front' (5') adapter,
+        return the part after the match if this is not a 'front' adapter (3').
+        This can be an empty string.
+        """
+        return self.sequence[:self.rstart]
+
+    def remainder_interval(self) -> Tuple[int, int]:
+        """
+        Return an interval (start, stop) that describes the part of the read that would
+        remain after trimming
+        """
+        return self.rstop, len(self.sequence)
+
+    def trim_slice(self):
+        # Same as remainder_interval, but as a slice() object
+        return slice(self.rstop, None)
+
     def trimmed(self, read):
-        if self.remove_before:
-            return read[self.rstop:]
-        else:
-            return read[:self.rstart]
+        return read[self.rstop:]
 
     def update_statistics(self, statistics: AdapterStatistics):
         """Update AdapterStatistics in place"""
-        if self.remove_before:
-            statistics.front.errors[self.rstop][self.errors] += 1
-        else:
-            statistics.back.errors[len(self.sequence) - self.rstart][self.errors] += 1
-            try:
-                statistics.back.adjacent_bases[self.adjacent_base] += 1
-            except KeyError:
-                statistics.back.adjacent_bases[''] = 1
+        statistics.front.errors[self.rstop][self.errors] += 1
+
+
+class RemoveAfterMatch(SingleMatch):
+    """A match that removes sequence after the match"""
+
+    def __repr__(self):
+        return "RemoveAfterMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})".format(
+            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
+
+    def rest(self) -> str:
+        """
+        Return the part of the read before this match if this is a
+        'front' (5') adapter,
+        return the part after the match if this is not a 'front' adapter (3').
+        This can be an empty string.
+        """
+        return self.sequence[self.rstop:]
+
+    def remainder_interval(self) -> Tuple[int, int]:
+        """
+        Return an interval (start, stop) that describes the part of the read that would
+        remain after trimming
+        """
+        return 0, self.rstart
+
+    def trim_slice(self):
+        # Same as remainder_interval, but as a slice() object
+        return slice(None, self.rstart)
+
+    def trimmed(self, read):
+        return read[:self.rstart]
+
+    def update_statistics(self, statistics: AdapterStatistics):
+        """Update AdapterStatistics in place"""
+        adjacent_base = self.sequence[self.rstart - 1:self.rstart]
+        statistics.back.errors[len(self.sequence) - self.rstart][self.errors] += 1
+        try:
+            statistics.back.adjacent_bases[adjacent_base] += 1
+        except KeyError:
+            statistics.back.adjacent_bases[''] = 1
 
 
 def _generate_adapter_name(_start=[1]) -> str:
@@ -332,8 +313,11 @@ def _generate_adapter_name(_start=[1]) -> str:
 
 
 class Adapter(ABC):
-    def __init__(self, *args, **kwargs):
-        pass
+
+    description = "adapter with one component"  # this is overriden in subclasses
+
+    def __init__(self, name: Optional[str], *args, **kwargs):
+        self.name = name
 
     @abstractmethod
     def enable_debug(self):
@@ -344,21 +328,13 @@ class Adapter(ABC):
         pass
 
 
-class SingleAdapter(Adapter):
+class SingleAdapter(Adapter, ABC):
     """
     This class can find a single adapter characterized by sequence, error rate,
     type etc. within reads.
 
     where --  A Where enum value. This influences where the adapter is allowed to appear within the
         read.
-
-    remove -- a WhereToRemove enum value. This describes which part of the read to remove if the
-        adapter was found:
-          * WhereToRemove.PREFIX (for a 3' adapter)
-          * WhereToRemove.SUFFIX (for a 5' adapter)
-          * WhereToRemove.AUTO for a 5'/3' mixed adapter (if the match involves the first base of
-            the read, it is assumed to be a 5' adapter and a 3' otherwise)
-          * None: One of the above is chosen depending on the 'where' parameter
 
     sequence -- The adapter sequence as string. Will be converted to uppercase.
         Also, Us will be converted to Ts.
@@ -382,8 +358,6 @@ class SingleAdapter(Adapter):
     def __init__(
         self,
         sequence: str,
-        where: Where,
-        remove: Optional[WhereToRemove] = None,
         max_error_rate: float = 0.1,
         min_overlap: int = 3,
         read_wildcards: bool = False,
@@ -391,15 +365,12 @@ class SingleAdapter(Adapter):
         name: Optional[str] = None,
         indels: bool = True,
     ):
-        super().__init__()
-        assert not isinstance(remove, str)
+        super().__init__(name)
         self._debug = False  # type: bool
         self.name = _generate_adapter_name() if name is None else name  # type: str
         self.sequence = sequence.upper().replace("U", "T")  # type: str
         if not self.sequence:
             raise ValueError("Adapter sequence is empty")
-        self.where = where  # type: Where
-        self.remove = WHERE_TO_REMOVE_MAP[where] if remove is None else remove  # type: WhereToRemove
         self.max_error_rate = max_error_rate  # type: float
         self.min_overlap = min(min_overlap, len(self.sequence))  # type: int
         iupac = frozenset('XACGTURYSWKMBDHVN')
@@ -413,36 +384,29 @@ class SingleAdapter(Adapter):
         self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set("ACGT")  # type: bool
         self.read_wildcards = read_wildcards  # type: bool
         self.indels = indels  # type: bool
-        if self.is_anchored and not self.indels:
-            aligner_class = align.PrefixComparer if self.where is Where.PREFIX else align.SuffixComparer
-            self.aligner = aligner_class(
-                self.sequence,
-                self.max_error_rate,
-                wildcard_ref=self.adapter_wildcards,
-                wildcard_query=self.read_wildcards,
-                min_overlap=self.min_overlap
-            )
-        else:
-            # TODO
-            # Indels are suppressed by setting their cost very high, but a different algorithm
-            # should be used instead.
-            indel_cost = 1 if self.indels else 100000
-            self.aligner = align.Aligner(
-                self.sequence,
-                self.max_error_rate,
-                flags=self.where.value,
-                wildcard_ref=self.adapter_wildcards,
-                wildcard_query=self.read_wildcards,
-                indel_cost=indel_cost,
-                min_overlap=self.min_overlap,
-            )
+        self.aligner = self._aligner()
+
+    def _make_aligner(self, flags):
+        # TODO
+        # Indels are suppressed by setting their cost very high, but a different algorithm
+        # should be used instead.
+        indel_cost = 1 if self.indels else 100000
+        return align.Aligner(
+            self.sequence,
+            self.max_error_rate,
+            flags=flags,
+            wildcard_ref=self.adapter_wildcards,
+            wildcard_query=self.read_wildcards,
+            indel_cost=indel_cost,
+            min_overlap=self.min_overlap,
+        )
 
     def __repr__(self):
-        return '<SingleAdapter(name={name!r}, sequence={sequence!r}, where={where}, '\
-            'remove={remove}, max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
+        return '<{cls}(name={name!r}, sequence={sequence!r}, '\
+            'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
             'read_wildcards={read_wildcards}, '\
             'adapter_wildcards={adapter_wildcards}, '\
-            'indels={indels})>'.format(**vars(self))
+            'indels={indels})>'.format(cls=self.__class__.__name__, **vars(self))
 
     @property
     def is_anchored(self):
@@ -461,75 +425,38 @@ class SingleAdapter(Adapter):
         self._debug = True
         self.aligner.enable_debug()
 
+    @abstractmethod
+    def _aligner(self):
+        pass
+
+    @abstractmethod
     def match_to(self, sequence: str):
         """
-        Attempt to match this adapter to the given read.
+        Attempt to match this adapter to the given string.
 
         Return a Match instance if a match was found;
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        read_seq = sequence
-        pos = -1
-
-        # try to find an exact match first unless wildcards are allowed
-        if not self.adapter_wildcards:
-            if self.where is Where.PREFIX:
-                pos = 0 if read_seq.startswith(self.sequence) else -1
-            elif self.where is Where.SUFFIX:
-                pos = (len(read_seq) - len(self.sequence)) if read_seq.endswith(self.sequence) else -1
-            # TODO BACK_NOT_INTERNAL, FRONT_NOT_INTERNAL
-        if pos >= 0:
-            match_args = (
-                0, len(self.sequence), pos, pos + len(self.sequence),
-                len(self.sequence), 0)  # type: Optional[Tuple[int,int,int,int,int,int]]
-        else:
-            # try approximate matching
-            alignment = self.aligner.locate(read_seq)
-            if self._debug:
-                try:
-                    print(self.aligner.dpmatrix)  # pragma: no cover
-                except AttributeError:
-                    pass
-            if alignment is None:
-                match_args = None
-            else:
-                astart, astop, rstart, rstop, matches, errors = alignment
-                match_args = (astart, astop, rstart, rstop, matches, errors)
-
-        if match_args is None:
-            return None
-        if self.remove == WhereToRemove.AUTO:
-            # guess: if alignment starts at pos 0, it’s a 5' adapter
-            remove_before = match_args[2] == 0  # index 2 is rstart
-        else:
-            remove_before = self.remove == WhereToRemove.PREFIX
-        match = SingleMatch(*match_args, remove_before=remove_before, adapter=self, sequence=sequence)
-
-        assert match.length >= self.min_overlap
-        return match
 
     def __len__(self):
         return len(self.sequence)
 
     def create_statistics(self):
-        return AdapterStatistics(self)
+        return AdapterStatistics(self, self)
 
 
-class BackOrFrontAdapter(SingleAdapter):
-    """A 5' or 3' adapter.
+class FrontAdapter(SingleAdapter):
+    """A 5' adapter"""
 
-    This is separate from the Adapter class so that a specialized match_to
-    method can be implemented that reduces some of the runtime checks.
-
-    TODO The generic Adapter class should become abstract, and the other
-    adapter types should also get their own classes.
-    """
+    description = "regular 5'"
 
     def __init__(self, *args, **kwargs):
+        self._force_anywhere = kwargs.pop("force_anywhere", False)
         super().__init__(*args, **kwargs)
-        assert self.where is Where.BACK or self.where is Where.FRONT
-        self._remove_before = self.remove is WhereToRemove.PREFIX
+
+    def _aligner(self):
+        return self._make_aligner(Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value)
 
     def match_to(self, sequence: str):
         """
@@ -544,18 +471,165 @@ class BackOrFrontAdapter(SingleAdapter):
             print(self.aligner.dpmatrix)  # pragma: no cover
         if alignment is None:
             return None
-        return SingleMatch(
-            *alignment, remove_before=self._remove_before, adapter=self, sequence=sequence)
+        return RemoveBeforeMatch(*alignment, adapter=self, sequence=sequence)
+
+
+class BackAdapter(SingleAdapter):
+    """A 3' adapter"""
+
+    description = "regular 3'"
+
+    def __init__(self, *args, **kwargs):
+        self._force_anywhere = kwargs.pop("force_anywhere", False)
+        super().__init__(*args, **kwargs)
+
+    def _aligner(self):
+        return self._make_aligner(Where.ANYWHERE.value if self._force_anywhere else Where.BACK.value)
+
+    def match_to(self, sequence: str):
+        """
+        Attempt to match this adapter to the given read.
+
+        Return a Match instance if a match was found;
+        return None if no match was found given the matching criteria (minimum
+        overlap length, maximum error rate).
+        """
+        alignment = self.aligner.locate(sequence.upper())  # type: Optional[Tuple[int,int,int,int,int,int]]
+        if self._debug:
+            print(self.aligner.dpmatrix)  # pragma: no cover
+        if alignment is None:
+            return None
+        return RemoveAfterMatch(*alignment, adapter=self, sequence=sequence)
+
+
+class AnywhereAdapter(SingleAdapter):
+    """
+    An adapter that can be 5' or 3'. If a match involves the first base of
+    the read, it is assumed to be a 5' adapter and a 3' otherwise.
+    """
+
+    description = "variable 5'/3'"
+
+    def _aligner(self):
+        return self._make_aligner(Where.ANYWHERE.value)
+
+    def match_to(self, sequence: str):
+        """
+        Attempt to match this adapter to the given string.
+
+        Return a Match instance if a match was found;
+        return None if no match was found given the matching criteria (minimum
+        overlap length, maximum error rate).
+        """
+        alignment = self.aligner.locate(sequence)
+        if self._debug:
+            print(self.aligner.dpmatrix)  # pragma: no cover
+        if alignment is None:
+            return None
+        # guess: if alignment starts at pos 0, it’s a 5' adapter
+        if alignment[2] == 0:  # index 2 is rstart
+            match = RemoveBeforeMatch(*alignment, adapter=self, sequence=sequence)  # type: ignore
+        else:
+            match = RemoveAfterMatch(*alignment, adapter=self, sequence=sequence)  # type: ignore
+        return match
+
+
+class NonInternalFrontAdapter(FrontAdapter):
+    """A non-internal 5' adapter"""
+
+    description = "non-internal 5'"
+
+    def _aligner(self):
+        return self._make_aligner(Where.FRONT_NOT_INTERNAL.value)
+
+    def match_to(self, sequence: str):
+        if not self.adapter_wildcards and sequence.startswith(self.sequence):
+            n = len(self.sequence)
+            return RemoveBeforeMatch(
+                0, n, 0, n, n, 0, adapter=self, sequence=sequence
+            )  # type: ignore
+        alignment = self.aligner.locate(sequence)
+        if self._debug:
+            try:
+                print(self.aligner.dpmatrix)  # pragma: no cover
+            except AttributeError:
+                pass
+        if alignment is None:
+            return None
+        return RemoveBeforeMatch(*alignment, adapter=self, sequence=sequence)  # type: ignore
+
+
+class NonInternalBackAdapter(BackAdapter):
+    """A non-internal 3' adapter"""
+
+    description = "non-internal 3'"
+
+    def _aligner(self):
+        return self._make_aligner(Where.BACK_NOT_INTERNAL.value)
+
+    def match_to(self, sequence: str):
+        if not self.adapter_wildcards and sequence.endswith(self.sequence):
+            # Exact match found
+            # astart, astop, rstart, rstop, matches, errors
+            n = len(self.sequence)
+            return RemoveAfterMatch(
+                0, n, len(sequence) - n, len(sequence), n, 0, adapter=self, sequence=sequence
+            )  # type: ignore
+        alignment = self.aligner.locate(sequence)
+        if self._debug:
+            try:
+                print(self.aligner.dpmatrix)  # pragma: no cover
+            except AttributeError:
+                pass
+        if alignment is None:
+            return None
+        return RemoveAfterMatch(*alignment, adapter=self, sequence=sequence)  # type: ignore
+
+
+class PrefixAdapter(NonInternalFrontAdapter):
+    """An anchored 5' adapter"""
+
+    description = "anchored 5'"
+
+    def _aligner(self):
+        if not self.indels:  # TODO or if error rate allows 0 errors anyway
+            return align.PrefixComparer(
+                self.sequence,
+                self.max_error_rate,
+                wildcard_ref=self.adapter_wildcards,
+                wildcard_query=self.read_wildcards,
+                min_overlap=self.min_overlap
+            )
+        else:
+            return self._make_aligner(Where.PREFIX.value)
+
+
+class SuffixAdapter(NonInternalBackAdapter):
+    """An anchored 3' adapter"""
+
+    description = "anchored 3'"
+
+    def _aligner(self):
+        if not self.indels:  # TODO or if error rate allows 0 errors anyway
+            return align.SuffixComparer(
+                self.sequence,
+                self.max_error_rate,
+                wildcard_ref=self.adapter_wildcards,
+                wildcard_query=self.read_wildcards,
+                min_overlap=self.min_overlap
+            )
+        else:
+            return self._make_aligner(Where.SUFFIX.value)
 
 
 class LinkedMatch(Match):
     """
     Represent a match of a LinkedAdapter
     """
-    def __init__(self, front_match: SingleMatch, back_match: SingleMatch, adapter: "LinkedAdapter"):
+    def __init__(self, front_match: RemoveBeforeMatch, back_match: RemoveAfterMatch, adapter: "LinkedAdapter"):
         assert front_match is not None or back_match is not None
-        self.front_match = front_match  # type: SingleMatch
-        self.back_match = back_match  # type: SingleMatch
+        self.front_match = front_match  # type: RemoveBeforeMatch
+        self.back_match = back_match  # type: RemoveAfterMatch
         self.adapter = adapter  # type: LinkedAdapter
 
     def __repr__(self):
@@ -613,15 +687,17 @@ class LinkedMatch(Match):
             if match is None:
                 continue
             record = match.get_info_records(read)[0]
-            record[7] = self.adapter.name + namesuffix
+            record[7] = ("none" if self.adapter.name is None else self.adapter.name) + namesuffix
             records.append(record)
             read = match.trimmed(read)
         return records
 
 
 class LinkedAdapter(Adapter):
-    """
-    """
+    """A 5' adapter combined with a 3' adapter"""
+
+    description = "linked"
+
     def __init__(
         self,
         front_adapter,
@@ -630,7 +706,7 @@ class LinkedAdapter(Adapter):
         back_required,
         name,
     ):
-        super().__init__()
+        super().__init__(name)
         self.front_required = front_required
         self.back_required = back_required
 
@@ -660,7 +736,7 @@ class LinkedAdapter(Adapter):
         return LinkedMatch(front_match, back_match, self)
 
     def create_statistics(self):
-        return AdapterStatistics(self.front_adapter, self.back_adapter, where=Where.LINKED)
+        return AdapterStatistics(self, self.front_adapter, self.back_adapter)
 
     @property
     def sequence(self):
@@ -671,14 +747,13 @@ class LinkedAdapter(Adapter):
         return None
 
 
-class MultiAdapter(Adapter):
+class MultiAdapter(Adapter, ABC):
     """
     Represent multiple adapters of the same type at once and use an index data structure
     to speed up matching. This acts like a "normal" Adapter as it provides a match_to
     method, but is faster with lots of adapters.
 
     There are quite a few restrictions:
-    - the adapters need to be either all PREFIX or all SUFFIX adapters
     - no indels are allowed
     - the error rate allows at most 2 mismatches
     - wildcards in the adapter are not allowed
@@ -689,34 +764,30 @@ class MultiAdapter(Adapter):
     MultiAdapterIndex = Dict[str, Tuple[SingleAdapter, int, int]]
 
     def __init__(self, adapters):
-        """All given adapters must be of the same type, either Where.PREFIX or Where.SUFFIX"""
-        super().__init__()
+        """All given adapters must be of the same type"""
+        super().__init__(name="multi_adapter")
         if not adapters:
             raise ValueError("Adapter list is empty")
-        self._where = adapters[0].where
         for adapter in adapters:
             self._accept(adapter)
-            if adapter.where is not self._where:
-                raise ValueError("All adapters must have identical 'where' attributes")
-        assert self._where in (Where.PREFIX, Where.SUFFIX)
         self._adapters = adapters
         self._lengths, self._index = self._make_index()
-        if self._where is Where.PREFIX:
-            def make_affix(s, n):
-                return s[:n]
-        else:
-            def make_affix(s, n):
-                return s[-n:]
-        self._make_affix = make_affix
+        self._make_affix = self._get_make_affix()
 
     def __repr__(self):
-        return 'MultiAdapter(adapters={!r}, where={})'.format(self._adapters, self._where)
+        return "MultiAdapter(adapters={!r})".format(self._adapters)
 
-    @staticmethod
-    def _accept(adapter):
+    @abstractmethod
+    def _get_make_affix(self):
+        pass
+
+    @abstractmethod
+    def _make_match(self, adapter, length, matches, errors, sequence) -> SingleMatch:
+        pass
+
+    @classmethod
+    def _accept(cls, adapter):
         """Raise a ValueError if the adapter is not acceptable"""
-        if adapter.where is not Where.PREFIX and adapter.where is not Where.SUFFIX:
-            raise ValueError("Only anchored adapter types are allowed")
         if adapter.read_wildcards:
             raise ValueError("Wildcards in the read not supported")
         if adapter.adapter_wildcards:
@@ -727,8 +798,8 @@ class MultiAdapter(Adapter):
         if k > 2:
             raise ValueError("Error rate too high")
 
-    @staticmethod
-    def is_acceptable(adapter):
+    @classmethod
+    def is_acceptable(cls, adapter):
         """
         Return whether this adapter is acceptable for being used by MultiAdapter
 
@@ -736,7 +807,7 @@ class MultiAdapter(Adapter):
         or would lead to a very large index.
         """
         try:
-            MultiAdapter._accept(adapter)
+            cls._accept(adapter)
         except ValueError:
             return False
         return True
@@ -800,35 +871,76 @@ class MultiAdapter(Adapter):
             return None
         else:
             assert best_adapter is not None
-            if self._where is Where.PREFIX:
-                rstart, rstop = 0, best_length
-            else:
-                assert self._where is Where.SUFFIX
-                rstart, rstop = len(sequence) - best_length, len(sequence)
-            return SingleMatch(
-                astart=0,
-                astop=len(best_adapter.sequence),
-                rstart=rstart,
-                rstop=rstop,
-                matches=best_m,
-                errors=best_e,
-                remove_before=best_adapter.remove is WhereToRemove.PREFIX,
-                adapter=best_adapter,
-                sequence=sequence,
-            )
+            return self._make_match(best_adapter, best_length, best_m, best_e, sequence)
 
     def enable_debug(self):
         pass
 
 
+class MultiPrefixAdapter(MultiAdapter):
+
+    @classmethod
+    def _accept(cls, adapter):
+        if not isinstance(adapter, PrefixAdapter):
+            raise ValueError("Only 5' anchored adapters are allowed")
+        return super()._accept(adapter)
+
+    def _make_match(self, adapter, length, matches, errors, sequence):
+        return RemoveBeforeMatch(
+            astart=0,
+            astop=len(adapter.sequence),
+            rstart=0,
+            rstop=length,
+            matches=matches,
+            errors=errors,
+            adapter=adapter,
+            sequence=sequence,
+        )
+
+    def _get_make_affix(self):
+        return self._make_prefix
+
+    @staticmethod
+    def _make_prefix(s, n):
+        return s[:n]
+
+
+class MultiSuffixAdapter(MultiAdapter):
+
+    @classmethod
+    def _accept(cls, adapter):
+        if not isinstance(adapter, SuffixAdapter):
+            raise ValueError("Only anchored 3' adapters are allowed")
+        return super()._accept(adapter)
+
+    def _make_match(self, adapter, length, matches, errors, sequence):
+        return RemoveAfterMatch(
+            astart=0,
+            astop=len(adapter.sequence),
+            rstart=len(sequence) - length,
+            rstop=len(sequence),
+            matches=matches,
+            errors=errors,
+            adapter=adapter,
+            sequence=sequence,
+        )
+
+    def _get_make_affix(self):
+        return self._make_suffix
+
+    @staticmethod
+    def _make_suffix(s, n):
+        return s[-n:]
+
+
 def warn_duplicate_adapters(adapters):
     d = dict()
     for adapter in adapters:
-        key = (adapter.sequence, adapter.where, adapter.remove)
+        key = (adapter.__class__, adapter.sequence)
         if key in d:
             logger.warning("Adapter %r (%s) was specified multiple times! "
                 "Please make sure that this is what you want.",
-                adapter.sequence, ADAPTER_TYPE_NAMES[adapter.where])
+                adapter.sequence, adapter.description)
         d[key] = adapter.name
 
 

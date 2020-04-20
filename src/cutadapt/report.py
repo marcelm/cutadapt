@@ -5,7 +5,10 @@ from io import StringIO
 import textwrap
 from collections import Counter
 from typing import Any, Optional, List
-from .adapters import Where, EndStatistics, AdapterStatistics, ADAPTER_TYPE_NAMES
+from .adapters import (
+    EndStatistics, AdapterStatistics, FrontAdapter, NonInternalFrontAdapter, PrefixAdapter,
+    BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
+)
 from .modifiers import (SingleEndModifier, PairedModifier, QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer)
 from .filters import WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter
@@ -342,12 +345,11 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
             total_back = sum(adapter_statistics.back.lengths.values())
             total = total_front + total_back
             reverse_complemented = adapter_statistics.reverse_complemented
-            where = adapter_statistics.where
-            where_backs = (Where.BACK, Where.BACK_NOT_INTERNAL, Where.SUFFIX)
-            where_fronts = (Where.FRONT, Where.FRONT_NOT_INTERNAL, Where.PREFIX)
-            assert (where in (Where.ANYWHERE, Where.LINKED)
-                or (where in where_backs and total_front == 0)
-                or (where in where_fronts and total_back == 0)), (where, total_front, total_back)
+            adapter = adapter_statistics.adapter
+            if isinstance(adapter, (BackAdapter, NonInternalBackAdapter, SuffixAdapter)):
+                assert total_front == 0
+            if isinstance(adapter, (FrontAdapter, NonInternalFrontAdapter, PrefixAdapter)):
+                assert total_back == 0
 
             if stats.paired:
                 extra = 'First read: ' if which_in_pair == 0 else 'Second read: '
@@ -357,7 +359,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
             print_s("=" * 3, extra + "Adapter", adapter_statistics.name, "=" * 3)
             print_s()
 
-            if where is Where.LINKED:
+            if isinstance(adapter, LinkedAdapter):
                 print_s("Sequence: {}...{}; Type: linked; Length: {}+{}; "
                     "5' trimmed: {} times; 3' trimmed: {} times".format(
                         adapter_statistics.front.sequence,
@@ -367,7 +369,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                         total_front, total_back))
             else:
                 print_s("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times".
-                    format(adapter_statistics.front.sequence, ADAPTER_TYPE_NAMES[adapter_statistics.where],
+                    format(adapter_statistics.front.sequence, adapter.description,
                         len(adapter_statistics.front.sequence), total), end="")
             if stats.reverse_complemented is not None:
                 print_s("; Reverse-complemented: {} times".format(reverse_complemented))
@@ -376,7 +378,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
             if total == 0:
                 print_s()
                 continue
-            if where is Where.ANYWHERE:
+            if isinstance(adapter, AnywhereAdapter):
                 print_s(total_front, "times, it overlapped the 5' end of a read")
                 print_s(total_back, "times, it overlapped the 3' end or was within the read")
                 print_s()
@@ -386,7 +388,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s()
                 print_s("Overview of removed sequences (3' or within)")
                 print_s(histogram(adapter_statistics.back, stats.n, gc_content))
-            elif where is Where.LINKED:
+            elif isinstance(adapter, LinkedAdapter):
                 print_s()
                 print_s(error_ranges(adapter_statistics.front))
                 print_s(error_ranges(adapter_statistics.back))
@@ -395,13 +397,13 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s()
                 print_s("Overview of removed sequences at 3' end")
                 print_s(histogram(adapter_statistics.back, stats.n, gc_content))
-            elif where in (Where.FRONT, Where.PREFIX, Where.FRONT_NOT_INTERNAL):
+            elif isinstance(adapter, (FrontAdapter, NonInternalFrontAdapter, PrefixAdapter)):
                 print_s()
                 print_s(error_ranges(adapter_statistics.front))
                 print_s("Overview of removed sequences")
                 print_s(histogram(adapter_statistics.front, stats.n, gc_content))
             else:
-                assert where in (Where.BACK, Where.SUFFIX, Where.BACK_NOT_INTERNAL)
+                assert isinstance(adapter, (BackAdapter, NonInternalBackAdapter, SuffixAdapter))
                 print_s()
                 print_s(error_ranges(adapter_statistics.back))
                 base_stats = AdjacentBaseStatistics(adapter_statistics.back.adjacent_bases)
@@ -418,7 +420,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     return sio.getvalue().rstrip()
 
 
-def minimal_report(stats, _time, _gc_content) -> str:
+def minimal_report(stats: Statistics, _time, _gc_content) -> str:
     """Create a minimal tabular report suitable for concatenation"""
 
     def none(value):
@@ -446,7 +448,7 @@ def minimal_report(stats, _time, _gc_content) -> str:
     warning = False
     for which_in_pair in (0, 1):
         for adapter_statistics in stats.adapter_stats[which_in_pair]:
-            if adapter_statistics.where in (Where.BACK, Where.SUFFIX, Where.BACK_NOT_INTERNAL):
+            if isinstance(adapter_statistics.adapter, (BackAdapter, NonInternalBackAdapter, SuffixAdapter)):
                 if AdjacentBaseStatistics(adapter_statistics.back.adjacent_bases).should_warn:
                     warning = True
                     break

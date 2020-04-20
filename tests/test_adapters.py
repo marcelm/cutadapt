@@ -2,22 +2,31 @@ import pytest
 
 from dnaio import Sequence
 from cutadapt.adapters import (
-    SingleAdapter, SingleMatch, Where, LinkedAdapter, WhereToRemove,
-    MultiAdapter)
+    RemoveAfterMatch, FrontAdapter, BackAdapter, PrefixAdapter, SuffixAdapter, LinkedAdapter,
+    MultiPrefixAdapter, MultiSuffixAdapter,
+    )
+
+
+def test_front_adapter_partial_occurrence_in_back():
+    adapter = FrontAdapter("CTGAATT", max_error_rate=0, min_overlap=4)
+    assert adapter.match_to("GGGGGCTGAA") is None
+
+
+def test_back_adapter_partial_occurrence_in_front():
+    adapter = BackAdapter("CTGAATT", max_error_rate=0, min_overlap=4)
+    assert adapter.match_to("AATTGGGGGGG") is None
 
 
 def test_issue_52():
-    adapter = SingleAdapter(
+    adapter = BackAdapter(
         sequence='GAACTCCAGTCACNNNNN',
-        where=Where.BACK,
-        remove=WhereToRemove.SUFFIX,
         max_error_rate=0.12,
         min_overlap=5,
         read_wildcards=False,
         adapter_wildcards=True)
     sequence = "CCCCAGAACTACAGTCCCGGC"
-    am = SingleMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2,
-        remove_before=False, adapter=adapter, sequence=sequence)
+    am = RemoveAfterMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2,
+        adapter=adapter, sequence=sequence)
     assert am.wildcards() == 'GGC'
     """
     The result above should actually be 'CGGC' since the correct
@@ -44,10 +53,8 @@ def test_issue_80():
     # This is correct, albeit a little surprising, since an alignment without
     # indels would have only two errors.
 
-    adapter = SingleAdapter(
+    adapter = BackAdapter(
         sequence="TCGTATGCCGTCTTC",
-        where=Where.BACK,
-        remove=WhereToRemove.SUFFIX,
         max_error_rate=0.2,
         min_overlap=3,
         read_wildcards=False,
@@ -59,14 +66,14 @@ def test_issue_80():
 
 
 def test_str():
-    a = SingleAdapter('ACGT', where=Where.BACK, remove=WhereToRemove.SUFFIX, max_error_rate=0.1)
+    a = BackAdapter('ACGT', max_error_rate=0.1)
     str(a)
     str(a.match_to("TTACGT"))
 
 
 def test_linked_adapter():
-    front_adapter = SingleAdapter('AAAA', where=Where.PREFIX, min_overlap=4)
-    back_adapter = SingleAdapter('TTTT', where=Where.BACK, min_overlap=3)
+    front_adapter = PrefixAdapter('AAAA', min_overlap=4)
+    back_adapter = BackAdapter('TTTT', min_overlap=3)
 
     linked_adapter = LinkedAdapter(
         front_adapter, back_adapter, front_required=True, back_required=False, name='name')
@@ -80,16 +87,15 @@ def test_linked_adapter():
 
 
 def test_info_record():
-    adapter = SingleAdapter(
+    adapter = BackAdapter(
         sequence='GAACTCCAGTCACNNNNN',
-        where=Where.BACK,
         max_error_rate=0.12,
         min_overlap=5,
         read_wildcards=False,
         adapter_wildcards=True,
         name="Foo")
     read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
-    am = SingleMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2, remove_before=False,
+    am = RemoveAfterMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2,
         adapter=adapter, sequence=read.sequence)
     assert am.get_info_records(read) == [[
         "",
@@ -107,22 +113,22 @@ def test_info_record():
 
 
 def test_random_match_probabilities():
-    a = SingleAdapter('A', where=Where.BACK, max_error_rate=0.1).create_statistics()
+    a = BackAdapter('A', max_error_rate=0.1).create_statistics()
     assert a.back.random_match_probabilities(0.5) == [1, 0.25]
     assert a.back.random_match_probabilities(0.2) == [1, 0.4]
 
     for s in ('ACTG', 'XMWH'):
-        a = SingleAdapter(s, where=Where.BACK, max_error_rate=0.1).create_statistics()
+        a = BackAdapter(s, max_error_rate=0.1).create_statistics()
         assert a.back.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
         assert a.back.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
-    a = SingleAdapter('GTCA', where=Where.FRONT, max_error_rate=0.1).create_statistics()
+    a = FrontAdapter('GTCA', max_error_rate=0.1).create_statistics()
     assert a.front.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
     assert a.front.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
 
 def test_add_adapter_statistics():
-    stats = SingleAdapter('A', name='name', where=Where.BACK, max_error_rate=0.1).create_statistics()
+    stats = BackAdapter('A', name='name', max_error_rate=0.1).create_statistics()
     end_stats = stats.back
     end_stats.adjacent_bases['A'] = 7
     end_stats.adjacent_bases['C'] = 19
@@ -137,7 +143,7 @@ def test_add_adapter_statistics():
     end_stats.errors[20][1] = 66
     end_stats.errors[20][2] = 6
 
-    stats2 = SingleAdapter('A', name='name', where=Where.BACK, max_error_rate=0.1).create_statistics()
+    stats2 = BackAdapter('A', name='name', max_error_rate=0.1).create_statistics()
     end_stats2 = stats2.back
     end_stats2.adjacent_bases['A'] = 43
     end_stats2.adjacent_bases['C'] = 31
@@ -165,21 +171,21 @@ def test_add_adapter_statistics():
 def test_linked_matches_property():
     """Accessing matches property of non-anchored linked adapters"""
     # Issue #265
-    front_adapter = SingleAdapter('GGG', where=Where.FRONT)
-    back_adapter = SingleAdapter('TTT', where=Where.BACK)
+    front_adapter = FrontAdapter("GGG")
+    back_adapter = BackAdapter("TTT")
     la = LinkedAdapter(front_adapter, back_adapter, front_required=False, back_required=False, name='name')
     assert la.match_to("AAAATTTT").matches == 3
 
 
-@pytest.mark.parametrize("where", [Where.PREFIX, Where.SUFFIX])
-def test_no_indels_empty_read(where):
+@pytest.mark.parametrize("adapter_class", [PrefixAdapter, SuffixAdapter])
+def test_no_indels_empty_read(adapter_class):
     # Issue #376
-    adapter = SingleAdapter('ACGT', where=where, indels=False)
+    adapter = adapter_class("ACGT", indels=False)
     adapter.match_to("")
 
 
 def test_prefix_match_with_n_wildcard_in_read():
-    adapter = SingleAdapter("NNNACGT", where=Where.PREFIX, indels=False)
+    adapter = PrefixAdapter("NNNACGT", indels=False)
     match = adapter.match_to("TTTACGTAAAA")
     assert match is not None and (0, 7) == (match.rstart, match.rstop)
     match = adapter.match_to("NTTACGTAAAA")
@@ -187,20 +193,48 @@ def test_prefix_match_with_n_wildcard_in_read():
 
 
 def test_suffix_match_with_n_wildcard_in_read():
-    adapter = SingleAdapter("ACGTNNN", where=Where.SUFFIX, indels=False)
+    adapter = SuffixAdapter("ACGTNNN", indels=False)
     match = adapter.match_to("TTTTACGTTTT")
     assert match is not None and (4, 11) == (match.rstart, match.rstop)
     match = adapter.match_to("TTTTACGTCNC")
     assert match is not None and (4, 11) == (match.rstart, match.rstop)
 
 
-def test_multi_adapter():
+def test_multi_prefix_adapter():
     adapters = [
-        SingleAdapter("GAAC", where=Where.PREFIX, indels=False),
-        SingleAdapter("TGCT", where=Where.PREFIX, indels=False),
+        PrefixAdapter("GAAC", indels=False),
+        PrefixAdapter("TGCT", indels=False),
     ]
-    ma = MultiAdapter(adapters)
+    ma = MultiPrefixAdapter(adapters)
     match = ma.match_to("GAACTT")
     assert match.adapter is adapters[0]
     match = ma.match_to("TGCTAA")
     assert match.adapter is adapters[1]
+
+
+def test_multi_prefix_adapter_incorrect_type():
+    with pytest.raises(ValueError):
+        MultiPrefixAdapter([
+            PrefixAdapter("GAAC", indels=False),
+            SuffixAdapter("TGCT", indels=False),
+        ])
+
+
+def test_multi_suffix_adapter():
+    adapters = [
+        SuffixAdapter("GAAC", indels=False),
+        SuffixAdapter("TGCT", indels=False),
+    ]
+    ma = MultiSuffixAdapter(adapters)
+    match = ma.match_to("TTGAAC")
+    assert match.adapter is adapters[0]
+    match = ma.match_to("AATGCT")
+    assert match.adapter is adapters[1]
+
+
+def test_multi_suffix_adapter_incorrect_type():
+    with pytest.raises(ValueError):
+        MultiSuffixAdapter([
+            SuffixAdapter("GAAC", indels=False),
+            PrefixAdapter("TGCT", indels=False),
+        ])

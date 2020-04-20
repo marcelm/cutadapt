@@ -237,6 +237,18 @@ cdef class Aligner:
         self._insertion_cost = indel_cost
         self._deletion_cost = indel_cost
 
+    def __reduce__(self):
+        cdef int flags = 0
+        if self.start_in_reference:
+            flags &=1
+        if self.start_in_query:
+            flags &= 2
+        if self.stop_in_reference:
+            flags &= 4
+        if self.stop_in_query:
+            flags &= 8
+        return (Aligner, (self.reference, self.max_error_rate, flags, self.wildcard_ref, self.wildcard_query, self._insertion_cost, self._min_overlap))
+
     def _set_reference(self, str reference):
         mem = <_Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(_Entry))
         if not mem:

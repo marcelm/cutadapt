@@ -2,7 +2,7 @@ from textwrap import dedent
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import Where, WhereToRemove, LinkedAdapter, SingleAdapter
+from cutadapt.adapters import LinkedAdapter, BackAdapter, FrontAdapter
 from cutadapt.parser import AdapterParser, AdapterSpecification
 from cutadapt.modifiers import ModificationInfo
 
@@ -169,14 +169,30 @@ def test_linked_adapter_name():
     assert a.create_statistics().name == "the_name"
 
 
-def test_anywhere_parameter():
+def test_anywhere_parameter_back():
     parser = AdapterParser(max_error_rate=0.2, min_overlap=4, read_wildcards=False,
         adapter_wildcards=False, indels=True)
     adapter = list(parser.parse('CTGAAGTGAAGTACACGGTT;anywhere', 'back'))[0]
-    assert isinstance(adapter, SingleAdapter)
-    assert adapter.remove == WhereToRemove.SUFFIX
-    assert adapter.where is Where.ANYWHERE
+    assert isinstance(adapter, BackAdapter)
+    assert adapter._force_anywhere
+
+    # TODO move the rest to a separate test
     read = Sequence('foo1', 'TGAAGTACACGGTTAAAAAAAAAA')
+    from cutadapt.modifiers import AdapterCutter
+    cutter = AdapterCutter([adapter])
+    trimmed_read = cutter(read, ModificationInfo(read))
+    assert trimmed_read.sequence == ''
+
+
+def test_anywhere_parameter_front():
+    parser = AdapterParser(max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+        adapter_wildcards=False, indels=True)
+    adapter = list(parser.parse('CTGAAGTGAAGTACACGGTT;anywhere', 'front'))[0]
+    assert isinstance(adapter, FrontAdapter)
+    assert adapter._force_anywhere
+
+    # TODO move the rest to a separate test
+    read = Sequence('foo1', 'AAAAAAAAAACTGAAGTGAA')
     from cutadapt.modifiers import AdapterCutter
     cutter = AdapterCutter([adapter])
     trimmed_read = cutter(read, ModificationInfo(read))

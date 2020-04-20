@@ -54,9 +54,9 @@ def test_shortener():
 
 
 def test_adapter_cutter():
-    from cutadapt.adapters import SingleAdapter, Where
-    a1 = SingleAdapter('GTAGTCCCGC', where=Where.BACK)
-    a2 = SingleAdapter('GTAGTCCCCC', where=Where.BACK)
+    from cutadapt.adapters import BackAdapter
+    a1 = BackAdapter("GTAGTCCCGC")
+    a2 = BackAdapter("GTAGTCCCCC")
     match = AdapterCutter.best_match([a1, a2], Sequence("name", "ATACCCCTGTAGTCCCC"))
     assert match.adapter is a2
 
@@ -68,9 +68,9 @@ def test_adapter_cutter():
     ("mask", "CCCCNNNNNNNNNN", "TTTTNNNNNNNNNN")
 ])
 def test_paired_adapter_cutter_actions(action, expected_trimmed1, expected_trimmed2):
-    from cutadapt.adapters import SingleAdapter, Where
-    a1 = SingleAdapter("GGTTAA", where=Where.BACK)
-    a2 = SingleAdapter("AACCGG", where=Where.BACK)
+    from cutadapt.adapters import BackAdapter
+    a1 = BackAdapter("GGTTAA")
+    a2 = BackAdapter("AACCGG")
     s1 = Sequence("name", "CCCCGGTTAACCCC")
     s2 = Sequence("name", "TTTTAACCGGTTTT")
     pac = PairedAdapterCutter([a1], [a2], action=action)
