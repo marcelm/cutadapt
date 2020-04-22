@@ -801,12 +801,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     if not logging.root.handlers:
         setup_logging(logger, stdout=log_to_stdout,
             quiet=args.quiet, minimal=args.report == 'minimal', debug=args.debug)
-    if args.profile:
-        import cProfile
-        profiler = cProfile.Profile()
-        profiler.enable()
-    else:
-        profiler = None
+    profiler = setup_profiler_if_requested(args.profile)
 
     if args.quiet and args.report:
         parser.error("Options --quiet and --report cannot be used at the same time")
@@ -893,6 +888,16 @@ def setup_runner(pipeline: Pipeline, infiles, outfiles, progress, cores, buffer_
         raise CommandLineError(e)
 
     return runner
+
+
+def setup_profiler_if_requested(requested: bool):
+    if requested:
+        import cProfile
+        profiler = cProfile.Profile()
+        profiler.enable()
+    else:
+        profiler = None
+    return profiler
 
 
 if __name__ == '__main__':
