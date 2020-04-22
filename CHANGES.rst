@@ -2,9 +2,10 @@
 Changes
 =======
 
-development version
--------------------
+v2.10 (2020-04-22)
+------------------
 
+* Fixed a performance regression introduced in version 2.9.
 * :pr:`449`: ``--action=`` could not be used with ``--pair-adapters``.
   Fix contributed by wlokhorst.
 * :issue:`450`: ``--untrimmed-output``, ``--too-short-output`` and ``--too-long-output`` can
@@ -15,7 +16,6 @@ development version
 * With ``--action=lowercase``/``mask``, print which sequences would have been
   removed in the “Overview of removed sequences” statistics. Previously, it
   would show that no sequences have been removed.
-* Fixed a performance regression introduced in version 2.9.
 
 v2.9 (2020-03-18)
 -----------------
