@@ -8,9 +8,6 @@ improvements.
 - show average error rate
 - run pylint, pychecker
 - length histogram
-- search for adapters in the order in which they are given on the
-  command line
-- more tests for the alignment algorithm
 - ``--detect`` prints out best guess which of the given adapters is the correct one
 - allow to remove not the adapter itself, but the sequence before or after it
 - warn when given adapter sequence contains non-IUPAC characters
@@ -88,8 +85,9 @@ Paired-end trimming
 * Could also use a paired-end read merger, then remove adapters with -a and -g
 
 Available letters for command-line options
------------------------------------------------
+------------------------------------------
 
-* Remaining characters: All uppercase letters except A, B, G, M, N, O, U
 * Lowercase letters: i, k, s, w
-* Planned/reserved: Q (paired-end quality trimming)
+* Uppercase letters: C, D, E, F, H, I, J, K, L, P, R, S, T, V, W
+* Deprecated, could be re-used: c, d, t
+* Planned/reserved: Q (paired-end quality trimming), V (alias for --version)
