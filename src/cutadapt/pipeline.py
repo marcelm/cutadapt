@@ -261,7 +261,7 @@ class SingleEndPipeline(Pipeline):
 
     def process_reads(self, progress: Progress = None):
         """Run the pipeline. Return statistics"""
-        n = 0  # no. of processed reads  # TODO turn into attribute
+        n = 0  # no. of processed reads
         total_bp = 0
         for read in self._reader:
             n += 1

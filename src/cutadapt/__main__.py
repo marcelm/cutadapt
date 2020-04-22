@@ -793,7 +793,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     parser = get_argument_parser()
     if cmdlineargs is None:
         cmdlineargs = sys.argv[1:]
-    args = parser.parse_args(args=cmdlineargs)
+    args, leftover_args = parser.parse_known_args(args=cmdlineargs)
     # log to stderr if results are to be sent to stdout
     log_to_stdout = args.output is not None and args.output != "-" and args.paired_output != "-"
     # Setup logging only if there are not already any handlers (can happen when
@@ -818,6 +818,10 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
 
     # Print the header now because some of the functions below create logging output
     log_header(cmdlineargs)
+    if leftover_args:
+        warn_if_en_dashes(cmdlineargs)
+        parser.error("unrecognized arguments: " + " ".join(leftover_args))
+
     if args.cores < 0:
         parser.error('Value for --cores cannot be negative')
 
@@ -898,6 +902,16 @@ def setup_profiler_if_requested(requested):
     else:
         profiler = None
     return profiler
+
+
+def warn_if_en_dashes(args):
+    for arg in args:
+        if arg.startswith("–"):
+            logger.warning(
+                "The first character in argument '%s' is '–' (an en-dash, Unicode U+2013)"
+                " and will therefore be interpreted as a file name. If you wanted to"
+                " provide an option, use a regular hyphen '-'.", arg
+            )
 
 
 if __name__ == '__main__':

@@ -736,3 +736,8 @@ def test_max_expected_errors_fasta(tmp_path):
     path = tmp_path / "input.fasta"
     path.write_text(">read\nACGTACGT\n")
     main(["--max-ee=0.001", "-o", "/dev/null", str(path)])
+
+
+def test_warn_if_en_dashes_used():
+    with pytest.raises(SystemExit):
+        main(["–q", "25", "-o", "/dev/null", "in.fastq"])
