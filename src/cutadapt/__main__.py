@@ -890,7 +890,7 @@ def setup_runner(pipeline: Pipeline, infiles, outfiles, progress, cores, buffer_
     return runner
 
 
-def setup_profiler_if_requested(requested: bool):
+def setup_profiler_if_requested(requested):
     if requested:
         import cProfile
         profiler = cProfile.Profile()
