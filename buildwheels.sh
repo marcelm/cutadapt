@@ -8,10 +8,7 @@
 # Run this within the repository root:
 #   ./buildwheels.sh
 #
-# The wheels will be put into the wheelhouse/ subdirectory.
-#
-# For interactive tests:
-#   docker run -it -v $(pwd):/io quay.io/pypa/manylinux2010_x86_64 /bin/bash
+# The wheels will be put into the dist/ subdirectory.
 
 set -xeuo pipefail
 
@@ -25,18 +22,17 @@ if ! grep -q docker /proc/1/cgroup; then
   exec docker run --rm -v $(pwd):/io ${manylinux} /io/$0
 fi
 
+if ! test -d /io/dist; then
+  mkdir /io/dist
+  chown --reference=/io/setup.py /io/dist
+fi
+
 # Strip binaries (copied from multibuild)
 STRIP_FLAGS=${STRIP_FLAGS:-"-Wl,-strip-all"}
 export CFLAGS="${CFLAGS:-$STRIP_FLAGS}"
 export CXXFLAGS="${CXXFLAGS:-$STRIP_FLAGS}"
 
-# We require Python 3.5+
-rm /opt/python/cp27* /opt/python/cp34*
-
-PYBINS="/opt/python/*/bin"
-HAS_CYTHON=0
-for PYBIN in ${PYBINS}; do
-#    ${PYBIN}/pip install -r /io/requirements.txt
+for PYBIN in /opt/python/cp3[5678]-*/bin; do
     ${PYBIN}/pip wheel --no-deps /io/ -w wheelhouse/
 done
 ls wheelhouse/
@@ -49,9 +45,3 @@ done
 # Created files are owned by root, so fix permissions.
 chown -R --reference=/io/setup.py repaired/
 mv repaired/*.whl /io/dist/
-
-# TODO Install packages and test them
-#for PYBIN in ${PYBINS}; do
-#    ${PYBIN}/pip install cutadapt --no-index -f /io/wheelhouse
-#    (cd $HOME; ${PYBIN}/nosetests ...)
-#done
