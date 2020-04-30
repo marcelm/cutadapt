@@ -190,7 +190,7 @@ class Statistics:
 def error_ranges(adapter_statistics: EndStatistics):
     length = adapter_statistics.effective_length
     error_rate = adapter_statistics.max_error_rate
-    prev = 0
+    prev = 1
     s = ""
     for errors in range(1, int(error_rate * length) + 1):
         r = int(errors / error_rate)
