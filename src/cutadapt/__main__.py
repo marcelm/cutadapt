@@ -85,6 +85,14 @@ class CutadaptArgumentParser(ArgumentParser):
     - A brief message is shown on errors, not full usage
     """
     class CustomUsageHelpFormatter(HelpFormatter):
+        def __init__(self, *args, **kwargs):
+            try:
+                import shutil
+                kwargs['width'] = min(24 + 80, shutil.get_terminal_size().columns)
+            except ImportError:
+                pass
+            super().__init__(*args, **kwargs)
+
         def add_usage(self, usage, actions, groups, prefix=None):
             if usage is not SUPPRESS:
                 args = usage, actions, groups, ''
