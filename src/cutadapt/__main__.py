@@ -168,7 +168,7 @@ def get_argument_parser() -> ArgumentParser:
         default=[], metavar="ADAPTER", dest="adapters",
         help="Sequence of an adapter that may be ligated to the 5' or 3' end "
             "(paired data: of the first read). Both types of matches as "
-            "described under -a und -g are allowed. If the first base of the "
+            "described under -a and -g are allowed. If the first base of the "
             "read is part of the match, the behavior is as with -g, otherwise "
             "as with -a. This option is mostly for rescuing failed library "
             "preparations - do not use if you know which end your adapter was "
