@@ -981,7 +981,7 @@ Quality trimming of reads using two-color chemistry (NextSeq)
 Some Illumina instruments use a two-color chemistry to encode the four bases.
 This includes the NextSeq and the NovaSeq. In those instruments, a
 'dark cycle' (with no detected color)
-encodes a ``G``. However, dark cycles also occur when when sequencing "falls
+encodes a ``G``. However, dark cycles also occur when sequencing "falls
 off" the end of the fragment. The read then `contains a run of high-quality, but
 incorrect “G” calls <https://sequencing.qcfail.com/articles/illumina-2-colour-chemistry-can-overcall-high-confidence-g-bases/>`_
 at its 3' end.
