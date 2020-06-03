@@ -1,0 +1,29 @@
+name: PyInstaller
+
+on: push
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+      - name: Install
+        run: |
+          python -m venv venv
+          venv/Scripts/pip install pyinstaller
+          venv/Scripts/pip install .
+      - name: Make exe
+        run: |
+          echo "from cutadapt.__main__ import main" > script.py
+          echo "sys.exit(main())" >> script.py
+          venv/Scripts/pyinstaller -F -w -n cutadapt script.py
+      - name: Run it
+        run: dist/cutadapt.exe --version
+      - uses: actions/upload-artifact@v2
+        with:
+          name: cutadapt-exe
+          path: dist/cutadapt.exe
