@@ -523,7 +523,7 @@ As described, when you specify a linked adapter with ``-a``, the adapters that a
 become *required*, and the non-anchored adapters become *optional*. To change this, you can
 instead use ``-g`` to specify a linked adapter. In that case, *both* adapters are required
 (even if they are not anchored). This type of linked adapter type is especially suited for
-trimming CRISR screening reads. For example::
+trimming CRISPR screening reads. For example::
 
     cutadapt -g ADAPTER1...ADAPTER2 -o out.fastq.gz in.fastq.gz
 
