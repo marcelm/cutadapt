@@ -275,7 +275,7 @@ class AdjacentBaseStatistics:
         if self.should_warn:
             print('WARNING:', file=sio)
             print('    The adapter is preceded by "{}" extremely often.'.format(self._warnbase), file=sio)
-            print("    The provided adapter sequence could be incomplete at its 3' end.", file=sio)
+            print("    The provided adapter sequence could be incomplete at its 5' end.", file=sio)
         return sio.getvalue()
 
 
