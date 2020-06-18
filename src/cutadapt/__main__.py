@@ -835,7 +835,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
 
     cores = available_cpu_count() if args.cores == 0 else args.cores
     file_opener = FileOpener(
-        compression_level=args.compression_level, threads=0 if cores == 1 else None)
+        compression_level=args.compression_level, threads=0 if cores == 1 else 1)
     if sys.stderr.isatty() and not args.quiet:
         progress = Progress()
     else:
