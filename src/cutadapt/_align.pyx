@@ -237,7 +237,7 @@ cdef class Aligner:
         self._insertion_cost = indel_cost
         self._deletion_cost = indel_cost
 
-    def __reduce__(self):
+    def _compute_flags(self):
         cdef int flags = 0
         if self.start_in_reference:
             flags |= 1
@@ -247,7 +247,18 @@ cdef class Aligner:
             flags |= 4
         if self.stop_in_query:
             flags |= 8
-        return (Aligner, (self.reference, self.max_error_rate, flags, self.wildcard_ref, self.wildcard_query, self._insertion_cost, self._min_overlap))
+        return flags
+
+    def __reduce__(self):
+        return (Aligner, (self.reference, self.max_error_rate, self._compute_flags(), self.wildcard_ref, self.wildcard_query, self._insertion_cost, self._min_overlap))
+
+    def __repr__(self):
+        return (
+            f"Aligner(reference='{self.reference}, max_error_rate={self.max_error_rate}, "
+            f"flags={self._compute_flags()}, wildcard_ref={self.wildcard_ref}, "
+            f"wildcard_query={self.wildcard_query}, indel_cost={self._insertion_cost}, "
+            f"min_overlap={self._min_overlap})"
+        )
 
     def _set_reference(self, str reference):
         mem = <_Entry*> PyMem_Realloc(self.column, (len(reference) + 1) * sizeof(_Entry))
