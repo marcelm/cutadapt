@@ -2,6 +2,11 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`469`: Cutadapt did not run under Python 3.8 on recent macOS versions.
+
 v2.10 (2020-04-22)
 ------------------
 
