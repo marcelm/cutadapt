@@ -518,10 +518,17 @@ class WorkerProcess(Process):
         self._pipeline = pipeline
         self._two_input_files = two_input_files
         self._interleaved_input = interleaved_input
-        self._orig_outfiles = orig_outfiles
         self._read_pipe = read_pipe
         self._write_pipe = write_pipe
         self._need_work_queue = need_work_queue
+
+        self._outfile_attributes = [
+            attr for attr in (
+                "out", "out2", "untrimmed", "untrimmed2", "too_short", "too_short2", "too_long",
+                "too_long2", "info", "rest", "wildcard"
+            ) if getattr(orig_outfiles, attr) is not None
+        ]
+        self._force_fasta = orig_outfiles.force_fasta
 
     def run(self):
         try:
@@ -573,15 +580,9 @@ class WorkerProcess(Process):
         Using self._orig_outfiles as a template, make a new OutputFiles instance
         that has BytesIO instances for each non-None output file
         """
-        output_files = copy.copy(self._orig_outfiles)
-        for attr in (
-            "out", "out2", "untrimmed", "untrimmed2", "too_short", "too_short2", "too_long",
-            "too_long2", "info", "rest", "wildcard"
-        ):
-            orig_outfile = getattr(self._orig_outfiles, attr)
-            if orig_outfile is not None:
-                output = io.BytesIO()
-                setattr(output_files, attr, output)
+        output_files = OutputFiles(force_fasta=self._force_fasta)
+        for attr in self._outfile_attributes:
+            setattr(output_files, attr, io.BytesIO())
 
         return output_files
 
