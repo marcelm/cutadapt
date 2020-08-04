@@ -120,4 +120,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Bio-Informatics"
     ],
+    project_urls={
+        "Changelog": "https://cutadapt.readthedocs.io/en/stable/changes.html",
+    },
 )
