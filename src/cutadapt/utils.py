@@ -155,6 +155,11 @@ def reverse_complemented_sequence(sequence: dnaio.Sequence):
 
 class FileOpener:
     def __init__(self, compression_level: int = 6, threads: int = None):
+        """
+        threads -- no. of external compression threads.
+            0: write in-process
+            None: min(cpu_count(0, 4)
+        """
         self.compression_level = compression_level
         self.threads = threads
 
