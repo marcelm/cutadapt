@@ -1224,17 +1224,20 @@ R1 and R2 into a single decision about the read pair.
 The default is ``--pair-filter=any``, which means that a read pair is discarded
 (or redirected) if *one of* the reads (R1 or R2) fulfills the filtering criterion.
 As an example, if option ``--minimum-length=20`` is used and paired-end data is
-processed, a read pair if discarded if one of the reads is shorter than 20 nt.
+processed, a read pair is discarded if at least one of the reads is shorter than
+20 nt.
 
-To require that filtering criteria must apply to *both* reads in order for a
-read pair to be discarded, use the option ``--pair-filter=both``.
+With ``--pair-filter=both``, you can require that filtering criteria must apply
+to *both* reads in order for a read pair to be discarded.
 
-If you want the filter to ignore the second read, use ``--pair-filter=first``.
+Finally, ``--pair-filter=first`` will make a decision about the read pair
+by inspecting whether the filtering criterion applies to the first read,
+ignoring the second read.
 
 The following table describes the effect for some filtering options.
 
 +----------------------------+------------------------------------------------+-----------------------------------------+
-| Filtering option           | With ``--pair-filter=any``, the pair           | With ``-pair-filter=both``, the pair    |
+| Filtering option           | With ``--pair-filter=any``, the pair           | With ``--pair-filter=both``, the pair   |
 |                            | is discarded if ...                            | is discarded if ...                     |
 +============================+================================================+=========================================+
 | ``--minimum-length``       | one of the reads is too short                  | both reads are too short                |
