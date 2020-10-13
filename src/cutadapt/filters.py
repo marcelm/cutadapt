@@ -93,6 +93,9 @@ class NoFilter(SingleEndFilterWithStatistics):
         super().__init__()
         self.writer = writer
 
+    def __repr__(self):
+        return "NoFilter({})".format(self.writer)
+
     def __call__(self, read, info: ModificationInfo):
         self.writer.write(read)
         self.update_statistics(read)
@@ -106,6 +109,9 @@ class PairedNoFilter(PairedEndFilterWithStatistics):
     def __init__(self, writer):
         super().__init__()
         self.writer = writer
+
+    def __repr__(self):
+        return "PairedNoFilter({})".format(self.writer)
 
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         self.writer.write(read1, read2)
@@ -123,6 +129,9 @@ class Redirector(SingleEndFilterWithStatistics):
         self.filtered = 0
         self.writer = writer
         self.filter = filter
+
+    def __repr__(self):
+        return "Redirector(writer={}, filter={})".format(self.writer, self.filter)
 
     def __call__(self, read, info: ModificationInfo):
         if self.filter(read, info):
@@ -150,6 +159,7 @@ class PairedRedirector(PairedEndFilterWithStatistics):
         super().__init__()
         if pair_filter_mode not in ('any', 'both', 'first'):
             raise ValueError("pair_filter_mode must be 'any', 'both' or 'first'")
+        self._pair_filter_mode = pair_filter_mode
         self.filtered = 0
         self.writer = writer
         self.filter = filter
@@ -164,6 +174,10 @@ class PairedRedirector(PairedEndFilterWithStatistics):
             self._is_filtered = self._is_filtered_both
         else:
             self._is_filtered = self._is_filtered_first
+
+    def __repr__(self):
+        return "PairedRedirector(writer={}, filter={}, filter2={}, pair_filter_mode='{}')".format(
+            self.writer, self.filter, self.filter2, self._pair_filter_mode)
 
     def _is_filtered_any(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         return self.filter(read1, info1) or self.filter2(read2, info2)
@@ -191,6 +205,9 @@ class TooShortReadFilter(SingleEndFilter):
     def __init__(self, minimum_length):
         self.minimum_length = minimum_length
 
+    def __repr__(self):
+        return "TooShortReadFilter(minimum_length={})".format(self.minimum_length)
+
     def __call__(self, read, info: ModificationInfo):
         return len(read) < self.minimum_length
 
@@ -198,6 +215,9 @@ class TooShortReadFilter(SingleEndFilter):
 class TooLongReadFilter(SingleEndFilter):
     def __init__(self, maximum_length):
         self.maximum_length = maximum_length
+
+    def __repr__(self):
+        return "TooLongReadFilter(maximum_length={})".format(self.maximum_length)
 
     def __call__(self, read, info: ModificationInfo):
         return len(read) > self.maximum_length
@@ -213,6 +233,9 @@ class MaximumExpectedErrorsFilter(SingleEndFilter):
     """
     def __init__(self, max_errors):
         self.max_errors = max_errors
+
+    def __repr__(self):
+        return "MaximumExpectedErrorsFilter(max_errors={})".format(self.max_errors)
 
     def __call__(self, read, info: ModificationInfo):
         """Return True when the read should be discarded"""
@@ -234,6 +257,10 @@ class NContentFilter(SingleEndFilter):
         self.is_proportion = count < 1.0
         self.cutoff = count
 
+    def __repr__(self):
+        return "NContentFilter(cutoff={}, is_proportion={})".format(
+            self.cutoff, self.is_proportion)
+
     def __call__(self, read, info: ModificationInfo):
         """Return True when the read should be discarded"""
         n_count = read.sequence.lower().count('n')
@@ -249,6 +276,9 @@ class DiscardUntrimmedFilter(SingleEndFilter):
     """
     Return True if read is untrimmed.
     """
+    def __repr__(self):
+        return "DiscardUntrimmedFilter()"
+
     def __call__(self, read, info: ModificationInfo):
         return not info.matches
 
@@ -257,6 +287,9 @@ class DiscardTrimmedFilter(SingleEndFilter):
     """
     Return True if read is trimmed.
     """
+    def __repr__(self):
+        return "DiscardTrimmedFilter()"
+
     def __call__(self, read, info: ModificationInfo):
         return bool(info.matches)
 
@@ -269,6 +302,9 @@ class CasavaFilter(SingleEndFilter):
 
     Reads with unrecognized headers are kept.
     """
+    def __repr__(self):
+        return "CasavaFilter()"
+
     def __call__(self, read, info: ModificationInfo):
         _, _, right = read.name.partition(' ')
         return right[1:4] == ':Y:'  # discard if :Y: found
