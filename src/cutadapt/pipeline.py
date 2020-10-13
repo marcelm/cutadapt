@@ -197,6 +197,7 @@ class Pipeline(ABC):
                 self._filters.append(
                     untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
             self._filters.append(self._final_filter(outfiles))
+        logger.debug("Filters: %s", self._filters)
 
     def flush(self) -> None:
         for f in self._textiowrappers:
