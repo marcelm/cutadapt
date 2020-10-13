@@ -30,17 +30,17 @@ KEEP = False
 
 class SingleEndFilter(ABC):
     @abstractmethod
-    def __call__(self, read, info: ModificationInfo):
+    def __call__(self, read, info: ModificationInfo) -> bool:
         """
-        Called to process a single-end read
+        Process a single read
         """
 
 
 class PairedEndFilter(ABC):
     @abstractmethod
-    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         """
-        Called to process the read pair (read1, read2)
+        Process read pair (read1, read2)
         """
 
 
