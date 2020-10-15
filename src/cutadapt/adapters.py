@@ -373,13 +373,13 @@ class SingleAdapter(Adapter, ABC):
             raise ValueError("Adapter sequence is empty")
         self.max_error_rate = max_error_rate  # type: float
         self.min_overlap = min(min_overlap, len(self.sequence))  # type: int
-        iupac = frozenset('XACGTURYSWKMBDHVN')
+        iupac = frozenset('ABCDGHKMNRSTUVWXY')
         if adapter_wildcards and not set(self.sequence) <= iupac:
             for c in self.sequence:
                 if c not in iupac:
                     raise ValueError('Character {!r} in adapter sequence {!r} is '
                         'not a valid IUPAC code. Use only characters '
-                        'XACGTURYSWKMBDHVN.'.format(c, self.sequence))
+                        'ABCDGHKMNRSTUVWXY.'.format(c, self.sequence))
         # Optimization: Use non-wildcard matching if only ACGT is used
         self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set("ACGT")  # type: bool
         self.read_wildcards = read_wildcards  # type: bool
