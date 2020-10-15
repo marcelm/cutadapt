@@ -63,7 +63,7 @@ from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 import dnaio
 
 from cutadapt import __version__
-from cutadapt.adapters import warn_duplicate_adapters, Adapter
+from cutadapt.adapters import warn_duplicate_adapters, Adapter, InvalidCharacter
 from cutadapt.parser import AdapterParser
 from cutadapt.modifiers import (SingleEndModifier, LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
@@ -691,7 +691,7 @@ def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
     try:
         adapters = adapter_parser.parse_multi(args.adapters)
         adapters2 = adapter_parser.parse_multi(args.adapters2)
-    except (FileNotFoundError, ValueError) as e:
+    except (FileNotFoundError, ValueError, InvalidCharacter) as e:
         raise CommandLineError(e)
     warn_duplicate_adapters(adapters)
     warn_duplicate_adapters(adapters2)

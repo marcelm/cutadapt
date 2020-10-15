@@ -3,12 +3,13 @@ Parse adapter specifications
 """
 import re
 import logging
+from pathlib import Path
 from typing import Type, Optional, List, Tuple, Iterator, Any, Dict
 from xopen import xopen
 from dnaio.readers import FastaReader
 from .adapters import (
     Adapter, FrontAdapter, NonInternalFrontAdapter, BackAdapter, NonInternalBackAdapter,
-    AnywhereAdapter, PrefixAdapter, SuffixAdapter, LinkedAdapter
+    AnywhereAdapter, PrefixAdapter, SuffixAdapter, LinkedAdapter, InvalidCharacter
 )
 
 logger = logging.getLogger(__name__)
@@ -411,7 +412,16 @@ class AdapterParser:
                     name = name[0] if name else None
                     yield self._parse(record.sequence, cmdline_type, name=name)
         else:
-            yield self._parse(spec, cmdline_type, name=None)
+            try:
+                yield self._parse(spec, cmdline_type, name=None)
+            except InvalidCharacter as e:
+                if Path(spec).exists():
+                    extra_message = "A file exists named '{}'. ".format(spec) +\
+                        "To use the sequences in that file as adapter sequences, write 'file:' " +\
+                        "before the path, as in 'file:{}'.".format(spec)
+                    raise InvalidCharacter(e.args[0] + "\n" + extra_message)
+                else:
+                    raise
 
     def parse_multi(self, type_spec_pairs: List[Tuple[str, str]]) -> List[Adapter]:
         """

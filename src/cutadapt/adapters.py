@@ -15,6 +15,10 @@ from . import align
 logger = logging.getLogger()
 
 
+class InvalidCharacter(Exception):
+    pass
+
+
 class Where(Enum):
     # Constants for the Aligner.locate() function.
     # The function is called with SEQ1 as the adapter, SEQ2 as the read.
@@ -377,7 +381,7 @@ class SingleAdapter(Adapter, ABC):
         if adapter_wildcards and not set(self.sequence) <= iupac:
             for c in self.sequence:
                 if c not in iupac:
-                    raise ValueError('Character {!r} in adapter sequence {!r} is '
+                    raise InvalidCharacter('Character {!r} in adapter sequence {!r} is '
                         'not a valid IUPAC code. Use only characters '
                         'ABCDGHKMNRSTUVWXY.'.format(c, self.sequence))
         # Optimization: Use non-wildcard matching if only ACGT is used
