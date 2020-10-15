@@ -852,6 +852,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
             interleaved=is_interleaved_input)
         runner = setup_runner(pipeline, infiles, outfiles, progress, cores, args.buffer_size)
     except CommandLineError as e:
+        logger.debug("Command line error. Traceback:", exc_info=True)
         parser.error(str(e))
         return  # avoid IDE warnings below
 
@@ -867,6 +868,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     except BrokenPipeError:
         sys.exit(1)
     except (dnaio.FileFormatError, dnaio.UnknownFileFormat, EOFError) as e:
+        logger.debug("Command line error. Traceback:", exc_info=True)
         sys.exit("cutadapt: error: {}".format(e))
 
     elapsed = time.time() - start_time
