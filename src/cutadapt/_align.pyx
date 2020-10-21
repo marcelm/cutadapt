@@ -1,6 +1,8 @@
 # cython: profile=False, emit_code_comments=False, language_level=3
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 
+DEF MATCH_SCORE = 16384
+
 # structure for a DP matrix entry
 ctypedef struct _Entry:
     int cost
@@ -440,11 +442,20 @@ cdef class Aligner:
                     else:
                         characters_equal = (s1[i-1] & s2[j-1]) != 0
                     if characters_equal:
-                        # If the characters match, skip computing costs for
+                        # If the characters match, wen can skip computing costs for
                         # insertion and deletion as they are at least as high.
                         cost = diag_entry.cost
                         origin = diag_entry.origin
-                        matches = diag_entry.matches + 1
+                        # Among the optimal alignments whose edit distance is within the
+                        # maximum allowed error rate, we prefer those that have the
+                        # maximum number of matches. And among those, we want to
+                        # prefer those with mismatches over those with indels.
+                        # To do so, the matches attribute works as follows:
+                        # - if there is a match, it is incremented by MATCH_SCORE
+                        # - if there is a mismatch, there is no change
+                        # - if there is an insertion or deletion, it is decremented by 1
+                        # (In a way, it can be considered a secondary score.)
+                        matches = diag_entry.matches + MATCH_SCORE
                     else:
                         # Characters do not match.
                         cost_diag = diag_entry.cost + 1
@@ -460,12 +471,14 @@ cdef class Aligner:
                             # INSERTION
                             cost = cost_insertion
                             origin = column[i-1].origin
-                            matches = column[i-1].matches
+                            # penalize insertions slightly
+                            matches = column[i-1].matches - 1
                         else:
                             # DELETION
                             cost = cost_deletion
                             origin = column[i].origin
-                            matches = column[i].matches
+                            # penalize deletions slightly
+                            matches = column[i].matches - 1
 
                     # Remember the current cell for next iteration
                     diag_entry = column[i]
@@ -504,7 +517,7 @@ cdef class Aligner:
                         best.origin = column[m].origin
                         best.ref_stop = m
                         best.query_stop = j
-                        if cost == 0 and matches == m:
+                        if cost == 0 and (matches + MATCH_SCORE - 1) // MATCH_SCORE == m:
                             # exact match, stop early
                             break
                 # column finished
@@ -552,7 +565,7 @@ cdef class Aligner:
             start2 = 0
 
         assert best.ref_stop - start1 > 0  # Do not return empty alignments.
-        return (start1, best.ref_stop, start2, best.query_stop, best.matches, best.cost)
+        return (start1, best.ref_stop, start2, best.query_stop, (best.matches + MATCH_SCORE - 1) // MATCH_SCORE, best.cost)
 
     def __dealloc__(self):
         PyMem_Free(self.column)
