@@ -85,6 +85,7 @@ def test_back_adapter_indel_and_exact_occurrence():
     assert match.rstop == 10
 
 
+@pytest.mark.xfail(strict=True)
 def test_back_adapter_indel_and_mismatch_occurrence():
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
@@ -107,6 +108,42 @@ def test_str():
     a = BackAdapter('ACGT', max_error_rate=0.1)
     str(a)
     str(a.match_to("TTACGT"))
+
+
+def test_prefix_with_indels_one_mismatch():
+    a = PrefixAdapter(
+        sequence="GCACATCT",
+        max_error_rate=0.15,
+        min_overlap=1,
+        read_wildcards=False,
+        adapter_wildcards=False,
+        indels=True,
+    )
+    result = a.match_to("GCACATCGGAA")
+    assert result.errors == 1
+    assert result.matches == 7
+    assert result.astart == 0
+    assert result.astop == 8
+    assert result.rstart == 0
+    assert result.rstop == 8
+
+
+def test_prefix_with_indels_two_mismatches():
+    a = PrefixAdapter(
+        sequence="GCACATTT",
+        max_error_rate=0.3,
+        min_overlap=1,
+        read_wildcards=False,
+        adapter_wildcards=False,
+        indels=True,
+    )
+    result = a.match_to("GCACATCGGAA")
+    assert result.errors == 2
+    assert result.matches == 6
+    assert result.astart == 0
+    assert result.astop == 8
+    assert result.rstart == 0
+    assert result.rstop == 8
 
 
 def test_linked_adapter():
