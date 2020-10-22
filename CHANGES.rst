@@ -6,6 +6,10 @@ development version
 -------------------
 
 * :issue:`469`: Cutadapt did not run under Python 3.8 on recent macOS versions.
+* :pr:`485`: Fix that, under some circumstances, in particular when trimming a
+  5' adapter and there was a mismatch in its last nucleotide(s), not the entire adapter
+  sequence would be trimmed from the read. Since fixing this required changed the
+  alignment algorithm slightly, this is a backwards incompatible change.
 
 v2.10 (2020-04-22)
 ------------------
