@@ -65,6 +65,26 @@ def test_issue_80():
     assert result.astop == 15, result
 
 
+@pytest.mark.xfail(strict=True)
+def test_back_adapter_indel_and_exact_occurrence():
+    adapter = BackAdapter(
+        sequence="GATCGGAAGA",
+        max_error_rate=0.1,
+        min_overlap=3,
+    )
+    match = adapter.match_to("GATCGTGAAGAGATCGGAAGA")
+    # We want the leftmost match of these two possible ones:
+    # GATCGTGAAGAGATCGGAAGA
+    # GATCG-GAAGA
+    #            GATCGGAAGA
+    assert match.errors == 0
+    assert match.matches == 10
+    assert match.astart == 0
+    assert match.astop == 10
+    assert match.rstart == 0
+    assert match.rstop == 10
+
+
 def test_str():
     a = BackAdapter('ACGT', max_error_rate=0.1)
     str(a)
