@@ -85,7 +85,6 @@ def test_back_adapter_indel_and_exact_occurrence():
     assert match.rstop == 10
 
 
-@pytest.mark.xfail(strict=True)
 def test_back_adapter_indel_and_mismatch_occurrence():
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
