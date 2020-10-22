@@ -85,6 +85,24 @@ def test_back_adapter_indel_and_exact_occurrence():
     assert match.rstop == 10
 
 
+def test_back_adapter_indel_and_mismatch_occurrence():
+    adapter = BackAdapter(
+        sequence="GATCGGAAGA",
+        max_error_rate=0.1,
+        min_overlap=3,
+    )
+    match = adapter.match_to("CTGGATCGGAGAGCCGTAGATCGGGAGAGGC")
+    # CTGGATCGGA-GAGCCGTAGATCGGGAGAGGC
+    #    ||||||| ||      ||||||X|||
+    #    GATCGGAAGA      GATCGGAAGA
+    assert match.errors == 1
+    assert match.matches == 9
+    assert match.astart == 0
+    assert match.astop == 10
+    assert match.rstart == 3
+    assert match.rstop == 12
+
+
 def test_str():
     a = BackAdapter('ACGT', max_error_rate=0.1)
     str(a)
