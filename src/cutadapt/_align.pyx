@@ -511,7 +511,9 @@ cdef class Aligner:
                     cost = column[m].cost
                     matches = column[m].matches
                     if length >= self._min_overlap and cost <= cur_effective_length * max_error_rate and (matches > best.matches or (matches == best.matches and cost < best.cost)):
-                        # update
+                        # The case "matches == best.matches and cost < best.cost" applies
+                        # when the query contains the reference twice, and where the right
+                        # occurrence contains fewer errors
                         best.matches = matches
                         best.cost = cost
                         best.origin = column[m].origin
