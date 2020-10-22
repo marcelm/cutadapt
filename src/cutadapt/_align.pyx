@@ -522,7 +522,14 @@ cdef class Aligner:
                         length >= self._min_overlap
                         and cost <= cur_effective_length * max_error_rate
                     )
-                    if is_acceptable and (score > best.score or (matches == best.matches and cost < best.cost)):
+                    if is_acceptable and (
+                        # no best match recorded so far
+                        (best.cost == m + n)
+                        # same start position, use score to judge whether this is better
+                        or (origin == best.origin and score > best.score)
+                        # different start position, only matches count
+                        or (matches > best.matches or (matches == best.matches and cost < best.cost))
+                    ):
                         # The case "matches == best.matches and cost < best.cost" applies
                         # when the query contains the reference twice, and where the right
                         # occurrence contains fewer errors
@@ -563,7 +570,14 @@ cdef class Aligner:
                     length >= self._min_overlap
                     and cost <= cur_effective_length * max_error_rate
                 )
-                if is_acceptable and (score > best.score or (matches == best.matches and cost < best.cost)):
+                if is_acceptable and (
+                    # no best match recorded so far
+                    (best.cost == m + n)
+                    # same start position, use score to judge whether this is better
+                    or (origin == best.origin and score > best.score)
+                    # different start position, only matches count
+                    or (matches > best.matches or (matches == best.matches and cost < best.cost))
+                ):
                     best.matches = matches
                     best.score = score
                     best.cost = cost
