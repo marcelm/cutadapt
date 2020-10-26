@@ -547,11 +547,6 @@ class NonInternalFrontAdapter(FrontAdapter):
         return self._make_aligner(Where.FRONT_NOT_INTERNAL.value)
 
     def match_to(self, sequence: str):
-        if not self.adapter_wildcards and sequence.startswith(self.sequence):
-            n = len(self.sequence)
-            return RemoveBeforeMatch(
-                0, n, 0, n, n, 0, adapter=self, sequence=sequence
-            )  # type: ignore
         alignment = self.aligner.locate(sequence)
         if self._debug:
             try:
@@ -572,13 +567,6 @@ class NonInternalBackAdapter(BackAdapter):
         return self._make_aligner(Where.BACK_NOT_INTERNAL.value)
 
     def match_to(self, sequence: str):
-        if not self.adapter_wildcards and sequence.endswith(self.sequence):
-            # Exact match found
-            # astart, astop, rstart, rstop, matches, errors
-            n = len(self.sequence)
-            return RemoveAfterMatch(
-                0, n, len(sequence) - n, len(sequence), n, 0, adapter=self, sequence=sequence
-            )  # type: ignore
         alignment = self.aligner.locate(sequence)
         if self._debug:
             try:
