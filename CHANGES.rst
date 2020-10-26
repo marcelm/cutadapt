@@ -10,6 +10,8 @@ development version
   5' adapter and there was a mismatch in its last nucleotide(s), not the entire adapter
   sequence would be trimmed from the read. Since fixing this required changed the
   alignment algorithm slightly, this is a backwards incompatible change.
+* :issue:`487`: When demultiplexing, the reported number of written pairs was
+  always zero.
 
 v2.10 (2020-04-22)
 ------------------

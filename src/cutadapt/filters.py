@@ -377,11 +377,16 @@ class PairedDemultiplexer(PairedEndFilterWithStatistics):
         self._demultiplexer2 = Demultiplexer(path_paired_template, untrimmed_paired_path,
             qualities, file_opener)
 
-    def written(self) -> int:
+    def written_reads(self) -> int:
         return self._demultiplexer1.written_reads()
 
     def written_bp(self) -> Tuple[int, int]:
         return (self._demultiplexer1.written_bp()[0], self._demultiplexer2.written_bp()[0])
+
+    def written_lengths(self) -> Tuple[Counter, Counter]:
+        return (
+            self._demultiplexer1.written_lengths()[0], self._demultiplexer2.written_lengths()[0],
+        )
 
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         assert read2 is not None
