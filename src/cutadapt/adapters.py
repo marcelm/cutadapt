@@ -470,7 +470,7 @@ class FrontAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        alignment = self.aligner.locate(sequence.upper())  # type: Optional[Tuple[int,int,int,int,int,int]]
+        alignment = self.aligner.locate(sequence)  # type: Optional[Tuple[int,int,int,int,int,int]]
         if self._debug:
             print(self.aligner.dpmatrix)  # pragma: no cover
         if alignment is None:
@@ -498,7 +498,7 @@ class BackAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        alignment = self.aligner.locate(sequence.upper())  # type: Optional[Tuple[int,int,int,int,int,int]]
+        alignment = self.aligner.locate(sequence)  # type: Optional[Tuple[int,int,int,int,int,int]]
         if self._debug:
             print(self.aligner.dpmatrix)  # pragma: no cover
         if alignment is None:
