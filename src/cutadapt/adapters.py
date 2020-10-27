@@ -343,8 +343,11 @@ class SingleAdapter(Adapter, ABC):
     sequence -- The adapter sequence as string. Will be converted to uppercase.
         Also, Us will be converted to Ts.
 
-    max_error_rate -- Maximum allowed error rate. The error rate is
-        the number of errors in the alignment divided by the length
+    max_errors -- Maximum allowed errors (non-negative float). If the values is less than 1, this is
+        interpreted as a rate directly and passed to the aligner. If it is 1 or greater, the value
+        is converted to a rate by dividing it by the length of the sequence.
+
+        The error rate is the number of errors in the alignment divided by the length
         of the part of the alignment that matches the adapter.
 
     minimum_overlap -- Minimum length of the part of the alignment
@@ -362,7 +365,7 @@ class SingleAdapter(Adapter, ABC):
     def __init__(
         self,
         sequence: str,
-        max_error_rate: float = 0.1,
+        max_errors: float = 0.1,
         min_overlap: int = 3,
         read_wildcards: bool = False,
         adapter_wildcards: bool = True,
@@ -375,7 +378,9 @@ class SingleAdapter(Adapter, ABC):
         self.sequence = sequence.upper().replace("U", "T")  # type: str
         if not self.sequence:
             raise ValueError("Adapter sequence is empty")
-        self.max_error_rate = max_error_rate  # type: float
+        if max_errors >= 1:
+            max_errors /= len(self.sequence)
+        self.max_error_rate = max_errors  # type: float
         self.min_overlap = min(min_overlap, len(self.sequence))  # type: int
         iupac = frozenset('ABCDGHKMNRSTUVWXY')
         if adapter_wildcards and not set(self.sequence) <= iupac:

@@ -24,7 +24,7 @@ class AdapterSpecification:
     - name (None or str)
     - restriction (None, 'anchored', or 'noninternal')
     - sequence (nucleotide sequence as string)
-    - parameters (dict with extra parameters such as 'max_error_rate', 'min_overlap')
+    - parameters (dict with extra parameters such as 'max_errors', 'min_overlap')
     - cmdline_type ('front' for -a, 'back' for -g and 'anywhere' for -b)
 
     >>> AdapterSpecification.parse('a_name=ACGT;anywhere', 'back')
@@ -122,11 +122,12 @@ class AdapterSpecification:
     allowed_parameters = {
         # abbreviations
         'e': 'max_error_rate',
-        'error_rate': 'max_error_rate',
+        'error_rate': 'max_errors',
+        'max_error_rate': 'max_errors',
         'o': 'min_overlap',
 
         # allowed parameters
-        'max_error_rate': None,
+        'max_errors': None,
         'min_overlap': None,
         'anywhere': None,
         'required': None,

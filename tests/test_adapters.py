@@ -7,20 +7,29 @@ from cutadapt.adapters import (
     )
 
 
+def test_back_adapter_absolute_number_of_errors():
+    adapter = BackAdapter(
+        sequence="GATCGGAAGA",
+        max_errors=1,
+        min_overlap=3,
+    )
+    assert adapter.max_error_rate == 1 / 10
+
+
 def test_front_adapter_partial_occurrence_in_back():
-    adapter = FrontAdapter("CTGAATT", max_error_rate=0, min_overlap=4)
+    adapter = FrontAdapter("CTGAATT", max_errors=0, min_overlap=4)
     assert adapter.match_to("GGGGGCTGAA") is None
 
 
 def test_back_adapter_partial_occurrence_in_front():
-    adapter = BackAdapter("CTGAATT", max_error_rate=0, min_overlap=4)
+    adapter = BackAdapter("CTGAATT", max_errors=0, min_overlap=4)
     assert adapter.match_to("AATTGGGGGGG") is None
 
 
 def test_issue_52():
     adapter = BackAdapter(
         sequence='GAACTCCAGTCACNNNNN',
-        max_error_rate=0.12,
+        max_errors=0.12,
         min_overlap=5,
         read_wildcards=False,
         adapter_wildcards=True)
@@ -55,7 +64,7 @@ def test_issue_80():
 
     adapter = BackAdapter(
         sequence="TCGTATGCCGTCTTC",
-        max_error_rate=0.2,
+        max_errors=0.2,
         min_overlap=3,
         read_wildcards=False,
         adapter_wildcards=False)
@@ -69,7 +78,7 @@ def test_issue_80():
 def test_back_adapter_indel_and_exact_occurrence():
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
-        max_error_rate=0.1,
+        max_errors=0.1,
         min_overlap=3,
     )
     match = adapter.match_to("GATCGTGAAGAGATCGGAAGA")
@@ -88,7 +97,7 @@ def test_back_adapter_indel_and_exact_occurrence():
 def test_back_adapter_indel_and_mismatch_occurrence():
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
-        max_error_rate=0.1,
+        max_errors=0.1,
         min_overlap=3,
     )
     match = adapter.match_to("CTGGATCGGAGAGCCGTAGATCGGGAGAGGC")
@@ -104,7 +113,7 @@ def test_back_adapter_indel_and_mismatch_occurrence():
 
 
 def test_str():
-    a = BackAdapter('ACGT', max_error_rate=0.1)
+    a = BackAdapter('ACGT', max_errors=0.1)
     str(a)
     str(a.match_to("TTACGT"))
 
@@ -112,7 +121,7 @@ def test_str():
 def test_prefix_with_indels_one_mismatch():
     a = PrefixAdapter(
         sequence="GCACATCT",
-        max_error_rate=0.15,
+        max_errors=0.15,
         min_overlap=1,
         read_wildcards=False,
         adapter_wildcards=False,
@@ -130,7 +139,7 @@ def test_prefix_with_indels_one_mismatch():
 def test_prefix_with_indels_two_mismatches():
     a = PrefixAdapter(
         sequence="GCACATTT",
-        max_error_rate=0.3,
+        max_errors=0.3,
         min_overlap=1,
         read_wildcards=False,
         adapter_wildcards=False,
@@ -163,7 +172,7 @@ def test_linked_adapter():
 def test_info_record():
     adapter = BackAdapter(
         sequence='GAACTCCAGTCACNNNNN',
-        max_error_rate=0.12,
+        max_errors=0.12,
         min_overlap=5,
         read_wildcards=False,
         adapter_wildcards=True,
@@ -187,22 +196,22 @@ def test_info_record():
 
 
 def test_random_match_probabilities():
-    a = BackAdapter('A', max_error_rate=0.1).create_statistics()
+    a = BackAdapter('A', max_errors=0.1).create_statistics()
     assert a.back.random_match_probabilities(0.5) == [1, 0.25]
     assert a.back.random_match_probabilities(0.2) == [1, 0.4]
 
     for s in ('ACTG', 'XMWH'):
-        a = BackAdapter(s, max_error_rate=0.1).create_statistics()
+        a = BackAdapter(s, max_errors=0.1).create_statistics()
         assert a.back.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
         assert a.back.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
-    a = FrontAdapter('GTCA', max_error_rate=0.1).create_statistics()
+    a = FrontAdapter('GTCA', max_errors=0.1).create_statistics()
     assert a.front.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
     assert a.front.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
 
 def test_add_adapter_statistics():
-    stats = BackAdapter('A', name='name', max_error_rate=0.1).create_statistics()
+    stats = BackAdapter('A', name='name', max_errors=0.1).create_statistics()
     end_stats = stats.back
     end_stats.adjacent_bases['A'] = 7
     end_stats.adjacent_bases['C'] = 19
@@ -217,7 +226,7 @@ def test_add_adapter_statistics():
     end_stats.errors[20][1] = 66
     end_stats.errors[20][2] = 6
 
-    stats2 = BackAdapter('A', name='name', max_error_rate=0.1).create_statistics()
+    stats2 = BackAdapter('A', name='name', max_errors=0.1).create_statistics()
     end_stats2 = stats2.back
     end_stats2.adjacent_bases['A'] = 43
     end_stats2.adjacent_bases['C'] = 31

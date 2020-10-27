@@ -37,7 +37,7 @@ def test_parse_file_notation(tmpdir):
             ADAPTER2
             """))
     parser = AdapterParser(
-        max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+        max_errors=0.2, min_overlap=4, read_wildcards=False,
         adapter_wildcards=False, indels=False)
 
     adapters = list(parser.parse('file:' + tmp_path, cmdline_type='back'))
@@ -68,11 +68,12 @@ def test_parse_not_linked():
 
 def test_parse_parameters():
     p = AdapterSpecification._parse_parameters
-    assert p('e=0.1') == {'max_error_rate': 0.1}
-    assert p('error_rate=0.1') == {'max_error_rate': 0.1}
+    assert p('e=0.1') == {'max_errors': 0.1}
+    assert p('error_rate=0.1') == {'max_errors': 0.1}
+    assert p('max_errors=2') == {'max_errors': 2}
     assert p('o=5') == {'min_overlap': 5}
     assert p('min_overlap=5') == {'min_overlap': 5}
-    assert p('o=7; e=0.4') == {'min_overlap': 7, 'max_error_rate': 0.4}
+    assert p('o=7; e=0.4') == {'min_overlap': 7, 'max_errors': 0.4}
     assert p('anywhere') == {'anywhere': True}
     assert p('required') == {'required': True}
     assert p('optional') == {'required': False}
@@ -87,7 +88,7 @@ def test_parse_parameters():
 
 def test_parse_with_parameters():
     parser = AdapterParser(
-        max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+        max_errors=0.2, min_overlap=4, read_wildcards=False,
         adapter_wildcards=False, indels=False)
     a = parser._parse('ACGTACGT; e=0.15', 'front')
     assert a.max_error_rate == 0.15
@@ -154,7 +155,7 @@ def test_linked_adapter_front_required_optional(r1, r2, exp1, exp2):
 
 def test_linked_adapter_parameters():
     # issue #394
-    a = AdapterParser(max_error_rate=0.17, indels=False)._parse("ACG...TGT")
+    a = AdapterParser(max_errors=0.17, indels=False)._parse("ACG...TGT")
     assert isinstance(a, LinkedAdapter)
     assert a.front_adapter.max_error_rate == 0.17
     assert a.back_adapter.max_error_rate == 0.17
@@ -170,7 +171,7 @@ def test_linked_adapter_name():
 
 
 def test_anywhere_parameter_back():
-    parser = AdapterParser(max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+    parser = AdapterParser(max_errors=0.2, min_overlap=4, read_wildcards=False,
         adapter_wildcards=False, indels=True)
     adapter = list(parser.parse('CTGAAGTGAAGTACACGGTT;anywhere', 'back'))[0]
     assert isinstance(adapter, BackAdapter)
@@ -185,7 +186,7 @@ def test_anywhere_parameter_back():
 
 
 def test_anywhere_parameter_front():
-    parser = AdapterParser(max_error_rate=0.2, min_overlap=4, read_wildcards=False,
+    parser = AdapterParser(max_errors=0.2, min_overlap=4, read_wildcards=False,
         adapter_wildcards=False, indels=True)
     adapter = list(parser.parse('CTGAAGTGAAGTACACGGTT;anywhere', 'front'))[0]
     assert isinstance(adapter, FrontAdapter)

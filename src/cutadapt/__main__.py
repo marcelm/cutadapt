@@ -682,7 +682,7 @@ def pipeline_from_parsed_args(args, paired, file_opener) -> Pipeline:
 
 def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
     adapter_parser = AdapterParser(
-        max_error_rate=args.error_rate,
+        max_errors=args.error_rate,
         min_overlap=args.overlap,
         read_wildcards=args.match_read_wildcards,
         adapter_wildcards=args.match_adapter_wildcards,
