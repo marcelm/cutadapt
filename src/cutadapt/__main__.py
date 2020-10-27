@@ -337,11 +337,9 @@ def get_argument_parser() -> ArgumentParser:
             "was found. Use with --untrimmed-output. Default: output "
             "to same file as trimmed reads")
     group.add_argument("--too-short-paired-output", metavar="FILE", default=None,
-        help="Write second read in a pair to this file if pair is too short. "
-            "Use also --too-short-output.")
+        help="Write second read in a pair to this file if pair is too short.")
     group.add_argument("--too-long-paired-output", metavar="FILE", default=None,
-        help="Write second read in a pair to this file if pair is too long. "
-            "Use also --too-long-output.")
+        help="Write second read in a pair to this file if pair is too long.")
 
     for arg in ("--colorspace", "-c", "-d", "--double-encode", "-t", "--trim-primer",
             "--strip-f3", "--maq", "--bwa", "--no-zero-cap"):
