@@ -173,9 +173,11 @@ def get_argument_parser() -> ArgumentParser:
             "as with -a. This option is mostly for rescuing failed library "
             "preparations - do not use if you know which end your adapter was "
             "ligated to!")
-    group.add_argument("-e", "--error-rate", type=float, default=0.1, metavar="RATE",
-        help="Maximum allowed error rate as value between 0 and 1 (no. of "
-            "errors divided by length of matching region). Default: %(default)s (=10%%)")
+    group.add_argument("-e", "--error-rate", "--errors",
+        type=float, metavar="E", default=0.1,
+        help="Maximum allowed error rate (if 0 <= E < 1), or absolute number of errors "
+            "for full-length adapter match (if E is an integer >= 1). Error rate = "
+            "no. of errors divided by length of matching region. Default: %(default)s (10%%)")
     group.add_argument("--no-indels", action='store_false', dest='indels', default=True,
         help="Allow only mismatches in alignments. "
             "Default: allow both mismatches and indels")
@@ -597,8 +599,6 @@ def check_arguments(args, paired: bool) -> None:
         logger.warning("Option --format is deprecated and ignored because the input file format is "
             "always auto-detected")
 
-    if not (0 <= args.error_rate < 1.):
-        raise CommandLineError("The maximum error rate must be at least 0 and less than 1.")
     if args.overlap < 1:
         raise CommandLineError("The overlap must be at least 1.")
     if not (0 <= args.gc_content <= 100):

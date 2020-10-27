@@ -635,6 +635,7 @@ The following parameters are supported at the moment:
 Parameter                                          Global option Adapter-specific parameter
 ================================================== ============= ================================
 Maximum error rate                                 ``-e 0.2``    | ``ADAPTER;e=0.2`` or
+                                                                 | ``ADAPTER;max_errors=0.2`` or
                                                                  | ``ADAPTER;max_error_rate=0.2``
 
 Minimum overlap                                    ``-O 5``      | ``ADAPTER;o=5`` or
@@ -661,58 +662,71 @@ mismatches, insertions and deletions. For example, if you search for the
 adapter sequence ``ADAPTER`` and the error tolerance is set appropriately
 (as explained below), then also ``ADABTER`` will be found (with 1 mismatch),
 as well as ``ADAPTR`` (with 1 deletion), and also ``ADAPPTER`` (with 1
-insertion).
+insertion). If insertions and deletions are disabled with ``--no-indels``,
+then mismatches are the only type of errors.
 
-The level of error tolerance is adjusted by specifying a *maximum error rate*,
-which is 0.1 (=10%) by default. Use the ``-e`` option to set a different value
-globally or the ``max_error_rate`` adapter-specific parameter to change it for
-a single adapter only. Example: ``-a "ADAPTER;max_error_rate=0.15"``
+The level of error tolerance is determined by a *maximum error rate*, which is
+0.1 (=10%) by default. An adapter occurrence is only found if the actual
+error rate of the match does not exceed the maximum error rate. The actual
+error rate is computed as the *number of errors in the match*
+divided by the *length of the matching part of the adapter*.
+
+For example, an adapter match of length 8 containing 1 error has an error rate
+of 1/8=0.125. At the default maximum error rate 0.1, it would not be found, but
+a match of length 10 containing 1 error has an error rate of 1/10=0.1 and would
+be found.
+
+Relating the number of errros to the length of the matching part of the
+adapter is important because Cutadapt allows for partial adapter
+occurrences (for the non-anchored adapter types). If only the absolute
+number of errors were used, shorter matches would be favored unfairly. For
+example, assume an adapter has 30 bases and we allow three errors over that
+length. If we allowed these three errors even for a partial occurrences of,
+for example, four bases, we can immediately see that this results in
+unexpected matches. Using the error rate as a criterion helps to keep
+sensitivity and specificity roughly the same over the possible lengths of
+the matches.
+
+The ``-e`` option on the command line allows you to change the maximum error rate.
+If the value is between 0 and 1 (but not 1 exactly), then this sets the maximum
+error rate directly for all specified adapters. The default is ``-e 0.1``. You
+can also use the adapter-specific parameter ``max_error_rate`` or ``max_errors``
+or just ``e`` to override the default for a single adapter only.
+Examples: ``-a "ADAPTER;max_error_rate=0.15"``, ``-a "ADAPTER;e=0.15"``
 (the quotation marks are necessary).
 
-To determine the number of allowed errors, the maximum error rate is multiplied
-by the length of the match and then rounded off.
-What does that mean?
-Assume you have a long adapter ``LONGADAPTER`` and it appears in full somewhere
-within the read. The length of the match is 11 characters since the full adapter
-has a length of 11, therefore 11·0.1=1.1 errors are allowed with the default
-maximum error rate of 0.1. This is rounded off to 1 allowed error. So the
-adapter will be found within this read::
+Alternatively, you can also specify a value of 1 or greater as the number of
+allowed errors, which is then converted to a maximum error rate for each adapter
+individually. For example, with an adapter of length 10, using ``-e 2`` will
+set the maximum error rate to 0.2 for an adapter of length 10.
 
-    sequenceLONGADUPTERsomething
+The value does not have to be an integer, and if you use an adapter type
+that allows partial matches, you may want to add 0.5 to the desired number of
+errors, which achieves that even slightly shorter than full-lengths
+matches will be allowed at the specified number of errors. In short, if you
+want to allow two errors, use ``-e 2.5``.
 
-If the match is a bit shorter, however, the result is different::
+This also works in the adapter-specific parameters.
+Examples: ``-a "ADAPTER;e=1"``, ``-a "ADAPTER;max_errors=2.5"``. Note that
+``e``, ``max_error_rate`` and ``max_errors`` are all equivalent and the
+decision whether a rate or an absolute number is meant is based on
+whether the given value is less than 1 or not.
 
-    sequenceLONGADUPT
+The number of errors allowed for a given adapter match length is also shown under
+the “No. of allowed errors” heading in the report that Cutadapt prints::
 
-Only the first 9 characters of the adapter match a part of the read:
-``LONGADAPT`` is matched to ``LONGADUPT``. So the length of the match
-is 9 and therefore, only 9·0.1=0.9 errors are allowed. This is then
-rounded off to zero, which means that the adapter will not be found
-as there is actually one substitution.
-
-The number of errors allowed for a given adapter match length is also shown in
-the report that Cutadapt prints::
-
-    Sequence: 'LONGADAPTER'; Length: 11; Trimmed: 2 times.
+    Sequence: 'SOMEADAPTER'; Length: 11; Trimmed: 2 times.
 
     No. of allowed errors:
     0-9 bp: 0; 10-11 bp: 1
 
-This tells us what we now already know: For match lengths of 0-9 bases, zero
-errors are allowed and for matches of length 10-11 bases, one error is allowed.
-
-The reason for this behavior is to ensure that short matches are not favored
-unfairly. For example, assume the adapter has 40 bases and the maximum error
-rate is 0.1, which means that four errors are allowed for full-length matches.
-If four errors were allowed even for a short match such as one with 10 bases, this would
-mean that the error rate for such a case is 40%, which is clearly not what was
-desired.
-
-Insertions and deletions can be disallowed by using the option
-``--no-indels``.
+This tells us: For match lengths of 0-9 bases, zero errors are allowed and for
+matches of length 10-11 bases, one error is allowed.
 
 See also the :ref:`section on details of the alignment algorithm <adapter-alignment-algorithm>`.
 
+.. versionadded: 2.11
+    Allow specifying the number of errors
 
 N wildcard characters
 ~~~~~~~~~~~~~~~~~~~~~

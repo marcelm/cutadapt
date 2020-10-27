@@ -5,8 +5,9 @@ Changes
 development version
 -------------------
 
-* :issue:`358`: You can now use ``-e`` with an absolute number of errors. For
-  example, write ``-e 2`` to allow two errors over a full-length adapter match.
+* :issue:`358`: You can now use ``-e`` also :ref:`to specify the maximum number of
+  errors <error-tolerance>` (instead of the maximum error rate). For example, write
+  ``-e 2`` to allow two errors over a full-length adapter match.
 * :issue:`469`: Cutadapt did not run under Python 3.8 on recent macOS versions.
 * :pr:`485`: Fix that, under some circumstances, in particular when trimming a
   5' adapter and there was a mismatch in its last nucleotide(s), not the entire adapter
