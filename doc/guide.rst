@@ -150,10 +150,10 @@ Speed-up tricks
 
 There are several tricks for limiting wall-clock time while using Cutadapt.
 
-``-Z`` (alternatively ``--compression-level=1``) can be used to limit the
+``-Z`` (equivalent to ``--compression-level=1``) can be used to limit the
 amount of CPU time which is spent on the compression of output files.
 Alternatively, choosing filenames not ending with ``.gz``, ``.bz2`` or ``.xz``
-will make sure no cpu time is spent on compression at all.  On systems
+will make sure no CPU time is spent on compression at all.  On systems
 with slow I/O, it can actually be faster to set a higher compression-level
 than 1.
 
@@ -168,10 +168,10 @@ you to create named pipes in bash.
 
     mkfifo R1.fastq R2.fastq
     cutadapt -a ${ADAPTER_R1} -A ${ADAPTER_R2} -o R1.fastq -p R2.fastq ${READ1} ${READ2} > cutadapt.report & \
-    bwa mem -o output.sam ${INDEX} R1.fastq R2.fastq
+    bwa mem ${INDEX} R1.fastq R2.fastq
 
-This command will run cutadapt and BWA simultaneously, using cutadapts output as
-BWA's input, and capturing cutadapts report in ``cutadapt.report``.
+This command will run cutadapt and BWA simultaneously, using Cutadapt’s output as
+BWA’s input, and capturing Cutadapt’s report in ``cutadapt.report``.
 
 Read processing stages
 ======================
