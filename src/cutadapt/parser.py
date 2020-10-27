@@ -351,16 +351,6 @@ class AdapterParser:
         if not name:
             name = front_spec.name
 
-        if cmdline_type == 'back' and front_spec.restriction is None:
-            import textwrap
-            logger.warning('\n'.join(textwrap.wrap(
-                "You specified a linked adapter as '-a ADAPTER1...ADAPTER2'. "
-                "The interpretation of what this means has changed in Cutadapt 2.0. "
-                "(The 5' adapter is now no longer anchored by default.) "
-                "To get results consist with the old behavior, you need to anchor "
-                "the 5' adapter explicitly as in '-a ^ADAPTER1...ADAPTER2'."
-            )))
-
         front_anchored = front_spec.restriction is not None
         back_anchored = back_spec.restriction is not None
 
