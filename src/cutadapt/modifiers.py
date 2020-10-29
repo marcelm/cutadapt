@@ -70,18 +70,29 @@ class AdapterCutter(SingleEndModifier):
     times parameter.
     """
 
-    def __init__(self, adapters, times=1, action='trim'):
+    def __init__(
+        self,
+        adapters: List[SingleAdapter],
+        times: int = 1,
+        action: str = "trim",
+        index: bool = True,
+    ):
         """
         adapters -- list of Adapter objects
 
         action -- What to do with a found adapter: None, 'trim', or 'mask'
+
+        index -- if True, an adapter index (for multiple adapters) is created if possible
         """
         self.times = times
         assert action in ('trim', 'mask', 'lowercase', None)
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
-        self.adapters = self._regroup_into_indexed_adapters(adapters)
+        if index:
+            self.adapters = self._regroup_into_indexed_adapters(adapters)
+        else:
+            self.adapters = adapters
 
     def __repr__(self):
         return 'AdapterCutter(adapters={!r}, times={}, action={!r})'.format(

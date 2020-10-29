@@ -143,6 +143,8 @@ def get_argument_parser() -> ArgumentParser:
         help=SUPPRESS)
     # Deprecated: The input format is always auto-detected
     group.add_argument("-f", "--format", help=SUPPRESS)
+    # Disable adapter index creation
+    group.add_argument("--no-index", dest="index", default=True, action="store_false", help=SUPPRESS)
 
     group = parser.add_argument_group("Finding adapters",
         description="Parameters -a, -g, -b specify adapters to be removed from "
@@ -653,6 +655,7 @@ def pipeline_from_parsed_args(args, paired, file_opener) -> Pipeline:
         args.action,
         args.times,
         args.reverse_complement,
+        args.index,
     )
 
     for modifier in modifiers_applying_to_both_ends_if_paired(args):
@@ -733,6 +736,7 @@ def add_adapter_cutter(
     action: str,
     times: int,
     reverse_complement: bool,
+    allow_index: bool,
 ):
     if pair_adapters:
         if reverse_complement:
@@ -745,9 +749,9 @@ def add_adapter_cutter(
     else:
         adapter_cutter, adapter_cutter2 = None, None
         if adapters:
-            adapter_cutter = AdapterCutter(adapters, times, action)
+            adapter_cutter = AdapterCutter(adapters, times, action, allow_index)
         if adapters2:
-            adapter_cutter2 = AdapterCutter(adapters2, times, action)
+            adapter_cutter2 = AdapterCutter(adapters2, times, action, allow_index)
         if paired:
             if reverse_complement:
                 raise CommandLineError("--revcomp not implemented for paired-end reads")

@@ -69,6 +69,9 @@ def test_adapter_cutter_indexing():
     assert len(ac.adapters) == 1
     assert isinstance(ac.adapters[0], MultiPrefixAdapter)
 
+    ac = AdapterCutter([a1, a2, a3], index=False)
+    assert ac.adapters == [a1, a2, a3]
+
 
 @pytest.mark.parametrize("action,expected_trimmed1,expected_trimmed2", [
     (None, "CCCCGGTTAACCCC", "TTTTAACCGGTTTT"),
