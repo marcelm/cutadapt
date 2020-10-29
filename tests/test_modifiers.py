@@ -1,6 +1,7 @@
 import pytest
 
 from dnaio import Sequence
+from cutadapt.adapters import BackAdapter, PrefixAdapter, MultiPrefixAdapter
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
     Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo)
 
@@ -54,11 +55,19 @@ def test_shortener():
 
 
 def test_adapter_cutter():
-    from cutadapt.adapters import BackAdapter
     a1 = BackAdapter("GTAGTCCCGC")
     a2 = BackAdapter("GTAGTCCCCC")
     match = AdapterCutter.best_match([a1, a2], Sequence("name", "ATACCCCTGTAGTCCCC"))
     assert match.adapter is a2
+
+
+def test_adapter_cutter_indexing():
+    a1 = PrefixAdapter("ACGAT", max_errors=1, indels=False)
+    a2 = PrefixAdapter("CGATA", max_errors=1, indels=False)
+    a3 = PrefixAdapter("GGAC", max_errors=1, indels=False)
+    ac = AdapterCutter([a1, a2, a3])
+    assert len(ac.adapters) == 1
+    assert isinstance(ac.adapters[0], MultiPrefixAdapter)
 
 
 @pytest.mark.parametrize("action,expected_trimmed1,expected_trimmed2", [
