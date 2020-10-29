@@ -8,6 +8,9 @@ development version
 * :issue:`358`: You can now use ``-e`` also :ref:`to specify the maximum number of
   errors <error-tolerance>` (instead of the maximum error rate). For example, write
   ``-e 2`` to allow two errors over a full-length adapter match.
+* :pr:`486`: Trimming many anchored adapters (for example when demultiplexing)
+  is now faster by using an index even when indels are allowed. Previously, Cutadapt
+  would only be able to build an index with ``--no-indels``.
 * :issue:`469`: Cutadapt did not run under Python 3.8 on recent macOS versions.
 * :pr:`485`: Fix that, under some circumstances, in particular when trimming a
   5' adapter and there was a mismatch in its last nucleotide(s), not the entire adapter

@@ -1663,9 +1663,8 @@ following conditions need to be met in order for index creation to be enabled:
 * The barcodes/adapters must be anchored 5’ adapters (``-g ^ADAPTER``) or anchored 3’ adapters
   (``-a ADAPTER$``). If you use ``file:`` to read in the adapter sequences from a FASTA file,
   remember to add the ``^`` or ``$`` to each sequence in the FASTA file.
-* The maximum error rate (``-e``) must be set in such a way as to allow at most 2 errors or less.
-  For example, if the barcode has length 10, you can use ``-e 0.2`` (or lower).
-* The option ``--no-indels`` must be used.
+* The maximum error rate (``-e``) must be set such that at most 2 errors are allowed,
+  so use ``-e 0``, ``-e 1`` or ``-e 2``.
 * No IUPAC wildcards must be used in the barcode/adapter. Also, you cannot use the option
   ``--match-read-wildcards``.
 
@@ -1685,6 +1684,10 @@ Hopefully some of the above restrictions will be lifted in the future.
 
 .. versionadded:: 2.0
    Added ability to use an index of adapters for speeding up demultiplexing
+
+.. versionadded::
+   An index can be built even when indels are allowed (that is, ``--no-indels``
+   is no longer required).
 
 
 Demultiplexing paired-end reads in mixed orientation
