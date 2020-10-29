@@ -4,12 +4,12 @@ A modifier must be callable and typically implemented as a class with a
 __call__ method.
 """
 import re
-from typing import Sequence, List, Optional
+from typing import Sequence, List, Tuple, Optional
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 
 from .qualtrim import quality_trim_index, nextseq_trim_index
-from .adapters import MultiPrefixAdapter, MultiSuffixAdapter, Match, remainder
+from .adapters import SingleAdapter, MultiPrefixAdapter, MultiSuffixAdapter, Match, remainder
 from .utils import reverse_complemented_sequence
 
 
@@ -81,27 +81,34 @@ class AdapterCutter(SingleEndModifier):
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
-        prefix, suffix, other = self._split_adapters(adapters)
-        # For somewhat better backwards compatibility, avoid re-ordering
-        # the adapters when we don’t need to
-        if len(prefix) > 1 or len(suffix) > 1:
-            adapters = other
-            if len(prefix) > 1:
-                adapters.append(MultiPrefixAdapter(prefix))
-            else:
-                adapters.extend(prefix)
-            if len(suffix) > 1:
-                adapters.append(MultiSuffixAdapter(suffix))
-            else:
-                adapters.extend(suffix)
-        self.adapters = adapters
+        self.adapters = self._regroup_into_indexed_adapters(adapters)
 
     def __repr__(self):
         return 'AdapterCutter(adapters={!r}, times={}, action={!r})'.format(
             self.adapters, self.times, self.action)
 
+    def _regroup_into_indexed_adapters(self, adapters):
+        prefix, suffix, single = self._split_adapters(adapters)
+        # For somewhat better backwards compatibility, avoid re-ordering
+        # the adapters when we don’t need to
+        if len(prefix) > 1 or len(suffix) > 1:
+            result = single
+            if len(prefix) > 1:
+                result.append(MultiPrefixAdapter(prefix))
+            else:
+                result.extend(prefix)
+            if len(suffix) > 1:
+                result.append(MultiSuffixAdapter(suffix))
+            else:
+                result.extend(suffix)
+            return result
+        else:
+            return adapters
+
     @staticmethod
-    def _split_adapters(adapters):
+    def _split_adapters(
+        adapters: Sequence[SingleAdapter]
+    ) -> Tuple[Sequence[SingleAdapter], Sequence[SingleAdapter], Sequence[SingleAdapter]]:
         """
         Split adapters into three different categories so that they can possibly be used
         with a MultiAdapter. Return a tuple (prefix, suffix, other), where
@@ -109,15 +116,16 @@ class AdapterCutter(SingleEndModifier):
         - suffix is a list of all anchored 3' adapters that MultiAdapter would accept
         - other is a list of all remaining adapters.
         """
-        prefix, suffix, other = [], [], []
+        prefix = []  # type: List[SingleAdapter]
+        suffix = []  # type: List[SingleAdapter]
+        other = []  # type: List[SingleAdapter]
         for a in adapters:
             if MultiPrefixAdapter.is_acceptable(a):
-                lst = prefix
+                prefix.append(a)
             elif MultiSuffixAdapter.is_acceptable(a):
-                lst = suffix
+                suffix.append(a)
             else:
-                lst = other
-            lst.append(a)
+                other.append(a)
         return prefix, suffix, other
 
     @staticmethod

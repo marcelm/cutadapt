@@ -451,7 +451,7 @@ class SingleAdapter(Adapter, ABC):
     def __len__(self):
         return len(self.sequence)
 
-    def create_statistics(self):
+    def create_statistics(self) -> AdapterStatistics:
         return AdapterStatistics(self, self)
 
 
@@ -732,7 +732,7 @@ class LinkedAdapter(Adapter):
             return None
         return LinkedMatch(front_match, back_match, self)
 
-    def create_statistics(self):
+    def create_statistics(self) -> AdapterStatistics:
         return AdapterStatistics(self, self.front_adapter, self.back_adapter)
 
     @property
