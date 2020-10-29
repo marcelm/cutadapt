@@ -772,7 +772,7 @@ class MultiAdapter(Adapter, ABC):
         self._make_affix = self._get_make_affix()
 
     def __repr__(self):
-        return "MultiAdapter(adapters={!r})".format(self._adapters)
+        return "{}(adapters={!r})".format(self.__class__.__name__, self._adapters)
 
     @abstractmethod
     def _get_make_affix(self):
