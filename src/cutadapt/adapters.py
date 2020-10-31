@@ -770,10 +770,19 @@ class MultiAdapter(Adapter, ABC):
             self._accept(adapter)
         self._adapters = adapters
         self._lengths, self._index = self._make_index()
+        logger.debug("String lengths in the index: %s", sorted(self._lengths, reverse=True))
+        if len(self._lengths) == 1:
+            self._length = self._lengths[0]
+            self.match_to = self._match_to_one_length
+        else:
+            self.match_to = self._match_to_multiple_lengths
         self._make_affix = self._get_make_affix()
 
     def __repr__(self):
         return "{}(adapters={!r})".format(self.__class__.__name__, self._adapters)
+
+    def match_to(self, sequence: str):
+        """Never called because it gets overwritten in __init__"""
 
     @abstractmethod
     def _get_make_affix(self):
@@ -838,7 +847,18 @@ class MultiAdapter(Adapter, ABC):
 
         return sorted(lengths, reverse=True), index
 
-    def match_to(self, sequence: str):
+    def _match_to_one_length(self, sequence: str):
+        """
+        Match the adapters against a string and return a Match that represents
+        the best match or None if no match was found
+        """
+        try:
+            adapter, e, m = self._index[self._make_affix(sequence.upper(), self._length)]
+        except KeyError:
+            return None
+        return self._make_match(adapter, self._length, m, e, sequence)
+
+    def _match_to_multiple_lengths(self, sequence: str):
         """
         Match the adapters against a string and return a Match that represents
         the best match or None if no match was found
