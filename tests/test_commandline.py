@@ -700,7 +700,7 @@ def test_adapter_order(run):
 
 def test_reverse_complement_normalized(run):
     run(
-        "--revcomp -g ^TTATTTGTCT -g ^TCCGCACTGG",
+        "--revcomp --no-index -g ^TTATTTGTCT -g ^TCCGCACTGG",
         "revcomp-single-normalize.fastq",
         "revcomp.1.fastq",
     )
@@ -711,6 +711,7 @@ def test_reverse_complement_and_info_file(run, tmp_path, cores):
     run(
         [
             "--revcomp",
+            "--no-index",
             "-g",
             "^TTATTTGTCT",
             "-g",

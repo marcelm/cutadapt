@@ -196,6 +196,19 @@ class SingleMatch(Match, ABC):
         return 'SingleMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
             self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
 
+    def __eq__(self, other) -> bool:
+        return (
+            other.__class__ is self.__class__
+            and self.astart == other.astart
+            and self.astop == other.astop
+            and self.rstart == other.rstart
+            and self.rstop == other.rstop
+            and self.matches == other.matches
+            and self.errors == other.errors
+            and self.adapter is other.adapter
+            and self.sequence == other.sequence
+        )
+
     def wildcards(self, wildcard_char: str = "N") -> str:
         """
         Return a string that contains, for each wildcard character,
@@ -807,6 +820,7 @@ class IndexedAdapters(Adapter, ABC):
         for adapter in adapters:
             self._accept(adapter)
         self._adapters = adapters
+        self._multiple_adapters = MultipleAdapters(adapters)
         self._lengths, self._index = self._make_index()
         logger.debug("String lengths in the index: %s", sorted(self._lengths, reverse=True))
         if len(self._lengths) == 1:
@@ -890,8 +904,12 @@ class IndexedAdapters(Adapter, ABC):
         Match the adapters against a string and return a Match that represents
         the best match or None if no match was found
         """
+        affix = self._make_affix(sequence.upper(), self._length)
+        if "N" in affix:
+            # Fall back to non-indexed matching
+            return self._multiple_adapters.match_to(sequence)
         try:
-            adapter, e, m = self._index[self._make_affix(sequence.upper(), self._length)]
+            adapter, e, m = self._index[affix]
         except KeyError:
             return None
         return self._make_match(adapter, self._length, m, e, sequence)
@@ -901,24 +919,30 @@ class IndexedAdapters(Adapter, ABC):
         Match the adapters against a string and return a Match that represents
         the best match or None if no match was found
         """
-        original_sequence = sequence
-        sequence = sequence.upper()
+        affix = sequence.upper()
+
         # Check all the prefixes or suffixes (affixes) that could match
         best_adapter = None  # type: Optional[SingleAdapter]
         best_length = 0
         best_m = -1
         best_e = 1000
+        check_n = True
         for length in self._lengths:
             if length < best_m:
                 # No chance of getting the same or a higher number of matches, so we can stop early
                 break
-
-            affix = self._make_affix(sequence, length)
+            affix = self._make_affix(affix, length)
+            if check_n:
+                if "N" in affix:
+                    return self._multiple_adapters.match_to(sequence)
+                check_n = False
             try:
                 adapter, e, m = self._index[affix]
             except KeyError:
                 continue
             if m > best_m or (m == best_m and e < best_e):
+                # TODO this could be made to work:
+                # assert best_m == -1
                 best_adapter = adapter
                 best_e = e
                 best_m = m
@@ -927,8 +951,7 @@ class IndexedAdapters(Adapter, ABC):
         if best_m == -1:
             return None
         else:
-            assert best_adapter is not None
-            return self._make_match(best_adapter, best_length, best_m, best_e, original_sequence)
+            return self._make_match(best_adapter, best_length, best_m, best_e, sequence)
 
     def enable_debug(self):
         pass
