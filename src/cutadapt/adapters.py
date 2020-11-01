@@ -863,34 +863,43 @@ class MultiAdapter(Adapter, ABC):
         Match the adapters against a string and return a Match that represents
         the best match or None if no match was found
         """
-        original_sequence = sequence
-        sequence = sequence.upper()
+        affix = sequence.upper()
+
         # Check all the prefixes or suffixes (affixes) that could match
         best_adapter = None  # type: Optional[SingleAdapter]
         best_length = 0
         best_m = -1
         best_e = 1000
+        check_n = True
+        n_count = 0
         for length in self._lengths:
             if length < best_m:
                 # No chance of getting the same or a higher number of matches, so we can stop early
                 break
-
-            affix = self._make_affix(sequence, length)
+            affix = self._make_affix(affix, length)
+            if check_n:
+                if "N" in affix:
+                    affix = affix.replace("N", "A")
+                check_n = False
             try:
                 adapter, e, m = self._index[affix]
             except KeyError:
                 continue
+            n_count = self._make_affix(sequence, len(affix)).count("N")
+            e += n_count
+            m -= n_count
             if m > best_m or (m == best_m and e < best_e):
+                # TODO this could be made to work:
+                # assert best_m == -1
                 best_adapter = adapter
-                best_e = e
-                best_m = m
+                best_e = e + n_count
+                best_m = m - n_count
                 best_length = length
 
         if best_m == -1:
             return None
         else:
-            assert best_adapter is not None
-            return self._make_match(best_adapter, best_length, best_m, best_e, original_sequence)
+            return self._make_match(best_adapter, best_length, best_m, best_e, sequence)
 
     def enable_debug(self):
         pass
