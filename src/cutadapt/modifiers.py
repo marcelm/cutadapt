@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 
 from .qualtrim import quality_trim_index, nextseq_trim_index
-from .adapters import SingleAdapter, IndexedPrefixAdapters, IndexedSuffixAdapters, Match, remainder
+from .adapters import MultipleAdapters, SingleAdapter, IndexedPrefixAdapters, IndexedSuffixAdapters, Match, remainder
 from .utils import reverse_complemented_sequence
 
 
@@ -88,9 +88,9 @@ class AdapterCutter(SingleEndModifier):
         self.with_adapters = 0
         self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
         if index:
-            self.adapters = self._regroup_into_indexed_adapters(adapters)
+            self.adapters = MultipleAdapters(self._regroup_into_indexed_adapters(adapters))
         else:
-            self.adapters = adapters
+            self.adapters = MultipleAdapters(adapters)
 
     def __repr__(self):
         return 'AdapterCutter(adapters={!r}, times={}, action={!r})'.format(
@@ -136,26 +136,6 @@ class AdapterCutter(SingleEndModifier):
             else:
                 other.append(a)
         return prefix, suffix, other
-
-    @staticmethod
-    def best_match(adapters, read):
-        """
-        Find the best matching adapter in the given read.
-
-        Return either a Match instance or None if there are no matches.
-        """
-        best_match = None
-        for adapter in adapters:
-            match = adapter.match_to(read.sequence)
-            if match is None:
-                continue
-
-            # the no. of matches determines which adapter fits best
-            if best_match is None or match.matches > best_match.matches or (
-                match.matches == best_match.matches and match.errors < best_match.errors
-            ):
-                best_match = match
-        return best_match
 
     @staticmethod
     def masked_read(read, matches: Sequence[Match]):
@@ -204,7 +184,7 @@ class AdapterCutter(SingleEndModifier):
             read.sequence = read.sequence.upper()
         trimmed_read = read
         for _ in range(self.times):
-            match = AdapterCutter.best_match(self.adapters, trimmed_read)
+            match = self.adapters.match_to(trimmed_read.sequence)
             if match is None:
                 # if nothing found, attempt no further rounds
                 break
@@ -294,9 +274,9 @@ class PairedAdapterCutter(PairedModifier):
                 "Given: {} for R1, {} for R2".format(len(adapters1), len(adapters2)))
         if not adapters1:
             raise PairedAdapterCutterError("No adapters given")
-        self._adapters1 = adapters1
+        self._adapters1 = MultipleAdapters(adapters1)
         self._adapter_indices = {a: i for i, a in enumerate(adapters1)}
-        self._adapters2 = adapters2
+        self._adapters2 = MultipleAdapters(adapters2)
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = [None, None]
@@ -310,7 +290,7 @@ class PairedAdapterCutter(PairedModifier):
     def __call__(self, read1, read2, info1, info2):
         """
         """
-        match1 = AdapterCutter.best_match(self._adapters1, read1)
+        match1 = self._adapters1.match_to(read1.sequence)
         if match1 is None:
             return read1, read2
         adapter1 = match1.adapter

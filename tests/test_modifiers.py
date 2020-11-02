@@ -54,13 +54,6 @@ def test_shortener():
     assert shortener(read, ModificationInfo(read)) == read
 
 
-def test_adapter_cutter():
-    a1 = BackAdapter("GTAGTCCCGC")
-    a2 = BackAdapter("GTAGTCCCCC")
-    match = AdapterCutter.best_match([a1, a2], Sequence("name", "ATACCCCTGTAGTCCCC"))
-    assert match.adapter is a2
-
-
 def test_adapter_cutter_indexing():
     a1 = PrefixAdapter("ACGAT", max_errors=1, indels=False)
     a2 = PrefixAdapter("CGATA", max_errors=1, indels=False)
@@ -70,7 +63,7 @@ def test_adapter_cutter_indexing():
     assert isinstance(ac.adapters[0], IndexedPrefixAdapters)
 
     ac = AdapterCutter([a1, a2, a3], index=False)
-    assert ac.adapters == [a1, a2, a3]
+    assert len(ac.adapters) == 3
 
 
 @pytest.mark.parametrize("action,expected_trimmed1,expected_trimmed2", [
@@ -80,7 +73,6 @@ def test_adapter_cutter_indexing():
     ("mask", "CCCCNNNNNNNNNN", "TTTTNNNNNNNNNN")
 ])
 def test_paired_adapter_cutter_actions(action, expected_trimmed1, expected_trimmed2):
-    from cutadapt.adapters import BackAdapter
     a1 = BackAdapter("GGTTAA")
     a2 = BackAdapter("AACCGG")
     s1 = Sequence("name", "CCCCGGTTAACCCC")
