@@ -9,8 +9,8 @@ from cutadapt.adapters import (
     PrefixAdapter,
     SuffixAdapter,
     LinkedAdapter,
-    MultiPrefixAdapter,
-    MultiSuffixAdapter,
+    IndexedPrefixAdapters,
+    IndexedSuffixAdapters,
 )
 
 
@@ -290,52 +290,52 @@ def test_suffix_match_with_n_wildcard_in_read():
     assert match is not None and (4, 11) == (match.rstart, match.rstop)
 
 
-def test_multi_prefix_adapter():
+def test_indexed_prefix_adapters():
     adapters = [
         PrefixAdapter("GAAC", indels=False),
         PrefixAdapter("TGCT", indels=False),
     ]
-    ma = MultiPrefixAdapter(adapters)
+    ma = IndexedPrefixAdapters(adapters)
     match = ma.match_to("GAACTT")
     assert match.adapter is adapters[0]
     match = ma.match_to("TGCTAA")
     assert match.adapter is adapters[1]
 
 
-def test_multi_prefix_adapter_incorrect_type():
+def test_indexed_prefix_adapters_incorrect_type():
     with pytest.raises(ValueError):
-        MultiPrefixAdapter([
+        IndexedPrefixAdapters([
             PrefixAdapter("GAAC", indels=False),
             SuffixAdapter("TGCT", indels=False),
         ])
 
 
-def test_multi_suffix_adapter():
+def test_indexed_suffix_adapters():
     adapters = [
         SuffixAdapter("GAAC", indels=False),
         SuffixAdapter("TGCT", indels=False),
     ]
-    ma = MultiSuffixAdapter(adapters)
+    ma = IndexedSuffixAdapters(adapters)
     match = ma.match_to("TTGAAC")
     assert match.adapter is adapters[0]
     match = ma.match_to("AATGCT")
     assert match.adapter is adapters[1]
 
 
-def test_multi_suffix_adapter_incorrect_type():
+def test_indexed_suffix_adapters_incorrect_type():
     with pytest.raises(ValueError):
-        MultiSuffixAdapter([
+        IndexedSuffixAdapters([
             SuffixAdapter("GAAC", indels=False),
             PrefixAdapter("TGCT", indels=False),
         ])
 
 
-def test_multi_prefix_adapter_with_indels():
+def test_indexed_prefix_adapters_with_indels():
     adapters = [
         PrefixAdapter("GTAC", max_errors=1, indels=True),
         PrefixAdapter("TGCT", max_errors=1, indels=True),
     ]
-    ma = MultiPrefixAdapter(adapters)
+    ma = IndexedPrefixAdapters(adapters)
     match = ma.match_to("GATACGGG")
     assert match.adapter is adapters[0]
     match = ma.match_to("TAGCTAA")

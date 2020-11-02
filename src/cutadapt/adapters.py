@@ -746,7 +746,7 @@ class LinkedAdapter(Adapter):
         return None
 
 
-class MultiAdapter(Adapter, ABC):
+class IndexedAdapters(Adapter, ABC):
     """
     Represent multiple adapters of the same type at once and use an index data structure
     to speed up matching. This acts like a "normal" Adapter as it provides a match_to
@@ -759,11 +759,11 @@ class MultiAdapter(Adapter, ABC):
 
     Use the is_acceptable() method to check individual adapters.
     """
-    MultiAdapterIndex = Dict[str, Tuple[SingleAdapter, int, int]]
+    AdapterIndex = Dict[str, Tuple[SingleAdapter, int, int]]
 
     def __init__(self, adapters):
         """All given adapters must be of the same type"""
-        super().__init__(name="multi_adapter")
+        super().__init__(name="indexed_adapters")
         if not adapters:
             raise ValueError("Adapter list is empty")
         for adapter in adapters:
@@ -806,7 +806,7 @@ class MultiAdapter(Adapter, ABC):
     @classmethod
     def is_acceptable(cls, adapter):
         """
-        Return whether this adapter is acceptable for being used by MultiAdapter
+        Return whether this adapter is acceptable for being used in an index
 
         Adapters are not acceptable if they allow wildcards, allow too many errors,
         or would lead to a very large index.
@@ -817,9 +817,9 @@ class MultiAdapter(Adapter, ABC):
             return False
         return True
 
-    def _make_index(self) -> Tuple[List[int], "MultiAdapterIndex"]:
+    def _make_index(self) -> Tuple[List[int], "AdapterIndex"]:
         logger.info('Building index of %s adapters ...', len(self._adapters))
-        index = dict()  # type: MultiAdapter.MultiAdapterIndex
+        index = dict()  # type: IndexedAdapters.AdapterIndex
         lengths = set()
         has_warned = False
         for adapter in self._adapters:
@@ -911,7 +911,7 @@ class MultiAdapter(Adapter, ABC):
         pass
 
 
-class MultiPrefixAdapter(MultiAdapter):
+class IndexedPrefixAdapters(IndexedAdapters):
 
     @classmethod
     def _accept(cls, adapter):
@@ -939,7 +939,7 @@ class MultiPrefixAdapter(MultiAdapter):
         return s[:n]
 
 
-class MultiSuffixAdapter(MultiAdapter):
+class IndexedSuffixAdapters(IndexedAdapters):
 
     @classmethod
     def _accept(cls, adapter):

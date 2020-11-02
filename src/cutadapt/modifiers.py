@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 
 from .qualtrim import quality_trim_index, nextseq_trim_index
-from .adapters import SingleAdapter, MultiPrefixAdapter, MultiSuffixAdapter, Match, remainder
+from .adapters import SingleAdapter, IndexedPrefixAdapters, IndexedSuffixAdapters, Match, remainder
 from .utils import reverse_complemented_sequence
 
 
@@ -103,11 +103,11 @@ class AdapterCutter(SingleEndModifier):
         if len(prefix) > 1 or len(suffix) > 1:
             result = single
             if len(prefix) > 1:
-                result.append(MultiPrefixAdapter(prefix))
+                result.append(IndexedPrefixAdapters(prefix))
             else:
                 result.extend(prefix)
             if len(suffix) > 1:
-                result.append(MultiSuffixAdapter(suffix))
+                result.append(IndexedSuffixAdapters(suffix))
             else:
                 result.extend(suffix)
             return result
@@ -129,9 +129,9 @@ class AdapterCutter(SingleEndModifier):
         suffix = []  # type: List[SingleAdapter]
         other = []  # type: List[SingleAdapter]
         for a in adapters:
-            if MultiPrefixAdapter.is_acceptable(a):
+            if IndexedPrefixAdapters.is_acceptable(a):
                 prefix.append(a)
-            elif MultiSuffixAdapter.is_acceptable(a):
+            elif IndexedSuffixAdapters.is_acceptable(a):
                 suffix.append(a)
             else:
                 other.append(a)

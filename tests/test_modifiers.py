@@ -1,7 +1,7 @@
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import BackAdapter, PrefixAdapter, MultiPrefixAdapter
+from cutadapt.adapters import BackAdapter, PrefixAdapter, IndexedPrefixAdapters
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
     Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo)
 
@@ -67,7 +67,7 @@ def test_adapter_cutter_indexing():
     a3 = PrefixAdapter("GGAC", max_errors=1, indels=False)
     ac = AdapterCutter([a1, a2, a3])
     assert len(ac.adapters) == 1
-    assert isinstance(ac.adapters[0], MultiPrefixAdapter)
+    assert isinstance(ac.adapters[0], IndexedPrefixAdapters)
 
     ac = AdapterCutter([a1, a2, a3], index=False)
     assert ac.adapters == [a1, a2, a3]
