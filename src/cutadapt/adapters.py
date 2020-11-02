@@ -852,11 +852,17 @@ class MultiAdapter(Adapter, ABC):
         Match the adapters against a string and return a Match that represents
         the best match or None if no match was found
         """
+        affix = self._make_affix(sequence.upper(), self._length)
+        if "N" in affix:
+            affix = affix.replace("N", "A")
+            n_count = affix.count("N")
+        else:
+            n_count = 0
         try:
-            adapter, e, m = self._index[self._make_affix(sequence.upper(), self._length)]
+            adapter, e, m = self._index[affix]
         except KeyError:
             return None
-        return self._make_match(adapter, self._length, m, e, sequence)
+        return self._make_match(adapter, self._length, m - n_count, e + n_count, sequence)
 
     def _match_to_multiple_lengths(self, sequence: str):
         """

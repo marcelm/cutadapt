@@ -340,3 +340,14 @@ def test_multi_prefix_adapter_with_indels():
     assert match.adapter is adapters[0]
     match = ma.match_to("TAGCTAA")
     assert match.adapter is adapters[1]
+
+
+def test_multi_prefix_adapter_with_n_wildcard():
+    a1 = PrefixAdapter("GGTCCAGA", max_errors=1, indels=False)
+    adapters = [a1]
+    ma = MultiPrefixAdapter(adapters)
+    result = ma.match_to("GNTCCAGAAGAT")
+    assert isinstance(result, RemoveBeforeMatch)
+    assert (result.rstart, result.rstop) == (0, 8)
+    assert result.errors == 1
+    assert result.matches == 7
