@@ -9,6 +9,7 @@ from cutadapt.adapters import (
     PrefixAdapter,
     SuffixAdapter,
     LinkedAdapter,
+    MultipleAdapters,
     IndexedPrefixAdapters,
     IndexedSuffixAdapters,
 )
@@ -288,6 +289,14 @@ def test_suffix_match_with_n_wildcard_in_read():
     assert match is not None and (4, 11) == (match.rstart, match.rstop)
     match = adapter.match_to("TTTTACGTCNC")
     assert match is not None and (4, 11) == (match.rstart, match.rstop)
+
+
+def test_multiple_adapters():
+    a1 = BackAdapter("GTAGTCCCGC")
+    a2 = BackAdapter("GTAGTCCCCC")
+    ma = MultipleAdapters([a1, a2])
+    match = ma.match_to("ATACCCCTGTAGTCCCC")
+    assert match.adapter is a2
 
 
 def test_indexed_prefix_adapters():

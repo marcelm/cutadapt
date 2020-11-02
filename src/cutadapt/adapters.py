@@ -746,6 +746,44 @@ class LinkedAdapter(Adapter):
         return None
 
 
+class MultipleAdapters(Adapter):
+    """
+    Represent multiple adapters at once
+    """
+    def __init__(self, adapters: Sequence[Adapter]):
+        super().__init__(name="multiple_adapters")
+        self._adapters = adapters
+
+    def enable_debug(self):
+        for a in self._adapters:
+            a.enable_debug()
+
+    def __getitem__(self, item):
+        return self._adapters[item]
+
+    def __len__(self):
+        return len(self._adapters)
+
+    def match_to(self, sequence: str) -> Optional[SingleMatch]:
+        """
+        Find the adapter that best matches the sequence.
+
+        Return either a Match instance or None if there are no matches.
+        """
+        best_match = None
+        for adapter in self._adapters:
+            match = adapter.match_to(sequence)
+            if match is None:
+                continue
+
+            # the no. of matches determines which adapter fits best
+            if best_match is None or match.matches > best_match.matches or (
+                match.matches == best_match.matches and match.errors < best_match.errors
+            ):
+                best_match = match
+        return best_match
+
+
 class IndexedAdapters(Adapter, ABC):
     """
     Represent multiple adapters of the same type at once and use an index data structure
