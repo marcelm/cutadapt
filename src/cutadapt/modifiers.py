@@ -78,9 +78,7 @@ class AdapterCutter(SingleEndModifier):
         index: bool = True,
     ):
         """
-        adapters -- list of Adapter objects
-
-        action -- What to do with a found adapter: None, 'trim', or 'mask'
+        action -- What to do with a found adapter: None, 'trim', 'mask' or 'lowercase'
 
         index -- if True, an adapter index (for multiple adapters) is created if possible
         """
