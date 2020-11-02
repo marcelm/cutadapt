@@ -57,7 +57,7 @@ def test_shortener():
 def test_adapter_cutter():
     a1 = BackAdapter("GTAGTCCCGC")
     a2 = BackAdapter("GTAGTCCCCC")
-    match = AdapterCutter.best_match([a1, a2], Sequence("name", "ATACCCCTGTAGTCCCC"))
+    match = AdapterCutter.best_match([a1, a2], "ATACCCCTGTAGTCCCC")
     assert match.adapter is a2
 
 

@@ -78,9 +78,7 @@ class AdapterCutter(SingleEndModifier):
         index: bool = True,
     ):
         """
-        adapters -- list of Adapter objects
-
-        action -- What to do with a found adapter: None, 'trim', or 'mask'
+        action -- What to do with a found adapter: None, 'trim', 'mask' or 'lowercase'
 
         index -- if True, an adapter index (for multiple adapters) is created if possible
         """
@@ -140,7 +138,7 @@ class AdapterCutter(SingleEndModifier):
         return prefix, suffix, other
 
     @staticmethod
-    def best_match(adapters, read):
+    def best_match(adapters, sequence):
         """
         Find the best matching adapter in the given read.
 
@@ -148,7 +146,7 @@ class AdapterCutter(SingleEndModifier):
         """
         best_match = None
         for adapter in adapters:
-            match = adapter.match_to(read.sequence)
+            match = adapter.match_to(sequence)
             if match is None:
                 continue
 
@@ -206,7 +204,7 @@ class AdapterCutter(SingleEndModifier):
             read.sequence = read.sequence.upper()
         trimmed_read = read
         for _ in range(self.times):
-            match = AdapterCutter.best_match(self.adapters, trimmed_read)
+            match = AdapterCutter.best_match(self.adapters, trimmed_read.sequence)
             if match is None:
                 # if nothing found, attempt no further rounds
                 break
@@ -312,7 +310,7 @@ class PairedAdapterCutter(PairedModifier):
     def __call__(self, read1, read2, info1, info2):
         """
         """
-        match1 = AdapterCutter.best_match(self._adapters1, read1)
+        match1 = AdapterCutter.best_match(self._adapters1, read1.sequence)
         if match1 is None:
             return read1, read2
         adapter1 = match1.adapter
