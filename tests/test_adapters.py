@@ -2,9 +2,15 @@ import pytest
 
 from dnaio import Sequence
 from cutadapt.adapters import (
-    RemoveAfterMatch, FrontAdapter, BackAdapter, PrefixAdapter, SuffixAdapter, LinkedAdapter,
-    MultiPrefixAdapter, MultiSuffixAdapter,
-    )
+    RemoveAfterMatch,
+    FrontAdapter,
+    BackAdapter,
+    PrefixAdapter,
+    SuffixAdapter,
+    LinkedAdapter,
+    MultiPrefixAdapter,
+    MultiSuffixAdapter,
+)
 
 
 def test_back_adapter_absolute_number_of_errors():
