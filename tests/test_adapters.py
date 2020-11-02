@@ -351,12 +351,13 @@ def test_indexed_prefix_adapters_with_indels():
     assert match.adapter is adapters[1]
 
 
-def test_multi_prefix_adapter_with_n_wildcard():
-    a1 = PrefixAdapter("GGTCCAGA", max_errors=1, indels=False)
-    adapters = [a1]
-    ma = MultiPrefixAdapter(adapters)
-    result = ma.match_to("GNTCCAGAAGAT")
-    assert isinstance(result, RemoveBeforeMatch)
-    assert (result.rstart, result.rstop) == (0, 8)
-    assert result.errors == 1
-    assert result.matches == 7
+def test_indexed_prefix_adapters_with_n_wildcard():
+    sequence = "GGTCCAGA"
+    ma = IndexedPrefixAdapters([PrefixAdapter(sequence, max_errors=1, indels=False)])
+    for i in range(len(sequence)):
+        t = sequence[:i] + "N" + sequence[i+1:] + "TGCT"
+        result = ma.match_to(t)
+        assert isinstance(result, RemoveBeforeMatch)
+        assert (result.rstart, result.rstop) == (0, 8)
+        assert result.errors == 1
+        assert result.matches == 7

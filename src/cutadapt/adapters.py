@@ -196,6 +196,19 @@ class SingleMatch(Match, ABC):
         return 'SingleMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
             self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
 
+    def __eq__(self, other) -> bool:
+        return (
+            other.__class__ is self.__class__
+            and self.astart == other.astart
+            and self.astop == other.astop
+            and self.rstart == other.rstart
+            and self.rstop == other.rstop
+            and self.matches == other.matches
+            and self.errors == other.errors
+            and self.adapter is other.adapter
+            and self.sequence == other.sequence
+        )
+
     def wildcards(self, wildcard_char: str = "N") -> str:
         """
         Return a string that contains, for each wildcard character,
@@ -807,6 +820,7 @@ class IndexedAdapters(Adapter, ABC):
         for adapter in adapters:
             self._accept(adapter)
         self._adapters = adapters
+        self._multiple_adapters = MultipleAdapters(adapters)
         self._lengths, self._index = self._make_index()
         logger.debug("String lengths in the index: %s", sorted(self._lengths, reverse=True))
         if len(self._lengths) == 1:
@@ -892,15 +906,13 @@ class IndexedAdapters(Adapter, ABC):
         """
         affix = self._make_affix(sequence.upper(), self._length)
         if "N" in affix:
-            affix = affix.replace("N", "A")
-            n_count = affix.count("N")
-        else:
-            n_count = 0
+            # Fall back to non-indexed matching
+            return self._multiple_adapters.match_to(sequence)
         try:
             adapter, e, m = self._index[affix]
         except KeyError:
             return None
-        return self._make_match(adapter, self._length, m - n_count, e + n_count, sequence)
+        return self._make_match(adapter, self._length, m, e, sequence)
 
     def _match_to_multiple_lengths(self, sequence: str):
         """
@@ -915,7 +927,6 @@ class IndexedAdapters(Adapter, ABC):
         best_m = -1
         best_e = 1000
         check_n = True
-        n_count = 0
         for length in self._lengths:
             if length < best_m:
                 # No chance of getting the same or a higher number of matches, so we can stop early
@@ -923,21 +934,18 @@ class IndexedAdapters(Adapter, ABC):
             affix = self._make_affix(affix, length)
             if check_n:
                 if "N" in affix:
-                    affix = affix.replace("N", "A")
+                    return self._multiple_adapters.match_to(sequence)
                 check_n = False
             try:
                 adapter, e, m = self._index[affix]
             except KeyError:
                 continue
-            n_count = self._make_affix(sequence, len(affix)).count("N")
-            e += n_count
-            m -= n_count
             if m > best_m or (m == best_m and e < best_e):
                 # TODO this could be made to work:
                 # assert best_m == -1
                 best_adapter = adapter
-                best_e = e + n_count
-                best_m = m - n_count
+                best_e = e
+                best_m = m
                 best_length = length
 
         if best_m == -1:
