@@ -55,15 +55,16 @@ def test_shortener():
 
 
 def test_adapter_cutter_indexing():
-    a1 = PrefixAdapter("ACGAT", max_errors=1, indels=False)
-    a2 = PrefixAdapter("CGATA", max_errors=1, indels=False)
-    a3 = PrefixAdapter("GGAC", max_errors=1, indels=False)
-    ac = AdapterCutter([a1, a2, a3])
+    adapters = [
+        PrefixAdapter(sequence, max_errors=1, indels=False)
+        for sequence in ["ACGAT", "GGAC", "TTTACTTA", "TAACCGGT", "GTTTACGTA", "CGATA"]
+    ]
+    ac = AdapterCutter(adapters)
     assert len(ac.adapters) == 1
     assert isinstance(ac.adapters[0], IndexedPrefixAdapters)
 
-    ac = AdapterCutter([a1, a2, a3], index=False)
-    assert len(ac.adapters) == 3
+    ac = AdapterCutter(adapters, index=False)
+    assert len(ac.adapters) == len(adapters)
 
 
 @pytest.mark.parametrize("action,expected_trimmed1,expected_trimmed2", [
