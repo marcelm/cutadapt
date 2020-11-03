@@ -410,6 +410,32 @@ class PrefixSuffixAdder(SingleEndModifier):
         return read
 
 
+class Renamer(SingleEndModifier):
+    """
+    Rename reads using a template
+
+    The template string can contain the following placeholders:
+
+    - {header} -- the full original, unchanged read header
+    - {id} -- the read ID (only the part before the first space)
+    """
+    def __init__(self, template: str):
+        self._template = template
+
+    def __call__(self, read, info):
+        fields = read.name.split(maxsplit=1)
+        if len(fields) == 2:
+            id_, comment = fields
+        else:
+            id_ = read.name
+            comment = ""
+        new_name = self._template.replace("{header}", read.name)
+        new_name = new_name.replace("{id}", id_)
+        new_name = new_name.replace("{comment}", comment)
+        read.name = new_name
+        return read
+
+
 class ZeroCapper(SingleEndModifier):
     """
     Change negative quality values of a read to zero
