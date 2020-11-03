@@ -246,6 +246,9 @@ class AdapterSpecification:
 
     @staticmethod
     def _restriction_to_class(cmdline_type, restriction):
+        """
+        restriction: None, "anchored", or "noninternal"
+        """
         if cmdline_type == 'front':
             if restriction is None:
                 return FrontAdapter
@@ -311,6 +314,8 @@ class AdapterParser:
 
     @staticmethod
     def _normalize_ellipsis(spec1: str, spec2: str, cmdline_type) -> Tuple[str, str]:
+        if cmdline_type == 'anywhere':
+            raise ValueError('No ellipsis ("...") allowed in "anywhere" adapters')
         if not spec1:
             if cmdline_type == 'back':
                 # -a ...ADAPTER

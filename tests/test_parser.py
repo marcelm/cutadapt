@@ -2,7 +2,7 @@ from textwrap import dedent
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import LinkedAdapter, BackAdapter, FrontAdapter
+from cutadapt.adapters import LinkedAdapter, BackAdapter, FrontAdapter, InvalidCharacter
 from cutadapt.parser import AdapterParser, AdapterSpecification
 from cutadapt.modifiers import ModificationInfo
 
@@ -23,7 +23,7 @@ def test_expand_braces():
 
 def test_expand_braces_fail():
     for expression in ['{', '}', '{}', '{5', '{1}', 'A{-7}', 'A{', 'A{1', 'N{7', 'AN{7', 'A{4{}',
-            'A{4}{3}', 'A{b}', 'A{6X}', 'A{X6}']:
+            'A{4}{3}', 'A{b}', 'A{6X}', 'A{X6}', 'A}A']:
         with pytest.raises(ValueError):
             AdapterSpecification.expand_braces(expression)
 
@@ -66,6 +66,39 @@ def test_parse_not_linked():
     assert p('a_name=ADAPT', 'front') == AdapterSpecification('a_name', None, 'ADAPT', {}, 'front')
 
 
+def test_parse_invalid_cmdline_type():
+    with pytest.raises(ValueError) as e:
+        AdapterSpecification._parse('A', 'invalid_type')
+    assert "cmdline_type must be front, back or anywhere" in e.value.args[0]
+
+
+@pytest.mark.parametrize("spec,cmdline_type", [
+    ("^XA", "front"),
+    ("^AX", "front"),
+    ("XA$", "back"),
+    ("AX$", "back"),
+])
+def test_parse_double_placement_restrictions(spec, cmdline_type):
+    with pytest.raises(ValueError) as e:
+        AdapterSpecification._parse(spec, cmdline_type)
+    assert "cannot use multiple placement restrictions" in e.value.args[0]
+
+
+def test_parse_misplaced_placement_restrictions():
+    with pytest.raises(ValueError) as e:
+        AdapterSpecification._parse("A$", "front")
+    assert "Allowed placement restrictions for a 5' adapter" in e.value.args[0]
+    with pytest.raises(ValueError) as e:
+        AdapterSpecification._parse("^A", "back")
+    assert "Allowed placement restrictions for a 3' adapter" in e.value.args[0]
+
+
+def test_restriction_to_class():
+    with pytest.raises(ValueError) as e:
+        AdapterSpecification._restriction_to_class("anywhere", "noninternal")
+    assert "No placement may be specified" in e.value.args[0]
+
+
 def test_parse_parameters():
     p = AdapterSpecification._parse_parameters
     assert p('e=0.1') == {'max_errors': 0.1}
@@ -84,17 +117,28 @@ def test_parse_parameters():
         p('bla=0.1')
     with pytest.raises(ValueError):
         p('e=')
+    with pytest.raises(KeyError) as e:
+        p('e=0.1;e=0.1')
+    assert "specified twice" in e.value.args[0]
+    with pytest.raises(KeyError) as e:
+        p('e=0.1;max_errors=0.1')
+    assert "specified twice" in e.value.args[0]
+    with pytest.raises(ValueError) as e:
+        p('optional; required')
+    assert "cannot be specified at the same time" in e.value.args[0]
 
 
-def test_parse_with_parameters():
+def test_parse_with_parameters(tmp_path):
     parser = AdapterParser(
         max_errors=0.2, min_overlap=4, read_wildcards=False,
         adapter_wildcards=False, indels=False)
     a = parser._parse('ACGTACGT; e=0.15', 'front')
+    assert isinstance(a, FrontAdapter)
     assert a.max_error_rate == 0.15
     assert a.min_overlap == 4
 
     a = parser._parse('ACGTAAAA; o=5; e=0.11', 'back')
+    assert isinstance(a, BackAdapter)
     assert a.max_error_rate == 0.11
     assert a.min_overlap == 5
 
@@ -103,6 +147,47 @@ def test_parse_with_parameters():
         assert isinstance(a, LinkedAdapter)
         assert a.front_adapter.max_error_rate == 0.15
         assert a.back_adapter.max_error_rate == 0.17
+
+    with pytest.raises(ValueError) as e:
+        parser._parse("A", "invalid-cmdline-type")
+    assert "cmdline_type cannot be" in e.value.args[0]
+
+
+def test_parse_with_adapter_sequence_as_a_path(tmp_path):
+    parser = AdapterParser()
+    with pytest.raises(InvalidCharacter):
+        parser._parse("invalid.character", "back")
+    # user forgot to write "file:"
+    path = (tmp_path / "afile.fasta")
+    path.write_text(">abc\nACGT\n")
+    with pytest.raises(InvalidCharacter) as e:
+        list(parser.parse(str(path), "back"))
+    assert "A file exists named" in e.value.args[0]
+
+
+def test_parse_multi():
+    parser = AdapterParser()
+    with pytest.raises(ValueError) as e:
+        parser.parse_multi([("invalid-type", "A")])
+    assert "adapter type must be" in e.value.args[0]
+
+
+def test_normalize_ellipsis():
+    ne = AdapterParser._normalize_ellipsis
+    assert ne("ACGT", "", "back") == ("ACGT", "front")  # -a ACGT...
+    assert ne("ACGT", "", "front") == ("ACGT", "front")  # -g ACGT...
+    assert ne("", "ACGT", "back") == ("ACGT", "back")  # -a ...ACGT
+    with pytest.raises(ValueError) as e:
+        # -g ...ACGT
+        ne("", "ACGT", "front")
+    assert "Invalid adapter specification" in e.value.args[0]
+
+    with pytest.raises(ValueError) as e:
+        ne("A", "C", "back")
+    assert "either" in e.value.args[0]
+    with pytest.raises(ValueError) as e:
+        ne("A", "", "anywhere")
+    assert "No ellipsis" in e.value.args[0]
 
 
 @pytest.mark.parametrize("seq,req1,req2", [
