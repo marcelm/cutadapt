@@ -3,16 +3,25 @@ import pytest
 from dnaio import Sequence
 from cutadapt.adapters import BackAdapter, PrefixAdapter, IndexedPrefixAdapters
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
-    Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo)
+    Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo, ZeroCapper)
 
 
 def test_unconditional_cutter():
     UnconditionalCutter(length=5)
-    s = 'abcdefg'
-    assert UnconditionalCutter(length=2)(s, []) == 'cdefg'
-    assert UnconditionalCutter(length=-2)(s, []) == 'abcde'
-    assert UnconditionalCutter(length=100)(s, []) == ''
-    assert UnconditionalCutter(length=-100)(s, []) == ''
+    read = Sequence('r1', 'abcdefg')
+    info = ModificationInfo(read)
+    assert UnconditionalCutter(length=2)(read, info).sequence == 'cdefg'
+    assert UnconditionalCutter(length=-2)(read, info).sequence == 'abcde'
+    assert UnconditionalCutter(length=100)(read, info).sequence == ''
+    assert UnconditionalCutter(length=-100)(read, info).sequence == ''
+
+
+def test_zero_capper():
+    zc = ZeroCapper()
+    read = Sequence("r1", "ACGT", "# !%")
+    result = zc(read, ModificationInfo(read))
+    assert result.sequence == "ACGT"
+    assert result.qualities == "#!!%"
 
 
 def test_nend_trimmer():
