@@ -13,6 +13,10 @@ from .adapters import MultipleAdapters, SingleAdapter, IndexedPrefixAdapters, In
 from .utils import reverse_complemented_sequence
 
 
+# If the number of prefix or suffix adapters is higher than this, switch to using an index
+INDEXING_THRESHOLD = 5
+
+
 class ModificationInfo:
     """
     An object of this class is created for each read that passes through the pipeline.
@@ -100,7 +104,7 @@ class AdapterCutter(SingleEndModifier):
         prefix, suffix, single = self._split_adapters(adapters)
         # For somewhat better backwards compatibility, avoid re-ordering
         # the adapters when we don’t need to
-        if len(prefix) > 1 or len(suffix) > 1:
+        if len(prefix) > INDEXING_THRESHOLD or len(suffix) > INDEXING_THRESHOLD:
             result = single
             if len(prefix) > 1:
                 result.append(IndexedPrefixAdapters(prefix))
