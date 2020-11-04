@@ -12,9 +12,17 @@ from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer
 def test_unconditional_cutter():
     UnconditionalCutter(length=5)
     read = Sequence('r1', 'abcdefg')
+
     info = ModificationInfo(read)
     assert UnconditionalCutter(length=2)(read, info).sequence == 'cdefg'
+    assert info.cut_prefix == 'ab'
+    assert not hasattr(info, 'cut_suffix')
+
+    info = ModificationInfo(read)
     assert UnconditionalCutter(length=-2)(read, info).sequence == 'abcde'
+    assert info.cut_suffix == 'fg'
+    assert not hasattr(info, 'cut_prefix')
+
     assert UnconditionalCutter(length=100)(read, info).sequence == ''
     assert UnconditionalCutter(length=-100)(read, info).sequence == ''
 

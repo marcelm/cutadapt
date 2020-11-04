@@ -24,7 +24,7 @@ class ModificationInfo:
     Any information (except the read itself) that needs to be passed from one modifier
     to one later in the pipeline or from one modifier to the filters is recorded here.
     """
-    __slots__ = ["matches", "original_read"]
+    __slots__ = ["matches", "original_read", "cut_prefix", "cut_suffix"]
 
     def __init__(self, read):
         self.matches = []  # type: List[Match]
@@ -358,8 +358,10 @@ class UnconditionalCutter(SingleEndModifier):
 
     def __call__(self, read, info: ModificationInfo):
         if self.length > 0:
+            info.cut_prefix = read.sequence[:self.length]
             return read[self.length:]
         elif self.length < 0:
+            info.cut_suffix = read.sequence[self.length:]
             return read[:self.length]
 
 
