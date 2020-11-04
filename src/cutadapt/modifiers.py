@@ -29,6 +29,9 @@ class ModificationInfo:
     def __init__(self, read):
         self.matches = []  # type: List[Match]
         self.original_read = read
+        self.cut_prefix = None
+        self.cut_suffix = None
+        self.is_rc = None
 
 
 class SingleEndModifier(ABC):
@@ -412,29 +415,39 @@ class PrefixSuffixAdder(SingleEndModifier):
         return read
 
 
+class InvalidTemplate(Exception):
+    pass
+
+
 class Renamer(SingleEndModifier):
     """
     Rename reads using a template
 
     The template string can contain the following placeholders:
 
-    - {header} -- the full original, unchanged read header
-    - {id} -- the read ID (only the part before the first space)
+    - {header} -- full unchanged header
+    - {id} -- the part of the header before the first whitespace
+    - {comment} -- the part of the header after the ID, excluding initial whitespace
+    - {cut_prefix} -- prefix removed by UnconditionalCutter (with positive length argument)
+    - {cut_suffix} -- suffix removed by UnconditionalCutter (with negative length argument)
     """
     def __init__(self, template: str):
         self._template = template
 
-    def __call__(self, read, info):
+    def __call__(self, read, info: ModificationInfo):
         fields = read.name.split(maxsplit=1)
         if len(fields) == 2:
             id_, comment = fields
         else:
             id_ = read.name
             comment = ""
-        new_name = self._template.replace("{header}", read.name)
-        new_name = new_name.replace("{id}", id_)
-        new_name = new_name.replace("{comment}", comment)
-        read.name = new_name
+        read.name = self._template.format(
+            header=read.name,
+            id=id_,
+            comment=comment,
+            cut_prefix=info.cut_prefix,
+            cut_suffix=info.cut_suffix,
+        )
         return read
 
 

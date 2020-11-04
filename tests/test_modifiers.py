@@ -7,7 +7,7 @@ from cutadapt.adapters import BackAdapter, PrefixAdapter, IndexedPrefixAdapters,
     FrontAdapter, Adapter
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
     Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo, ZeroCapper,
-    Renamer, ReverseComplementer)
+    Renamer, ReverseComplementer, InvalidTemplate)
 
 
 def test_unconditional_cutter():
@@ -17,12 +17,12 @@ def test_unconditional_cutter():
     info = ModificationInfo(read)
     assert UnconditionalCutter(length=2)(read, info).sequence == 'cdefg'
     assert info.cut_prefix == 'ab'
-    assert not hasattr(info, 'cut_suffix')
+    assert info.cut_suffix is None
 
     info = ModificationInfo(read)
     assert UnconditionalCutter(length=-2)(read, info).sequence == 'abcde'
     assert info.cut_suffix == 'fg'
-    assert not hasattr(info, 'cut_prefix')
+    assert info.cut_prefix is None
 
     assert UnconditionalCutter(length=100)(read, info).sequence == ''
     assert UnconditionalCutter(length=-100)(read, info).sequence == ''
@@ -187,3 +187,15 @@ class TestRenamer:
         read = Sequence("theid", "ACGT")
         info = ModificationInfo(read)
         assert renamer(read, info).name == "theid_extra "
+
+    def test_cut_prefix_template_variable(self):
+        renamer = Renamer("{id}_{cut_prefix} {comment}")
+        read = Sequence("theid thecomment", "ACGT")
+        info = ModificationInfo(read)
+        info.cut_prefix = "TTAAGG"
+        assert renamer(read, info).name == "theid_TTAAGG thecomment"
+
+    @pytest.mark.skip("to do")
+    def test_invalid_template_variable(self):
+        with pytest.raises(InvalidTemplate):
+            Renamer("{id} {invalid}")
