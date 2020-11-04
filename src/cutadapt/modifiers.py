@@ -24,7 +24,7 @@ class ModificationInfo:
     Any information (except the read itself) that needs to be passed from one modifier
     to one later in the pipeline or from one modifier to the filters is recorded here.
     """
-    __slots__ = ["matches", "original_read", "cut_prefix", "cut_suffix"]
+    __slots__ = ["matches", "original_read", "cut_prefix", "cut_suffix", "is_rc"]
 
     def __init__(self, read):
         self.matches = []  # type: List[Match]
@@ -252,9 +252,11 @@ class ReverseComplementer(SingleEndModifier):
             self.reverse_complemented += 1
             assert reverse_matches
             trimmed_read, matches = reverse_trimmed_read, reverse_matches
+            info.is_rc = True
             if self._suffix:
                 trimmed_read.name += self._suffix
         else:
+            info.is_rc = False
             trimmed_read, matches = forward_trimmed_read, forward_matches
 
         if matches:

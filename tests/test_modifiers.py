@@ -7,7 +7,7 @@ from cutadapt.adapters import BackAdapter, PrefixAdapter, IndexedPrefixAdapters,
     FrontAdapter, Adapter
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
     Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo, ZeroCapper,
-    Renamer)
+    Renamer, ReverseComplementer)
 
 
 def test_unconditional_cutter():
@@ -26,6 +26,27 @@ def test_unconditional_cutter():
 
     assert UnconditionalCutter(length=100)(read, info).sequence == ''
     assert UnconditionalCutter(length=-100)(read, info).sequence == ''
+
+
+def test_reverse_complementer():
+    adapters = [
+        PrefixAdapter("TTATTTGTCT"),
+        PrefixAdapter("TCCGCACTGG"),
+    ]
+    adapter_cutter = AdapterCutter(adapters, index=False)
+    reverse_complementer = ReverseComplementer(adapter_cutter)
+
+    read = Sequence("r", "ttatttgtctCCAGCTTAGACATATCGCCT")
+    info = ModificationInfo(read)
+    trimmed = reverse_complementer(read, info)
+    assert trimmed.sequence == "CCAGCTTAGACATATCGCCT"
+    assert not info.is_rc
+
+    read = Sequence("r", "CAACAGGCCACATTAGACATATCGGATGGTagacaaataa")
+    info = ModificationInfo(read)
+    trimmed = reverse_complementer(read, info)
+    assert trimmed.sequence == "ACCATCCGATATGTCTAATGTGGCCTGTTG"
+    assert info.is_rc
 
 
 def test_zero_capper():
