@@ -16,7 +16,7 @@ from xopen import xopen
 import dnaio
 
 from .utils import Progress, FileOpener
-from .modifiers import SingleEndModifier, PairedModifier, PairedModifierWrapper, ModificationInfo
+from .modifiers import SingleEndModifier, PairedEndModifier, PairedEndModifierWrapper, ModificationInfo
 from .report import Statistics
 from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
     RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
@@ -400,7 +400,7 @@ class PairedEndPipeline(Pipeline):
 
     def __init__(self, pair_filter_mode, file_opener: FileOpener):
         super().__init__(file_opener)
-        self._modifiers = []  # type: List[PairedModifier]
+        self._modifiers = []  # type: List[PairedEndModifier]
         self._pair_filter_mode = pair_filter_mode
         self._reader = None
         # Whether to ignore pair_filter mode for discard-untrimmed filter
@@ -413,18 +413,18 @@ class PairedEndPipeline(Pipeline):
         """
         if modifier1 is None and modifier2 is None:
             raise ValueError("Not both modifiers can be None")
-        self._modifiers.append(PairedModifierWrapper(modifier1, modifier2))
+        self._modifiers.append(PairedEndModifierWrapper(modifier1, modifier2))
 
     def add_both(self, modifier: SingleEndModifier) -> None:
         """
         Add one modifier for both R1 and R2
         """
         assert modifier is not None
-        self._modifiers.append(PairedModifierWrapper(modifier, copy.copy(modifier)))
+        self._modifiers.append(PairedEndModifierWrapper(modifier, copy.copy(modifier)))
 
-    def add_paired_modifier(self, paired_modifier: PairedModifier) -> None:
-        """Add a Modifier (without wrapping it in a PairedModifierWrapper)"""
-        self._modifiers.append(paired_modifier)
+    def add_paired_modifier(self, modifier: PairedEndModifier) -> None:
+        """Add a Modifier (without wrapping it in a PairedEndModifierWrapper)"""
+        self._modifiers.append(modifier)
 
     def process_reads(self, progress: Progress = None) -> Tuple[int, int, Optional[int]]:
         n = 0  # no. of processed reads

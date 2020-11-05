@@ -10,7 +10,7 @@ from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter, NonInternalFrontAdapter, PrefixAdapter,
     BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
 )
-from .modifiers import (SingleEndModifier, PairedModifier, QualityTrimmer, NextseqQualityTrimmer,
+from .modifiers import (SingleEndModifier, PairedEndModifier, QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer)
 from .filters import (WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter,
     CasavaFilter, MaximumExpectedErrorsFilter)
@@ -138,7 +138,7 @@ class Statistics:
                 self.with_adapters[i] += m.with_adapters
                 self.adapter_stats[i] = list(m.adapter_statistics[i].values())
             return
-        if isinstance(m, PairedModifier):
+        if isinstance(m, PairedEndModifier):
             modifiers_list = [(0, m._modifier1), (1, m._modifier2)]
         else:
             modifiers_list = [(0, m)]

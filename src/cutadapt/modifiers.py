@@ -37,13 +37,13 @@ class SingleEndModifier(ABC):
         pass
 
 
-class PairedModifier(ABC):
+class PairedEndModifier(ABC):
     @abstractmethod
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         pass
 
 
-class PairedModifierWrapper(PairedModifier):
+class PairedEndModifierWrapper(PairedEndModifier):
     """
     Wrapper for modifiers that work on both reads in a paired-end read
     """
@@ -57,7 +57,7 @@ class PairedModifierWrapper(PairedModifier):
             raise ValueError("Not both modifiers may be None")
 
     def __repr__(self):
-        return 'PairedModifier(modifier1={!r}, modifier2={!r})'.format(
+        return "PairedEndModifier(modifier1={!r}, modifier2={!r})".format(
             self._modifier1, self._modifier2)
 
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
@@ -271,7 +271,7 @@ class PairedAdapterCutterError(Exception):
     pass
 
 
-class PairedAdapterCutter(PairedModifier):
+class PairedAdapterCutter(PairedEndModifier):
     """
     A Modifier that trims adapter pairs from R1 and R2.
     """
