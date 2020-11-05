@@ -77,17 +77,21 @@ class OutputFiles:
         self.force_fasta = force_fasta
 
     def __iter__(self):
-        yield self.out
-        yield self.out2
-        yield self.untrimmed
-        yield self.untrimmed2
-        yield self.too_short
-        yield self.too_short2
-        yield self.too_long
-        yield self.too_long2
-        yield self.info
-        yield self.rest
-        yield self.wildcard
+        for f in [
+            self.out,
+            self.out2,
+            self.untrimmed,
+            self.untrimmed2,
+            self.too_short,
+            self.too_short2,
+            self.too_long,
+            self.too_long2,
+            self.info,
+            self.rest,
+            self.wildcard,
+        ]:
+            if f is not None:
+                yield f
 
 
 class Pipeline(ABC):
@@ -204,8 +208,7 @@ class Pipeline(ABC):
             f.flush()
         assert self._outfiles is not None
         for f in self._outfiles:
-            if f is not None:
-                f.flush()
+            f.flush()
 
     def close(self) -> None:
         self._reader.close()
@@ -214,7 +217,7 @@ class Pipeline(ABC):
         assert self._outfiles is not None
         for f in self._outfiles:
             # TODO do not use hasattr
-            if f is not None and f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
+            if f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
                 f.close()
         if self._demultiplexer is not None:
             self._demultiplexer.close()
@@ -748,10 +751,8 @@ class ParallelPipelineRunner(PipelineRunner):
     def run(self):
         workers, connections = self._start_workers()
         writers = []
-        for outfile in self._outfiles:
-            if outfile is None:
-                continue
-            writers.append(OrderedChunkWriter(outfile))
+        for f in self._outfiles:
+            writers.append(OrderedChunkWriter(f))
         stats = None
         n = 0  # A running total of the number of processed reads (for progress indicator)
         while connections:
@@ -805,7 +806,7 @@ class ParallelPipelineRunner(PipelineRunner):
     def close(self):
         for f in self._outfiles:
             # TODO do not use hasattr
-            if f is not None and f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
+            if f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
                 f.close()
 
 
