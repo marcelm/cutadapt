@@ -102,13 +102,13 @@ def test_untrimmed_paired_output_automatic_pair_filter(tmpdir, run_paired):
 
 
 def test_explicit_format_with_paired(tmpdir, run_paired):
-    # Use --format=fastq with input files whose extension is .txt
+    # Use FASTQ input files whose extension is .txt
     txt1 = str(tmpdir.join("paired.1.txt"))
     txt2 = str(tmpdir.join("paired.2.txt"))
     shutil.copyfile(datapath("paired.1.fastq"), txt1)
     shutil.copyfile(datapath("paired.2.fastq"), txt2)
     run_paired(
-        "--format=fastq -a TTAGACATAT -m 14 -q 10",
+        "-a TTAGACATAT -m 14 -q 10",
         in1=txt1, in2=txt2,
         expected1="paired.m14.1.fastq",
         expected2="paired.m14.2.fastq",

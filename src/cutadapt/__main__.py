@@ -141,8 +141,6 @@ def get_argument_parser() -> ArgumentParser:
     # Compression level for gzipped output files. Not exposed since we have -Z
     group.add_argument("--compression-level", type=int, default=6,
         help=SUPPRESS)
-    # Deprecated: The input format is always auto-detected
-    group.add_argument("-f", "--format", help=SUPPRESS)
     # Disable adapter index creation
     group.add_argument("--no-index", dest="index", default=True, action="store_false", help=SUPPRESS)
 
@@ -342,12 +340,6 @@ def get_argument_parser() -> ArgumentParser:
         help="Write second read in a pair to this file if pair is too short.")
     group.add_argument("--too-long-paired-output", metavar="FILE", default=None,
         help="Write second read in a pair to this file if pair is too long.")
-
-    for arg in ("--colorspace", "-c", "-d", "--double-encode", "-t", "--trim-primer",
-            "--strip-f3", "--maq", "--bwa", "--no-zero-cap"):
-        group.add_argument(arg, dest='colorspace', action='store_true', default=False,
-        help=SUPPRESS)
-    parser.set_defaults(colorspace=False)
 
     # We could have two positional arguments here, with the second one optional, but
     # we want custom, more helpful error messages.
@@ -595,10 +587,6 @@ def check_arguments(args, paired: bool) -> None:
                     " --{name}-output/--{name}-paired-output options.".format(name=argname)
                 )
 
-    if args.format is not None:
-        logger.warning("Option --format is deprecated and ignored because the input file format is "
-            "always auto-detected")
-
     if args.overlap < 1:
         raise CommandLineError("The overlap must be at least 1.")
     if not (0 <= args.gc_content <= 100):
@@ -815,13 +803,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
 
     if args.quiet and args.report:
         parser.error("Options --quiet and --report cannot be used at the same time")
-
-    if args.colorspace:
-        parser.error(
-            "These colorspace-specific options are no longer supported: "
-            "--colorspace, -c, -d, --double-encode, -t, --trim-primer, "
-            "--strip-f3, --maq, --bwa, --no-zero-cap. "
-            "Use Cutadapt 1.18 or earlier to work with colorspace data.")
 
     paired = determine_paired(args)
     assert paired in (False, True)

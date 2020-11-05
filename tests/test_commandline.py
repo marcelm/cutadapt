@@ -74,11 +74,6 @@ def test_extensiontxtgz(run):
     run("-b TTAGACATATCTCCGTCG", "s_1_sequence.txt", "s_1_sequence.txt.gz")
 
 
-def test_format(run):
-    """the -f/--format parameter"""
-    run("-f fastq -b TTAGACATATCTCCGTCG", "small.fastq", "small.myownextension")
-
-
 def test_minimum_length(run):
     """-m/--minimum-length"""
     run("-m 5 -a TTAGACATATCTCCGTCG", "minlen.fa", "lengths.fa")
