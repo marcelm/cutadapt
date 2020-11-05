@@ -93,6 +93,22 @@ class OutputFiles:
             if f is not None:
                 yield f
 
+    def as_bytesio(self):
+        """
+        Create a new OutputFiles instance that has BytesIO instances for each non-None output file
+        """
+        result = OutputFiles(
+            force_fasta=self.force_fasta,
+            demultiplex=self.demultiplex,
+        )
+        for attr in (
+            "out", "out2", "untrimmed", "untrimmed2", "too_short", "too_short2", "too_long",
+            "too_long2", "info", "rest", "wildcard"
+        ):
+            if getattr(self, attr) is not None:
+                setattr(result, attr, io.BytesIO())
+        return result
+
 
 class Pipeline(ABC):
     """
@@ -537,14 +553,7 @@ class WorkerProcess(Process):
         self._read_pipe = read_pipe
         self._write_pipe = write_pipe
         self._need_work_queue = need_work_queue
-
-        self._outfile_attributes = [
-            attr for attr in (
-                "out", "out2", "untrimmed", "untrimmed2", "too_short", "too_short2", "too_long",
-                "too_long2", "info", "rest", "wildcard"
-            ) if getattr(orig_outfiles, attr) is not None
-        ]
-        self._force_fasta = orig_outfiles.force_fasta
+        self._original_outfiles = orig_outfiles
 
     def run(self):
         try:
@@ -563,7 +572,7 @@ class WorkerProcess(Process):
                     raise e
 
                 infiles = self._make_input_files()
-                outfiles = self._make_output_files()
+                outfiles = self._original_outfiles.as_bytesio()
                 self._pipeline.connect_io(infiles, outfiles)
                 (n, bp1, bp2) = self._pipeline.process_reads()
                 self._pipeline.flush()
@@ -590,17 +599,6 @@ class WorkerProcess(Process):
         else:
             input2 = None
         return InputFiles(input, input2, interleaved=self._interleaved_input)
-
-    def _make_output_files(self):
-        """
-        Using self._orig_outfiles as a template, make a new OutputFiles instance
-        that has BytesIO instances for each non-None output file
-        """
-        output_files = OutputFiles(force_fasta=self._force_fasta)
-        for attr in self._outfile_attributes:
-            setattr(output_files, attr, io.BytesIO())
-
-        return output_files
 
     def _send_outfiles(self, outfiles: OutputFiles, chunk_index: int, n_reads: int):
         self._write_pipe.send(chunk_index)
