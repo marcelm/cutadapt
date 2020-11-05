@@ -420,8 +420,10 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     return sio.getvalue().rstrip()
 
 
-def minimal_report(stats: Statistics, _time, _gc_content) -> str:
+def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
     """Create a minimal tabular report suitable for concatenation"""
+    _ = time
+    _ = gc_content
 
     def none(value):
         return 0 if value is None else value

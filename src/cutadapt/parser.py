@@ -338,14 +338,12 @@ class AdapterParser:
     def _parse_not_linked(self, spec: str, name: Optional[str], cmdline_type: str) -> Adapter:
         aspec = AdapterSpecification.parse(spec, cmdline_type)
         adapter_class = aspec.adapter_class()  # type: Type[Adapter]
-        if not name:
-            name = aspec.name
         if aspec.parameters.pop('anywhere', False) and adapter_class in (FrontAdapter, BackAdapter):
             aspec.parameters['force_anywhere'] = True
         parameters = self.default_parameters.copy()
         parameters.update(aspec.parameters)
-
-        return adapter_class(sequence=aspec.sequence, name=name, **parameters)
+        return adapter_class(
+            sequence=aspec.sequence, name=aspec.name if name is None else name, **parameters)
 
     def _parse_linked(self, spec1: str, spec2: str, name: Optional[str], cmdline_type: str) -> LinkedAdapter:
         """Return a linked adapter from two specification strings"""

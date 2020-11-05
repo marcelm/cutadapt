@@ -333,7 +333,7 @@ class Adapter(ABC):
 
     description = "adapter with one component"  # this is overriden in subclasses
 
-    def __init__(self, name: Optional[str], *args, **kwargs):
+    def __init__(self, name: str, *args, **kwargs):
         self.name = name
 
     @abstractmethod
@@ -385,9 +385,9 @@ class SingleAdapter(Adapter, ABC):
         name: Optional[str] = None,
         indels: bool = True,
     ):
-        super().__init__(name)
-        self._debug = False  # type: bool
         self.name = _generate_adapter_name() if name is None else name  # type: str
+        super().__init__(self.name)
+        self._debug = False  # type: bool
         self.sequence = sequence.upper().replace("U", "T")  # type: str
         if not self.sequence:
             raise ValueError("Adapter sequence is empty")

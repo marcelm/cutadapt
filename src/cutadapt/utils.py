@@ -4,6 +4,7 @@ import time
 import errno
 import multiprocessing
 import logging
+from typing import Optional
 
 from xopen import xopen
 import dnaio
@@ -124,9 +125,9 @@ class Progress:
         print(file=sys.stderr)
 
 
-class DummyProgress:
+class DummyProgress(Progress):
     """
-    Has the same interface as Progress, but does not print anything
+    Does not print anything
     """
     def update(self, total, _final=False):
         pass
@@ -173,7 +174,7 @@ class FileOpener:
             return None
         return self.xopen(path, mode)
 
-    def xopen_pair(self, path1, path2, mode):
+    def xopen_pair(self, path1: str, path2: Optional[str], mode):
         if path1 is None and path2 is not None:
             raise ValueError("When giving paths for paired-end files, only providing the second"
                 " file is not supported")

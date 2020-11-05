@@ -34,8 +34,23 @@ class InputFiles:
         self.interleaved = interleaved
 
     def open(self):
-        return dnaio.open(self.file1, file2=self.file2,
-            interleaved=self.interleaved, mode="r")
+        return dnaio.open(self.file1, file2=self.file2, interleaved=self.interleaved, mode="r")
+
+    def close(self) -> None:
+        self.file1.close()
+        if self.file2 is not None:
+            self.file2.close()
+
+
+class InputPaths:
+    def __init__(self, path1: str, path2: Optional[str] = None, interleaved: bool = False):
+        self.path1 = path1
+        self.path2 = path2
+        self.interleaved = interleaved
+
+    def open(self, file_opener: FileOpener) -> InputFiles:
+        file1, file2 = file_opener.xopen_pair(self.path1, self.path2, "rb")
+        return InputFiles(file1, file2, self.interleaved)
 
 
 class OutputFiles:
@@ -132,11 +147,13 @@ class Pipeline(ABC):
     Processing pipeline that loops over reads and applies modifiers and filters
     """
     n_adapters = 0
+    paired = False
 
     def __init__(self, file_opener: FileOpener):
         self._close_files = []  # type: List[IO]
         self._reader = None  # type: Any
         self._filters = []  # type: List[Any]
+        self._infiles = None  # type: Optional[InputFiles]
         self._outfiles = None  # type: Optional[OutputFiles]
         self._demultiplexer = None
         self._textiowrappers = []  # type: List[TextIO]
@@ -152,6 +169,7 @@ class Pipeline(ABC):
         self.file_opener = file_opener
 
     def connect_io(self, infiles: InputFiles, outfiles: OutputFiles):
+        self._infiles = infiles
         self._reader = infiles.open()
         self._set_output(outfiles)
 
@@ -245,6 +263,8 @@ class Pipeline(ABC):
 
     def close(self) -> None:
         self._reader.close()
+        if self._infiles is not None:
+            self._infiles.close()
         for f in self._textiowrappers:
             f.close()  # This also closes the underlying files; a second close occurs below
         assert self._outfiles is not None
@@ -287,8 +307,6 @@ class SingleEndPipeline(Pipeline):
     """
     Processing pipeline for single-end reads
     """
-    paired = False
-
     def __init__(self, file_opener: FileOpener):
         super().__init__(file_opener)
         self._modifiers = []  # type: List[SingleEndModifier]
@@ -520,15 +538,15 @@ class ReaderProcess(Process):
     and finally sends the stop token -1 ("poison pills") to all connections.
     """
 
-    def __init__(self, file, file2, connections, queue, buffer_size, stdin_fd):
+    def __init__(self, path: str, path2: Optional[str], connections, queue, buffer_size, stdin_fd):
         """
         queue -- a Queue of worker indices. A worker writes its own index into this
             queue to notify the reader that it is ready to receive more data.
         connections -- a list of Connection objects, one for each worker.
         """
         super().__init__()
-        self.file = file
-        self.file2 = file2
+        self.path = path
+        self.path2 = path2
         self.connections = connections
         self.queue = queue
         self.buffer_size = buffer_size
@@ -539,9 +557,9 @@ class ReaderProcess(Process):
             sys.stdin.close()
             sys.stdin = os.fdopen(self.stdin_fd)
         try:
-            with xopen(self.file, 'rb') as f:
-                if self.file2:
-                    with xopen(self.file2, 'rb') as f2:
+            with xopen(self.path, 'rb') as f:
+                if self.path2:
+                    with xopen(self.path2, 'rb') as f2:
                         for chunk_index, (chunk1, chunk2) in enumerate(
                                 dnaio.read_paired_chunks(f, f2, self.buffer_size)):
                             self.send_to_worker(chunk_index, chunk1, chunk2)
@@ -622,13 +640,13 @@ class WorkerProcess(Process):
             self._write_pipe.send(-2)
             self._write_pipe.send((e, traceback.format_exc()))
 
-    def _make_input_files(self):
+    def _make_input_files(self) -> InputFiles:
         data = self._read_pipe.recv_bytes()
         input = io.BytesIO(data)
 
         if self._two_input_files:
             data = self._read_pipe.recv_bytes()
-            input2 = io.BytesIO(data)
+            input2 = io.BytesIO(data)  # type: Optional[BinaryIO]
         else:
             input2 = None
         return InputFiles(input, input2, interleaved=self._interleaved_input)
@@ -717,7 +735,7 @@ class ParallelPipelineRunner(PipelineRunner):
     def __init__(
         self,
         pipeline: Pipeline,
-        infiles: InputFiles,
+        infiles: InputPaths,
         outfiles: OutputFiles,
         progress: Progress,
         n_workers: int,
@@ -727,16 +745,16 @@ class ParallelPipelineRunner(PipelineRunner):
         self._n_workers = n_workers
         self._need_work_queue = Queue()  # type: Queue
         self._buffer_size = buffer_size
-        self._assign_input(infiles.file1, infiles.file2, infiles.interleaved)
+        self._assign_input(infiles.path1, infiles.path2, infiles.interleaved)
         self._assign_output(outfiles)
 
     def _assign_input(
         self,
-        file1: BinaryIO,
-        file2: Optional[BinaryIO] = None,
+        path1: str,
+        path2: Optional[str] = None,
         interleaved: bool = False,
     ):
-        self._two_input_files = file2 is not None
+        self._two_input_files = path2 is not None
         self._interleaved_input = interleaved
         # the workers read from these connections
         connections = [Pipe(duplex=False) for _ in range(self._n_workers)]
@@ -747,7 +765,7 @@ class ParallelPipelineRunner(PipelineRunner):
             # This happens during tests: pytest sets sys.stdin to an object
             # that does not have a file descriptor.
             fileno = -1
-        self._reader_process = ReaderProcess(file1, file2, connw,
+        self._reader_process = ReaderProcess(path1, path2, connw,
             self._need_work_queue, self._buffer_size, fileno)
         self._reader_process.daemon = True
         self._reader_process.start()

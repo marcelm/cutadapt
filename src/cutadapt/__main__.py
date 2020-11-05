@@ -58,7 +58,7 @@ import time
 import logging
 import platform
 import itertools
-from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Type
+from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
@@ -71,7 +71,7 @@ from cutadapt.modifiers import (SingleEndModifier, LengthTagModifier, SuffixRemo
     PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener,
     ReverseComplementer)
 from cutadapt.report import full_report, minimal_report, Statistics
-from cutadapt.pipeline import (Pipeline, SingleEndPipeline, PairedEndPipeline, InputFiles,
+from cutadapt.pipeline import (Pipeline, SingleEndPipeline, PairedEndPipeline, InputPaths,
     OutputFiles, PipelineRunner, SerialPipelineRunner, ParallelPipelineRunner)
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress, FileOpener
 from cutadapt.log import setup_logging, REPORT
@@ -874,15 +874,15 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         check_arguments(args, paired)
         adapters, adapters2 = adapters_from_args(args)
         pipeline = pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2)
-        adapter_names = [a.name for a in adapters]
-        adapter_names2 = [a.name for a in adapters2]
+        adapter_names = [a.name for a in adapters]  # type: List[str]
+        adapter_names2 = [a.name for a in adapters2]  # type: List[str]
         outfiles = open_output_files(args, default_outfile, file_opener, adapter_names, adapter_names2)
-        infiles = InputFiles(input_filename, file2=input_paired_filename,
-            interleaved=is_interleaved_input)
-        runner = setup_runner(pipeline, infiles, outfiles, progress, cores, args.buffer_size)
+        inpaths = InputPaths(input_filename, path2=input_paired_filename, interleaved=is_interleaved_input)
+        runner = setup_runner(pipeline, inpaths, outfiles, progress, cores, args.buffer_size, file_opener)
     except CommandLineError as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
         parser.error(str(e))
+        return
 
     logger.info("Processing reads on %d core%s in %s mode ...",
         cores, 's' if cores > 1 else '',
@@ -912,19 +912,24 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     return stats
 
 
-def setup_runner(pipeline: Pipeline, infiles, outfiles, progress, cores, buffer_size):
-    if cores > 1:
-        runner_class = ParallelPipelineRunner  # type: Type[PipelineRunner]
-        runner_kwargs = dict(n_workers=cores, buffer_size=buffer_size)
-    else:
-        runner_class = SerialPipelineRunner
-        runner_kwargs = dict()
+def setup_runner(
+    pipeline: Pipeline,
+    inpaths: InputPaths,
+    outfiles: OutputFiles,
+    progress: Progress,
+    cores: int,
+    buffer_size: int,
+    file_opener: FileOpener,
+) -> PipelineRunner:
     try:
-        runner = runner_class(pipeline, infiles, outfiles, progress, **runner_kwargs)
+        if cores > 1:
+            return ParallelPipelineRunner(
+                pipeline, inpaths, outfiles, progress, n_workers=cores, buffer_size=buffer_size)
+        else:
+            infiles = inpaths.open(file_opener)
+            return SerialPipelineRunner(pipeline, infiles, outfiles, progress)
     except (dnaio.UnknownFileFormat, dnaio.FileFormatError, OSError) as e:
         raise CommandLineError(e)
-
-    return runner
 
 
 def setup_profiler_if_requested(requested):
