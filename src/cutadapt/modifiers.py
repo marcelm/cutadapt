@@ -78,7 +78,7 @@ class AdapterCutter(SingleEndModifier):
         self,
         adapters: List[SingleAdapter],
         times: int = 1,
-        action: str = "trim",
+        action: Optional[str] = "trim",
         index: bool = True,
     ):
         """

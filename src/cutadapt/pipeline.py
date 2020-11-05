@@ -4,7 +4,7 @@ import sys
 import copy
 import logging
 import functools
-from typing import List, IO, Optional, BinaryIO, TextIO, Any, Tuple
+from typing import List, IO, Optional, BinaryIO, TextIO, Any, Tuple, Dict
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe, Queue
 from pathlib import Path
@@ -40,11 +40,9 @@ class InputFiles:
 
 class OutputFiles:
     """
-    The attributes are open file-like objects except when demultiplex is True. In that case,
-    untrimmed, untrimmed2, out and out2 are file names or templates
-    as required by the used demultiplexer ('{name}' etc.).
-
-    Files may also be None.
+    The attributes are either None or open file-like objects except for demultiplex_out
+    and demultiplex_out2, which are dictionaries that map an adapter name
+    to file-like objects.
     """
     def __init__(
         self,
@@ -59,7 +57,10 @@ class OutputFiles:
         info: Optional[BinaryIO] = None,
         rest: Optional[BinaryIO] = None,
         wildcard: Optional[BinaryIO] = None,
-        demultiplex: bool = False,
+        demultiplex_out: Optional[Dict[str, BinaryIO]] = None,
+        demultiplex_out2: Optional[Dict[str, BinaryIO]] = None,
+        combinatorial_out: Optional[Dict[Tuple[str, str], BinaryIO]] = None,
+        combinatorial_out2: Optional[Dict[Tuple[str, str], BinaryIO]] = None,
         force_fasta: Optional[bool] = None,
     ):
         self.out = out
@@ -73,7 +74,10 @@ class OutputFiles:
         self.info = info
         self.rest = rest
         self.wildcard = wildcard
-        self.demultiplex = demultiplex
+        self.demultiplex_out = demultiplex_out
+        self.demultiplex_out2 = demultiplex_out2
+        self.combinatorial_out = combinatorial_out
+        self.combinatorial_out2 = combinatorial_out2
         self.force_fasta = force_fasta
 
     def __iter__(self):
@@ -92,21 +96,34 @@ class OutputFiles:
         ]:
             if f is not None:
                 yield f
+        for outs in (
+            self.demultiplex_out, self.demultiplex_out2,
+            self.combinatorial_out, self.combinatorial_out2,
+        ):
+            if outs is not None:
+                for f in outs.values():
+                    assert f is not None
+                    yield f
 
     def as_bytesio(self):
         """
         Create a new OutputFiles instance that has BytesIO instances for each non-None output file
         """
-        result = OutputFiles(
-            force_fasta=self.force_fasta,
-            demultiplex=self.demultiplex,
-        )
+        result = OutputFiles(force_fasta=self.force_fasta)
         for attr in (
             "out", "out2", "untrimmed", "untrimmed2", "too_short", "too_short2", "too_long",
             "too_long2", "info", "rest", "wildcard"
         ):
             if getattr(self, attr) is not None:
                 setattr(result, attr, io.BytesIO())
+        if self.demultiplex_out is not None:
+            result.demultiplex_out = dict()
+            for k, v in self.demultiplex_out.items():
+                result.demultiplex_out[k] = io.BytesIO()
+        if self.demultiplex_out2 is not None:
+            result.demultiplex_out2 = dict()
+            for k, v in self.demultiplex_out2.items():
+                result.demultiplex_out2[k] = io.BytesIO()
         return result
 
 
@@ -196,7 +213,7 @@ class Pipeline(ABC):
             raise ValueError('discard_trimmed, discard_untrimmed and outfiles.untrimmed must not '
                 'be set simultaneously')
 
-        if outfiles.demultiplex:
+        if outfiles.demultiplex_out is not None or outfiles.combinatorial_out is not None:
             self._demultiplexer = self._create_demultiplexer(outfiles)
             self._filters.append(self._demultiplexer)
         else:
@@ -235,8 +252,10 @@ class Pipeline(ABC):
             # TODO do not use hasattr
             if f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
                 f.close()
-        if self._demultiplexer is not None:
-            self._demultiplexer.close()
+        for outs in [self._outfiles.demultiplex_out, self._outfiles.demultiplex_out2]:
+            if outs is not None:
+                for out in outs.values():
+                    out.close()
 
     @property
     def uses_qualities(self) -> bool:
@@ -324,8 +343,13 @@ class SingleEndPipeline(Pipeline):
         return NoFilter(writer)
 
     def _create_demultiplexer(self, outfiles: OutputFiles):
-        return Demultiplexer(outfiles.out, outfiles.untrimmed, qualities=self.uses_qualities,
-            file_opener=self.file_opener)
+        writers = dict()  # type: Dict[Optional[str], Any]
+        if outfiles.untrimmed is not None:
+            writers[None] = self._open_writer(outfiles.untrimmed, force_fasta=outfiles.force_fasta)
+        assert outfiles.demultiplex_out is not None
+        for name, file in outfiles.demultiplex_out.items():
+            writers[name] = self._open_writer(file, force_fasta=outfiles.force_fasta)
+        return Demultiplexer(writers)
 
     @property
     def minimum_length(self):
@@ -447,13 +471,22 @@ class PairedEndPipeline(Pipeline):
         return PairedNoFilter(writer)
 
     def _create_demultiplexer(self, outfiles):
-        if '{name1}' in outfiles.out and '{name2}' in outfiles.out:
-            return CombinatorialDemultiplexer(outfiles.out, outfiles.out2,
-                outfiles.untrimmed, qualities=self.uses_qualities, file_opener=self.file_opener)
+        def open_writer(file, file2):
+            return self._open_writer(file, file2, force_fasta=outfiles.force_fasta)
+
+        if outfiles.combinatorial_out is not None:
+            assert outfiles.untrimmed is None and outfiles.untrimmed2 is None
+            writers = dict()
+            for key, out in outfiles.combinatorial_out.items():
+                writers[key] = open_writer(out, outfiles.combinatorial_out2[key])
+            return CombinatorialDemultiplexer(writers)
         else:
-            return PairedDemultiplexer(outfiles.out, outfiles.out2,
-                outfiles.untrimmed, outfiles.untrimmed2, qualities=self.uses_qualities,
-                file_opener=self.file_opener)
+            writers = dict()
+            if outfiles.untrimmed is not None:
+                writers[None] = open_writer(outfiles.untrimmed, outfiles.untrimmed2)
+            for name, file in outfiles.demultiplex_out.items():
+                writers[name] = open_writer(file, outfiles.demultiplex_out2[name])
+            return PairedDemultiplexer(writers)
 
     @property
     def minimum_length(self):
@@ -605,8 +638,6 @@ class WorkerProcess(Process):
         self._write_pipe.send(n_reads)
 
         for f in outfiles:
-            if f is None:
-                continue
             f.flush()
             assert isinstance(f, io.BytesIO)
             processed_chunk = f.getvalue()
@@ -721,13 +752,7 @@ class ParallelPipelineRunner(PipelineRunner):
         self._reader_process.daemon = True
         self._reader_process.start()
 
-    @staticmethod
-    def can_output_to(outfiles: OutputFiles) -> bool:
-        return outfiles.out is not None and not outfiles.demultiplex
-
     def _assign_output(self, outfiles: OutputFiles):
-        if not self.can_output_to(outfiles):
-            raise ValueError()
         self._outfiles = outfiles
 
     def _start_workers(self) -> Tuple[List[WorkerProcess], List[Connection]]:

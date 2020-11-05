@@ -430,10 +430,16 @@ def test_adapter_file_empty_name(run):
     run('-N -a file:' + datapath('adapter-empty-name.fasta'), 'illumina.fastq', 'illumina.fastq.gz')
 
 
-def test_demultiplex():
+def test_demultiplex(cores):
     tempdir = tempfile.mkdtemp(prefix='cutadapt-tests.')
     multiout = os.path.join(tempdir, 'tmp-demulti.{name}.fasta')
-    params = ['-a', 'first=AATTTCAGGAATT', '-a', 'second=GTTCTCTAGTTCT', '-o', multiout, datapath('twoadapters.fasta')]
+    params = [
+        '--cores', str(cores),
+        '-a', 'first=AATTTCAGGAATT',
+        '-a', 'second=GTTCTCTAGTTCT',
+        '-o', multiout,
+        datapath('twoadapters.fasta'),
+    ]
     assert main(params) is None
     assert_files_equal(cutpath('twoadapters.first.fasta'), multiout.format(name='first'))
     assert_files_equal(cutpath('twoadapters.second.fasta'), multiout.format(name='second'))

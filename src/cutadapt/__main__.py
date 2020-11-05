@@ -57,6 +57,7 @@ import sys
 import time
 import logging
 import platform
+import itertools
 from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Type
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
@@ -395,7 +396,7 @@ def parse_lengths(s: str) -> Tuple[Optional[int], ...]:
 
 
 def open_output_files(
-    args, default_outfile, file_opener: FileOpener
+    args, default_outfile, file_opener: FileOpener, adapter_names: Sequence[str], adapter_names2: Sequence[str],
 ) -> OutputFiles:
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
@@ -426,35 +427,20 @@ def open_output_files(
         raise CommandLineError("Do not use --discard-trimmed when demultiplexing.")
 
     if demultiplex_mode == "normal":
-        out = args.output
-        untrimmed = args.output.replace('{name}', 'unknown')
-        if args.untrimmed_output:
-            untrimmed = args.untrimmed_output
-        if args.discard_untrimmed:
-            untrimmed = None
-
-        if args.paired_output is not None:
-            out2 = args.paired_output
-            untrimmed2 = args.paired_output.replace('{name}', 'unknown')
-            if args.untrimmed_paired_output:
-                untrimmed2 = args.untrimmed_paired_output
-            if args.discard_untrimmed:
-                untrimmed2 = None
-        else:
-            untrimmed2 = out2 = None
-
-        assert out is not None and '{name}' in out and (out2 is None or '{name}' in out2)
+        out = out2 = None
+        combinatorial_out = combinatorial_out2 = None
+        demultiplex_out, demultiplex_out2, untrimmed, untrimmed2 = open_demultiplex_out(
+            adapter_names, args, file_opener)
     elif demultiplex_mode == "combinatorial":
-        out = args.output
-        out2 = args.paired_output
-        if args.untrimmed_output or args.untrimmed_paired_output:
-            raise CommandLineError("Combinatorial demultiplexing (with {name1} and {name2})"
-                " cannot be combined with --untrimmed-output or --untrimmed-paired-output")
-        if args.discard_untrimmed:
-            untrimmed = untrimmed2 = None
-        else:
-            untrimmed = untrimmed2 = 'unknown'
+        assert '{name1}' in args.output and '{name2}' in args.output
+        assert '{name1}' in args.paired_output and '{name2}' in args.paired_output
+        out = out2 = None
+        demultiplex_out = demultiplex_out2 = None
+        combinatorial_out, combinatorial_out2, untrimmed, untrimmed2 = open_combinatorial_out(
+            adapter_names, adapter_names2, args, file_opener)
     else:
+        combinatorial_out = combinatorial_out2 = None
+        demultiplex_out = demultiplex_out2 = None
         untrimmed, untrimmed2 = file_opener.xopen_pair(
             args.untrimmed_output, args.untrimmed_paired_output, "wb")
         out, out2 = file_opener.xopen_pair(args.output, args.paired_output, "wb")
@@ -473,9 +459,65 @@ def open_output_files(
         untrimmed2=untrimmed2,
         out=out,
         out2=out2,
-        demultiplex=bool(demultiplex_mode),
+        demultiplex_out=demultiplex_out,
+        demultiplex_out2=demultiplex_out2,
+        combinatorial_out=combinatorial_out,
+        combinatorial_out2=combinatorial_out2,
         force_fasta=args.fasta,
     )
+
+
+def open_combinatorial_out(adapter_names, adapter_names2, args, file_opener):
+    combinatorial_out = dict()
+    combinatorial_out2 = dict()
+    if args.discard_untrimmed:
+        extra = []
+    else:
+        extra = [(None, None)]
+        extra += [(None, name2) for name2 in adapter_names2]
+        extra += [(name1, None) for name1 in adapter_names]
+    for name1, name2 in list(itertools.product(adapter_names, adapter_names2)) + extra:
+        fname1 = name1 if name1 is not None else "unknown"
+        fname2 = name2 if name2 is not None else "unknown"
+        path1 = args.output.replace("{name1}", fname1).replace("{name2}", fname2)
+        path2 = args.paired_output.replace("{name1}", fname1).replace("{name2}", fname2)
+        combinatorial_out[(name1, name2)] = file_opener.xopen(path1, "wb")
+        combinatorial_out2[(name1, name2)] = file_opener.xopen(path2, "wb")
+    if args.untrimmed_output or args.untrimmed_paired_output:
+        raise CommandLineError(
+            "Combinatorial demultiplexing (with {name1} and {name2})"
+            " cannot be combined with --untrimmed-output or --untrimmed-paired-output")
+    untrimmed = untrimmed2 = None
+    return combinatorial_out, combinatorial_out2, untrimmed, untrimmed2
+
+
+def open_demultiplex_out(adapter_names, args, file_opener):
+    demultiplex_out = dict()
+    demultiplex_out2 = dict() if args.paired_output is not None else None
+    for name in adapter_names:
+        path1 = args.output.replace("{name}", name)
+        demultiplex_out[name] = file_opener.xopen(path1, "wb")
+        if args.paired_output is not None:
+            path2 = args.paired_output.replace("{name}", name)
+            demultiplex_out2[name] = file_opener.xopen(path2, "wb")
+    untrimmed_path = args.output.replace("{name}", "unknown")
+    if args.untrimmed_output:
+        untrimmed_path = args.untrimmed_output
+    if args.discard_untrimmed:
+        untrimmed = None
+    else:
+        untrimmed = file_opener.xopen(untrimmed_path, "wb")
+    if args.paired_output is not None:
+        untrimmed2_path = args.paired_output.replace("{name}", "unknown")
+        if args.untrimmed_paired_output:
+            untrimmed2_path = args.untrimmed_paired_output
+        if args.discard_untrimmed:
+            untrimmed2 = None
+        else:
+            untrimmed2 = file_opener.xopen(untrimmed2_path, "wb")
+    else:
+        untrimmed2 = None
+    return demultiplex_out, demultiplex_out2, untrimmed, untrimmed2
 
 
 def determine_demultiplex_mode(args) -> Union[str, bool]:
@@ -596,7 +638,7 @@ def check_arguments(args, paired: bool) -> None:
         raise CommandLineError("--pair-adapters cannot be used with --times")
 
 
-def pipeline_from_parsed_args(args, paired, file_opener) -> Pipeline:
+def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) -> Pipeline:
     """
     Setup a processing pipeline from parsed command-line arguments.
 
@@ -606,8 +648,6 @@ def pipeline_from_parsed_args(args, paired, file_opener) -> Pipeline:
     """
     if args.action == 'none':
         args.action = None
-
-    adapters, adapters2 = adapters_from_args(args)
 
     # Create the processing pipeline
     if paired:
@@ -721,7 +761,7 @@ def add_adapter_cutter(
     adapters2,
     paired: bool,
     pair_adapters: bool,
-    action: str,
+    action: Optional[str],
     times: int,
     reverse_complement: bool,
     allow_index: bool,
@@ -829,8 +869,11 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         input_filename, input_paired_filename = setup_input_files(args.inputs,
             paired, is_interleaved_input)
         check_arguments(args, paired)
-        pipeline = pipeline_from_parsed_args(args, paired, file_opener)
-        outfiles = open_output_files(args, default_outfile, file_opener)
+        adapters, adapters2 = adapters_from_args(args)
+        pipeline = pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2)
+        adapter_names = [a.name for a in adapters]
+        adapter_names2 = [a.name for a in adapters2]
+        outfiles = open_output_files(args, default_outfile, file_opener, adapter_names, adapter_names2)
         infiles = InputFiles(input_filename, file2=input_paired_filename,
             interleaved=is_interleaved_input)
         runner = setup_runner(pipeline, infiles, outfiles, progress, cores, args.buffer_size)
@@ -868,14 +911,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
 
 def setup_runner(pipeline: Pipeline, infiles, outfiles, progress, cores, buffer_size):
     if cores > 1:
-        if ParallelPipelineRunner.can_output_to(outfiles):
-            runner_class = ParallelPipelineRunner  # type: Type[PipelineRunner]
-            runner_kwargs = dict(n_workers=cores, buffer_size=buffer_size)
-        else:
-            raise CommandLineError("Running in parallel is currently not supported "
-                 "when using --format or when demultiplexing.\n"
-                 "Omit --cores/-j to continue.")
-            # return  # avoid IDE warnings below
+        runner_class = ParallelPipelineRunner  # type: Type[PipelineRunner]
+        runner_kwargs = dict(n_workers=cores, buffer_size=buffer_size)
     else:
         runner_class = SerialPipelineRunner
         runner_kwargs = dict()

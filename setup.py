@@ -104,7 +104,7 @@ setup(
     entry_points={'console_scripts': ['cutadapt = cutadapt.__main__:main']},
     install_requires=[
         'dnaio~=0.4.2',
-        'xopen~=0.9.0',
+        'xopen~=1.0.0',
     ],
     extras_require={
         'dev': ['Cython', 'pytest', 'pytest-timeout', 'pytest-mock', 'sphinx', 'sphinx_issues'],

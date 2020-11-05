@@ -129,9 +129,6 @@ Make also sure that you have ``pigz`` (parallel gzip) installed if you use
 multiple cores and write to a ``.gz`` output file. Otherwise, compression of
 the output will be done in a single thread and therefore be a bottleneck.
 
-Currently, multi-core support is not available when demultiplexing. You
-will get an error message if you try to use it. This limitations may be
-lifted in the future.
 
 .. versionadded:: 1.15
 
@@ -142,7 +139,10 @@ lifted in the future.
     Multicore works with ``--untrimmed/too-short/too-long-(paired)-output``
 
 .. versionadded:: 2.7
-    Muticore works with ``--info-file``, ``--rest-file``, ``--wildcard-file``
+    Multicore works with ``--info-file``, ``--rest-file``, ``--wildcard-file``
+
+.. versionadded:: 3.0
+    Multicore support for demultiplexing added.
 
 
 Speed-up tricks

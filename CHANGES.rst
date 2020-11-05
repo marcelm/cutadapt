@@ -5,6 +5,9 @@ Changes
 development version
 -------------------
 
+* Demultiplexing on multiple cores is now supported. This was the last feature that
+  only ran single-threaded.
+* :issue:`478`: Demultiplexing now always generates all possible output files.
 * :issue:`358`: You can now use ``-e`` also :ref:`to specify the maximum number of
   errors <error-tolerance>` (instead of the maximum error rate). For example, write
   ``-e 2`` to allow two errors over a full-length adapter match.

@@ -18,7 +18,6 @@ from abc import ABC, abstractmethod
 from typing import Tuple, Optional, Dict, Any, DefaultDict
 
 from .qualtrim import expected_errors
-from .utils import FileOpener
 from .modifiers import ModificationInfo
 
 
@@ -315,22 +314,16 @@ class Demultiplexer(SingleEndFilterWithStatistics):
     Demultiplex trimmed reads. Reads are written to different output files
     depending on which adapter matches. Files are created when the first read
     is written to them.
+
+    Untrimmed reads are sent to writers[None] if that key exists.
     """
-    def __init__(self, path_template, untrimmed_path, qualities, file_opener):
+    def __init__(self, writers: Dict[Optional[str], Any]):
         """
-        path_template must contain the string '{name}', which will be replaced
-        with the name of the adapter to form the final output path.
-        Reads without an adapter match are written to the file named by
-        untrimmed_path.
+        out is a dictionary that maps an adapter name to a writer
         """
         super().__init__()
-        assert '{name}' in path_template
-        self.template = path_template
-        self.untrimmed_path = untrimmed_path
-        self.untrimmed_writer = None
-        self.writers = dict()
-        self.qualities = qualities
-        self.file_opener = file_opener
+        self._writers = writers
+        self._untrimmed_writer = self._writers.get(None, None)
 
     def __call__(self, read, info):
         """
@@ -338,25 +331,12 @@ class Demultiplexer(SingleEndFilterWithStatistics):
         """
         if info.matches:
             name = info.matches[-1].adapter.name
-            if name not in self.writers:
-                self.writers[name] = self.file_opener.dnaio_open_raise_limit(
-                    self.template.replace('{name}', name), self.qualities)
             self.update_statistics(read)
-            self.writers[name].write(read)
-        else:
-            if self.untrimmed_writer is None and self.untrimmed_path is not None:
-                self.untrimmed_writer = self.file_opener.dnaio_open_raise_limit(
-                    self.untrimmed_path, self.qualities)
-            if self.untrimmed_writer is not None:
-                self.update_statistics(read)
-                self.untrimmed_writer.write(read)
+            self._writers[name].write(read)
+        elif self._untrimmed_writer is not None:
+            self.update_statistics(read)
+            self._untrimmed_writer.write(read)
         return DISCARD
-
-    def close(self):
-        for w in self.writers.values():
-            w.close()
-        if self.untrimmed_writer is not None:
-            self.untrimmed_writer.close()
 
 
 class PairedDemultiplexer(PairedEndFilterWithStatistics):
@@ -364,77 +344,37 @@ class PairedDemultiplexer(PairedEndFilterWithStatistics):
     Demultiplex trimmed paired-end reads. Reads are written to different output files
     depending on which adapter (in read 1) matches.
     """
-    def __init__(self, path_template, path_paired_template, untrimmed_path, untrimmed_paired_path,
-            qualities, file_opener):
-        """
-        The path templates must contain the string '{name}', which will be replaced
-        with the name of the adapter to form the final output path.
-        Read pairs without an adapter match are written to the files named by
-        untrimmed_path.
-        """
+    def __init__(self, writers: Dict[Optional[str], Any]):
         super().__init__()
-        self._demultiplexer1 = Demultiplexer(path_template, untrimmed_path, qualities, file_opener)
-        self._demultiplexer2 = Demultiplexer(path_paired_template, untrimmed_paired_path,
-            qualities, file_opener)
-
-    def written_reads(self) -> int:
-        return self._demultiplexer1.written_reads()
-
-    def written_bp(self) -> Tuple[int, int]:
-        return (self._demultiplexer1.written_bp()[0], self._demultiplexer2.written_bp()[0])
-
-    def written_lengths(self) -> Tuple[Counter, Counter]:
-        return (
-            self._demultiplexer1.written_lengths()[0], self._demultiplexer2.written_lengths()[0],
-        )
+        self._writers = writers
+        self._untrimmed_writer = self._writers.get(None, None)
 
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         assert read2 is not None
-        self._demultiplexer1(read1, info1)
-        self._demultiplexer2(read2, info1)
-
-    def close(self):
-        self._demultiplexer1.close()
-        self._demultiplexer2.close()
+        if info1.matches:
+            name = info1.matches[-1].adapter.name  # type: ignore
+            self.update_statistics(read1, read2)
+            self._writers[name].write(read1, read2)
+        elif self._untrimmed_writer is not None:
+            self.update_statistics(read1, read2)
+            self._untrimmed_writer.write(read1, read2)
+        return DISCARD
 
 
 class CombinatorialDemultiplexer(PairedEndFilterWithStatistics):
     """
-    Demultiplex reads depending on which adapter matches, taking into account both matches
-    on R1 and R2.
+    Demultiplex paired-end reads depending on which adapter matches, taking into account
+    matches on R1 and R2.
     """
-    def __init__(
-        self,
-        path_template: str,
-        path_paired_template: str,
-        untrimmed_name: Optional[str],
-        qualities: bool,
-        file_opener: FileOpener,
-    ):
+    def __init__(self, writers: Dict[Tuple[Optional[str], Optional[str]], Any]):
         """
-        path_template must contain the string '{name1}' and '{name2}', which will be replaced
-        with the name of the adapters found on R1 and R2, respectively to form the final output
-        path. For reads without an adapter match, the name1 and/or name2 are set to the string
-        specified by untrimmed_name. Alternatively, untrimmed_name can be set to None; in that
-        case, read pairs for which at least one read does not have an adapter match are
-        discarded.
-
-        untrimmed_name -- what to replace the templates with when one or both of the reads
-            do not contain an adapter (use "unknown"). Set to None to discard these read pairs.
+        Adapter names of the matches on R1 and R2 will be used to look up the writer in the
+        writers dict. If there is no match on a read, None is used in the lookup instead
+        of the name. Missing dictionary keys are ignored and can be used to discard
+        read pairs.
         """
         super().__init__()
-        assert '{name1}' in path_template and '{name2}' in path_template
-        assert '{name1}' in path_paired_template and '{name2}' in path_paired_template
-        self.template = path_template
-        self.paired_template = path_paired_template
-        self.untrimmed_name = untrimmed_name
-        self.writers = dict()  # type: Dict[Tuple[str, str], Any]
-        self.qualities = qualities
-        self.file_opener = file_opener
-
-    @staticmethod
-    def _make_path(template, name1, name2):
-        return template.replace('{name1}', name1).replace('{name2}', name2)
+        self._writers = writers
 
     def __call__(self, read1, read2, info1, info2):
         """
@@ -445,30 +385,10 @@ class CombinatorialDemultiplexer(PairedEndFilterWithStatistics):
         name1 = info1.matches[-1].adapter.name if info1.matches else None
         name2 = info2.matches[-1].adapter.name if info2.matches else None
         key = (name1, name2)
-        if key not in self.writers:
-            # Open writer on first use
-            if name1 is None:
-                name1 = self.untrimmed_name
-            if name2 is None:
-                name2 = self.untrimmed_name
-            if name1 is None or name2 is None:
-                return DISCARD
-            path1 = self._make_path(self.template, name1, name2)
-            path2 = self._make_path(self.paired_template, name1, name2)
-            self.writers[key] = (
-                self.file_opener.dnaio_open_raise_limit(path1, qualities=self.qualities),
-                self.file_opener.dnaio_open_raise_limit(path2, qualities=self.qualities),
-            )
-        writer1, writer2 = self.writers[key]
-        self.update_statistics(read1, read2)
-        writer1.write(read1)
-        writer2.write(read2)
+        if key in self._writers:
+            self.update_statistics(read1, read2)
+            self._writers[key].write(read1, read2)
         return DISCARD
-
-    def close(self):
-        for w1, w2 in self.writers.values():
-            w1.close()
-            w2.close()
 
 
 class RestFileWriter(SingleEndFilter):

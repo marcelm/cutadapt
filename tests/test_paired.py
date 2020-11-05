@@ -410,10 +410,11 @@ def test_nextseq_paired(run_paired, cores):
         cores=cores)
 
 
-def test_paired_demultiplex(tmpdir):
+def test_paired_demultiplex(tmpdir, cores):
     multiout1 = str(tmpdir.join("demultiplexed.{name}.1.fastq"))
     multiout2 = str(tmpdir.join("demultiplexed.{name}.2.fastq"))
     params = [
+        "--cores", str(cores),
         "-a", "first=AACATTAGACA", "-a", "second=CATTAGACATATCGG",
         "-A", "ignored=CAGTGGAGTA", "-A", "alsoignored=AATAACAGTGGAGTA",
         "-o", multiout1, "-p", multiout2,
@@ -521,34 +522,27 @@ def test_combinatorial_demultiplexing(tmpdir, discarduntrimmed):
     params += ["-o", str(tmpdir.join("combinatorial.{name1}_{name2}.1.fasta"))]
     params += ["-p", str(tmpdir.join("combinatorial.{name1}_{name2}.2.fasta"))]
     params += [datapath("combinatorial.1.fasta"), datapath("combinatorial.2.fasta")]
-    combinations = [
-        # third column says whether the file must exist
-        ("A", "G", True),
-        ("A", "T", True),
-        ("C", "G", True),
-        ("C", "T", True),
-    ]
+    # third item in tuple says whether the file must exist
+    combinations = [(a, b, True) for a, b in product("AC", "GT")]
+    optional = [("unknown", "unknown")]
+    optional += [(a, "unknown") for a in "AC"]
+    optional += [("unknown", b) for b in "GT"]
     if discarduntrimmed:
-        combinations += [
-            ("unknown", "G", False),
-            ("A", "unknown", False),
-        ]
+        combinations.extend((a, b, False) for a, b in optional)
         params += ["--discard-untrimmed"]
     else:
-        combinations += [
-            ("unknown", "G", True),
-            ("A", "unknown", True),
-        ]
+        combinations.extend((a, b, True) for a, b in optional)
     assert main(params) is None
     for (name1, name2, should_exist) in combinations:
         for i in (1, 2):
             name = "combinatorial.{name1}_{name2}.{i}.fasta".format(name1=name1, name2=name2, i=i)
             path = cutpath(os.path.join("combinatorial", name))
             if should_exist:
-                assert tmpdir.join(name).check(), "Output file missing"
-                assert_files_equal(path, str(tmpdir.join(name)))
+                assert tmpdir.join(name).check(), ("Output file missing", name)
+                if os.path.exists(path):
+                    assert_files_equal(path, str(tmpdir.join(name)))
             else:
-                assert not tmpdir.join(name).check(), "Output file should not exist"
+                assert not tmpdir.join(name).check(), ("Output file should not exist", name)
 
 
 def test_info_file(tmpdir):
