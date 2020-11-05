@@ -139,7 +139,7 @@ def get_argument_parser() -> ArgumentParser:
     group.add_argument("--buffer-size", type=int, default=4000000,
         help=SUPPRESS)
     # Compression level for gzipped output files. Not exposed since we have -Z
-    group.add_argument("--compression-level", type=int, default=6,
+    group.add_argument("--compression-level", type=int, default=5,
         help=SUPPRESS)
     # Disable adapter index creation
     group.add_argument("--no-index", dest="index", default=True, action="store_false", help=SUPPRESS)

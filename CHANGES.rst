@@ -12,6 +12,11 @@ development version
   is now faster by using an index even when indels are allowed. Previously, Cutadapt
   would only be able to build an index with ``--no-indels``.
 * :issue:`469`: Cutadapt did not run under Python 3.8 on recent macOS versions.
+* :issue:`425`: Change the default compression level for ``.gz`` output files from 6
+  to 5. This reduces the time used for compression by about 50% while increasing file
+  size by less than 10%. To get the old behavior, use ``--compression-level=6``.
+  If you use Cutadapt to create intermediate files that are deleted anyway,
+  consider also using the even faster option ``-Z`` (same as ``--compression-level=1``).
 * :pr:`485`: Fix that, under some circumstances, in particular when trimming a
   5' adapter and there was a mismatch in its last nucleotide(s), not the entire adapter
   sequence would be trimmed from the read. Since fixing this required changed the
