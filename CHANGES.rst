@@ -18,6 +18,7 @@ development version
   alignment algorithm slightly, this is a backwards incompatible change.
 * :issue:`487`: When demultiplexing, the reported number of written pairs was
   always zero.
+* Ensure Cutadapt runs under Python 3.9.
 
 v2.10 (2020-04-22)
 ------------------
