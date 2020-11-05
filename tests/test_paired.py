@@ -18,9 +18,10 @@ def run_paired(tmpdir):
         path2 = str(tmpdir.join(expected2))
         params += ["-o", path1, "-p", path2]
         params += [datapath(in1), datapath(in2)]
-        assert main(params) is None
+        stats = main(params)
         assert_files_equal(cutpath(expected1), path1)
         assert_files_equal(cutpath(expected2), path2)
+        return stats
 
     return _run
 
@@ -45,11 +46,12 @@ def run_interleaved(tmpdir):
         if expected2:
             tmp2 = str(tmpdir.join("out2-" + expected2))
             params += ["-p", tmp2]
-            assert main(params + paths) is None
+            stats = main(params + paths)
             assert_files_equal(cutpath(expected2), tmp2)
         else:
-            assert main(params + paths) is None
+            stats = main(params + paths)
         assert_files_equal(cutpath(expected1), tmp1)
+        return stats
 
     return _run
 
@@ -419,7 +421,7 @@ def test_paired_demultiplex(tmpdir, cores):
         "-A", "ignored=CAGTGGAGTA", "-A", "alsoignored=AATAACAGTGGAGTA",
         "-o", multiout1, "-p", multiout2,
         datapath("paired.1.fastq"), datapath("paired.2.fastq")]
-    assert main(params) is None
+    main(params)
     assert_files_equal(cutpath("demultiplexed.first.1.fastq"), multiout1.format(name="first"))
     assert_files_equal(cutpath("demultiplexed.second.1.fastq"), multiout1.format(name="second"))
     assert_files_equal(cutpath("demultiplexed.unknown.1.fastq"), multiout1.format(name="unknown"))
@@ -503,7 +505,7 @@ def test_pair_adapters_demultiplexing(tmpdir):
     params += ["-o", str(tmpdir.join("dual-{name}.1.fastq"))]
     params += ["-p", str(tmpdir.join("dual-{name}.2.fastq"))]
     params += [datapath("dual-index.1.fastq"), datapath("dual-index.2.fastq")]
-    assert main(params) is None
+    main(params)
     for name in [
         "dual-i1.1.fastq",
         "dual-i1.2.fastq",
@@ -532,7 +534,7 @@ def test_combinatorial_demultiplexing(tmpdir, discarduntrimmed):
         params += ["--discard-untrimmed"]
     else:
         combinations.extend((a, b, True) for a, b in optional)
-    assert main(params) is None
+    main(params)
     for (name1, name2, should_exist) in combinations:
         for i in (1, 2):
             name = "combinatorial.{name1}_{name2}.{i}.fasta".format(name1=name1, name2=name2, i=i)
@@ -554,4 +556,4 @@ def test_info_file(tmpdir):
         datapath("paired.1.fastq"),
         datapath("paired.2.fastq"),
     ]
-    assert main(params) is None
+    main(params)

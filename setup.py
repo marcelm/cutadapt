@@ -101,7 +101,7 @@ setup(
     ext_modules=extensions,
     package_dir={'': 'src'},
     packages=find_packages('src'),
-    entry_points={'console_scripts': ['cutadapt = cutadapt.__main__:main']},
+    entry_points={'console_scripts': ['cutadapt = cutadapt.__main__:main_cli']},
     install_requires=[
         'dnaio~=0.4.2',
         'xopen~=1.0.0',

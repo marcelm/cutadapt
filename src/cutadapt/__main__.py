@@ -70,7 +70,7 @@ from cutadapt.modifiers import (SingleEndModifier, LengthTagModifier, SuffixRemo
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
     PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener,
     ReverseComplementer)
-from cutadapt.report import full_report, minimal_report
+from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import (Pipeline, SingleEndPipeline, PairedEndPipeline, InputFiles,
     OutputFiles, PipelineRunner, SerialPipelineRunner, ParallelPipelineRunner)
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress, FileOpener
@@ -820,17 +820,22 @@ def log_header(cmdlineargs):
     logger.info("Command line parameters: %s", " ".join(cmdlineargs))
 
 
-def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
+def main_cli():
+    """Entry point for command-line script"""
+    main(sys.argv[1:])
+    return 0
+
+
+def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     """
-    Main function that sets up a processing pipeline and runs it.
+    Set up a processing pipeline from the command-line arguments, run it and return
+    a Statistics object.
 
     default_outfile is the file to which trimmed reads are sent if the ``-o``
     parameter is not used.
     """
     start_time = time.time()
     parser = get_argument_parser()
-    if cmdlineargs is None:
-        cmdlineargs = sys.argv[1:]
     args, leftover_args = parser.parse_known_args(args=cmdlineargs)
     # log to stderr if results are to be sent to stdout
     log_to_stdout = args.output is not None and args.output != "-" and args.paired_output != "-"
@@ -839,16 +844,12 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     if not logging.root.handlers:
         setup_logging(logger, stdout=log_to_stdout,
             quiet=args.quiet, minimal=args.report == 'minimal', debug=args.debug)
+    log_header(cmdlineargs)
     profiler = setup_profiler_if_requested(args.profile)
 
     if args.quiet and args.report:
         parser.error("Options --quiet and --report cannot be used at the same time")
 
-    paired = determine_paired(args)
-    assert paired in (False, True)
-
-    # Print the header now because some of the functions below create logging output
-    log_header(cmdlineargs)
     if leftover_args:
         warn_if_en_dashes(cmdlineargs)
         parser.error("unrecognized arguments: " + " ".join(leftover_args))
@@ -863,6 +864,8 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         progress = Progress()
     else:
         progress = DummyProgress()
+    paired = determine_paired(args)
+    assert paired in (False, True)
 
     try:
         is_interleaved_input = args.interleaved and len(args.inputs) == 1
@@ -880,7 +883,6 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
     except CommandLineError as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
         parser.error(str(e))
-        return  # avoid IDE warnings below
 
     logger.info("Processing reads on %d core%s in %s mode ...",
         cores, 's' if cores > 1 else '',
@@ -907,6 +909,7 @@ def main(cmdlineargs=None, default_outfile=sys.stdout.buffer):
         import pstats
         profiler.disable()
         pstats.Stats(profiler).sort_stats('time').print_stats(20)
+    return stats
 
 
 def setup_runner(pipeline: Pipeline, infiles, outfiles, progress, cores, buffer_size):
@@ -945,4 +948,4 @@ def warn_if_en_dashes(args):
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main_cli())

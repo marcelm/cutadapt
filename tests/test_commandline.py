@@ -334,7 +334,7 @@ def test_compressed_output(tmp_path, cores, extension):
     out_path = str(tmp_path / ("small.fastq." + extension))
     params = [
         "--cores", str(cores), "-a", "TTAGACATATCTCCGTCG", "-o", out_path, datapath("small.fastq")]
-    assert main(params) is None
+    main(params)
 
 
 if sys.version_info[:2] >= (3, 3):
@@ -440,7 +440,7 @@ def test_demultiplex(cores):
         '-o', multiout,
         datapath('twoadapters.fasta'),
     ]
-    assert main(params) is None
+    main(params)
     assert_files_equal(cutpath('twoadapters.first.fasta'), multiout.format(name='first'))
     assert_files_equal(cutpath('twoadapters.second.fasta'), multiout.format(name='second'))
     assert_files_equal(cutpath('twoadapters.unknown.fasta'), multiout.format(name='unknown'))
