@@ -1,5 +1,3 @@
-# TODO
-# test reading from standard input
 import os
 import shutil
 import sys
@@ -621,7 +619,6 @@ def test_paired_separate(run):
 
 def test_run_as_module():
     """Check that "python3 -m cutadapt ..." works"""
-    import subprocess
     from cutadapt import __version__
     py = subprocess.Popen([sys.executable, "-m", "cutadapt", "--version"], stdout=subprocess.PIPE)
     assert py.communicate()[0].decode().strip() == __version__
@@ -629,26 +626,23 @@ def test_run_as_module():
 
 def test_standard_input_pipe(tmpdir, cores):
     """Read FASTQ from standard input"""
-
-    import subprocess
     out_path = str(tmpdir.join("out.fastq"))
     in_path = datapath("small.fastq")
     # Use 'cat' to simulate that no file name is available for stdin
-    cat = subprocess.Popen(["cat", in_path], stdout=subprocess.PIPE)
-    py = subprocess.Popen([
-        sys.executable, "-m", "cutadapt", "--cores", str(cores),
-        "-a", "TTAGACATATCTCCGTCG", "-o", out_path, "-"],
-        stdin=cat.stdout)
-    _ = py.communicate()
-    cat.stdout.close()
-    _ = py.communicate()[0]
+    with subprocess.Popen(["cat", in_path], stdout=subprocess.PIPE) as cat:
+        with subprocess.Popen([
+            sys.executable, "-m", "cutadapt", "--cores", str(cores),
+            "-a", "TTAGACATATCTCCGTCG", "-o", out_path, "-"],
+            stdin=cat.stdout
+        ) as py:
+            _ = py.communicate()
+            cat.stdout.close()
+            _ = py.communicate()[0]
     assert_files_equal(cutpath("small.fastq"), out_path)
 
 
 def test_standard_output(tmpdir, cores):
     """Write FASTQ to standard output (not using --output/-o option)"""
-
-    import subprocess
     out_path = str(tmpdir.join("out.fastq"))
     with open(out_path, "w") as out_file:
         py = subprocess.Popen([
