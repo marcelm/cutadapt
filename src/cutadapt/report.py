@@ -113,12 +113,13 @@ class Statistics:
             for i in 0, 1:
                 self.written_bp[i] += written_bp[i]
                 self.written_lengths[i] += written_lengths[i]
-        elif isinstance(w.filter, TooShortReadFilter):
-            self.too_short = w.filtered
-        elif isinstance(w.filter, TooLongReadFilter):
-            self.too_long = w.filtered
-        elif isinstance(w.filter, NContentFilter):
-            self.too_many_n = w.filtered
+        if hasattr(w, "filter"):
+            if isinstance(w.filter, TooShortReadFilter):
+                self.too_short = w.filtered
+            elif isinstance(w.filter, TooLongReadFilter):
+                self.too_long = w.filtered
+            elif isinstance(w.filter, NContentFilter):
+                self.too_many_n = w.filtered
 
     def _collect_modifier(self, m: SingleEndModifier):
         if isinstance(m, PairedAdapterCutter):

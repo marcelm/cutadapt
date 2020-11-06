@@ -80,13 +80,14 @@ def test_minimum_length(run):
 def test_too_short(run, tmpdir, cores):
     """--too-short-output"""
     too_short_path = str(tmpdir.join('tooshort.fa'))
-    run([
+    stats = run([
         "--cores", str(cores),
         "-m", "5",
         "-a", "TTAGACATATCTCCGTCG",
         "--too-short-output", too_short_path
     ], "minlen.fa", "lengths.fa")
     assert_files_equal(datapath('tooshort.fa'), too_short_path)
+    assert stats.too_short == 5
 
 
 def test_maximum_length(run):
@@ -97,13 +98,14 @@ def test_maximum_length(run):
 def test_too_long(run, tmpdir, cores):
     """--too-long-output"""
     too_long_path = str(tmpdir.join('toolong.fa'))
-    run([
+    stats = run([
         "--cores", str(cores),
         "-M", "5",
         "-a", "TTAGACATATCTCCGTCG",
         "--too-long-output", too_long_path
     ], "maxlen.fa", "lengths.fa")
     assert_files_equal(datapath('toolong.fa'), too_long_path)
+    assert stats.too_long == 5
 
 
 def test_length_tag(run):
@@ -466,11 +468,11 @@ def test_multiple_suffix_adapters_noindels(run):
 
 
 def test_max_n(run):
-    run('--max-n 0', 'maxn0.fasta', 'maxn.fasta')
-    run('--max-n 1', 'maxn1.fasta', 'maxn.fasta')
-    run('--max-n 2', 'maxn2.fasta', 'maxn.fasta')
-    run('--max-n 0.2', 'maxn0.2.fasta', 'maxn.fasta')
-    run('--max-n 0.4', 'maxn0.4.fasta', 'maxn.fasta')
+    assert run('--max-n 0', 'maxn0.fasta', 'maxn.fasta').too_many_n == 4
+    assert run('--max-n 1', 'maxn1.fasta', 'maxn.fasta').too_many_n == 2
+    assert run('--max-n 2', 'maxn2.fasta', 'maxn.fasta').too_many_n == 1
+    assert run('--max-n 0.2', 'maxn0.2.fasta', 'maxn.fasta').too_many_n == 3
+    assert run('--max-n 0.4', 'maxn0.4.fasta', 'maxn.fasta').too_many_n == 2
 
 
 def test_quiet_is_quiet():
@@ -694,11 +696,13 @@ def test_adapter_order(run):
 
 
 def test_reverse_complement_normalized(run):
-    run(
+    stats = run(
         "--revcomp --no-index -g ^TTATTTGTCT -g ^TCCGCACTGG",
         "revcomp-single-normalize.fastq",
         "revcomp.1.fastq",
     )
+    assert stats.n == 6
+    assert stats.reverse_complemented == 2
 
 
 def test_reverse_complement_and_info_file(run, tmp_path, cores):

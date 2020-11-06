@@ -24,6 +24,8 @@ development version
   5' adapter and there was a mismatch in its last nucleotide(s), not the entire adapter
   sequence would be trimmed from the read. Since fixing this required changed the
   alignment algorithm slightly, this is a backwards incompatible change.
+* Fix that the report did not include the number of reads that are too long, too short
+  or had too many ``N``. (This unintentionally disappeared in a previous version.)
 * :issue:`487`: When demultiplexing, the reported number of written pairs was
   always zero.
 * Ensure Cutadapt runs under Python 3.9.
