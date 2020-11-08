@@ -29,6 +29,7 @@ development version
 * :issue:`487`: When demultiplexing, the reported number of written pairs was
   always zero.
 * Ensure Cutadapt runs under Python 3.9.
+* Drop support for Python 3.5.
 
 v2.10 (2020-04-22)
 ------------------

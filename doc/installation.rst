@@ -79,7 +79,7 @@ Dependencies
 
 Cutadapt installation requires this software to be installed:
 
-* Python 3.5 or newer
+* Python 3.6 or newer
 * Possibly a C compiler. For Linux, Cutadapt packages are provided as
   so-called “wheels” (``.whl`` files) which come pre-compiled.
 
