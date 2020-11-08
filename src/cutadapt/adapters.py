@@ -408,7 +408,7 @@ class SingleAdapter(Adapter, ABC):
         self.indels = indels  # type: bool
         self.aligner = self._aligner()
 
-    def _make_aligner(self, flags):
+    def _make_aligner(self, flags: int) -> align.Aligner:
         # TODO
         # Indels are suppressed by setting their cost very high, but a different algorithm
         # should be used instead.
@@ -431,15 +431,10 @@ class SingleAdapter(Adapter, ABC):
             'indels={indels})>'.format(cls=self.__class__.__name__, **vars(self))
 
     @property
-    def is_anchored(self):
-        """Return whether this adapter is anchored"""
-        return self.where in {Where.PREFIX, Where.SUFFIX}
-
-    @property
-    def effective_length(self):
+    def effective_length(self) -> int:
         return self.aligner.effective_length
 
-    def enable_debug(self):
+    def enable_debug(self) -> None:
         """
         Print out the dynamic programming matrix after matching a read to an
         adapter.
@@ -461,7 +456,7 @@ class SingleAdapter(Adapter, ABC):
         overlap length, maximum error rate).
         """
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.sequence)
 
     def create_statistics(self) -> AdapterStatistics:
@@ -477,7 +472,7 @@ class FrontAdapter(SingleAdapter):
         self._force_anywhere = kwargs.pop("force_anywhere", False)
         super().__init__(*args, **kwargs)
 
-    def _aligner(self):
+    def _aligner(self) -> align.Aligner:
         return self._make_aligner(Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value)
 
     def match_to(self, sequence: str):

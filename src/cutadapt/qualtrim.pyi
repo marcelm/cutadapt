@@ -1,0 +1,12 @@
+from typing import Tuple
+from typing_extensions import Protocol
+
+class _Sequence(Protocol):
+    sequence: str
+    qualities: str
+
+def quality_trim_index(
+    qualities: str, cutoff_front: int, cutoff_back: int, base: int = 33
+) -> Tuple[int, int]: ...
+def nextseq_trim_index(sequence: _Sequence, cutoff: str, base: int = 33) -> int: ...
+def expected_errors(qualities: str, base: int = 33) -> float: ...
