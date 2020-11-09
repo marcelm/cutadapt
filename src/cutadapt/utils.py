@@ -187,17 +187,17 @@ class FileOpener:
         kwargs["opener"] = self.xopen
         return dnaio.open(*args, **kwargs)
 
-    def dnaio_open_raise_limit(self, path, qualities):
+    def dnaio_open_raise_limit(self, *args, **kwargs):
         """
         Open a FASTA/FASTQ file for writing. If it fails because the number of open files
         would be exceeded, try to raise the soft limit and re-try.
         """
         try:
-            f = self.dnaio_open(path, mode="w", qualities=qualities)
+            f = self.dnaio_open(*args, **kwargs)
         except OSError as e:
             if e.errno == errno.EMFILE:  # Too many open files
                 raise_open_files_limit(8)
-                f = self.dnaio_open(path, mode="w", qualities=qualities)
+                f = self.dnaio_open(*args, **kwargs)
             else:
                 raise
         return f

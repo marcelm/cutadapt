@@ -346,7 +346,7 @@ class SingleEndPipeline(Pipeline):
     ):
         assert file2 is None
         assert not isinstance(file, (str, bytes, Path))
-        return dnaio.open(
+        return self.file_opener.dnaio_open_raise_limit(
             file, mode="w", qualities=self.uses_qualities, fileformat="fasta" if force_fasta else None)
 
     def _filter_wrapper(self):
@@ -460,7 +460,7 @@ class PairedEndPipeline(Pipeline):
         # take care of threads and compression levels here.
         for f in (file, file2):
             assert not isinstance(f, (str, bytes, Path))
-        return dnaio.open(
+        return self.file_opener.dnaio_open_raise_limit(
             file,
             file2=file2,
             mode="w",
