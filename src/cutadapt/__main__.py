@@ -126,7 +126,7 @@ def get_argument_parser() -> ArgumentParser:
     group.add_argument("--version", action="version", help="Show version number and exit",
         version=__version__)
     group.add_argument("--debug", nargs="?", const=True, default=False,
-        choices=("trace",),
+        choices=("trace", ),
         help="Print debug log. 'trace' prints also DP matrices")
     group.add_argument("--profile", action="store_true", default=False, help=SUPPRESS)
     group.add_argument('-j', '--cores', type=int, default=1,
@@ -820,7 +820,7 @@ def log_header(cmdlineargs):
     logger.info("Command line parameters: %s", " ".join(cmdlineargs))
 
 
-def main_cli():
+def main_cli():  # pragma: no cover
     """Entry point for command-line script"""
     main(sys.argv[1:])
     return 0
@@ -952,5 +952,5 @@ def warn_if_en_dashes(args):
             )
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     sys.exit(main_cli())

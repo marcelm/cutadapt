@@ -485,7 +485,7 @@ class FrontAdapter(SingleAdapter):
         """
         alignment = self.aligner.locate(sequence)  # type: Optional[Tuple[int,int,int,int,int,int]]
         if self._debug:
-            print(self.aligner.dpmatrix)  # pragma: no cover
+            print(self.aligner.dpmatrix)
         if alignment is None:
             return None
         return RemoveBeforeMatch(*alignment, adapter=self, sequence=sequence)
@@ -540,7 +540,7 @@ class AnywhereAdapter(SingleAdapter):
         """
         alignment = self.aligner.locate(sequence.upper())
         if self._debug:
-            print(self.aligner.dpmatrix)  # pragma: no cover
+            print(self.aligner.dpmatrix)
         if alignment is None:
             return None
         # guess: if alignment starts at pos 0, it’s a 5' adapter
@@ -564,7 +564,7 @@ class NonInternalFrontAdapter(FrontAdapter):
         alignment = self.aligner.locate(sequence)
         if self._debug:
             try:
-                print(self.aligner.dpmatrix)  # pragma: no cover
+                print(self.aligner.dpmatrix)
             except AttributeError:
                 pass
         if alignment is None:

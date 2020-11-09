@@ -2,7 +2,7 @@ import os
 import shutil
 import sys
 import tempfile
-from io import StringIO
+from io import StringIO, BytesIO
 import pytest
 import subprocess
 
@@ -17,10 +17,44 @@ except ImportError:  # pragma: no cover
 del _unused
 
 
-def test_help(run):
+def test_does_not_close_stdout():
+    main([datapath("small.fastq")])
+    assert not sys.stdout.closed
+
+
+def test_help():
     with pytest.raises(SystemExit) as e:
         main(["--help"])
     assert e.value.args[0] == 0
+
+
+def test_unknown_file_format(tmp_path):
+    path = tmp_path / "unknown_format.txt"
+    path.write_text("raw text")
+    with pytest.raises(SystemExit):
+        main([str(path)])
+
+
+def test_cores_negative():
+    with pytest.raises(SystemExit) as e:
+        main(["--cores=-1", datapath("simple.fasta")])
+    assert e.value.args[0] == 2
+    # "cannot be negative"
+
+
+def test_quiet_and_report():
+    with pytest.raises(SystemExit) as e:
+        main(["--quiet", "--report=minimal", datapath("simple.fasta")])
+    assert e.value.args[0] == 2
+    # "Options --quiet and --report cannot be used at the same time"
+
+
+def test_debug():
+    main(["--debug", "--", datapath("small.fastq")])
+
+
+def test_debug_trace():
+    main(["--debug=trace", "-a", "ACGT", datapath("small.fastq")])
 
 
 def test_example(run):
@@ -484,17 +518,21 @@ def test_max_n(run):
 def test_quiet_is_quiet():
     captured_standard_output = StringIO()
     captured_standard_error = StringIO()
+    setattr(captured_standard_output, "buffer", BytesIO())
+    setattr(captured_standard_error, "buffer", BytesIO())
     old_stdout = sys.stdout
     old_stderr = sys.stderr
     try:
         sys.stdout = captured_standard_output
         sys.stderr = captured_standard_error
-        main(['-o', '/dev/null', '--quiet', '-a', 'XXXX', datapath('illumina.fastq.gz')])
+        main(['-o', '/dev/null', '--quiet', datapath('small.fastq')])
     finally:
         sys.stdout = old_stdout
         sys.stderr = old_stderr
     assert captured_standard_output.getvalue() == ''
     assert captured_standard_error.getvalue() == ''
+    assert getattr(captured_standard_output, "buffer").getvalue() == b''
+    assert getattr(captured_standard_output, "buffer").getvalue() == b''
 
 
 def test_x_brace_notation():

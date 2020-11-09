@@ -309,6 +309,7 @@ def test_indexed_prefix_adapters():
     assert match.adapter is adapters[0]
     match = ma.match_to("TGCTAA")
     assert match.adapter is adapters[1]
+    assert ma.match_to("GGGGGGG") is None
 
 
 def test_indexed_prefix_adapters_incorrect_type():
@@ -317,6 +318,23 @@ def test_indexed_prefix_adapters_incorrect_type():
             PrefixAdapter("GAAC", indels=False),
             SuffixAdapter("TGCT", indels=False),
         ])
+
+
+def test_indexed_very_similar(caplog):
+    IndexedPrefixAdapters([
+        PrefixAdapter("GAAC", max_errors=1, indels=False),
+        PrefixAdapter("GAAG", max_errors=1, indels=False),
+    ])
+    assert "cannot be assigned uniquely" in caplog.text
+
+
+def test_indexed_too_high_k():
+    with pytest.raises(ValueError) as e:
+        IndexedPrefixAdapters([
+            PrefixAdapter("ACGTACGT", max_errors=3, indels=False),
+            PrefixAdapter("AAGGTTCC", max_errors=2, indels=False),
+        ])
+    assert "Error rate too high" in e.value.args[0]
 
 
 def test_indexed_suffix_adapters():

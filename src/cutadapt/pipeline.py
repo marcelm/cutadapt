@@ -270,7 +270,7 @@ class Pipeline(ABC):
         assert self._outfiles is not None
         for f in self._outfiles:
             # TODO do not use hasattr
-            if f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
+            if f is not sys.stdin and f is not sys.stdout and f is not sys.stdout.buffer and hasattr(f, 'close'):
                 f.close()
         for outs in [self._outfiles.demultiplex_out, self._outfiles.demultiplex_out2]:
             if outs is not None:
@@ -847,7 +847,7 @@ class ParallelPipelineRunner(PipelineRunner):
     def close(self):
         for f in self._outfiles:
             # TODO do not use hasattr
-            if f is not sys.stdin and f is not sys.stdout and hasattr(f, 'close'):
+            if f is not sys.stdin and f is not sys.stdout and f is not sys.stdout.buffer and hasattr(f, 'close'):
                 f.close()
 
 
