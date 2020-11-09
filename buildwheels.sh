@@ -32,7 +32,7 @@ STRIP_FLAGS=${STRIP_FLAGS:-"-Wl,-strip-all"}
 export CFLAGS="${CFLAGS:-$STRIP_FLAGS}"
 export CXXFLAGS="${CXXFLAGS:-$STRIP_FLAGS}"
 
-for PYBIN in /opt/python/cp3[5678]-*/bin; do
+for PYBIN in /opt/python/cp3[6789]-*/bin; do
     ${PYBIN}/pip wheel --no-deps /io/ -w wheelhouse/
 done
 ls wheelhouse/
