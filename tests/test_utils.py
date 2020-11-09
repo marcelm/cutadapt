@@ -1,3 +1,4 @@
+from itertools import islice
 import dnaio
 
 from cutadapt.utils import (raise_open_files_limit, Progress, DummyProgress, reverse_complement,
@@ -14,8 +15,15 @@ def test_raise_open_files_limit():
 def test_progress():
     p = Progress()
     p.update(100)
+    p.update(100)
     p.update(1000)
     p.stop(100000)
+
+
+def test_progress_scissors():
+    sc = Progress.scissors(width=10)
+    for i in islice(sc, 0, 30):
+        next(sc)
 
 
 def test_dummy_progress():

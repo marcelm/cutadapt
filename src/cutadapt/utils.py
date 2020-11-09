@@ -94,8 +94,6 @@ class Progress:
         if not _final:
             if time_delta < self._every:
                 return
-            if total <= self._n:
-                return
 
         t = current_time - self._start_time
         hours = int(t) // 3600
