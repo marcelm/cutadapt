@@ -17,6 +17,12 @@ except ImportError:  # pragma: no cover
 del _unused
 
 
+def test_help(run):
+    with pytest.raises(SystemExit) as e:
+        main(["--help"])
+    assert e.value.args[0] == 0
+
+
 def test_example(run):
     run('-N -b ADAPTER', 'example.fa', 'example.fa')
 
