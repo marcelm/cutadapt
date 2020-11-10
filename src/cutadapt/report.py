@@ -291,7 +291,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
         kwargs['file'] = sio
         print(*args, **kwargs)
 
-    print_s("Finished in {:.2F} s ({:.0F} us/read; {:.2F} M reads/minute).".format(
+    print_s("Finished in {:.2F} s ({:.0F} µs/read; {:.2F} M reads/minute).".format(
         time, 1E6 * time / stats.n, stats.n / time * 60 / 1E6))
 
     report = "\n=== Summary ===\n\n"
