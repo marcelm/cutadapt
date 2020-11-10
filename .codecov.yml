@@ -1,5 +1,3 @@
-comment: off
-
 codecov:
   require_ci_to_pass: no
 
@@ -9,7 +7,11 @@ coverage:
   range: "90...100"
 
   status:
-    project: yes
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
     patch: no
     changes: no
 
