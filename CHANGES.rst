@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v3.0 (2020-11-10)
+-----------------
 
 * Demultiplexing on multiple cores is now supported. This was the last feature that
   only ran single-threaded.
