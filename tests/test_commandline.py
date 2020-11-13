@@ -1,7 +1,5 @@
-import os
-import shutil
+import subprocess
 import sys
-import tempfile
 from io import StringIO, BytesIO
 import pytest
 
@@ -469,9 +467,9 @@ def test_adapter_file_empty_name(run):
     run('-N -a file:' + datapath('adapter-empty-name.fasta'), 'illumina.fastq', 'illumina.fastq.gz')
 
 
-def test_demultiplex(cores):
-    tempdir = tempfile.mkdtemp(prefix='cutadapt-tests.')
-    multiout = os.path.join(tempdir, 'tmp-demulti.{name}.fasta')
+@pytest.mark.parametrize("ext", ["", ".gz"])
+def test_demultiplex(cores, tmp_path, ext):
+    multiout = str(tmp_path / 'tmp-demulti.{name}.fasta') + ext
     params = [
         '--cores', str(cores),
         '-a', 'first=AATTTCAGGAATT',
@@ -480,10 +478,13 @@ def test_demultiplex(cores):
         datapath('twoadapters.fasta'),
     ]
     main(params)
-    assert_files_equal(cutpath('twoadapters.first.fasta'), multiout.format(name='first'))
-    assert_files_equal(cutpath('twoadapters.second.fasta'), multiout.format(name='second'))
-    assert_files_equal(cutpath('twoadapters.unknown.fasta'), multiout.format(name='unknown'))
-    shutil.rmtree(tempdir)
+    for name in ("first", "second", "unknown"):
+        actual = multiout.format(name=name)
+        if ext == ".gz":
+            subprocess.run(["gzip", "-d", actual], check=True)
+            actual = actual[:-3]
+        expected = cutpath("twoadapters.{name}.fasta".format(name=name))
+        assert_files_equal(expected, actual)
 
 
 def test_multiple_fake_anchored_adapters(run):
