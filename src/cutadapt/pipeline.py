@@ -764,7 +764,7 @@ class ParallelPipelineRunner(PipelineRunner):
         self._need_work_queue = Queue()  # type: Queue
         self._buffer_size = buffer_size
         self._assign_input(infiles.path1, infiles.path2, infiles.interleaved)
-        self._assign_output(outfiles)
+        self._outfiles = outfiles
 
     def _assign_input(
         self,
@@ -787,9 +787,6 @@ class ParallelPipelineRunner(PipelineRunner):
             self._need_work_queue, self._buffer_size, fileno)
         self._reader_process.daemon = True
         self._reader_process.start()
-
-    def _assign_output(self, outfiles: OutputFiles) -> None:
-        self._outfiles = outfiles
 
     def _start_workers(self) -> Tuple[List[WorkerProcess], List[Connection]]:
         workers = []
