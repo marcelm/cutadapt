@@ -120,7 +120,7 @@ class OutputFiles:
                     assert f is not None
                     yield f
 
-    def as_bytesio(self):
+    def as_bytesio(self) -> "OutputFiles":
         """
         Create a new OutputFiles instance that has BytesIO instances for each non-None output file
         """
@@ -174,7 +174,7 @@ class Pipeline(ABC):
         self.discard_untrimmed = False
         self.file_opener = file_opener
 
-    def connect_io(self, infiles: InputFiles, outfiles: OutputFiles):
+    def connect_io(self, infiles: InputFiles, outfiles: OutputFiles) -> None:
         self._infiles = infiles
         self._reader = infiles.open()
         self._set_output(outfiles)
@@ -188,7 +188,7 @@ class Pipeline(ABC):
     ):
         pass
 
-    def _set_output(self, outfiles: OutputFiles):
+    def _set_output(self, outfiles: OutputFiles) -> None:
         self._filters = []
         self._outfiles = outfiles
         filter_wrapper = self._filter_wrapper()
@@ -290,7 +290,7 @@ class Pipeline(ABC):
         return self._reader.delivers_qualities
 
     @abstractmethod
-    def process_reads(self, progress: Progress = None):
+    def process_reads(self, progress: Progress = None) -> Tuple[int, int, Optional[int]]:
         pass
 
     @abstractmethod
@@ -323,7 +323,7 @@ class SingleEndPipeline(Pipeline):
             raise ValueError("Modifier must not be None")
         self._modifiers.append(modifier)
 
-    def process_reads(self, progress: Progress = None):
+    def process_reads(self, progress: Progress = None) -> Tuple[int, int, Optional[int]]:
         """Run the pipeline. Return statistics"""
         n = 0  # no. of processed reads
         total_bp = 0
@@ -409,7 +409,7 @@ class PairedEndPipeline(Pipeline):
         # Whether to ignore pair_filter mode for discard-untrimmed filter
         self.override_untrimmed_pair_filter = False
 
-    def add(self, modifier1: Optional[SingleEndModifier], modifier2: Optional[SingleEndModifier]):
+    def add(self, modifier1: Optional[SingleEndModifier], modifier2: Optional[SingleEndModifier]) -> None:
         """
         Add a modifier for R1 and R2. One of them can be None, in which case the modifier
         will only be added for the respective read.
@@ -418,18 +418,18 @@ class PairedEndPipeline(Pipeline):
             raise ValueError("Not both modifiers can be None")
         self._modifiers.append(PairedModifierWrapper(modifier1, modifier2))
 
-    def add_both(self, modifier: SingleEndModifier):
+    def add_both(self, modifier: SingleEndModifier) -> None:
         """
         Add one modifier for both R1 and R2
         """
         assert modifier is not None
         self._modifiers.append(PairedModifierWrapper(modifier, copy.copy(modifier)))
 
-    def add_paired_modifier(self, paired_modifier: PairedModifier):
+    def add_paired_modifier(self, paired_modifier: PairedModifier) -> None:
         """Add a Modifier (without wrapping it in a PairedModifierWrapper)"""
         self._modifiers.append(paired_modifier)
 
-    def process_reads(self, progress: Progress = None):
+    def process_reads(self, progress: Progress = None) -> Tuple[int, int, Optional[int]]:
         n = 0  # no. of processed reads
         total1_bp = 0
         total2_bp = 0
@@ -601,8 +601,17 @@ class WorkerProcess(Process):
     To notify the reader process that it wants data, it puts its own identifier into the
     need_work_queue before attempting to read data from the read_pipe.
     """
-    def __init__(self, id_, pipeline, two_input_files,
-            interleaved_input, orig_outfiles, read_pipe, write_pipe, need_work_queue):
+    def __init__(
+        self,
+        id_: int,
+        pipeline: Pipeline,
+        two_input_files: bool,
+        interleaved_input: bool,
+        orig_outfiles: OutputFiles,
+        read_pipe: Connection,
+        write_pipe: Connection,
+        need_work_queue: Queue,
+    ):
         super().__init__()
         self._id = id_
         self._pipeline = pipeline
@@ -762,7 +771,7 @@ class ParallelPipelineRunner(PipelineRunner):
         path1: str,
         path2: Optional[str] = None,
         interleaved: bool = False,
-    ):
+    ) -> None:
         self._two_input_files = path2 is not None
         self._interleaved_input = interleaved
         # the workers read from these connections
@@ -779,7 +788,7 @@ class ParallelPipelineRunner(PipelineRunner):
         self._reader_process.daemon = True
         self._reader_process.start()
 
-    def _assign_output(self, outfiles: OutputFiles):
+    def _assign_output(self, outfiles: OutputFiles) -> None:
         self._outfiles = outfiles
 
     def _start_workers(self) -> Tuple[List[WorkerProcess], List[Connection]]:
@@ -798,7 +807,7 @@ class ParallelPipelineRunner(PipelineRunner):
             workers.append(worker)
         return workers, connections
 
-    def run(self):
+    def run(self) -> Statistics:
         workers, connections = self._start_workers()
         writers = []
         for f in self._outfiles:
@@ -808,6 +817,7 @@ class ParallelPipelineRunner(PipelineRunner):
         while connections:
             ready_connections = multiprocessing.connection.wait(connections)
             for connection in ready_connections:
+                assert isinstance(connection, Connection)
                 chunk_index = connection.recv()
                 if chunk_index == -1:
                     # the worker is done
@@ -851,9 +861,10 @@ class ParallelPipelineRunner(PipelineRunner):
             w.join()
         self._reader_process.join()
         self._progress.stop(n)
+        assert isinstance(stats, Statistics)
         return stats
 
-    def close(self):
+    def close(self) -> None:
         self._outfiles.close()
 
 
@@ -872,12 +883,14 @@ class SerialPipelineRunner(PipelineRunner):
         super().__init__(pipeline, progress)
         self._pipeline.connect_io(infiles, outfiles)
 
-    def run(self):
+    def run(self) -> Statistics:
         (n, total1_bp, total2_bp) = self._pipeline.process_reads(progress=self._progress)
         if self._progress:
             self._progress.stop(n)
         # TODO
-        return Statistics().collect(n, total1_bp, total2_bp, self._pipeline._modifiers, self._pipeline._filters)
+        modifiers = getattr(self._pipeline, "_modifiers", None)
+        assert modifiers is not None
+        return Statistics().collect(n, total1_bp, total2_bp, modifiers, self._pipeline._filters)
 
-    def close(self):
+    def close(self) -> None:
         self._pipeline.close()
