@@ -141,6 +141,13 @@ class OutputFiles:
                 result.demultiplex_out2[k] = io.BytesIO()
         return result
 
+    def close(self) -> None:
+        """Close all output files that are not stdout"""
+        for f in self:
+            if f is sys.stdout or f is sys.stdout.buffer:
+                continue
+            f.close()
+
 
 class Pipeline(ABC):
     """
@@ -261,20 +268,21 @@ class Pipeline(ABC):
             f.flush()
 
     def close(self) -> None:
+        self._close_input()
+        self._close_output()
+
+    def _close_input(self) -> None:
         self._reader.close()
         if self._infiles is not None:
             self._infiles.close()
+
+    def _close_output(self) -> None:
         for f in self._textiowrappers:
-            f.close()  # This also closes the underlying files; a second close occurs below
+            f.close()
+        # Closing a TextIOWrapper also closes the underlying file, so
+        # this closes some files a second time.
         assert self._outfiles is not None
-        for f in self._outfiles:
-            # TODO do not use hasattr
-            if f is not sys.stdin and f is not sys.stdout and f is not sys.stdout.buffer and hasattr(f, 'close'):
-                f.close()
-        for outs in [self._outfiles.demultiplex_out, self._outfiles.demultiplex_out2]:
-            if outs is not None:
-                for out in outs.values():
-                    out.close()
+        self._outfiles.close()
 
     @property
     def uses_qualities(self) -> bool:
@@ -846,10 +854,7 @@ class ParallelPipelineRunner(PipelineRunner):
         return stats
 
     def close(self):
-        for f in self._outfiles:
-            # TODO do not use hasattr
-            if f is not sys.stdin and f is not sys.stdout and f is not sys.stdout.buffer and hasattr(f, 'close'):
-                f.close()
+        self._outfiles.close()
 
 
 class SerialPipelineRunner(PipelineRunner):
