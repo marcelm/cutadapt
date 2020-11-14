@@ -812,7 +812,7 @@ class ParallelPipelineRunner(PipelineRunner):
         writers = []
         for f in self._outfiles:
             writers.append(OrderedChunkWriter(f))
-        stats = None
+        stats = Statistics()
         n = 0  # A running total of the number of processed reads (for progress indicator)
         while connections:
             ready_connections = multiprocessing.connection.wait(connections)
@@ -829,10 +829,7 @@ class ParallelPipelineRunner(PipelineRunner):
                         e, tb_str = connection.recv()
                         logger.error('%s', tb_str)
                         raise e
-                    if stats is None:
-                        stats = cur_stats
-                    else:
-                        stats += cur_stats
+                    stats += cur_stats
                     connections.remove(connection)
                     continue
                 elif chunk_index == -2:
@@ -861,7 +858,6 @@ class ParallelPipelineRunner(PipelineRunner):
             w.join()
         self._reader_process.join()
         self._progress.stop(n)
-        assert isinstance(stats, Statistics)
         return stats
 
     def close(self) -> None:
