@@ -4,7 +4,7 @@ import sys
 import copy
 import logging
 import functools
-from typing import List, IO, Optional, BinaryIO, TextIO, Any, Tuple, Dict
+from typing import List, Optional, BinaryIO, TextIO, Any, Tuple, Dict
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe, Queue
 from pathlib import Path
@@ -150,7 +150,6 @@ class Pipeline(ABC):
     paired = False
 
     def __init__(self, file_opener: FileOpener):
-        self._close_files = []  # type: List[IO]
         self._reader = None  # type: Any
         self._filters = []  # type: List[Any]
         self._infiles = None  # type: Optional[InputFiles]
