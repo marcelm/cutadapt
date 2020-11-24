@@ -13,8 +13,8 @@ def test_run_cutadapt_process():
 def test_run_as_module():
     """Check that "python3 -m cutadapt ..." works"""
     from cutadapt import __version__
-    py = subprocess.Popen([sys.executable, "-m", "cutadapt", "--version"], stdout=subprocess.PIPE)
-    assert py.communicate()[0].decode().strip() == __version__
+    with subprocess.Popen([sys.executable, "-m", "cutadapt", "--version"], stdout=subprocess.PIPE) as py:
+        assert py.communicate()[0].decode().strip() == __version__
 
 
 def test_standard_input_pipe(tmpdir, cores):
