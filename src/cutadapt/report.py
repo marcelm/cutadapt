@@ -1,6 +1,7 @@
 """
 Routines for printing a report.
 """
+import sys
 from io import StringIO
 import textwrap
 from collections import Counter
@@ -291,8 +292,12 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
         kwargs['file'] = sio
         print(*args, **kwargs)
 
-    print_s("Finished in {:.2F} s ({:.0F} µs/read; {:.2F} M reads/minute).".format(
-        time, 1E6 * time / stats.n, stats.n / time * 60 / 1E6))
+    if sys.version_info[:2] <= (3, 6):
+        micro = "u"
+    else:
+        micro = "µ"
+    print_s("Finished in {:.2F} s ({:.0F} {}s/read; {:.2F} M reads/minute).".format(
+        time, 1E6 * time / stats.n, micro, stats.n / time * 60 / 1E6))
 
     report = "\n=== Summary ===\n\n"
     if stats.paired:

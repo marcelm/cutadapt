@@ -70,3 +70,10 @@ def test_force_fasta_output(tmpdir, cores):
             stdout=out_file)
         _ = py.communicate()
     assert_files_equal(cutpath("small.fasta"), out_path)
+
+
+def test_non_utf8_locale():
+    subprocess.check_call(
+        [sys.executable, "-m", "cutadapt", "-o", "/dev/null", datapath("small.fastq")],
+        env={"LC_CTYPE": "C"},
+    )
