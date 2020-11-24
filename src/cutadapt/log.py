@@ -6,6 +6,17 @@ import logging
 REPORT = 25
 
 
+class CrashingHandler(logging.StreamHandler):
+
+    def emit(self, record):
+        """Unlike the method it overrides, this will not catch exceptions"""
+        msg = self.format(record)
+        stream = self.stream
+        stream.write(msg)
+        stream.write(self.terminator)
+        self.flush()
+
+
 class NiceFormatter(logging.Formatter):
     """
     Do not prefix "INFO:" to info-level log messages (but do it for all other
@@ -30,7 +41,7 @@ def setup_logging(logger, stdout=False, minimal=False, quiet=False, debug=False)
 
     # Due to backwards compatibility, logging output is sent to standard output
     # instead of standard error if the -o option is used.
-    stream_handler = logging.StreamHandler(sys.stdout if stdout else sys.stderr)
+    stream_handler = CrashingHandler(sys.stdout if stdout else sys.stderr)
     stream_handler.setFormatter(NiceFormatter())
     # debug overrides quiet overrides minimal
     if debug:
