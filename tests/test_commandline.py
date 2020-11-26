@@ -53,7 +53,7 @@ def test_debug():
 
 
 def test_debug_trace():
-    main(["--debug=trace", "-a", "ACGT", datapath("small.fastq")])
+    main(["--debug", "--debug", "-a", "ACGT", datapath("small.fastq")])
 
 
 def test_example(run):
