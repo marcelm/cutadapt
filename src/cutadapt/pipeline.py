@@ -604,7 +604,9 @@ class WorkerProcess(Process):
         self._read_pipe = read_pipe
         self._write_pipe = write_pipe
         self._need_work_queue = need_work_queue
-        self._original_outfiles = orig_outfiles
+        # Do not store orig_outfiles directly because it contains
+        # _io.BufferedWriter attributes, which cannot be pickled.
+        self._original_outfiles = orig_outfiles.as_bytesio()
 
     def run(self):
         try:
