@@ -39,8 +39,6 @@ def setup_logging(logger, stdout=False, minimal=False, quiet=False, debug=0):
     # INFO level (and the ERROR level would give us an 'ERROR:' prefix).
     logging.addLevelName(REPORT, 'REPORT')
 
-    # Due to backwards compatibility, logging output is sent to standard output
-    # instead of standard error if the -o option is used.
     stream_handler = CrashingHandler(sys.stdout if stdout else sys.stderr)
     stream_handler.setFormatter(NiceFormatter())
     # debug overrides quiet overrides minimal

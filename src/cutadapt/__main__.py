@@ -836,11 +836,11 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     start_time = time.time()
     parser = get_argument_parser()
     args, leftover_args = parser.parse_known_args(args=cmdlineargs)
-    # log to stderr if results are to be sent to stdout
-    log_to_stdout = args.output is not None and args.output != "-" and args.paired_output != "-"
     # Setup logging only if there are not already any handlers (can happen when
     # this function is being called externally such as from unit tests)
     if not logging.root.handlers:
+        # If results are to be sent to stdout, logging needs to go to stderr
+        log_to_stdout = args.output is not None and args.output != "-" and args.paired_output != "-"
         setup_logging(logger, stdout=log_to_stdout,
             quiet=args.quiet, minimal=args.report == 'minimal', debug=args.debug)
     log_header(cmdlineargs)
