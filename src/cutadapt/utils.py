@@ -194,6 +194,7 @@ class FileOpener:
             f = self.dnaio_open(*args, **kwargs)
         except OSError as e:
             if e.errno == errno.EMFILE:  # Too many open files
+                logger.debug("Too many open files, attempting to raise soft limit")
                 raise_open_files_limit(8)
                 f = self.dnaio_open(*args, **kwargs)
             else:
