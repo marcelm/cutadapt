@@ -329,9 +329,7 @@ def _generate_adapter_name(_start=[1]) -> str:
     return name
 
 
-class Adapter(ABC):
-
-    description = "adapter with one component"  # this is overriden in subclasses
+class Matchable(ABC):
 
     def __init__(self, name: str, *args, **kwargs):
         self.name = name
@@ -342,6 +340,15 @@ class Adapter(ABC):
 
     @abstractmethod
     def match_to(self, sequence: str):
+        pass
+
+
+class Adapter(Matchable, ABC):
+
+    description = "adapter with one component"  # this is overriden in subclasses
+
+    @abstractmethod
+    def create_statistics(self) -> AdapterStatistics:
         pass
 
 
@@ -707,11 +714,11 @@ class LinkedAdapter(Adapter):
 
     def __init__(
         self,
-        front_adapter,
-        back_adapter,
-        front_required,
-        back_required,
-        name,
+        front_adapter: SingleAdapter,
+        back_adapter: SingleAdapter,
+        front_required: bool,
+        back_required: bool,
+        name: str,
     ):
         super().__init__(name)
         self.front_required = front_required
@@ -754,11 +761,11 @@ class LinkedAdapter(Adapter):
         return None
 
 
-class MultipleAdapters(Adapter):
+class MultipleAdapters(Matchable):
     """
     Represent multiple adapters at once
     """
-    def __init__(self, adapters: Sequence[Adapter]):
+    def __init__(self, adapters: Sequence[Matchable]):
         super().__init__(name="multiple_adapters")
         self._adapters = adapters
 
@@ -792,7 +799,7 @@ class MultipleAdapters(Adapter):
         return best_match
 
 
-class IndexedAdapters(Adapter, ABC):
+class IndexedAdapters(Matchable, ABC):
     """
     Represent multiple adapters of the same type at once and use an index data structure
     to speed up matching. This acts like a "normal" Adapter as it provides a match_to

@@ -352,7 +352,7 @@ class AdapterParser:
             raise ValueError("'anywhere' (-b) adapters may not be linked")
         front_spec = AdapterSpecification.parse(spec1, 'front')
         back_spec = AdapterSpecification.parse(spec2, 'back')
-        if not name:
+        if name is None:
             name = front_spec.name
 
         front_anchored = front_spec.restriction is not None

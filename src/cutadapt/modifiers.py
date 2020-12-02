@@ -9,7 +9,8 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 
 from .qualtrim import quality_trim_index, nextseq_trim_index
-from .adapters import MultipleAdapters, SingleAdapter, IndexedPrefixAdapters, IndexedSuffixAdapters, Match, remainder
+from .adapters import MultipleAdapters, SingleAdapter, IndexedPrefixAdapters, IndexedSuffixAdapters, \
+    Match, remainder, Adapter
 from .utils import reverse_complemented_sequence
 
 
@@ -76,7 +77,7 @@ class AdapterCutter(SingleEndModifier):
 
     def __init__(
         self,
-        adapters: List[SingleAdapter],
+        adapters: List[Adapter],
         times: int = 1,
         action: Optional[str] = "trim",
         index: bool = True,
