@@ -152,6 +152,10 @@ class Match(ABC):
         pass
 
     @abstractmethod
+    def retained_adapter_interval(self) -> Tuple[int, int]:
+        pass
+
+    @abstractmethod
     def get_info_records(self, read) -> List[List]:
         pass
 
@@ -271,6 +275,9 @@ class RemoveBeforeMatch(SingleMatch):
         """
         return self.rstop, len(self.sequence)
 
+    def retained_adapter_interval(self) -> Tuple[int, int]:
+        return self.rstart, len(self.sequence)
+
     def trim_slice(self):
         # Same as remainder_interval, but as a slice() object
         return slice(self.rstop, None)
@@ -305,6 +312,9 @@ class RemoveAfterMatch(SingleMatch):
         remain after trimming
         """
         return 0, self.rstart
+
+    def retained_adapter_interval(self) -> Tuple[int, int]:
+        return 0, self.rstop
 
     def trim_slice(self):
         # Same as remainder_interval, but as a slice() object
@@ -691,6 +701,18 @@ class LinkedMatch(Match):
     def remainder_interval(self) -> Tuple[int, int]:
         matches = [match for match in [self.front_match, self.back_match] if match is not None]
         return remainder(matches)
+
+    def retained_adapter_interval(self) -> Tuple[int, int]:
+        if self.front_match:
+            start = self.front_match.rstart
+            offset = self.front_match.rstop
+        else:
+            start = offset = 0
+        if self.back_match:
+            end = self.back_match.rstop + offset
+        else:
+            end = len(self.front_match.sequence)
+        return start, end
 
     def get_info_records(self, read) -> List[List]:
         records = []

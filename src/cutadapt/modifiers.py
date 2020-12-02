@@ -83,12 +83,17 @@ class AdapterCutter(SingleEndModifier):
         index: bool = True,
     ):
         """
-        action -- What to do with a found adapter: None, 'trim', 'mask' or 'lowercase'
+        action -- What to do with a found adapter:
+          None: Do nothing, only update the ModificationInfo appropriately
+          "trim": Remove the adapter and down- or upstream sequence depending on adapter type
+          "mask": Replace the part of the sequence that would have been removed with "N" bases
+          "lowercase": Convert the part of the sequence that would have been removed to lowercase
+          "retain": Like "trim", but leave the adapter sequence itself in the read
 
         index -- if True, an adapter index (for multiple adapters) is created if possible
         """
         self.times = times
-        assert action in ('trim', 'mask', 'lowercase', None)
+        assert action in ("trim", "mask", "lowercase", "retain", None)
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
@@ -96,6 +101,8 @@ class AdapterCutter(SingleEndModifier):
             self.adapters = MultipleAdapters(self._regroup_into_indexed_adapters(adapters))
         else:
             self.adapters = MultipleAdapters(adapters)
+        if action == "retain" and times > 1:
+            raise ValueError("'retain' cannot be combined with times > 1")
 
     def __repr__(self):
         return 'AdapterCutter(adapters={!r}, times={}, action={!r})'.format(
@@ -143,6 +150,11 @@ class AdapterCutter(SingleEndModifier):
         return prefix, suffix, other
 
     @staticmethod
+    def trim_but_retain_adapter(read, matches: Sequence[Match]):
+        start, stop = matches[-1].retained_adapter_interval()
+        return read[start:stop]
+
+    @staticmethod
     def masked_read(read, matches: Sequence[Match]):
         start, stop = remainder(matches)
         result = read[:]
@@ -175,7 +187,7 @@ class AdapterCutter(SingleEndModifier):
     def match_and_trim(self, read):
         """
         Search for the best-matching adapter in a read, perform the requested action
-        ('trim', 'mask', 'lowercase' or None as determined by self.action) and return the
+        ('trim', 'mask' etc. as determined by self.action) and return the
         (possibly) modified read.
 
         *self.times* adapter removal rounds are done. During each round,
@@ -185,7 +197,7 @@ class AdapterCutter(SingleEndModifier):
         Return a pair (trimmed_read, matches), where matches is a list of Match instances.
         """
         matches = []
-        if self.action == 'lowercase':
+        if self.action == 'lowercase':  # TODO this should not be needed
             read.sequence = read.sequence.upper()
         trimmed_read = read
         for _ in range(self.times):
@@ -202,12 +214,14 @@ class AdapterCutter(SingleEndModifier):
         if self.action == 'trim':
             # read is already trimmed, nothing to do
             pass
+        elif self.action == 'retain':
+            trimmed_read = self.trim_but_retain_adapter(read, matches)
         elif self.action == 'mask':
             trimmed_read = self.masked_read(read, matches)
         elif self.action == 'lowercase':
             trimmed_read = self.lowercased_read(read, matches)
             assert len(trimmed_read.sequence) == len(read)
-        elif self.action is None:  # --no-trim
+        elif self.action is None:
             trimmed_read = read[:]
 
         return trimmed_read, matches
@@ -322,6 +336,8 @@ class PairedAdapterCutter(PairedModifier):
             elif self.action == 'lowercase':
                 trimmed_read = AdapterCutter.lowercased_read(read, [match])
                 assert len(trimmed_read.sequence) == len(read)
+            elif self.action == 'retain':
+                trimmed_read = AdapterCutter.trim_but_retain_adapter(read, [match])
             elif self.action is None:  # --no-trim
                 trimmed_read = read[:]
             result.append(trimmed_read)

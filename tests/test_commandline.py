@@ -227,6 +227,15 @@ def test_action_lowercase(run):
     run("-b CAAG -n 3 --action=lowercase", "action_lowercase.fasta", "action_lowercase.fasta")
 
 
+def test_action_retain(run):
+    run("-g GGTTAACC -a CAAG --action=retain", "action_retain.fasta", "action_retain.fasta")
+
+
+def test_action_retain_times():
+    with pytest.raises(SystemExit):
+        main(["-a", "ACGT", "--times=2", "--action=retain", datapath("small.fastq")])
+
+
 def test_gz_multiblock(run):
     """compressed gz file with multiple blocks (created by concatenating two .gz files)"""
     run("-b TTAGACATATCTCCGTCG", "small.fastq", "multiblock.fastq.gz")

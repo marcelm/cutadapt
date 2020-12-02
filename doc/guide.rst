@@ -903,25 +903,47 @@ This section describes in which ways reads can be modified other than adapter
 removal.
 
 
-Not trimming adapters
----------------------
+.. _changing-what-is-done-when-an-adapter-is-found:
+.. _action:
 
-Instead of removing an adapter from a read, it is also possible to take other
-actions when an adapter is found by specifying the ``--action`` option.
+``--action`` changes what is done when an adapter is found
+----------------------------------------------------------
 
-The default is ``--action=trim``, which will remove the adapter and either
-the sequence before or after it from the read.
+The ``--action`` option can be used to change what is done when an adapter match
+is found in a read.
 
-Use ``--action=none`` to not remove the adapter from the read. This is useful
-when combined with other options, such as ``--untrimmed-output``, which
-will redirect the reads without adapter to a different file. Other read
-modification options (as listed below) may still change the read.
+The default is ``--action=trim``, which will remove the adapter and the
+sequence before or after it from the read. For 5' adapters, the adapter and
+the sequence preceding it is removed. For 3' adapters, the adapter and the
+sequence following it is removed. Since linked adapters are a combination of
+a 5' and 3' adapter, in effect only the sequence between the 5' and the 3'
+adapter matches is kept.
 
-Use ``--action=mask`` to write ``N`` characters to that parts of the read
-that would otherwise have been removed .
+With ``--action=retain``, the read is trimmed, but the adapter sequence itself
+is not removed. Up- and downstream sequences are removed in the same way as
+for the ``trim`` action. For linked adapters, both adapter sequences are kept.
 
-Use ``--action=lowercase`` to change to lowercase that part of the read that would otherwise
-have been removed. The rest is converted to uppercase.
+.. note::
+    Because it is somewhat unclear what should happen, ``--action=retain`` can
+    at the moment not be combined with ``--times`` (multiple rounds of adapter
+    removal).
+
+Use ``--action=none`` to not change the read even if there is a match.
+This is useful because the statistics will still be updated as before
+and because the read will still be considered "trimmed" for the read
+filtering options. Combining this with ``--untrimmed-output``, for
+example, can be used to copy reads without adapters to a different
+file. Other read modification options, if used, may still change
+the read.
+
+Use ``--action=mask`` to write ``N`` characters to those parts of the read
+that would otherwise have been removed.
+
+Use ``--action=lowercase`` to change to lowercase those parts of the read that
+would otherwise have been removed. The rest is converted to uppercase.
+
+.. versionadded:: 3.1
+    The ``retain`` action.
 
 
 .. _cut-bases:

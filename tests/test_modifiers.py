@@ -1,7 +1,10 @@
+from typing import List
+
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import BackAdapter, PrefixAdapter, IndexedPrefixAdapters
+from cutadapt.adapters import BackAdapter, PrefixAdapter, IndexedPrefixAdapters, LinkedAdapter, \
+    FrontAdapter, Adapter
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
     Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo, ZeroCapper)
 
@@ -80,7 +83,8 @@ def test_adapter_cutter_indexing():
     (None, "CCCCGGTTAACCCC", "TTTTAACCGGTTTT"),
     ("trim", "CCCC", "TTTT"),
     ("lowercase", "CCCCggttaacccc", "TTTTaaccggtttt"),
-    ("mask", "CCCCNNNNNNNNNN", "TTTTNNNNNNNNNN")
+    ("mask", "CCCCNNNNNNNNNN", "TTTTNNNNNNNNNN"),
+    ("retain", "CCCCGGTTAA", "TTTTAACCGG"),
 ])
 def test_paired_adapter_cutter_actions(action, expected_trimmed1, expected_trimmed2):
     a1 = BackAdapter("GGTTAA")
@@ -93,3 +97,37 @@ def test_paired_adapter_cutter_actions(action, expected_trimmed1, expected_trimm
     trimmed1, trimmed2 = pac(s1, s2, info1, info2)
     assert expected_trimmed1 == trimmed1.sequence
     assert expected_trimmed2 == trimmed2.sequence
+
+
+def test_retain_times():
+    with pytest.raises(ValueError) as e:
+        AdapterCutter([BackAdapter("ACGT")], times=2, action="retain")
+    assert "cannot be combined with times" in e.value.args[0]
+
+
+def test_action_retain():
+    back = BackAdapter("AACCGG")
+    ac = AdapterCutter([back], action="retain")
+    seq = Sequence("r1", "ATTGCCAACCGGTATATAT")
+    info = ModificationInfo(seq)
+    trimmed = ac(seq, info)
+    assert "ATTGCCAACCGG" == trimmed.sequence
+
+
+@pytest.mark.parametrize("s,expected", [
+    ("ATTATTggttaaccAAAAAaaccggTATT", "ggttaaccAAAAAaaccgg"),
+    ("AAAAAaaccggTATT", "AAAAAaaccgg"),
+    ("ATTATTggttaaccAAAAA", "ggttaaccAAAAA"),
+    ("ATTATT", "ATTATT"),
+])
+def test_linked_action_retain(s, expected):
+    front = FrontAdapter("GGTTAACC")
+    back = BackAdapter("AACCGG")
+    adapters: List[Adapter] = [
+        LinkedAdapter(front, back, front_required=False, back_required=False, name="linked")
+    ]
+    ac = AdapterCutter(adapters, action="retain")
+    seq = Sequence("r1", s)
+    info = ModificationInfo(seq)
+    trimmed = ac(seq, info)
+    assert expected == trimmed.sequence

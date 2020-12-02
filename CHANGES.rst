@@ -2,6 +2,14 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`443`: With ``--action=retain``, it is now possible to trim reads while
+  leaving the adapter sequence itself in the read. That is, only the sequence
+  before (for 5’ adapters) or after (for 3’ adapters) is removed. With linked adapters,
+  both adapters are retained.
+
 v3.0 (2020-11-10)
 -----------------
 

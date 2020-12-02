@@ -191,12 +191,14 @@ def get_argument_parser() -> ArgumentParser:
     group.add_argument("-N", "--no-match-adapter-wildcards", action="store_false",
         default=True, dest='match_adapter_wildcards',
         help="Do not interpret IUPAC wildcards in adapters.")
-    group.add_argument("--action", choices=('trim', 'mask', 'lowercase', 'none'), default='trim',
-        help="What to do with found adapters. "
+    group.add_argument("--action", choices=("trim", "retain", "mask", "lowercase", "none"),
+        default="trim",
+        help="What to do if a match was found. "
+            "trim: trim adapter and up- or downstream sequence; "
+            "retain: trim, but retain adapter; "
             "mask: replace with 'N' characters; "
             "lowercase: convert to lowercase; "
-            "none: leave unchanged (useful with "
-            "--discard-untrimmed). Default: %(default)s")
+            "none: leave unchanged. Default: %(default)s")
     group.add_argument("--rc", "--revcomp", dest="reverse_complement", default=False,
         action="store_true",
         help="Check both the read and its reverse complement for adapter matches. If "
@@ -775,10 +777,13 @@ def add_adapter_cutter(
         pipeline.add_paired_modifier(cutter)
     else:
         adapter_cutter, adapter_cutter2 = None, None
-        if adapters:
-            adapter_cutter = AdapterCutter(adapters, times, action, allow_index)
-        if adapters2:
-            adapter_cutter2 = AdapterCutter(adapters2, times, action, allow_index)
+        try:
+            if adapters:
+                adapter_cutter = AdapterCutter(adapters, times, action, allow_index)
+            if adapters2:
+                adapter_cutter2 = AdapterCutter(adapters2, times, action, allow_index)
+        except ValueError as e:
+            raise CommandLineError(e)
         if paired:
             if reverse_complement:
                 raise CommandLineError("--revcomp not implemented for paired-end reads")
