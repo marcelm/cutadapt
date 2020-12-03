@@ -16,7 +16,7 @@ manylinux=quay.io/pypa/manylinux2010_x86_64
 
 # For convenience, if this script is called from outside of a docker container,
 # it starts a container and runs itself inside of it.
-if ! grep -q docker /proc/1/cgroup; then
+if ! grep -q docker /proc/1/cgroup && ! test -d /opt/python; then
   # We are not inside a container
   docker pull ${manylinux}
   exec docker run --rm -v $(pwd):/io ${manylinux} /io/$0
