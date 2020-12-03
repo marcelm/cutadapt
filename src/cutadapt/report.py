@@ -330,7 +330,8 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     if stats.too_many_n is not None:
         report += "{pairs_or_reads} with too many N:           {o.too_many_n:13,d} ({o.too_many_n_fraction:.1%})\n"
     if stats.casava_filtered is not None:
-        report += "{pairs_or_reads} failing CASAVA filter:     {o.casava_filtered:13,d} ({o.casava_filtered_fraction:.1%})\n"
+        report += "{pairs_or_reads} failed CASAVA filter:       " \
+                  "{o.casava_filtered:13,d} ({o.casava_filtered_fraction:.1%})\n"
 
     report += textwrap.dedent("""\
     {pairs_or_reads} written (passing filters): {o.written:13,d} ({o.written_fraction:.1%})
