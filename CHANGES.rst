@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v3.1 (2020-12-03)
+-----------------
 
 * :issue:`443`: With ``--action=retain``, it is now possible to trim reads while
   leaving the adapter sequence itself in the read. That is, only the sequence
@@ -12,6 +12,8 @@ development version
 * :issue:`495`: Running with multiple cores did not work using macOS and Python 3.8+.
   To prevent problems like these in the future, automated testing has been extended
   to also run on macOS.
+* :issue:`482`: Print statistics for ``--discard-casava`` and ``--max-ee`` in the
+  report.
 * :issue:`497`: The changelog for 3.0 previously forgot to mention that the following
   options, which were deprecated in version 2.0, have now been removed, and
   using them will lead to an error: ``--format``, ``--colorspace``, ``-c``, ``-d``,
