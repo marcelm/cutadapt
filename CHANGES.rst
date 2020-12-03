@@ -9,6 +9,9 @@ development version
   leaving the adapter sequence itself in the read. That is, only the sequence
   before (for 5’ adapters) or after (for 3’ adapters) is removed. With linked
   adapters, both adapters are retained.
+* :issue:`495`: Running with multiple cores did not work using macOS and Python 3.8+.
+  To prevent problems like these in the future, automated testing has been extended
+  to also run on macOS.
 * :issue:`497`: The changelog for 3.0 previously forgot to mention that the following
   options, which were deprecated in version 2.0, have now been removed, and
   using them will lead to an error: ``--format``, ``--colorspace``, ``-c``, ``-d``,
