@@ -127,10 +127,10 @@ class Statistics:
                 self.too_long = w.filtered
             elif isinstance(w.filter, NContentFilter):
                 self.too_many_n = w.filtered
-            elif isinstance(w.filter, CasavaFilter):
-                self.casava_filtered = w.filtered
             elif isinstance(w.filter, MaximumExpectedErrorsFilter):
                 self.too_many_expected_errors = w.filtered
+            elif isinstance(w.filter, CasavaFilter):
+                self.casava_filtered = w.filtered
 
     def _collect_modifier(self, m: SingleEndModifier):
         if isinstance(m, PairedAdapterCutter):
@@ -339,12 +339,12 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
         report += "{pairs_or_reads} that were too long:        {o.too_long:13,d} ({o.too_long_fraction:.1%})\n"
     if stats.too_many_n is not None:
         report += "{pairs_or_reads} with too many N:           {o.too_many_n:13,d} ({o.too_many_n_fraction:.1%})\n"
-    if stats.casava_filtered is not None:
-        report += "{pairs_or_reads} failed CASAVA filter:      " \
-                  "{o.casava_filtered:13,d} ({o.casava_filtered_fraction:.1%})\n"
     if stats.too_many_expected_errors is not None:
         report += "{pairs_or_reads} with too many exp. errors: " \
                   "{o.too_many_expected_errors:13,d} ({o.too_many_expected_errors_fraction:.1%})\n"
+    if stats.casava_filtered is not None:
+        report += "{pairs_or_reads} failed CASAVA filter:      " \
+                  "{o.casava_filtered:13,d} ({o.casava_filtered_fraction:.1%})\n"
 
     report += textwrap.dedent("""\
     {pairs_or_reads} written (passing filters): {o.written:13,d} ({o.written_fraction:.1%})
