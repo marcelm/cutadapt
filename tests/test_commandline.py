@@ -641,7 +641,8 @@ def test_adapterx(run):
 
 
 def test_discard_casava(run):
-    run('--discard-casava', 'casava.fastq', 'casava.fastq')
+    stats = run('--discard-casava', 'casava.fastq', 'casava.fastq')
+    assert stats.casava_filtered == 1
 
 
 def test_underscore(run):
