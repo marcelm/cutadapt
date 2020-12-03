@@ -7,8 +7,14 @@ development version
 
 * :issue:`443`: With ``--action=retain``, it is now possible to trim reads while
   leaving the adapter sequence itself in the read. That is, only the sequence
-  before (for 5’ adapters) or after (for 3’ adapters) is removed. With linked adapters,
-  both adapters are retained.
+  before (for 5’ adapters) or after (for 3’ adapters) is removed. With linked
+  adapters, both adapters are retained.
+* :issue:`497`: The changelog for 3.0 previously forgot to mention that the following
+  options, which were deprecated in version 2.0, have now been removed, and
+  using them will lead to an error: ``--format``, ``--colorspace``, ``-c``, ``-d``,
+  ``--double-encode``, ``-t``, ``--trim-primer``, ``--strip-f3``, ``--maq``,
+  ``--bwa``, ``--no-zero-cap``. This frees up some single-character options,
+  allowing them to be re-purposed for future Cutadapt features.
 
 v3.0 (2020-11-10)
 -----------------
@@ -36,6 +42,12 @@ v3.0 (2020-11-10)
   or had too many ``N``. (This unintentionally disappeared in a previous version.)
 * :issue:`487`: When demultiplexing, the reported number of written pairs was
   always zero.
+* :issue:`497`: The following options, which were deprecated in version 2.0, have
+  been removed, and using them will lead to an error:
+  ``--format``, ``--colorspace``, ``-c``, ``-d``, ``--double-encode``,
+  ``-t``, ``--trim-primer``, ``--strip-f3``, ``--maq``, ``--bwa``, ``--no-zero-cap``.
+  This frees up some single-character options,
+  allowing them to be re-purposed for future Cutadapt features.
 * Ensure Cutadapt runs under Python 3.9.
 * Drop support for Python 3.5.
 
