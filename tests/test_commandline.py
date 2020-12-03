@@ -717,7 +717,8 @@ def test_reverse_complement_and_info_file(run, tmp_path, cores):
 
 
 def test_max_expected_errors(run, cores):
-    run("--max-ee=0.9", "maxee.fastq", "maxee.fastq")
+    stats = run("--max-ee=0.9", "maxee.fastq", "maxee.fastq")
+    assert stats.too_many_expected_errors == 2
 
 
 def test_max_expected_errors_fasta(tmp_path):

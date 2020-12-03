@@ -13,7 +13,7 @@ from .adapters import (
 from .modifiers import (SingleEndModifier, PairedModifier, QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer)
 from .filters import (WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter,
-    CasavaFilter)
+    CasavaFilter, MaximumExpectedErrorsFilter)
 
 
 def safe_divide(numerator, denominator):
@@ -40,6 +40,7 @@ class Statistics:
         self.too_short = None
         self.too_long = None
         self.too_many_n = None
+        self.too_many_expected_errors = None
         self.casava_filtered = None
         self.reverse_complemented = None  # type: Optional[int]
         self.n = 0
@@ -69,6 +70,8 @@ class Statistics:
         self.too_short = add_if_not_none(self.too_short, other.too_short)
         self.too_long = add_if_not_none(self.too_long, other.too_long)
         self.too_many_n = add_if_not_none(self.too_many_n, other.too_many_n)
+        self.too_many_expected_errors = add_if_not_none(
+            self.too_many_expected_errors, other.too_many_expected_errors)
         self.casava_filtered = add_if_not_none(self.casava_filtered, other.casava_filtered)
         for i in (0, 1):
             self.total_bp[i] += other.total_bp[i]
@@ -126,6 +129,8 @@ class Statistics:
                 self.too_many_n = w.filtered
             elif isinstance(w.filter, CasavaFilter):
                 self.casava_filtered = w.filtered
+            elif isinstance(w.filter, MaximumExpectedErrorsFilter):
+                self.too_many_expected_errors = w.filtered
 
     def _collect_modifier(self, m: SingleEndModifier):
         if isinstance(m, PairedAdapterCutter):
@@ -192,6 +197,10 @@ class Statistics:
     @property
     def too_many_n_fraction(self):
         return safe_divide(self.too_many_n, self.n)
+
+    @property
+    def too_many_expected_errors_fraction(self):
+        return safe_divide(self.too_many_expected_errors, self.n)
 
     @property
     def casava_filtered_fraction(self):
@@ -323,6 +332,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     if stats.reverse_complemented is not None:
         report += "Reverse-complemented:            " \
                   "{o.reverse_complemented:13,d} ({o.reverse_complemented_fraction:.1%})\n"
+
     if stats.too_short is not None:
         report += "{pairs_or_reads} that were too short:       {o.too_short:13,d} ({o.too_short_fraction:.1%})\n"
     if stats.too_long is not None:
@@ -330,8 +340,11 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     if stats.too_many_n is not None:
         report += "{pairs_or_reads} with too many N:           {o.too_many_n:13,d} ({o.too_many_n_fraction:.1%})\n"
     if stats.casava_filtered is not None:
-        report += "{pairs_or_reads} failed CASAVA filter:       " \
+        report += "{pairs_or_reads} failed CASAVA filter:      " \
                   "{o.casava_filtered:13,d} ({o.casava_filtered_fraction:.1%})\n"
+    if stats.too_many_expected_errors is not None:
+        report += "{pairs_or_reads} with too many exp. errors: " \
+                  "{o.too_many_expected_errors:13,d} ({o.too_many_expected_errors_fraction:.1%})\n"
 
     report += textwrap.dedent("""\
     {pairs_or_reads} written (passing filters): {o.written:13,d} ({o.written_fraction:.1%})
