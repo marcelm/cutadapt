@@ -92,6 +92,7 @@ setup(
     url='https://cutadapt.readthedocs.io/',
     description='trim adapters from high-throughput sequencing reads',
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     license='MIT',
     cmdclass={'build_ext': BuildExt, 'sdist': SDist},
     ext_modules=extensions,
