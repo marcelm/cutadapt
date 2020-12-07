@@ -132,7 +132,7 @@ system-installed packages::
 Uninstalling
 ------------
 
-Type  ::
+Type ::
 
     pip3 uninstall cutadapt
 
@@ -146,13 +146,14 @@ Shared installation (on a cluster)
 
 If you have a larger installation and want to provide Cutadapt as a module
 that can be loaded and unloaded (with the Lmod system, for example), we
-recommend that you create a virtual environment and 'pip install' cutadapt into
-it. These instructions work on our SLURM cluster that uses the Lmod system
-(replace ``1.9.1`` with the actual version you want to use)::
+recommend that you create a virtual environment and 'pip install' Cutadapt into
+it. These instructions work on a SLURM cluster that uses the Lmod system
+(replace ``3.1`` with the actual version you want to use)::
 
     BASE=/software/cutadapt-3.1
     virtualenv $BASE/venv
     $BASE/venv/bin/pip install cutadapt==3.1
+    mkdir $BASE/bin
     cd $BASE/bin
     ln -s ../venv/bin/cutadapt
 
