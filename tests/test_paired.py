@@ -521,9 +521,9 @@ def test_pair_adapters_demultiplexing(tmpdir):
 @pytest.mark.parametrize("discarduntrimmed", (False, True))
 def test_combinatorial_demultiplexing(tmpdir, discarduntrimmed):
     params = "-g A=^AAAAAAAAAA -g C=^CCCCCCCCCC -G G=^GGGGGGGGGG -G T=^TTTTTTTTTT".split()
-    params += ["-o", str(tmpdir.join("combinatorial.{name1}_{name2}.1.fasta"))]
-    params += ["-p", str(tmpdir.join("combinatorial.{name1}_{name2}.2.fasta"))]
-    params += [datapath("combinatorial.1.fasta"), datapath("combinatorial.2.fasta")]
+    params += ["-o", str(tmpdir.join("combinatorial.{name1}_{name2}.1.fastq"))]
+    params += ["-p", str(tmpdir.join("combinatorial.{name1}_{name2}.2.fastq"))]
+    params += [datapath("combinatorial.1.fastq"), datapath("combinatorial.2.fastq")]
     # third item in tuple says whether the file must exist
     combinations = [(a, b, True) for a, b in product("AC", "GT")]
     optional = [("unknown", "unknown")]
@@ -537,7 +537,7 @@ def test_combinatorial_demultiplexing(tmpdir, discarduntrimmed):
     main(params)
     for (name1, name2, should_exist) in combinations:
         for i in (1, 2):
-            name = "combinatorial.{name1}_{name2}.{i}.fasta".format(name1=name1, name2=name2, i=i)
+            name = "combinatorial.{name1}_{name2}.{i}.fastq".format(name1=name1, name2=name2, i=i)
             path = cutpath(os.path.join("combinatorial", name))
             if should_exist:
                 assert tmpdir.join(name).check(), ("Output file missing", name)
