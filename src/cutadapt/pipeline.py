@@ -131,14 +131,11 @@ class OutputFiles:
         ):
             if getattr(self, attr) is not None:
                 setattr(result, attr, io.BytesIO())
-        if self.demultiplex_out is not None:
-            result.demultiplex_out = dict()
-            for k, v in self.demultiplex_out.items():
-                result.demultiplex_out[k] = io.BytesIO()
-        if self.demultiplex_out2 is not None:
-            result.demultiplex_out2 = dict()
-            for k, v in self.demultiplex_out2.items():
-                result.demultiplex_out2[k] = io.BytesIO()
+        for attr in "demultiplex_out", "demultiplex_out2", "combinatorial_out", "combinatorial_out2":
+            if getattr(self, attr) is not None:
+                setattr(result, attr, dict())
+                for k, v in getattr(self, attr).items():
+                    getattr(result, attr)[k] = io.BytesIO()
         return result
 
     def close(self) -> None:

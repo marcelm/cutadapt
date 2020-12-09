@@ -2,6 +2,12 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`499`: Fix combinatorial demultiplexing not working when using
+  multiple cores.
+
 v3.1 (2020-12-03)
 -----------------
 
