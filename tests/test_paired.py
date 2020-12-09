@@ -499,9 +499,10 @@ def test_pair_adapters_unequal_length(tmpdir):
         ])
 
 
-def test_pair_adapters_demultiplexing(tmpdir):
+def test_pair_adapters_demultiplexing(tmpdir, cores):
     params = "-g i1=AAAA -G i1=GGGG -g i2=CCCC -G i2=TTTT".split()
     params += ["--pair-adapters"]
+    params += ["--cores", str(cores)]
     params += ["-o", str(tmpdir.join("dual-{name}.1.fastq"))]
     params += ["-p", str(tmpdir.join("dual-{name}.2.fastq"))]
     params += [datapath("dual-index.1.fastq"), datapath("dual-index.2.fastq")]
@@ -519,10 +520,11 @@ def test_pair_adapters_demultiplexing(tmpdir):
 
 
 @pytest.mark.parametrize("discarduntrimmed", (False, True))
-def test_combinatorial_demultiplexing(tmpdir, discarduntrimmed):
+def test_combinatorial_demultiplexing(tmpdir, discarduntrimmed, cores):
     params = "-g A=^AAAAAAAAAA -g C=^CCCCCCCCCC -G G=^GGGGGGGGGG -G T=^TTTTTTTTTT".split()
     params += ["-o", str(tmpdir.join("combinatorial.{name1}_{name2}.1.fastq"))]
     params += ["-p", str(tmpdir.join("combinatorial.{name1}_{name2}.2.fastq"))]
+    params += ["--cores", str(cores)]
     params += [datapath("combinatorial.1.fastq"), datapath("combinatorial.2.fastq")]
     # third item in tuple says whether the file must exist
     combinations = [(a, b, True) for a, b in product("AC", "GT")]
