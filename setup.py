@@ -102,6 +102,7 @@ setup(
     install_requires=[
         'dnaio~=0.4.2',
         'xopen~=1.0.0',
+        "dataclasses>=0.8; python_version<'3.7'",
     ],
     extras_require={
         'dev': ['Cython', 'pytest', 'pytest-timeout', 'pytest-mock', 'sphinx', 'sphinx_issues'],

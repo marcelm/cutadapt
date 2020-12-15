@@ -4,13 +4,17 @@ A modifier must be callable and typically implemented as a class with a
 __call__ method.
 """
 import re
-from typing import Sequence, List, Tuple, Optional
+from types import SimpleNamespace
+from typing import Sequence, List, Tuple, Optional, Set
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+
+from dnaio import Sequence as DnaSequence
 
 from .qualtrim import quality_trim_index, nextseq_trim_index
 from .adapters import MultipleAdapters, SingleAdapter, IndexedPrefixAdapters, IndexedSuffixAdapters, \
     Match, remainder, Adapter
+from .tokenizer import tokenize_braces, TokenizeError, Token, BraceToken
 from .utils import reverse_complemented_sequence
 
 
@@ -42,7 +46,9 @@ class SingleEndModifier(ABC):
 
 class PairedEndModifier(ABC):
     @abstractmethod
-    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+    def __call__(
+        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+    ) -> Tuple[DnaSequence, DnaSequence]:
         pass
 
 
@@ -425,22 +431,50 @@ class Renamer(SingleEndModifier):
 
     The template string can contain the following placeholders:
 
-    - {header} -- full unchanged header
+    - {header} -- full, unchanged header
     - {id} -- the part of the header before the first whitespace
     - {comment} -- the part of the header after the ID, excluding initial whitespace
     - {cut_prefix} -- prefix removed by UnconditionalCutter (with positive length argument)
     - {cut_suffix} -- suffix removed by UnconditionalCutter (with negative length argument)
     """
+    variables = {
+        "header",
+        "id",
+        "comment",
+        "cut_prefix",
+        "cut_suffix",
+    }
+
     def __init__(self, template: str):
+        try:
+            self._tokens = list(tokenize_braces(template))
+        except TokenizeError as e:
+            raise InvalidTemplate("Error in template '{}': {}".format(template, e))
+        self.raise_if_invalid_variable(self._tokens, self.variables)
         self._template = template
 
-    def __call__(self, read, info: ModificationInfo):
-        fields = read.name.split(maxsplit=1)
+    @staticmethod
+    def raise_if_invalid_variable(tokens: List[Token], allowed: Set[str]) -> None:
+        for token in tokens:
+            if not isinstance(token, BraceToken):
+                continue
+            value = token.value
+            if value not in allowed:
+                raise InvalidTemplate(
+                    "Error in template: Variable '{}' not recognized".format(value)
+                )
+
+    @staticmethod
+    def parse_name(read_name: str) -> Tuple[str, str]:
+        """Parse read header and return (id, comment) tuple"""
+        fields = read_name.split(maxsplit=1)
         if len(fields) == 2:
-            id_, comment = fields
+            return (fields[0], fields[1])
         else:
-            id_ = read.name
-            comment = ""
+            return (read_name, "")
+
+    def __call__(self, read: DnaSequence, info: ModificationInfo) -> DnaSequence:
+        id_, comment = self.parse_name(read.name)
         read.name = self._template.format(
             header=read.name,
             id=id_,
@@ -449,6 +483,101 @@ class Renamer(SingleEndModifier):
             cut_suffix=info.cut_suffix,
         )
         return read
+
+
+class PairedEndRenamer(PairedEndModifier):
+    """
+    Rename paired-end reads using a template. The template is applied to both
+    R1 and R2, and the same template variables as in the (single-end) renamer
+    are allowed. However,
+    these variables are evaluated separately for each read. For example, if `{comment}`
+    is used, it gets replaced with the R1 comment in the R1 header, and with the R2
+    comment in the R2 header.
+
+    Additionally, all template variables except `id` can be used in the read-specific
+    forms `{r1.variablename}` and `{r2.variablename}`. For example, `{r1.comment}`
+    always gets replaced with the R1 comment, even in R2.
+    """
+
+    def __init__(self, template: str):
+        try:
+            self._tokens = list(tokenize_braces(template))
+        except TokenizeError as e:
+            raise InvalidTemplate("Error in template '{}': {}".format(template, e))
+        Renamer.raise_if_invalid_variable(self._tokens, self._get_allowed_variables())
+        self._template = template
+
+    @staticmethod
+    def _get_allowed_variables() -> Set[str]:
+        allowed = Renamer.variables.copy()
+        for v in Renamer.variables - {"id"}:
+            allowed.add("r1." + v)
+            allowed.add("r2." + v)
+        return allowed
+
+    def __call__(
+        self, read1: DnaSequence, read2: DnaSequence, info1: ModificationInfo, info2: ModificationInfo
+    ) -> Tuple[DnaSequence, DnaSequence]:
+
+        id1, comment1 = Renamer.parse_name(read1.name)
+        id2, comment2 = Renamer.parse_name(read2.name)
+        if id1 != id2:
+            raise ValueError("Input read IDs not identical: '{}' != '{}'".format(id1, id2))
+        name1, name2 = self.get_new_headers(
+            id=id1,
+            comment1=comment1,
+            comment2=comment2,
+            header1=read1.name,
+            header2=read2.name,
+            info1=info1,
+            info2=info2,
+        )
+        new_id1 = Renamer.parse_name(name1)[0]
+        new_id2 = Renamer.parse_name(name2)[0]
+        if new_id1 != new_id2:
+            raise InvalidTemplate(
+                "After renaming R1 and R2, their IDs are no longer identical: "
+                "'{}' != '{}'. Original read ID: '{}'. ".format(new_id1, new_id2, id1)
+            )
+        read1.name = name1
+        read2.name = name2
+        return read1, read2
+
+    def get_new_headers(
+        self,
+        id: str,
+        comment1: str,
+        comment2: str,
+        header1: str,
+        header2: str,
+        info1: ModificationInfo,
+        info2: ModificationInfo,
+    ) -> Tuple[str, str]:
+        d = []
+        for comment, header, info in (
+            (comment1, header1, info1), (comment2, header2, info2)
+        ):
+            d.append(
+                dict(
+                    comment=comment,
+                    header=header,
+                    cut_prefix=info.cut_prefix,
+                    cut_suffix=info.cut_suffix,
+                )
+            )
+        name1 = self._template.format(
+            id=id,
+            **d[0],
+            r1=SimpleNamespace(**d[0]),
+            r2=SimpleNamespace(**d[1]),
+        )
+        name2 = self._template.format(
+            id=id,
+            **d[1],
+            r1=SimpleNamespace(**d[0]),
+            r2=SimpleNamespace(**d[1]),
+        )
+        return name1, name2
 
 
 class ZeroCapper(SingleEndModifier):

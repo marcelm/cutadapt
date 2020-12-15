@@ -7,7 +7,7 @@ from cutadapt.adapters import BackAdapter, PrefixAdapter, IndexedPrefixAdapters,
     FrontAdapter, Adapter
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
     Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo, ZeroCapper,
-    Renamer, ReverseComplementer, InvalidTemplate)
+    Renamer, ReverseComplementer, InvalidTemplate, PairedEndRenamer)
 
 
 def test_unconditional_cutter():
@@ -164,6 +164,10 @@ def test_linked_action_retain(s, expected):
 
 
 class TestRenamer:
+    def test_invalid_template_variable(self):
+        with pytest.raises(InvalidTemplate):
+            Renamer("{id} {invalid}")
+
     def test_header_template_variable(self):
         renamer = Renamer("{header} extra")
         read = Sequence("theid thecomment", "ACGT")
@@ -195,7 +199,52 @@ class TestRenamer:
         info.cut_prefix = "TTAAGG"
         assert renamer(read, info).name == "theid_TTAAGG thecomment"
 
-    @pytest.mark.skip("to do")
-    def test_invalid_template_variable(self):
-        with pytest.raises(InvalidTemplate):
-            Renamer("{id} {invalid}")
+    def test_cut_suffix_template_variable(self):
+        renamer = Renamer("{id}_{cut_suffix} {comment}")
+        read = Sequence("theid thecomment", "ACGT")
+        info = ModificationInfo(read)
+        info.cut_suffix = "TTAAGG"
+        assert renamer(read, info).name == "theid_TTAAGG thecomment"
+
+
+class TestPairedEndRenamer:
+
+    def test_ids_not_identical(self):
+        renamer = PairedEndRenamer("{id} abc {comment} xyz")
+        r1 = Sequence("theid_a cmtx", "ACGT")
+        r2 = Sequence("theid_b cmty", "ACGT")
+        info1 = ModificationInfo(r1)
+        info2 = ModificationInfo(r2)
+        with pytest.raises(ValueError) as e:
+            renamer(r1, r2, info1, info2)
+        assert "not identical" in e.value.args[0]
+
+    def test_comment(self):
+        renamer = PairedEndRenamer("{id} abc {comment} xyz")
+        r1 = Sequence("theid cmtx", "ACGT")
+        r2 = Sequence("theid cmty", "ACGT")
+        info1 = ModificationInfo(r1)
+        info2 = ModificationInfo(r2)
+        renamed1, renamed2 = renamer(r1, r2, info1, info2)
+        assert renamed1.name == "theid abc cmtx xyz"
+        assert renamed2.name == "theid abc cmty xyz"
+
+    def test_r1_comment(self):
+        renamer = PairedEndRenamer("{id} abc {r1.comment} xyz")
+        r1 = Sequence("theid cmtx", "ACGT")
+        r2 = Sequence("theid cmty", "ACGT")
+        info1 = ModificationInfo(r1)
+        info2 = ModificationInfo(r2)
+        renamed1, renamed2 = renamer(r1, r2, info1, info2)
+        assert renamed1.name == "theid abc cmtx xyz"
+        assert renamed2.name == "theid abc cmtx xyz"
+
+    def test_r2_comment(self):
+        renamer = PairedEndRenamer("{id} abc {r2.comment} xyz")
+        r1 = Sequence("theid cmtx", "ACGT")
+        r2 = Sequence("theid cmty", "ACGT")
+        info1 = ModificationInfo(r1)
+        info2 = ModificationInfo(r2)
+        renamed1, renamed2 = renamer(r1, r2, info1, info2)
+        assert renamed1.name == "theid abc cmty xyz"
+        assert renamed2.name == "theid abc cmty xyz"
