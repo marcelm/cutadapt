@@ -324,17 +324,12 @@ class SingleEndPipeline(Pipeline):
         """Run the pipeline. Return statistics"""
         n = 0  # no. of processed reads
         total_bp = 0
-        info = ModificationInfo(None)
         for read in self._reader:
             n += 1
             if n % 10000 == 0 and progress:
                 progress.update(n)
             total_bp += len(read)
-            # To avoid creating new ModificationInfo instances,
-            # which is quite slow, update the ones we already
-            # have in place.
-            info.matches = []
-            info.original_read = read
+            info = ModificationInfo(read)
             for modifier in self._modifiers:
                 read = modifier(read, info)
             for filter_ in self._filters:
@@ -431,21 +426,14 @@ class PairedEndPipeline(Pipeline):
         total1_bp = 0
         total2_bp = 0
         assert self._reader is not None
-        info1 = ModificationInfo(None)
-        info2 = ModificationInfo(None)
         for read1, read2 in self._reader:
             n += 1
             if n % 10000 == 0 and progress:
                 progress.update(n)
             total1_bp += len(read1)
             total2_bp += len(read2)
-            # To avoid creating new ModificationInfo instances,
-            # which is quite slow, update the ones we already
-            # have in place.
-            info1.matches = []
-            info2.matches = []
-            info1.original_read = read1
-            info2.original_read = read2
+            info1 = ModificationInfo(read1)
+            info2 = ModificationInfo(read2)
             for modifier in self._modifiers:
                 read1, read2 = modifier(read1, read2, info1, info2)
             for filter_ in self._filters:
