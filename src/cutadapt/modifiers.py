@@ -66,7 +66,7 @@ class PairedEndModifierWrapper(PairedEndModifier):
             raise ValueError("Not both modifiers may be None")
 
     def __repr__(self):
-        return "PairedEndModifier(modifier1={!r}, modifier2={!r})".format(
+        return "PairedEndModifierWrapper(modifier1={!r}, modifier2={!r})".format(
             self._modifier1, self._modifier2)
 
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
