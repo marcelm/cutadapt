@@ -9,7 +9,7 @@ from typing import Sequence, List, Tuple, Optional, Set
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 
-from dnaio import Sequence as DnaSequence
+from dnaio import record_names_match, Sequence as DnaSequence
 
 from .qualtrim import quality_trim_index, nextseq_trim_index
 from .adapters import MultipleAdapters, SingleAdapter, IndexedPrefixAdapters, IndexedSuffixAdapters, \
@@ -521,7 +521,7 @@ class PairedEndRenamer(PairedEndModifier):
 
         id1, comment1 = Renamer.parse_name(read1.name)
         id2, comment2 = Renamer.parse_name(read2.name)
-        if id1 != id2:
+        if not record_names_match(read1.name, read2.name):
             raise ValueError("Input read IDs not identical: '{}' != '{}'".format(id1, id2))
         name1, name2 = self.get_new_headers(
             id=id1,
@@ -534,7 +534,7 @@ class PairedEndRenamer(PairedEndModifier):
         )
         new_id1 = Renamer.parse_name(name1)[0]
         new_id2 = Renamer.parse_name(name2)[0]
-        if new_id1 != new_id2:
+        if not record_names_match(name1, name2):
             raise InvalidTemplate(
                 "After renaming R1 and R2, their IDs are no longer identical: "
                 "'{}' != '{}'. Original read ID: '{}'. ".format(new_id1, new_id2, id1)
