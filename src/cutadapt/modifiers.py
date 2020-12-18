@@ -513,6 +513,7 @@ class PairedEndRenamer(PairedEndModifier):
     @staticmethod
     def _get_allowed_variables() -> Set[str]:
         allowed = Renamer.variables.copy()
+        allowed.add("rn")
         for v in Renamer.variables - {"id"}:
             allowed.add("r1." + v)
             allowed.add("r2." + v)
@@ -573,12 +574,14 @@ class PairedEndRenamer(PairedEndModifier):
             )
         name1 = self._template.format(
             id=id1,
+            rn=1,
             **d[0],
             r1=SimpleNamespace(**d[0]),
             r2=SimpleNamespace(**d[1]),
         )
         name2 = self._template.format(
             id=id2,
+            rn=2,
             **d[1],
             r1=SimpleNamespace(**d[0]),
             r2=SimpleNamespace(**d[1]),

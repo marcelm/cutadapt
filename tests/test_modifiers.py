@@ -208,6 +208,9 @@ class TestRenamer:
 
 
 class TestPairedEndRenamer:
+    def test_invalid_template_variable(self):
+        with pytest.raises(InvalidTemplate):
+            PairedEndRenamer("{id} {invalid}")
 
     def test_ids_not_identical(self):
         renamer = PairedEndRenamer("{id} abc {comment} xyz")
@@ -248,3 +251,13 @@ class TestPairedEndRenamer:
         renamed1, renamed2 = renamer(r1, r2, info1, info2)
         assert renamed1.name == "theid abc cmty xyz"
         assert renamed2.name == "theid abc cmty xyz"
+
+    def test_read_number(self):
+        renamer = PairedEndRenamer("{id} read no. is: {rn}")
+        r1 = Sequence("theid cmtx", "ACGT")
+        r2 = Sequence("theid cmty", "ACGT")
+        info1 = ModificationInfo(r1)
+        info2 = ModificationInfo(r2)
+        renamed1, renamed2 = renamer(r1, r2, info1, info2)
+        assert renamed1.name == "theid read no. is: 1"
+        assert renamed2.name == "theid read no. is: 2"

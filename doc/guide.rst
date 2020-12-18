@@ -1118,7 +1118,7 @@ Will result in this modified read::
 ``--rename`` also renames paired-end reads
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If the ``--rename`` option is used with paired-end data, the given template is applied
+If the ``--rename`` option is used with paired-end data, the template is applied
 separately to both R1 and R2. That is, for R1, the placeholders are replaced with values
 from R1, and for R2, the placeholders are replaced with values from R2. For example,
 ``{comment}`` becomes R1’s comment in R1 and it becomes R2’s comment in R2.
@@ -1138,6 +1138,9 @@ is renamed to ::
 
     >myread please note: also quite important
     ...
+
+For paired-end data, also the placeholder ``{rn}`` is available and is replaced with ``1`` in
+R1 and with ``2`` in R2.
 
 In addition, it is possible to write a placeholder as ``{r1.placeholdername}`` or
 ``{r2.placeholdername}``, which always takes the replacement value from R1 or R2,
@@ -1162,14 +1165,15 @@ will be changed to ::
     GGGGCCCC
 
 The ``{r1.placeholder}`` and ``{r2.placeholder}`` notation is available for all
-placeholders except ``{id}`` because the read ID needs to be identical for both reads.
+placeholders except ``{rn}`` and ``{id}`` because the read ID needs to be
+identical for both reads.
+
 
 In general, the read IDs of R1 and R2 need to be identical. Cutadapt
 enforces this when reading paired-end FASTQ files, except that it allows a single trailing
 "1" or "2" as the only difference between the read IDs. This allows for read IDs ending in
 ``/1`` and ``/2`` (some old formats are like this) or ``.1`` and ``.2`` (``fastq-dump``
 produces this).
-
 If you use ``--rename``, Cutadapt will also enforce this when *writing* paired-end reads.
 
 .. versionadded:: 3.2
