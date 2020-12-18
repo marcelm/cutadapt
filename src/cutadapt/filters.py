@@ -46,8 +46,8 @@ class PairedEndFilter(ABC):
 class WithStatistics(ABC):
     def __init__(self) -> None:
         # A defaultdict is much faster than a Counter
-        self._written_lengths1 = defaultdict(int)  # type: DefaultDict[int, int]
-        self._written_lengths2 = defaultdict(int)  # type: DefaultDict[int, int]
+        self._written_lengths1: DefaultDict[int, int] = defaultdict(int)
+        self._written_lengths2: DefaultDict[int, int] = defaultdict(int)
 
     def written_reads(self) -> int:
         """Return number of written reads or read pairs"""

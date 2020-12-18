@@ -5,25 +5,25 @@ import sys
 from io import StringIO
 import textwrap
 from collections import Counter
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Dict
 from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter, NonInternalFrontAdapter, PrefixAdapter,
     BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
 )
-from .modifiers import (SingleEndModifier, QualityTrimmer, NextseqQualityTrimmer,
+from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
 from .filters import (WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter,
     CasavaFilter, MaximumExpectedErrorsFilter)
 
 
-def safe_divide(numerator, denominator):
+def safe_divide(numerator: Optional[int], denominator: int) -> float:
     if numerator is None or not denominator:
         return 0.0
     else:
         return numerator / denominator
 
 
-def add_if_not_none(a, b):
+def add_if_not_none(a: Optional[int], b: Optional[int]) -> Optional[int]:
     if a is None:
         return b
     if b is None:
@@ -35,22 +35,22 @@ class Statistics:
     def __init__(self) -> None:
         """
         """
-        self.paired = None  # type: Optional[bool]
-        self.did_quality_trimming = None  # type: Optional[bool]
-        self.too_short = None
-        self.too_long = None
-        self.too_many_n = None
-        self.too_many_expected_errors = None
-        self.casava_filtered = None
-        self.reverse_complemented = None  # type: Optional[int]
+        self.paired: Optional[bool] = None
+        self.did_quality_trimming: Optional[bool] = None
+        self.too_short: Optional[int] = None
+        self.too_long: Optional[int] = None
+        self.too_many_n: Optional[int] = None
+        self.too_many_expected_errors: Optional[int] = None
+        self.casava_filtered: Optional[int] = None
+        self.reverse_complemented: Optional[int] = None
         self.n = 0
         self.written = 0
         self.total_bp = [0, 0]
         self.written_bp = [0, 0]
-        self.written_lengths = [Counter(), Counter()]  # type: List[Counter]
+        self.written_lengths: List[Counter] = [Counter(), Counter()]
         self.with_adapters = [0, 0]
         self.quality_trimmed_bp = [0, 0]
-        self.adapter_stats = [[], []]  # type: List[List[AdapterStatistics]]
+        self.adapter_stats: List[List[AdapterStatistics]] = [[], []]
 
     def __iadd__(self, other: Any):
         self.n += other.n
@@ -89,7 +89,7 @@ class Statistics:
                 self.adapter_stats[i] = other.adapter_stats[i]
         return self
 
-    def collect(self, n, total_bp1, total_bp2, modifiers, writers):
+    def collect(self, n: int, total_bp1: int, total_bp2: Optional[int], modifiers, writers):
         """
         n -- total number of reads
         total_bp1 -- number of bases in first reads
@@ -112,7 +112,7 @@ class Statistics:
         # For chaining
         return self
 
-    def _collect_writer(self, w):
+    def _collect_writer(self, w) -> None:
         if isinstance(w, WithStatistics):
             self.written += w.written_reads()
             written_bp = w.written_bp()
@@ -132,7 +132,7 @@ class Statistics:
             elif isinstance(w.filter, CasavaFilter):
                 self.casava_filtered = w.filtered
 
-    def _collect_modifier(self, m: SingleEndModifier):
+    def _collect_modifier(self, m) -> None:
         if isinstance(m, PairedAdapterCutter):
             for i in 0, 1:
                 self.with_adapters[i] += m.with_adapters
@@ -155,59 +155,59 @@ class Statistics:
                 self.reverse_complemented = modifier.reverse_complemented
 
     @property
-    def total(self):
+    def total(self) -> int:
         return sum(self.total_bp)
 
     @property
-    def quality_trimmed(self):
+    def quality_trimmed(self) -> int:
         return sum(self.quality_trimmed_bp)
 
     @property
-    def total_written_bp(self):
+    def total_written_bp(self) -> int:
         return sum(self.written_bp)
 
     @property
-    def written_fraction(self):
+    def written_fraction(self) -> float:
         return safe_divide(self.written, self.n)
 
     @property
-    def with_adapters_fraction(self):
+    def with_adapters_fraction(self) -> List[float]:
         return [safe_divide(v, self.n) for v in self.with_adapters]
 
     @property
-    def quality_trimmed_fraction(self):
+    def quality_trimmed_fraction(self) -> float:
         return safe_divide(self.quality_trimmed, self.total)
 
     @property
-    def total_written_bp_fraction(self):
+    def total_written_bp_fraction(self) -> float:
         return safe_divide(self.total_written_bp, self.total)
 
     @property
-    def reverse_complemented_fraction(self):
+    def reverse_complemented_fraction(self) -> float:
         return safe_divide(self.reverse_complemented, self.n)
 
     @property
-    def too_short_fraction(self):
+    def too_short_fraction(self) -> float:
         return safe_divide(self.too_short, self.n)
 
     @property
-    def too_long_fraction(self):
+    def too_long_fraction(self) -> float:
         return safe_divide(self.too_long, self.n)
 
     @property
-    def too_many_n_fraction(self):
+    def too_many_n_fraction(self) -> float:
         return safe_divide(self.too_many_n, self.n)
 
     @property
-    def too_many_expected_errors_fraction(self):
+    def too_many_expected_errors_fraction(self) -> float:
         return safe_divide(self.too_many_expected_errors, self.n)
 
     @property
-    def casava_filtered_fraction(self):
+    def casava_filtered_fraction(self) -> float:
         return safe_divide(self.casava_filtered, self.n)
 
 
-def error_ranges(adapter_statistics: EndStatistics):
+def error_ranges(adapter_statistics: EndStatistics) -> str:
     length = adapter_statistics.effective_length
     error_rate = adapter_statistics.max_error_rate
     prev = 1
@@ -224,7 +224,7 @@ def error_ranges(adapter_statistics: EndStatistics):
     return "No. of allowed errors:\n" + s + "\n"
 
 
-def histogram(end_statistics: EndStatistics, n: int, gc_content: float):
+def histogram(end_statistics: EndStatistics, n: int, gc_content: float) -> str:
     """
     Return a formatted histogram. Include the no. of reads expected to be
     trimmed by chance (assuming a uniform distribution of nucleotides in the reads).
@@ -259,11 +259,11 @@ def histogram(end_statistics: EndStatistics, n: int, gc_content: float):
 
 
 class AdjacentBaseStatistics:
-    def __init__(self, bases):
+    def __init__(self, bases: Dict[str, int]):
         """
         """
-        self.bases = bases
-        self._warnbase = None
+        self.bases: Dict[str, int] = bases
+        self._warnbase: Optional[str] = None
         total = sum(self.bases.values())
         if total == 0:
             self._fractions = None
@@ -282,10 +282,10 @@ class AdjacentBaseStatistics:
         return 'AdjacentBaseStatistics(bases={})'.format(self.bases)
 
     @property
-    def should_warn(self):
+    def should_warn(self) -> bool:
         return self._warnbase is not None
 
-    def __str__(self):
+    def __str__(self) -> str:
         if not self._fractions:
             return ""
         sio = StringIO()
