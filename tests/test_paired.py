@@ -559,3 +559,16 @@ def test_info_file(tmpdir):
         datapath("paired.2.fastq"),
     ]
     main(params)
+
+
+def test_rename(run_paired, cores):
+    run_paired([
+            "--rename={id} {r1.cut_prefix} {cut_prefix}"
+            " {comment} {adapter_name} {r2.adapter_name}",
+            "--cut=4",
+            "-a", "R1adapter=GTCTCCAGCT", "-A", "R2adapter=GACAAATAAC",
+        ],
+        in1="paired.1.fastq", in2="paired.2.fastq",
+        expected1="rename.1.fastq", expected2="rename.2.fastq",
+        cores=cores,
+    )

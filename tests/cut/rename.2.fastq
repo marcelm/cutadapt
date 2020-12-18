@@ -1,0 +1,20 @@
+@read1/2 TTAT  other text R2adapter R2adapter
+GCTGGA
++
+HHHHHH
+@read2/2 CAAC   no_adapter no_adapter
+TGTGGCCTGTTGCAGTGGAGTAACTCCAGC
++
+###HHHHHHHHHHHHHHHHHHHHHHHHHHH
+@read3/2 CCAA   no_adapter no_adapter
+TGTTATTAATATCAAGTTGGCAGTG
++
+#HHHHHHHHHHHHHHHHHHHHHHHH
+@read4/2 GACA   no_adapter no_adapter
+CATCCCGTCAACATTCAAACGGCCTGTCCA
++
+HH############################
+@read5 TTAT   no_adapter no_adapter
+CAACAGGCCACATTAGACATATCGGATGGT
++
+HHHHHHHH##HHHHHHHHHHHHHHHHHHHH

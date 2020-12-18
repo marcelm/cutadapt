@@ -436,6 +436,7 @@ class Renamer(SingleEndModifier):
     - {comment} -- the part of the header after the ID, excluding initial whitespace
     - {cut_prefix} -- prefix removed by UnconditionalCutter (with positive length argument)
     - {cut_suffix} -- suffix removed by UnconditionalCutter (with negative length argument)
+    - {adapter_name} -- name of the *last* adapter match or no_adapter if there was none
     """
     variables = {
         "header",
@@ -443,6 +444,7 @@ class Renamer(SingleEndModifier):
         "comment",
         "cut_prefix",
         "cut_suffix",
+        "adapter_name",
     }
 
     def __init__(self, template: str):
@@ -479,8 +481,9 @@ class Renamer(SingleEndModifier):
             header=read.name,
             id=id_,
             comment=comment,
-            cut_prefix=info.cut_prefix,
-            cut_suffix=info.cut_suffix,
+            cut_prefix=info.cut_prefix if info.cut_prefix else "",
+            cut_suffix=info.cut_suffix if info.cut_suffix else "",
+            adapter_name=info.matches[-1].adapter.name if info.matches else "no_adapter",
         )
         return read
 
@@ -524,7 +527,8 @@ class PairedEndRenamer(PairedEndModifier):
         if not record_names_match(read1.name, read2.name):
             raise ValueError("Input read IDs not identical: '{}' != '{}'".format(id1, id2))
         name1, name2 = self.get_new_headers(
-            id=id1,
+            id1=id1,
+            id2=id2,
             comment1=comment1,
             comment2=comment2,
             header1=read1.name,
@@ -545,7 +549,8 @@ class PairedEndRenamer(PairedEndModifier):
 
     def get_new_headers(
         self,
-        id: str,
+        id1: str,
+        id2: str,
         comment1: str,
         comment2: str,
         header1: str,
@@ -554,25 +559,26 @@ class PairedEndRenamer(PairedEndModifier):
         info2: ModificationInfo,
     ) -> Tuple[str, str]:
         d = []
-        for comment, header, info in (
-            (comment1, header1, info1), (comment2, header2, info2)
+        for id_, comment, header, info in (
+            (id1, comment1, header1, info1), (id2, comment2, header2, info2)
         ):
             d.append(
                 dict(
                     comment=comment,
                     header=header,
-                    cut_prefix=info.cut_prefix,
-                    cut_suffix=info.cut_suffix,
+                    cut_prefix=info.cut_prefix if info.cut_prefix else "",
+                    cut_suffix=info.cut_suffix if info.cut_suffix else "",
+                    adapter_name=info.matches[-1].adapter.name if info.matches else "no_adapter",
                 )
             )
         name1 = self._template.format(
-            id=id,
+            id=id1,
             **d[0],
             r1=SimpleNamespace(**d[0]),
             r2=SimpleNamespace(**d[1]),
         )
         name2 = self._template.format(
-            id=id,
+            id=id2,
             **d[1],
             r1=SimpleNamespace(**d[0]),
             r2=SimpleNamespace(**d[1]),

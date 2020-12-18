@@ -66,10 +66,11 @@ import dnaio
 from cutadapt import __version__
 from cutadapt.adapters import warn_duplicate_adapters, Adapter, InvalidCharacter
 from cutadapt.parser import AdapterParser
-from cutadapt.modifiers import (SingleEndModifier, LengthTagModifier, SuffixRemover, PrefixSuffixAdder,
+from cutadapt.modifiers import (SingleEndModifier, LengthTagModifier, SuffixRemover,
+    PrefixSuffixAdder,
     ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
     PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener,
-    ReverseComplementer)
+    ReverseComplementer, PairedEndRenamer, Renamer, InvalidTemplate)
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import (Pipeline, SingleEndPipeline, PairedEndPipeline, InputPaths,
     OutputFiles, PipelineRunner, SerialPipelineRunner, ParallelPipelineRunner)
@@ -247,6 +248,9 @@ def get_argument_parser() -> ArgumentParser:
             "adapter.")
     group.add_argument("-y", "--suffix", default='',
         help="Add this suffix to read names; can also include {name}")
+    group.add_argument("--rename", metavar="TEMPLATE",
+        help="Rename reads using TEMPLATE containing variables such as {id}, {adapter_name} "
+            "etc. (see documentation)")
     group.add_argument("--zero-cap", "-z", action='store_true', default=False,
         help="Change negative quality values to zero.")
 
@@ -690,6 +694,18 @@ def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) ->
     for modifier in modifiers_applying_to_both_ends_if_paired(args):
         pipeline_add(modifier)
 
+    if args.rename:
+        if args.prefix or args.suffix:
+            raise CommandLineError(
+                "Option --rename cannot be combined with --prefix (-x) or --suffix (-y)"
+            )
+        try:
+            if paired:
+                pipeline.add_paired_modifier(PairedEndRenamer(args.rename))
+            else:
+                pipeline_add(Renamer(args.rename))
+        except InvalidTemplate as e:
+            raise CommandLineError(e)
     # Set filtering parameters
     # Minimum/maximum length
     for attr in 'minimum_length', 'maximum_length':

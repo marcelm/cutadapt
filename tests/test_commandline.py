@@ -241,12 +241,6 @@ def test_gz_multiblock(run):
     run("-b TTAGACATATCTCCGTCG", "small.fastq", "multiblock.fastq.gz")
 
 
-@pytest.mark.parametrize("opt", ["-y", "--suffix"])
-def test_suffix(opt, run):
-    """-y/--suffix parameter"""
-    run([opt, ' {name}', '-e', '0', '-a', 'OnlyT=TTTTTTTT', '-a', 'OnlyG=GGGGGGGG'], "suffix.fastq", "suffix.fastq")
-
-
 def test_read_wildcard(run):
     """test wildcards in reads"""
     run("--match-read-wildcards -b ACGTACGT", "wildcard.fa", "wildcard.fa")
@@ -730,3 +724,24 @@ def test_max_expected_errors_fasta(tmp_path):
 def test_warn_if_en_dashes_used():
     with pytest.raises(SystemExit):
         main(["–q", "25", "-o", "/dev/null", "in.fastq"])
+
+
+@pytest.mark.parametrize("opt", ["-y", "--suffix"])
+def test_suffix(opt, run):
+    """-y/--suffix parameter"""
+    run([opt, ' {name}', '-e', '0', '-a', 'OnlyT=TTTTTTTT', '-a', 'OnlyG=GGGGGGGG'], "suffix.fastq", "suffix.fastq")
+
+
+@pytest.mark.parametrize("opt", ["--prefix", "--suffix"])
+def test_rename_cannot_be_combined_with_other_renaming_options(opt):
+    with pytest.raises(SystemExit):
+        main([opt, "something", "--rename='{id} {comment} extrainfo'", "-o", "/dev/null", datapath("empty.fastq")])
+
+
+def test_rename(run):
+    run([
+        "--rename={id}_{cut_suffix} {header} {adapter_name}",
+        "--cut=-4",
+        "-a", "OnlyT=TTTTTT",
+        "-a", "OnlyG=GGGGGG",
+    ], "rename.fastq", "suffix.fastq")

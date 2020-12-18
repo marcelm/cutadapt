@@ -10,7 +10,7 @@ from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter, NonInternalFrontAdapter, PrefixAdapter,
     BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
 )
-from .modifiers import (SingleEndModifier, PairedEndModifier, QualityTrimmer, NextseqQualityTrimmer,
+from .modifiers import (SingleEndModifier, QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
 from .filters import (WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter,
     CasavaFilter, MaximumExpectedErrorsFilter)

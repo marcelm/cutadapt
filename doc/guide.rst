@@ -1041,23 +1041,160 @@ If you want to remove a fixed number of bases from each read, use
 :ref:`the --cut option instead <cut-bases>`.
 
 
+.. _modifying-read-names:
+
 Modifying read names
 --------------------
 
 If you feel the need to modify the names of processed reads, some of the
 following options may be useful.
 
-Use ``-y`` or ``--suffix`` to append a text to read names. The given string can
+These options exist; they are explained in more detail in the following
+sections:
+
+- ``--rename`` changes a read name according to a template.
+- ``--prefix`` (or ``-x``) adds a prefix to read names.
+- ``--suffix`` (or ``-y``) adds a suffix to read names.
+- ``--length-tag`` updates a “length tag” such as ``length=`` with the correct read length
+- ``--strip-suffix`` removes a known suffix from read names
+
+The ``--prefix`` and ``--suffix`` options are outdated as they do not ensure that paired-end
+read names remain consistent, and you should prefer to use ``--rename``.
+``--prefix`` and ``--suffix`` can currently not be used together with ``--rename``.
+
+
+.. _read-renaming:
+
+``--rename`` renames reads
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``--rename`` option can be used to rename both single-end and paired-end reads.
+This section describes how it can be used to rename single-end reads.
+
+We use the following terminology: The FASTQ or FASTA header line consists of a
+*read ID* and is optionally followed by a separator (whitespace) and a *comment*.
+
+For example, in this FASTQ header, the read ID is ``read1234`` and the comment is ``value=17``
+(sequence and qualities not shown)::
+
+    @read1234 value=17
+
+
+The ``--rename`` option expects a *template string* such as
+``{id} extra_info {adapter_name}`` as a parameter. It can contain regular text
+and placeholders that consist of a name enclosed in curly braces (``{placeholdername}``).
+
+The read name will be set to the template string in which the placeholders are
+replaced with the actual values relevant for the current read.
+
+The following placeholders are currently available for single-end reads:
+
+* ``{header}`` -- the full, unchanged header
+* ``{id}`` -- the read ID, that is, the part of the header before the first whitespace
+* ``{comment}`` -- the part of the header after the whitespace following the ID
+* ``{adapter_name}`` -- the name of adapter that was found in this read or
+  ``no_adapter`` if there was none adapter match. If you use ``--times`` to do
+  multiple rounds of adapter matching, this is the name of the *last* found adapter.
+* ``{cut_prefix}`` -- the prefix removed by the ``--cut`` (or ``-u``) option (that is, when
+  used with a positive length argument)
+* ``{cut_suffix}`` -- the suffix removed by the ``--cut`` (or ``-u``) option (that is, when
+  used with a negative length argument)
+
+For example, assume you have this input read in ``in.fasta``::
+
+    >myread extra info
+    ACGTAAAATTTTCCCC
+
+Running the command ::
+
+    cutadapt -a myadapter=TTTT -u 4 --rename='{id} barcode={cut_prefix} adapter={adapter_name} {comment}' in.fasta
+
+Will result in this modified read::
+
+    >myread barcode=ACGT adapter=myadapter extra info
+    AAAA
+
+
+``--rename`` also renames paired-end reads
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If the ``--rename`` option is used with paired-end data, the given template is applied
+separately to both R1 and R2. That is, for R1, the placeholders are replaced with values
+from R1, and for R2, the placeholders are replaced with values from R2. For example,
+``{comment}`` becomes R1’s comment in R1 and it becomes R2’s comment in R2.
+
+As another example, using ``--rename='{id} please note: {comment}'``, the paired-end reads ::
+
+    >myread important comment
+    ...
+
+    >myread also quite important
+    ...
+
+is renamed to ::
+
+    >myread please note: important comment
+    ...
+
+    >myread please note: also quite important
+    ...
+
+In addition, it is possible to write a placeholder as ``{r1.placeholdername}`` or
+``{r2.placeholdername}``, which always takes the replacement value from R1 or R2,
+respectively.
+
+For example, assume R1 starts with a 4 nt barcode that you want to “move” from the
+sequence into the ID of both reads. You can use
+``--cut=4 --rename='{id}_{r1.cut_prefix} {comment}'`` and the read pair ::
+
+    >myread this is R1
+    ACGTAAAATTTT
+
+    >myread this is R2
+    GGGGCCCC
+
+will be changed to ::
+
+    >myread_ACGT this is R1
+    AAAATTTT
+
+    >myread_ACGT this is R2
+    GGGGCCCC
+
+The ``{r1.placeholder}`` and ``{r2.placeholder}`` notation is available for all
+placeholders except ``{id}`` because the read ID needs to be identical for both reads.
+
+In general, the read IDs of R1 and R2 need to be identical. Cutadapt
+enforces this when reading paired-end FASTQ files, except that it allows a single trailing
+"1" or "2" as the only difference between the read IDs. This allows for read IDs ending in
+``/1`` and ``/2`` (some old formats are like this) or ``.1`` and ``.2`` (``fastq-dump``
+produces this).
+
+If you use ``--rename``, Cutadapt will also enforce this when *writing* paired-end reads.
+
+.. versionadded:: 3.2
+    The ``--rename`` option
+
+
+Other read name modification
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use ``-y`` (or its alias ``--suffix``) to append a text to read names. The given string can
 contain the placeholder ``{name}``, which will be replaced with the name of the
 adapter found in that read. For example, writing ::
 
     cutadapt -a adapter1=ACGT -y ' we found {name}' input.fastq
 
 changes a read named ``read1`` to ``read1 we found adapter1`` if the adapter
-``ACGT`` was found. The options ``-x``/``--prefix`` work the same, but the text
+``ACGT`` was found.
+
+The option ``-x`` (and its alias ``--prefix``) work the same, except that the text
 is added in front of the read name. For both options, spaces need to be
 specified explicitly, as in the above example. If no adapter was found in a
 read, the text ``no_adapter`` is inserted for ``{name}``.
+
+We recommend that you no longer use the ``-x``/``--prefix``/``-y``/``--suffix``
+options and use ``--rename`` instead, which is more general.
 
 In order to remove a suffix of each read name, use ``--strip-suffix``.
 
@@ -1088,7 +1225,8 @@ each read. Steps not requested on the command-line are skipped.
 6. Length tag modification (``--length-tag``)
 7. Read name suffix removal (``--strip-suffix``)
 8. Addition of prefix and suffix to read name (``-x``/``--prefix`` and ``-y``/``--suffix``)
-9. Replace negative quality values with zero (zero capping)
+9. Read renaming according to ``--rename``
+10. Replace negative quality values with zero (zero capping)
 
 
 .. _filtering:

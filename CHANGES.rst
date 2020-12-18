@@ -5,6 +5,9 @@ Changes
 development version
 -------------------
 
+* :issue:`437`: Implement a ``--rename`` option for :ref:`flexible read
+  name modifications <read-renaming>` such as moving a barcode sequence
+  into the read name.
 * :issue:`499`: Fix combinatorial demultiplexing not working when using
   multiple cores.
 
