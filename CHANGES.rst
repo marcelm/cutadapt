@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v3.2 (2021-01-07)
+-----------------
 
 * :issue:`437`: Implement a ``--rename`` option for :ref:`flexible read
   name modifications <read-renaming>` such as moving a barcode sequence
