@@ -8,7 +8,7 @@ from cutadapt.align import (
     edit_environment,
     SEMIGLOBAL,
     edit_distance,
-    naive_edit_environment,
+    naive_edit_environment, slow_edit_environment,
 )
 from cutadapt.adapters import Where
 
@@ -277,27 +277,34 @@ def test_hamming_sphere(sk):
         assert hamming_distance(s, t) == k
 
 
-@pytest.mark.parametrize("sk", [
-    ('', 0),
-    ('A', 0),
-    ('AAA', 1),
-    ('ACC', 2),
-    ('TCATTA', 3),
-    ('AAAAAAAA', 1),
-    # skip these since the naive function is very slow
-    # ('A'*10, 2),
-    # ('A'*10, 3),
-    # ('A'*15, 2),
-    # ('A'*6, 4),
+@pytest.mark.parametrize("k,s", [
+    (0, ""),
+    (0, "A"),
+    (1, "AAA"),
+    (1, "TCATTAGA"),
+    (2, "ACC"),
+    (2, "A" * 10),
+    (3, "TCATTA"),
 ])
-def test_edit_environment(sk):
-    s, k = sk
-    result = list(edit_environment(s, k))
+@pytest.mark.parametrize("environment_func", [edit_environment, slow_edit_environment])
+def test_edit_environment(k, s, environment_func):
+    result = list(environment_func(s, k))
     strings, distances, matches = zip(*result)
     naive = set(naive_edit_environment(s, k))
     assert len(set(strings)) == len(strings)
     assert set(strings) == naive
+
+    error_rate = k / len(s) if s else 0.0
+    aligner = Aligner(s, max_error_rate=error_rate, flags=0, min_overlap=len(s))
     for t, dist, m in result:
+        result = aligner.locate(t)
+        start1, stop1, start2, stop2, matches, errors = result
+        assert errors == dist
+        assert m == matches
+        assert start1 == 0
+        assert stop1 == len(s)
+        assert start2 == 0
+        assert stop2 == len(t)
         assert edit_distance(s, t) == dist
         assert m <= len(s), (s, t, dist)
         assert m <= len(t), (s, t, dist)

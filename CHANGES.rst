@@ -8,6 +8,8 @@ development version
 * :issue:`437`: Implement a ``--rename`` option for :ref:`flexible read
   name modifications <read-renaming>` such as moving a barcode sequence
   into the read name.
+* :issue:`503`: The index for demultiplexing is now created a lot faster
+  (within seconds instead of minutes) when allowing indels.
 * :issue:`499`: Fix combinatorial demultiplexing not working when using
   multiple cores.
 

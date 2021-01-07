@@ -122,6 +122,25 @@ def edit_environment(s: str, k: int):
     Yield tuples (t, e, m), where e is the edit distance between s and t and
     m is the number of matches in the optimal alignment.
     """
+    aligner = Aligner(s, max_error_rate=27, flags=0, min_overlap=len(s))
+    seen = set()
+    for t in naive_edit_environment(s, k):
+        if t in seen:
+            continue
+        seen.add(t)
+        result = aligner.locate(t)
+        matches, errors = result[-2:]  # type: ignore
+        yield t, errors, matches
+
+
+def slow_edit_environment(s: str, k: int):
+    """
+    Find all strings t for which the edit distance between s and t is at most k,
+    assuming the alphabet is A, C, G, T.
+
+    Yield tuples (t, e, m), where e is the edit distance between s and t and
+    m is the number of matches in the optimal alignment.
+    """
     n = len(s)
     alphabet = "TGCA"
     work_stack = [(

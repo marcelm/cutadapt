@@ -342,6 +342,7 @@ def _generate_adapter_name(_start=[1]) -> str:
 
 
 class Matchable(ABC):
+    """Something that has a match_to() method."""
 
     def __init__(self, name: str, *args, **kwargs):
         self.name = name
