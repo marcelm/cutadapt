@@ -103,22 +103,15 @@ def naive_edit_environment(s: str, k: int):
         return
     for s in naive_edit_environment(s, k - 1):
         n = len(s)
-        for ch in 'ACGT':
-            # all insertions
-            for i in range(n+1):
-                x = s[:i] + ch + s[i:]
-                assert len(x) == len(s) + 1
-                yield x
-            # all substitutions
+        for ch in "ACGT":
             for i in range(n):
-                x = s[:i] + ch + s[i+1:]
-                assert len(x) == len(s)
-                yield x
+                prefix = s[:i] + ch
+                yield prefix + s[i:]  # insertion
+                yield prefix + s[i + 1:]  # substitution
+            yield s + ch  # insertion into final position
         # all deletions
         for i in range(n):
-            x = s[:i] + s[i+1:]
-            assert len(x) == len(s) - 1
-            yield x
+            yield s[:i] + s[i+1:]
 
 
 def edit_environment(s: str, k: int):
