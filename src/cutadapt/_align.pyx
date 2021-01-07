@@ -234,8 +234,6 @@ cdef class Aligner:
         self.wildcard_ref = wildcard_ref
         self.wildcard_query = wildcard_query
         self._set_reference(reference)
-        if min_overlap < 1:
-            raise ValueError('min_overlap must be at least 1')
         self._min_overlap = min_overlap
         self.debug = False
         self._dpmatrix = None
@@ -261,7 +259,7 @@ cdef class Aligner:
 
     def __repr__(self):
         return (
-            f"Aligner(reference='{self.reference}, max_error_rate={self.max_error_rate}, "
+            f"Aligner(reference='{self.reference}', max_error_rate={self.max_error_rate}, "
             f"flags={self._compute_flags()}, wildcard_ref={self.wildcard_ref}, "
             f"wildcard_query={self.wildcard_query}, indel_cost={self._insertion_cost}, "
             f"min_overlap={self._min_overlap})"
@@ -407,7 +405,7 @@ cdef class Aligner:
         cdef _Match best
         best.ref_stop = m
         best.query_stop = n
-        best.cost = m + n
+        best.cost = m + n + 1
         best.origin = 0
         best.score = 0
         best.matches = 0
@@ -524,7 +522,7 @@ cdef class Aligner:
                     )
                     if is_acceptable and (
                         # no best match recorded so far
-                        (best.cost == m + n)
+                        (best.cost == m + n + 1)
                         # same start position, use score to judge whether this is better
                         or (origin == best.origin and score > best.score)
                         # different start position, only matches count
@@ -572,7 +570,7 @@ cdef class Aligner:
                 )
                 if is_acceptable and (
                     # no best match recorded so far
-                    (best.cost == m + n)
+                    (best.cost == m + n + 1)
                     # same start position, use score to judge whether this is better
                     or (origin == best.origin and score > best.score)
                     # different start position, only matches count
@@ -584,7 +582,7 @@ cdef class Aligner:
                     best.origin = column[i].origin
                     best.ref_stop = i
                     best.query_stop = n
-        if best.cost == m + n:
+        if best.cost == m + n + 1:
             # best.cost was initialized with this value.
             # If it is unchanged, no alignment was found that has
             # an error rate within the allowed range.
@@ -598,7 +596,6 @@ cdef class Aligner:
             start1 = -best.origin
             start2 = 0
 
-        assert best.ref_stop - start1 > 0  # Do not return empty alignments.
         return (start1, best.ref_stop, start2, best.query_stop, best.matches, best.cost)
 
     def __dealloc__(self):

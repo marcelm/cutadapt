@@ -39,6 +39,11 @@ class TestAligner:
             Aligner(reference, 0.1, wildcard_ref=True)
         assert "only N wildcards" in info.value.args[0]
 
+    def test_find_empty_in_empty(self):
+        aligner = Aligner("", 0, flags=0, min_overlap=0)
+        result = aligner.locate("")
+        assert (0, 0, 0, 0, 0, 0) == result
+
 
 def test_polya():
     s = 'AAAAAAAAAAAAAAAAA'
