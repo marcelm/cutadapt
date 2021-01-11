@@ -4,6 +4,8 @@ import subprocess
 import sys
 import os
 
+import pytest
+
 from utils import datapath, assert_files_equal, cutpath
 
 
@@ -74,6 +76,7 @@ def test_force_fasta_output(tmpdir, cores):
     assert_files_equal(cutpath("small.fasta"), out_path)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Maybe this can be made to work")
 def test_non_utf8_locale():
     subprocess.check_call(
         [sys.executable, "-m", "cutadapt", "-o", os.devnull, datapath("small.fastq")],
