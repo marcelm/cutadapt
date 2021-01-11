@@ -303,7 +303,8 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     """Print report to standard output."""
     if stats.n == 0:
         return "No reads processed!"
-
+    if time == 0:
+        time = 1E-6
     sio = StringIO()
 
     def print_s(*args, **kwargs):
