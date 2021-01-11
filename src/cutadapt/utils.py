@@ -91,6 +91,8 @@ class Progress:
             delta = total - self._n
         if delta < 1:
             return
+        if time_delta == 0:
+            return
         if not _final:
             if time_delta < self._every:
                 return
