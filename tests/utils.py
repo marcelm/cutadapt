@@ -1,3 +1,4 @@
+import sys
 import os.path
 import subprocess
 
@@ -15,8 +16,11 @@ class FilesDifferent(Exception):
 
 
 def assert_files_equal(path1, path2):
+    cmd = ["diff", "-u"]
+    if sys.platform == "win32":
+        cmd.append("--strip-trailing-cr")
     try:
-        subprocess.check_output(['diff', '-u', path1, path2], stderr=subprocess.STDOUT)
+        subprocess.check_output(cmd + [path1, path2], stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise FilesDifferent('\n' + e.output.decode()) from None
 
