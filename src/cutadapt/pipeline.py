@@ -798,8 +798,7 @@ class ParallelPipelineRunner(PipelineRunner):
         n = 0  # A running total of the number of processed reads (for progress indicator)
         while connections:
             ready_connections = multiprocessing.connection.wait(connections)
-            for connection in ready_connections:
-                assert isinstance(connection, Connection)
+            for connection in ready_connections:  # type: Any
                 chunk_index = connection.recv()
                 if chunk_index == -1:
                     # the worker is done
