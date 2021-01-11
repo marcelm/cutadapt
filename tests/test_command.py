@@ -18,11 +18,12 @@ def test_run_as_module():
         assert py.communicate()[0].decode().strip() == __version__
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Perhaps this can be fixed")
 def test_standard_input_pipe(tmpdir, cores):
     """Read FASTQ from standard input"""
     out_path = str(tmpdir.join("out.fastq"))
     in_path = datapath("small.fastq")
-    # Use 'cat' to simulate that no file name is available for stdin
+    # Simulate that no file name is available for stdin
     with subprocess.Popen(["cat", in_path], stdout=subprocess.PIPE) as cat:
         with subprocess.Popen([
             sys.executable, "-m", "cutadapt", "--cores", str(cores),
