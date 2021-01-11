@@ -2,6 +2,11 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`504`: Fix a crash on Windows.
+
 v3.2 (2021-01-07)
 -----------------
 

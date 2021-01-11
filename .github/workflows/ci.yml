@@ -31,6 +31,8 @@ jobs:
         include:
         - python-version: 3.8
           os: macos-latest
+        - python-version: 3.8
+          os: windows-latest
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
