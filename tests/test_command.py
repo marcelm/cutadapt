@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import os
 
 from utils import datapath, assert_files_equal, cutpath
 
@@ -74,6 +75,6 @@ def test_force_fasta_output(tmpdir, cores):
 
 def test_non_utf8_locale():
     subprocess.check_call(
-        [sys.executable, "-m", "cutadapt", "-o", "/dev/null", datapath("small.fastq")],
+        [sys.executable, "-m", "cutadapt", "-o", os.devnull, datapath("small.fastq")],
         env={"LC_CTYPE": "C"},
     )

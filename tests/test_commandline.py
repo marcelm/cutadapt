@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import os
 from io import StringIO, BytesIO
 import pytest
 
@@ -528,7 +529,7 @@ def test_quiet_is_quiet():
     try:
         sys.stdout = captured_standard_output
         sys.stderr = captured_standard_error
-        main(['-o', '/dev/null', '--quiet', datapath('small.fastq')])
+        main(['-o', os.devnull, '--quiet', datapath('small.fastq')])
     finally:
         sys.stdout = old_stdout
         sys.stderr = old_stderr
@@ -539,7 +540,7 @@ def test_quiet_is_quiet():
 
 
 def test_x_brace_notation():
-    main(['-o', '/dev/null', '--quiet', '-a', 'X{5}', datapath('small.fastq')])
+    main(['-o', os.devnull, '--quiet', '-a', 'X{5}', datapath('small.fastq')])
 
 
 def test_nextseq(run):
@@ -718,12 +719,12 @@ def test_max_expected_errors(run, cores):
 def test_max_expected_errors_fasta(tmp_path):
     path = tmp_path / "input.fasta"
     path.write_text(">read\nACGTACGT\n")
-    main(["--max-ee=0.001", "-o", "/dev/null", str(path)])
+    main(["--max-ee=0.001", "-o", os.devnull, str(path)])
 
 
 def test_warn_if_en_dashes_used():
     with pytest.raises(SystemExit):
-        main(["–q", "25", "-o", "/dev/null", "in.fastq"])
+        main(["–q", "25", "-o", os.devnull, "in.fastq"])
 
 
 @pytest.mark.parametrize("opt", ["-y", "--suffix"])
@@ -735,7 +736,7 @@ def test_suffix(opt, run):
 @pytest.mark.parametrize("opt", ["--prefix", "--suffix"])
 def test_rename_cannot_be_combined_with_other_renaming_options(opt):
     with pytest.raises(SystemExit):
-        main([opt, "something", "--rename='{id} {comment} extrainfo'", "-o", "/dev/null", datapath("empty.fastq")])
+        main([opt, "something", "--rename='{id} {comment} extrainfo'", "-o", os.devnull, datapath("empty.fastq")])
 
 
 def test_rename(run):

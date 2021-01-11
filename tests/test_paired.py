@@ -1,3 +1,4 @@
+import os
 import os.path
 import shutil
 from itertools import product
@@ -121,14 +122,14 @@ def test_explicit_format_with_paired(tmpdir, run_paired):
 def test_no_trimming_legacy():
     # make sure that this doesn"t divide by zero
     main([
-        "-a", "XXXXX", "-o", "/dev/null", "-p", "/dev/null",
+        "-a", "XXXXX", "-o", os.devnull, "-p", os.devnull,
         datapath("paired.1.fastq"), datapath("paired.2.fastq")])
 
 
 def test_no_trimming():
     # make sure that this doesn"t divide by zero
     main([
-        "-a", "XXXXX", "-A", "XXXXX", "-o", "/dev/null", "-p", "/dev/null",
+        "-a", "XXXXX", "-A", "XXXXX", "-o", os.devnull, "-p", os.devnull,
         datapath("paired.1.fastq"), datapath("paired.2.fastq")])
 
 
@@ -147,7 +148,7 @@ def test_first_too_short(tmpdir, cores):
 
     with pytest.raises(SystemExit):
         main([
-            "-o", "/dev/null",
+            "-o", os.devnull,
             "--paired-output", str(tmpdir.join("out.fastq")),
             "--cores", str(cores),
             str(trunc1), datapath("paired.2.fastq")
@@ -164,7 +165,7 @@ def test_second_too_short(tmpdir, cores):
 
     with pytest.raises(SystemExit):
         main([
-            "-o", "/dev/null",
+            "-o", os.devnull,
             "--paired-output", str(tmpdir.join("out.fastq")),
             "--cores", str(cores),
             datapath("paired.1.fastq"), str(trunc2)
@@ -192,7 +193,7 @@ def test_unmatched_read_names(tmpdir, cores):
 def test_p_without_o(cores):
     """Option -p given but -o missing"""
     with pytest.raises(SystemExit):
-        main("-a XX -p /dev/null".split()
+        main(["-a", "XX", "-p", os.devnull]
             + ["--cores", str(cores)]
             + [datapath("paired.1.fastq"), datapath("paired.2.fastq")])
 
@@ -200,7 +201,7 @@ def test_p_without_o(cores):
 def test_paired_but_only_one_input_file(cores):
     """Option -p given but only one input file"""
     with pytest.raises(SystemExit):
-        main("-a XX -o /dev/null -p /dev/null".split()
+        main(["-a", "XX", "-o", os.devnull, "-p", os.devnull]
             + ["--cores", str(cores)]
             + [datapath("paired.1.fastq")])
 
