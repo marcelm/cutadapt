@@ -2021,7 +2021,8 @@ Cutadapt supports the following options to deal with ``N`` bases in your reads:
 ``--max-n COUNT``
     Discard reads containing more than *COUNT* ``N`` bases. A fractional *COUNT*
     between 0 and 1 can also be given and will be treated as the proportion of
-    maximally allowed ``N`` bases in the read.
+    maximally allowed ``N`` bases in the read. For example, ``--max-n 0``
+    removes all reads that contain any ``N`` bases.
 
 ``--trim-n``
     Remove flanking ``N`` bases from each read. That is, a read such as this::
