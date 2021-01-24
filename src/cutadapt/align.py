@@ -8,6 +8,8 @@ __all__ = [
     'edit_distance',
 ]
 
+from typing import Iterator, Tuple
+
 from cutadapt._align import Aligner, PrefixComparer, SuffixComparer
 
 # flags for global alignment
@@ -28,7 +30,7 @@ STOP_WITHIN_SEQ2 = 8
 SEMIGLOBAL = START_WITHIN_SEQ1 | START_WITHIN_SEQ2 | STOP_WITHIN_SEQ1 | STOP_WITHIN_SEQ2
 
 
-def edit_distance(s: str, t: str):
+def edit_distance(s: str, t: str) -> int:
     """
     Return the edit distance between the strings s and t.
     The edit distance is the sum of the numbers of insertions, deletions,
@@ -54,7 +56,7 @@ def edit_distance(s: str, t: str):
     return costs[-1]
 
 
-def hamming_sphere(s, k):
+def hamming_sphere(s: str, k: int) -> Iterator[str]:
     """
     Yield all strings t for which the hamming distance between s and t is exactly k,
     assuming the alphabet is A, C, G, T.
@@ -79,7 +81,7 @@ def hamming_sphere(s, k):
                 yield y
 
 
-def hamming_environment(s, k):
+def hamming_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
     """
     Find all strings t for which the hamming distance between s and t is at most k,
     assuming the alphabet is A, C, G, T.
@@ -93,7 +95,7 @@ def hamming_environment(s, k):
             yield t, e, n - e
 
 
-def naive_edit_environment(s: str, k: int):
+def naive_edit_environment(s: str, k: int) -> Iterator[str]:
     """
     Apply all possible edits up to edit distance k to string s.
     A string may be returned more than once.
@@ -114,7 +116,7 @@ def naive_edit_environment(s: str, k: int):
             yield s[:i] + s[i+1:]
 
 
-def edit_environment(s: str, k: int):
+def edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
     """
     Find all strings t for which the edit distance between s and t is at most k,
     assuming the alphabet is A, C, G, T.
@@ -134,7 +136,7 @@ def edit_environment(s: str, k: int):
         yield t, errors, matches
 
 
-def slow_edit_environment(s: str, k: int):
+def slow_edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
     """
     Find all strings t for which the edit distance between s and t is at most k,
     assuming the alphabet is A, C, G, T.
