@@ -129,6 +129,32 @@ system-installed packages::
     sudo ln -s ../cutadapt/bin/cutadapt
 
 
+Installation on Windows
+-----------------------
+
+There is no Bioconda package for Windows because Bioconda does not produce
+Windows packages. To install Cutadapt, you can use ``pip``, but because
+Cutadapt contains components that need to be compiled, you also need to install
+a compiler.
+
+1. Download a recent version (at least 3.6) of Python for Windows from
+   <https://www.python.org/> and install it.
+2. Download and install “Build Tools for Visual Studio 2019” from
+   <https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019>.
+   (There are many similarly named downloads on that page, ensure you get the
+   right one.)
+
+   During installation, when the dialog about which components to install pops
+   up, ensure that “C++ Build tools” is ticked. The download is quite big and
+   can take a long time.
+3. Open the command line (``cmd.exe``) and run ``py -m pip install cutadapt``.
+4. Test whether it worked by running ``py -m cutadapt --version``. You should
+   see the version number of Cutadapt.
+
+When running Cutadapt this way, you will need to remember to write
+``py -m cutadapt`` instead of just ``cutadapt``.
+
+
 Uninstalling
 ------------
 
