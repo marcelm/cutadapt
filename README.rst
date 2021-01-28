@@ -1,4 +1,4 @@
-.. image:: https://travis-ci.org/marcelm/cutadapt.svg?branch=master
+.. image:: https://github.com/marcelm/cutadapt/workflows/CI/badge.svg
     :target: https://travis-ci.org/marcelm/cutadapt
     :alt:
 
