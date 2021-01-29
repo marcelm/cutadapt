@@ -23,7 +23,7 @@
 """
 cutadapt version {version}
 
-Copyright (C) 2010-2020 Marcel Martin <marcel.martin@scilifelab.se>
+Copyright (C) 2010-2021 Marcel Martin <marcel.martin@scilifelab.se>
 
 cutadapt removes adapter sequences from high-throughput sequencing reads.
 
