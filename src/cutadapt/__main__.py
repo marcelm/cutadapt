@@ -688,6 +688,7 @@ def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) ->
         args.action,
         args.times,
         args.reverse_complement,
+        not args.rename,  # no "rc" suffix if --rename is used
         args.index,
     )
 
@@ -781,6 +782,7 @@ def add_adapter_cutter(
     action: Optional[str],
     times: int,
     reverse_complement: bool,
+    add_rc_suffix: bool,
     allow_index: bool,
 ):
     if pair_adapters:
@@ -808,7 +810,8 @@ def add_adapter_cutter(
         elif adapter_cutter:
             if reverse_complement:
                 modifier = ReverseComplementer(
-                    adapter_cutter
+                    adapter_cutter,
+                    rc_suffix=" rc" if add_rc_suffix else None,
                 )  # type: Union[AdapterCutter,ReverseComplementer]
             else:
                 modifier = adapter_cutter

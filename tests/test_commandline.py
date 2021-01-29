@@ -2,6 +2,8 @@ import subprocess
 import sys
 import os
 from io import StringIO, BytesIO
+
+import dnaio
 import pytest
 
 from cutadapt.__main__ import main
@@ -676,6 +678,24 @@ def test_print_progress_to_tty(tmpdir, mocker):
 def test_adapter_order(run):
     run("-g ^AAACC -a CCGGG", "adapterorder-ga.fasta", "adapterorder.fasta")
     run("-a CCGGG -g ^AAACC", "adapterorder-ag.fasta", "adapterorder.fasta")
+
+
+def test_reverse_complement_no_rc_suffix(run, tmp_path):
+    out_path = str(tmp_path / "out.fastq")
+    main([
+        "-o", out_path,
+        "--revcomp",
+        "--no-index",
+        "--rename", "{header}",
+        "-g", "^TTATTTGTCT",
+        "-g", "^TCCGCACTGG",
+        datapath("revcomp.1.fastq")
+    ])
+    with dnaio.open(out_path) as f:
+        reads = list(f)
+    assert len(reads) == 6
+    assert reads[1].name == "read2/1"
+    assert reads[1].sequence == "ACCATCCGATATGTCTAATGTGGCCTGTTG"
 
 
 def test_reverse_complement_normalized(run):

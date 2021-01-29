@@ -6,6 +6,8 @@ development version
 -------------------
 
 * :issue:`504`: Fix a crash on Windows.
+* :issue:`490`: When ``--rename`` is used with ``--revcomp``, disable adding the
+  ``rc`` suffix to reads that were reverse-complemented.
 
 v3.2 (2021-01-07)
 -----------------
