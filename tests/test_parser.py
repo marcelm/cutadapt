@@ -66,6 +66,15 @@ def test_parse_not_linked():
     assert p('a_name=ADAPT', 'front') == AdapterSpecification('a_name', None, 'ADAPT', {}, 'front')
 
 
+@pytest.mark.parametrize("where", ("front", "back"))
+@pytest.mark.parametrize("reqopt", ("required", "optional"))
+def test_parse_invalid_adapter_specific_parameter(where, reqopt):
+    parser = AdapterParser()
+    with pytest.raises(ValueError) as e:
+        parser._parse_not_linked("A;{}".format(reqopt), "name", where)
+    assert "can only be used within linked adapters" in e.value.args[0]
+
+
 def test_parse_invalid_cmdline_type():
     with pytest.raises(ValueError) as e:
         AdapterSpecification._parse('A', 'invalid_type')

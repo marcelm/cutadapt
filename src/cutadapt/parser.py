@@ -340,6 +340,8 @@ class AdapterParser:
         adapter_class = aspec.adapter_class()  # type: Type[Adapter]
         if aspec.parameters.pop('anywhere', False) and adapter_class in (FrontAdapter, BackAdapter):
             aspec.parameters['force_anywhere'] = True
+        if 'required' in aspec.parameters:
+            raise ValueError("'required' and 'optional' can only be used within linked adapters")
         parameters = self.default_parameters.copy()
         parameters.update(aspec.parameters)
         return adapter_class(
