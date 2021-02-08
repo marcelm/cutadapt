@@ -3,3 +3,8 @@ requires = ["setuptools", "wheel", "setuptools_scm", "cython"]
 
 [black.tool]
 line-length = 100
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+]
