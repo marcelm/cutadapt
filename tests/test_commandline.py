@@ -114,11 +114,12 @@ def test_extensiontxtgz(run):
 
 def test_minimum_length(run):
     """-m/--minimum-length"""
-    run("-m 5 -a TTAGACATATCTCCGTCG", "minlen.fa", "lengths.fa")
+    stats = run("-m 5 -a TTAGACATATCTCCGTCG", "minlen.fa", "lengths.fa")
+    assert stats.written_bp[0] == 45
+    assert stats.written == 6
 
 
 def test_too_short(run, tmpdir, cores):
-    """--too-short-output"""
     too_short_path = str(tmpdir.join('tooshort.fa'))
     stats = run([
         "--cores", str(cores),
@@ -128,6 +129,18 @@ def test_too_short(run, tmpdir, cores):
     ], "minlen.fa", "lengths.fa")
     assert_files_equal(datapath('tooshort.fa'), too_short_path)
     assert stats.too_short == 5
+
+
+@pytest.mark.parametrize("redirect", (False, True))
+def test_too_short_statistics(redirect):
+    args = ["-a", "TTAGACATATCTCCGTCG", "-m", "24", "-o", os.devnull, datapath("small.fastq")]
+    if redirect:
+        args[:0] = ["--too-short-output", os.devnull]
+    stats = main(args)
+    assert stats.with_adapters[0] == 2
+    assert stats.written == 2
+    assert stats.written_bp[0] == 58
+    assert stats.too_short == 1
 
 
 def test_maximum_length(run):
@@ -444,9 +457,12 @@ def test_unconditional_cut_invalid_number():
 
 def test_untrimmed_output(run, cores, tmpdir):
     path = str(tmpdir.join("untrimmed.fastq"))
-    run(["--cores", str(cores), "-a", "TTAGACATATCTCCGTCG", "--untrimmed-output", path],
+    stats = run(["--cores", str(cores), "-a", "TTAGACATATCTCCGTCG", "--untrimmed-output", path],
         "small.trimmed.fastq", "small.fastq")
     assert_files_equal(cutpath("small.untrimmed.fastq"), path)
+    assert stats.with_adapters[0] == 2
+    assert stats.written == 2
+    assert stats.written_bp[0] == 46
 
 
 def test_adapter_file(run):

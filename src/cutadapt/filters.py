@@ -118,7 +118,7 @@ class PairedNoFilter(PairedEndFilterWithStatistics):
         return DISCARD
 
 
-class Redirector(SingleEndFilterWithStatistics):
+class Redirector(SingleEndFilter):
     """
     Redirect discarded reads to the given writer. This is for single-end reads.
     """
@@ -137,12 +137,11 @@ class Redirector(SingleEndFilterWithStatistics):
             self.filtered += 1
             if self.writer is not None:
                 self.writer.write(read)
-                self.update_statistics(read)
             return DISCARD
         return KEEP
 
 
-class PairedRedirector(PairedEndFilterWithStatistics):
+class PairedRedirector(PairedEndFilter):
     """
     Redirect paired-end reads matching a filtering criterion to a writer.
     Different filtering styles are supported, differing by which of the
@@ -195,7 +194,6 @@ class PairedRedirector(PairedEndFilterWithStatistics):
             self.filtered += 1
             if self.writer is not None:
                 self.writer.write(read1, read2)
-                self.update_statistics(read1, read2)
             return DISCARD
         return KEEP
 
