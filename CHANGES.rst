@@ -8,6 +8,8 @@ development version
 * :issue:`504`: Fix a crash on Windows.
 * :issue:`490`: When ``--rename`` is used with ``--revcomp``, disable adding the
   ``rc`` suffix to reads that were reverse-complemented.
+* :issue:`512`: Fix issue :issue:`128` once more (the “Reads written” figure in the report
+  incorrectly included both trimmed and untrimmed reads if ``--untrimmed-output`` was used).
 
 v3.2 (2021-01-07)
 -----------------
