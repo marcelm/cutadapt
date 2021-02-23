@@ -169,7 +169,6 @@ class FileOpener:
         logger.debug("Opening '%s', mode '%s' with xopen resulted in %s", path, mode, f)
         return f
 
-
     def xopen_or_none(self, path, mode):
         """Return opened file or None if the path is None"""
         if path is None:
