@@ -165,8 +165,10 @@ class FileOpener:
         self.threads = threads
 
     def xopen(self, path, mode):
-        logger.debug("Opening file '%s', mode '%s' with xopen", path, mode)
-        return xopen(path, mode, compresslevel=self.compression_level, threads=self.threads)
+        f = xopen(path, mode, compresslevel=self.compression_level, threads=self.threads)
+        logger.debug("Opening '%s', mode '%s' with xopen resulted in %s", path, mode, f)
+        return f
+
 
     def xopen_or_none(self, path, mode):
         """Return opened file or None if the path is None"""
@@ -183,9 +185,11 @@ class FileOpener:
         return file1, file2
 
     def dnaio_open(self, *args, **kwargs):
-        logger.debug("Opening file '%s', mode '%s' with dnaio", args[0], kwargs['mode'])
         kwargs["opener"] = self.xopen
-        return dnaio.open(*args, **kwargs)
+        f = dnaio.open(*args, **kwargs)
+        logger.debug("Opening file '%s', mode '%s' with dnaio resulted in %s",
+            args[0], kwargs['mode'], f)
+        return f
 
     def dnaio_open_raise_limit(self, *args, **kwargs):
         """
