@@ -165,7 +165,8 @@ class FileOpener:
         self.threads = threads
 
     def xopen(self, path, mode):
-        f = xopen(path, mode, compresslevel=self.compression_level, threads=self.threads)
+        threads = self.threads if "w" in mode else 0
+        f = xopen(path, mode, compresslevel=self.compression_level, threads=threads)
         logger.debug("Opening '%s', mode '%s' with xopen resulted in %s", path, mode, f)
         return f
 
