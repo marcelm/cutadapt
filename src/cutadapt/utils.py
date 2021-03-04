@@ -187,7 +187,7 @@ class FileOpener:
     def dnaio_open(self, *args, **kwargs):
         kwargs["opener"] = self.xopen
         f = dnaio.open(*args, **kwargs)
-        logger.debug("Opening file '%s', mode '%s' with dnaio resulted in %s",
+        logger.debug("Opening %r, mode '%s' with dnaio resulted in %s",
             args[0], kwargs['mode'], f)
         return f
 
