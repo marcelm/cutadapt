@@ -206,6 +206,16 @@ class TestRenamer:
         info.cut_suffix = "TTAAGG"
         assert renamer(read, info).name == "theid_TTAAGG thecomment"
 
+    def test_rc_template_varialbe(self):
+        renamer = Renamer("{id} rc={rc} {comment}")
+        read = Sequence("theid thecomment", "ACGT")
+        info = ModificationInfo(read)
+        assert renamer(read, info).name == "theid rc= thecomment"
+
+        read = Sequence("theid thecomment", "ACGT")
+        info.is_rc = True
+        assert renamer(read, info).name == "theid rc=rc thecomment"
+
 
 class TestPairedEndRenamer:
     def test_invalid_template_variable(self):

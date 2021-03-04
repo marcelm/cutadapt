@@ -1099,6 +1099,8 @@ The following placeholders are currently available for single-end reads:
   used with a positive length argument)
 * ``{cut_suffix}`` -- the suffix removed by the ``--cut`` (or ``-u``) option (that is, when
   used with a negative length argument)
+* ``{rc}`` -- this is replaced with the string ``rc`` if the read was reverse complemented.
+  This only applies when :ref:`reverse complementing <reverse-complement>` was requested.
 
 For example, assume you have this input read in ``in.fasta``::
 
@@ -1113,6 +1115,10 @@ Will result in this modified read::
 
     >myread barcode=ACGT adapter=myadapter extra info
     AAAA
+
+
+.. versionadded:: 3.3
+    The ``{rc}`` template variable.
 
 
 ``--rename`` also renames paired-end reads

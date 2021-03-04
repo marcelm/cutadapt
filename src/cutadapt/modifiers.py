@@ -437,6 +437,7 @@ class Renamer(SingleEndModifier):
     - {cut_prefix} -- prefix removed by UnconditionalCutter (with positive length argument)
     - {cut_suffix} -- suffix removed by UnconditionalCutter (with negative length argument)
     - {adapter_name} -- name of the *last* adapter match or no_adapter if there was none
+    - {rc} -- the string 'rc' if the read was reverse complemented (with --revcomp) or '' otherwise
     """
     variables = {
         "header",
@@ -445,6 +446,7 @@ class Renamer(SingleEndModifier):
         "cut_prefix",
         "cut_suffix",
         "adapter_name",
+        "rc",
     }
 
     def __init__(self, template: str):
@@ -454,6 +456,9 @@ class Renamer(SingleEndModifier):
             raise InvalidTemplate("Error in template '{}': {}".format(template, e))
         self.raise_if_invalid_variable(self._tokens, self.variables)
         self._template = template
+
+    def __repr__(self):
+        return f"Renamer('{self._template}')"
 
     @staticmethod
     def raise_if_invalid_variable(tokens: List[Token], allowed: Set[str]) -> None:
@@ -484,6 +489,7 @@ class Renamer(SingleEndModifier):
             cut_prefix=info.cut_prefix if info.cut_prefix else "",
             cut_suffix=info.cut_suffix if info.cut_suffix else "",
             adapter_name=info.matches[-1].adapter.name if info.matches else "no_adapter",
+            rc="rc" if info.is_rc else "",
         )
         return read
 
@@ -512,9 +518,8 @@ class PairedEndRenamer(PairedEndModifier):
 
     @staticmethod
     def _get_allowed_variables() -> Set[str]:
-        allowed = Renamer.variables.copy()
-        allowed.add("rn")
-        for v in Renamer.variables - {"id"}:
+        allowed = (Renamer.variables - {"rc"}) | {"rn"}
+        for v in Renamer.variables - {"id", "rc"}:
             allowed.add("r1." + v)
             allowed.add("r2." + v)
         return allowed
