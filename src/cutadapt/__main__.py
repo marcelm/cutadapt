@@ -978,7 +978,20 @@ def estimate_compression_threads(cores: int) -> Optional[int]:
 
 
 def is_any_output_stdout(args):
-    return not (args.output is not None and args.output != "-" and args.paired_output != "-")
+    return any([
+        args.output is None,
+        args.output == "-",
+        args.paired_output == "-",
+        args.untrimmed_output == "-",
+        args.untrimmed_paired_output == "-",
+        args.too_short_output == "-",
+        args.too_short_paired_output == "-",
+        args.too_long_output == "-",
+        args.too_long_paired_output == "-",
+        args.rest_file == "-",
+        args.info_file == "-",
+        args.wildcard_file == "-",
+    ])
 
 
 if __name__ == '__main__':  # pragma: no cover
