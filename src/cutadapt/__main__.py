@@ -976,7 +976,7 @@ def warn_if_en_dashes(args):
 
 
 def estimate_compression_threads(cores: int) -> Optional[int]:
-    return 0 if cores == 1 else None
+    return max(0, min(cores, 4))
 
 
 if __name__ == '__main__':  # pragma: no cover
