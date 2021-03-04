@@ -49,6 +49,7 @@ class EndStatistics:
         self.sequence = adapter.sequence  # type: str
         self.effective_length = adapter.effective_length  # type: int
         self.has_wildcards = adapter.adapter_wildcards  # type: bool
+        self.allows_partial_matches: bool = adapter.allows_partial_matches
         # self.errors[l][e] == n iff n times a sequence of length l matching at e errors was removed
         self.errors = defaultdict(returns_defaultdict_int)  # type: Dict[int, Dict[int, int]]
         self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
@@ -395,6 +396,8 @@ class SingleAdapter(Adapter, ABC):
         unique number.
     """
 
+    allows_partial_matches: bool = True
+
     def __init__(
         self,
         sequence: str,
@@ -617,6 +620,7 @@ class PrefixAdapter(NonInternalFrontAdapter):
     """An anchored 5' adapter"""
 
     description = "anchored 5'"
+    allows_partial_matches = False
 
     def _aligner(self):
         if not self.indels:  # TODO or if error rate allows 0 errors anyway
@@ -635,6 +639,7 @@ class SuffixAdapter(NonInternalBackAdapter):
     """An anchored 3' adapter"""
 
     description = "anchored 3'"
+    allows_partial_matches = False
 
     def _aligner(self):
         if not self.indels:  # TODO or if error rate allows 0 errors anyway

@@ -210,18 +210,21 @@ class Statistics:
 def error_ranges(adapter_statistics: EndStatistics) -> str:
     length = adapter_statistics.effective_length
     error_rate = adapter_statistics.max_error_rate
-    prev = 1
-    s = ""
-    for errors in range(1, int(error_rate * length) + 1):
-        r = int(errors / error_rate)
-        s += "{}-{} bp: {}; ".format(prev, r - 1, errors - 1)
-        prev = r
-    if prev == length:
-        s += "{} bp: {}".format(length, int(error_rate * length))
+    if adapter_statistics.allows_partial_matches:
+        prev = 1
+        s = "\n"
+        for errors in range(1, int(error_rate * length) + 1):
+            r = int(errors / error_rate)
+            s += "{}-{} bp: {}; ".format(prev, r - 1, errors - 1)
+            prev = r
+        if prev == length:
+            s += "{} bp: {}".format(length, int(error_rate * length))
+        else:
+            s += "{}-{} bp: {}".format(prev, length, int(error_rate * length))
     else:
-        s += "{}-{} bp: {}".format(prev, length, int(error_rate * length))
+        s = f" {int(error_rate * length)}"
 
-    return "No. of allowed errors:\n" + s + "\n"
+    return "No. of allowed errors:" + s + "\n"
 
 
 def histogram(end_statistics: EndStatistics, n: int, gc_content: float) -> str:
