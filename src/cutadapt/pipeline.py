@@ -12,7 +12,6 @@ import multiprocessing.connection
 from multiprocessing.connection import Connection
 import traceback
 
-from xopen import xopen
 import dnaio
 
 from .utils import Progress, FileOpener
@@ -530,7 +529,7 @@ class ReaderProcess(Process):
     and finally sends the stop token -1 ("poison pills") to all connections.
     """
 
-    def __init__(self, path: str, path2: Optional[str], connections, queue, buffer_size, stdin_fd):
+    def __init__(self, path: str, path2: Optional[str], opener: FileOpener, connections, queue, buffer_size, stdin_fd):
         """
         queue -- a Queue of worker indices. A worker writes its own index into this
             queue to notify the reader that it is ready to receive more data.
@@ -543,15 +542,16 @@ class ReaderProcess(Process):
         self.queue = queue
         self.buffer_size = buffer_size
         self.stdin_fd = stdin_fd
+        self._opener = opener
 
     def run(self):
         if self.stdin_fd != -1:
             sys.stdin.close()
             sys.stdin = os.fdopen(self.stdin_fd)
         try:
-            with xopen(self.path, 'rb') as f:
+            with self._opener.xopen(self.path, 'rb') as f:
                 if self.path2:
-                    with xopen(self.path2, 'rb') as f2:
+                    with self._opener.xopen(self.path2, 'rb') as f2:
                         for chunk_index, (chunk1, chunk2) in enumerate(
                                 dnaio.read_paired_chunks(f, f2, self.buffer_size)):
                             self.send_to_worker(chunk_index, chunk1, chunk2)
@@ -740,6 +740,7 @@ class ParallelPipelineRunner(PipelineRunner):
         pipeline: Pipeline,
         infiles: InputPaths,
         outfiles: OutputFiles,
+        opener: FileOpener,
         progress: Progress,
         n_workers: int,
         buffer_size: int = 4 * 1024**2,
@@ -748,8 +749,9 @@ class ParallelPipelineRunner(PipelineRunner):
         self._n_workers = n_workers
         self._need_work_queue = Queue()  # type: Queue
         self._buffer_size = buffer_size
-        self._assign_input(infiles.path1, infiles.path2, infiles.interleaved)
         self._outfiles = outfiles
+        self._opener = opener
+        self._assign_input(infiles.path1, infiles.path2, infiles.interleaved)
 
     def _assign_input(
         self,
@@ -768,7 +770,7 @@ class ParallelPipelineRunner(PipelineRunner):
             # This happens during tests: pytest sets sys.stdin to an object
             # that does not have a file descriptor.
             fileno = -1
-        self._reader_process = ReaderProcess(path1, path2, connw,
+        self._reader_process = ReaderProcess(path1, path2, self._opener, connw,
             self._need_work_queue, self._buffer_size, fileno)
         self._reader_process.daemon = True
         self._reader_process.start()

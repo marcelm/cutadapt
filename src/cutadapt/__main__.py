@@ -947,7 +947,7 @@ def setup_runner(
     try:
         if cores > 1:
             return ParallelPipelineRunner(
-                pipeline, inpaths, outfiles, progress, n_workers=cores, buffer_size=buffer_size)
+                pipeline, inpaths, outfiles, file_opener, progress, n_workers=cores, buffer_size=buffer_size)
         else:
             infiles = inpaths.open(file_opener)
             return SerialPipelineRunner(pipeline, infiles, outfiles, progress)
