@@ -882,7 +882,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
 
     cores = available_cpu_count() if args.cores == 0 else args.cores
     file_opener = FileOpener(
-        compression_level=args.compression_level, threads=0 if cores == 1 else None)
+        compression_level=args.compression_level, threads=estimate_compression_threads(cores))
     if sys.stderr.isatty() and not args.quiet and not args.debug:
         progress = Progress()
     else:
@@ -973,6 +973,10 @@ def warn_if_en_dashes(args):
                 " and will therefore be interpreted as a file name. If you wanted to"
                 " provide an option, use a regular hyphen '-'.", arg
             )
+
+
+def estimate_compression_threads(cores: int) -> Optional[int]:
+    return 0 if cores == 1 else None
 
 
 if __name__ == '__main__':  # pragma: no cover
