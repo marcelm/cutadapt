@@ -2,8 +2,8 @@
 Changes
 =======
 
-development version
--------------------
+v3.3 (2021-03-04)
+-----------------
 
 * :issue:`504`: Fix a crash on Windows.
 * :issue:`490`: When ``--rename`` is used with ``--revcomp``, disable adding the
