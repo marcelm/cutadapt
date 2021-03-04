@@ -30,7 +30,7 @@ class NiceFormatter(logging.Formatter):
         return super().format(record)
 
 
-def setup_logging(logger, log_to_stdout=False, minimal=False, quiet=False, debug=0):
+def setup_logging(logger, log_to_stderr=True, minimal=False, quiet=False, debug=0):
     """
     Attach handler to the global logger object
     """
@@ -39,7 +39,7 @@ def setup_logging(logger, log_to_stdout=False, minimal=False, quiet=False, debug
     # INFO level (and the ERROR level would give us an 'ERROR:' prefix).
     logging.addLevelName(REPORT, 'REPORT')
 
-    stream_handler = CrashingHandler(sys.stdout if log_to_stdout else sys.stderr)
+    stream_handler = CrashingHandler(sys.stderr if log_to_stderr else sys.stdout)
     stream_handler.setFormatter(NiceFormatter())
     # debug overrides quiet overrides minimal
     if debug > 0:

@@ -42,5 +42,5 @@ def test_parse_lengths():
 def test_setup_logging():
     import logging
     logger = logging.getLogger(__name__)
-    setup_logging(logger, log_to_stdout=True, quiet=False, minimal=False, debug=False)
+    setup_logging(logger, log_to_stderr=False, quiet=False, minimal=False, debug=False)
     logger.info("Log message")

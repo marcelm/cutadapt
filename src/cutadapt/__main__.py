@@ -863,7 +863,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     # Setup logging only if there are not already any handlers (can happen when
     # this function is being called externally such as from unit tests)
     if not logging.root.handlers:
-        setup_logging(logger, log_to_stdout=not is_any_output_stdout(args),
+        setup_logging(logger, log_to_stderr=is_any_output_stdout(args),
             quiet=args.quiet, minimal=args.report == 'minimal', debug=args.debug)
     log_header(cmdlineargs)
     profiler = setup_profiler_if_requested(args.profile)
