@@ -863,9 +863,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     # Setup logging only if there are not already any handlers (can happen when
     # this function is being called externally such as from unit tests)
     if not logging.root.handlers:
-        # If results are to be sent to stdout, logging needs to go to stderr
-        log_to_stdout = args.output is not None and args.output != "-" and args.paired_output != "-"
-        setup_logging(logger, stdout=log_to_stdout,
+        setup_logging(logger, log_to_stdout=not is_any_output_stdout(args),
             quiet=args.quiet, minimal=args.report == 'minimal', debug=args.debug)
     log_header(cmdlineargs)
     profiler = setup_profiler_if_requested(args.profile)
@@ -977,6 +975,10 @@ def warn_if_en_dashes(args):
 
 def estimate_compression_threads(cores: int) -> Optional[int]:
     return max(0, min(cores, 4))
+
+
+def is_any_output_stdout(args):
+    return not (args.output is not None and args.output != "-" and args.paired_output != "-")
 
 
 if __name__ == '__main__':  # pragma: no cover
