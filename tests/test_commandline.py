@@ -373,6 +373,19 @@ def test_info_file_fasta(run, tmp_path, cores):
         "no_indels.fasta", "no_indels.fasta")
 
 
+def test_info_file_revcomp(run, tmp_path):
+    info_path = tmp_path / "info-rc.txt"
+    main([
+        "--info-file", str(info_path),
+        "-a", "adapt=GAGTCG",
+        "--revcomp",
+        "--rename={header}",
+        "-o", str(tmp_path / "out.fasta"),
+        datapath("info-rc.fasta")
+    ])
+    assert_files_equal(cutpath("info-rc.txt"), info_path)
+
+
 def test_named_adapter(run):
     run("-a MY_ADAPTER=GCCGAACTTCTTAGACTGCCTTAAGGACGT", "illumina.fastq", "illumina.fastq.gz")
 

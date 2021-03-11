@@ -23,6 +23,8 @@ from .modifiers import ModificationInfo
 
 # Constants used when returning from a Filter’s __call__ method to improve
 # readability (it is unintuitive that "return True" means "discard the read").
+from .utils import reverse_complemented_sequence
+
 DISCARD = True
 KEEP = False
 
@@ -414,16 +416,21 @@ class WildcardFileWriter(SingleEndFilter):
 
 
 class InfoFileWriter(SingleEndFilter):
+    RC_MAP = {None: "", True: "1", False: "0"}
+
     def __init__(self, file):
         self.file = file
 
     def __call__(self, read, info: ModificationInfo):
         current_read = info.original_read
+        if info.is_rc:
+            current_read = reverse_complemented_sequence(current_read)
         if info.matches:
             for match in info.matches:
                 for info_record in match.get_info_records(current_read):
                     # info_record[0] is the read name suffix
-                    print(read.name + info_record[0], *info_record[1:], sep='\t', file=self.file)
+                    print(read.name + info_record[0], *info_record[1:], self.RC_MAP[info.is_rc],
+                        sep='\t', file=self.file)
                 current_read = match.trimmed(current_read)
         else:
             seq = read.sequence

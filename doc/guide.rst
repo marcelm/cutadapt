@@ -2192,7 +2192,7 @@ from the final FASTA/FASTQ output due to filtering options
 (such as ``--minimum-length``). Which fields are output in each row
 depends on whether an adapter match was found in the read or not.
 
-The fields in a row that describes a match are:
+If an adapter match was found, these fields are output in each row:
 
 1. Read name
 2. Number of errors
@@ -2205,12 +2205,18 @@ The fields in a row that describes a match are:
 9. Quality values corresponding to sequence left of the adapter match (can be empty)
 10. Quality values corresponding to sequence matched to the adapter (can be empty)
 11. Quality values corresponding to sequence to the right of the adapter match (can be empty)
+12. Flag indicating whether the read was reverse complemented: 1 if yes, 0 if not,
+    and empty if ``--revcomp`` was not used.
 
 The concatenation of the fields 5-7 yields the full read sequence. Column 8 identifies
 the found adapter. `The section about named adapters <named-adapters>` describes
 how to give a name to an adapter. Adapters without a name are numbered starting
 from 1. Fields 9-11 are empty if quality values are not available.
 Concatenating them yields the full sequence of quality values.
+
+If the adapter match was found on the reverse complement of the read, fields 5 to 7
+show the reverse-complemented sequence, and fields 9-11 contain the qualities in
+reversed order.
 
 If no adapter was found, the format is as follows:
 
@@ -2244,3 +2250,6 @@ a match of the 3' adapter, the string ``;2`` is added. If there are two rows, th
 
 .. versionadded:: 2.8
     Linked adapters in info files work.
+
+.. versionadded:: 3.4
+    Column 12 (revcomp flag) added
