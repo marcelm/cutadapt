@@ -42,6 +42,23 @@ def available_cpu_count():
     return multiprocessing.cpu_count()
 
 
+def open_raise_limit(func, *args, **kwargs):
+    """
+    Run 'func' (which should be some kind of open() function and return its result.
+    If "Too many open files" occurs, increase limit and try again.
+    """
+    try:
+        f = func(*args, **kwargs)
+    except OSError as e:
+        if e.errno == errno.EMFILE:  # Too many open files
+            logger.debug("Too many open files, attempting to raise soft limit")
+            raise_open_files_limit(8)
+            f = func(*args, **kwargs)
+        else:
+            raise
+    return f
+
+
 def raise_open_files_limit(n):
     if resource is None:
         return
@@ -166,7 +183,9 @@ class FileOpener:
 
     def xopen(self, path, mode):
         threads = self.threads if "w" in mode else 0
-        f = xopen(path, mode, compresslevel=self.compression_level, threads=threads)
+        f = open_raise_limit(
+            xopen, path, mode, compresslevel=self.compression_level, threads=threads
+        )
         logger.debug("Opening '%s', mode '%s' with xopen resulted in %s", path, mode, f)
         return f
 
@@ -196,13 +215,4 @@ class FileOpener:
         Open a FASTA/FASTQ file for writing. If it fails because the number of open files
         would be exceeded, try to raise the soft limit and re-try.
         """
-        try:
-            f = self.dnaio_open(*args, **kwargs)
-        except OSError as e:
-            if e.errno == errno.EMFILE:  # Too many open files
-                logger.debug("Too many open files, attempting to raise soft limit")
-                raise_open_files_limit(8)
-                f = self.dnaio_open(*args, **kwargs)
-            else:
-                raise
-        return f
+        return open_raise_limit(self.dnaio_open, *args, **kwargs)
