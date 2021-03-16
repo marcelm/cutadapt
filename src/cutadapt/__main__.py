@@ -695,11 +695,11 @@ def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) ->
     for modifier in modifiers_applying_to_both_ends_if_paired(args):
         pipeline_add(modifier)
 
-    if args.rename:
-        if args.prefix or args.suffix:
-            raise CommandLineError(
-                "Option --rename cannot be combined with --prefix (-x) or --suffix (-y)"
-            )
+    if args.rename and (args.prefix or args.suffix):
+        raise CommandLineError(
+            "Option --rename cannot be combined with --prefix (-x) or --suffix (-y)"
+        )
+    if args.rename and args.rename != "{header}":
         try:
             if paired:
                 pipeline.add_paired_modifier(PairedEndRenamer(args.rename))
