@@ -20,7 +20,11 @@ def assert_files_equal(path1, path2, ignore_trailing_space: bool = False):
     if sys.platform == "win32":
         cmd.append("--strip-trailing-cr")
     if ignore_trailing_space:
-        cmd.append("--ignore-trailing-space")
+        if sys.platform == "darwin":
+            # Ignores too much, but macOS doesn’t have the option below
+            cmd.append("-b")
+        else:
+            cmd.append("--ignore-trailing-space")
     try:
         subprocess.check_output(cmd + [path1, path2], stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
