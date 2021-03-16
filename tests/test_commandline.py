@@ -84,15 +84,15 @@ def test_lowercase(run):
     run('-a ttagacatatctccgtcg', 'lowercase.fastq', 'small.fastq')
 
 
-def test_rest(run, tmpdir, cores):
+def test_rest(run, tmp_path, cores):
     """-r/--rest-file"""
-    rest = str(tmpdir.join("rest.tmp"))
+    rest = tmp_path / "rest.tmp"
     run(['--cores', str(cores), '-b', 'ADAPTER', '-N', '-r', rest], "rest.fa", "rest.fa")
     assert_files_equal(datapath('rest.txt'), rest)
 
 
-def test_restfront(run, tmpdir):
-    path = str(tmpdir.join("rest.txt"))
+def test_restfront(run, tmp_path):
+    path = tmp_path / "rest.txt"
     run(['-g', 'ADAPTER', '-N', '-r', path], "restfront.fa", "rest.fa")
     assert_files_equal(datapath('restfront.txt'), path)
 
@@ -119,8 +119,8 @@ def test_minimum_length(run):
     assert stats.written == 6
 
 
-def test_too_short(run, tmpdir, cores):
-    too_short_path = str(tmpdir.join('tooshort.fa'))
+def test_too_short(run, tmp_path, cores):
+    too_short_path = tmp_path / 'tooshort.fa'
     stats = run([
         "--cores", str(cores),
         "-m", "5",
@@ -148,9 +148,9 @@ def test_maximum_length(run):
     run("-M 5 -a TTAGACATATCTCCGTCG", "maxlen.fa", "lengths.fa")
 
 
-def test_too_long(run, tmpdir, cores):
+def test_too_long(run, tmp_path, cores):
     """--too-long-output"""
-    too_long_path = str(tmpdir.join('toolong.fa'))
+    too_long_path = tmp_path / 'toolong.fa'
     stats = run([
         "--cores", str(cores),
         "-M", "5",
@@ -169,19 +169,19 @@ def test_length_tag(run):
 
 
 @pytest.mark.parametrize("length", list(range(3, 11)))
-def test_overlap_a(tmpdir, length):
+def test_overlap_a(tmp_path, length):
     """-O/--overlap with -a"""
     adapter = "catatctccg"
     record = ">read\nGAGACCATTCCAATG" + adapter[:length] + '\n'
-    input = tmpdir.join("overlap.fasta")
-    input.write(record)
+    input = tmp_path / "overlap.fasta"
+    input.write_text(record)
     if length < 7:
         expected = record
     else:
         expected = '>read\nGAGACCATTCCAATG\n'
-    output = tmpdir.join("overlap-trimmed.fasta")
+    output = tmp_path / "overlap-trimmed.fasta"
     main(["-O", "7", "-e", "0", "-a", adapter, "-o", str(output), str(input)])
-    assert expected == output.read()
+    assert expected == output.read_text()
 
 
 def test_overlap_b(run):
@@ -266,9 +266,9 @@ def test_read_wildcard(run):
     ("-a", "wildcard_adapter.fa"),
     ("-b", "wildcard_adapter_anywhere.fa"),
 ])
-def test_adapter_wildcard(adapter_type, expected, run, tmpdir, cores):
+def test_adapter_wildcard(adapter_type, expected, run, tmp_path, cores):
     """wildcards in adapter"""
-    wildcard_path = str(tmpdir.join("wildcards.txt"))
+    wildcard_path = tmp_path / "wildcards.txt"
     run([
             "--cores", str(cores),
             "--wildcard-file", wildcard_path,
@@ -340,34 +340,34 @@ def test_ellipsis_notation(run):
     run('-a ...TTAGACATAT -g GAGATTGCCA --no-indels', 'no_indels.fasta', 'no_indels.fasta')
 
 
-def test_issue_46(run, tmpdir):
+def test_issue_46(run, tmp_path):
     """issue 46 - IndexError with --wildcard-file"""
     run("--anywhere=AACGTN --wildcard-file={}".format(
-        tmpdir.join("wildcards.txt")), "issue46.fasta", "issue46.fasta")
+        tmp_path / "wildcards.txt"), "issue46.fasta", "issue46.fasta")
 
 
 def test_strip_suffix(run):
     run("--strip-suffix _sequence -a XXXXXXX", "stripped.fasta", "simple.fasta")
 
 
-def test_info_file(run, tmpdir, cores):
+def test_info_file(run, tmp_path, cores):
     # The true adapter sequence in the illumina.fastq.gz data set is
     # GCCTAACTTCTTAGACTGCCTTAAGGACGT (fourth base is different from the sequence shown here)
-    info_path = str(tmpdir.join("info.txt"))
+    info_path = tmp_path / "info.txt"
     run(["--cores", str(cores), "--info-file", info_path, "-a", "adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT"],
         "illumina.fastq", "illumina.fastq.gz")
     assert_files_equal(cutpath("illumina.info.txt"), info_path)
 
 
-def test_info_file_times(run, tmpdir, cores):
-    info_path = str(tmpdir.join("info.txt"))
+def test_info_file_times(run, tmp_path, cores):
+    info_path = tmp_path / "info.txt"
     run(["--cores", str(cores), "--info-file", info_path, "--times", "2", "-a", "adapt=GCCGAACTTCTTA",
         "-a", "adapt2=GACTGCCTTAAGGACGT"], "illumina5.fastq", "illumina5.fastq")
     assert_files_equal(cutpath('illumina5.info.txt'), info_path)
 
 
-def test_info_file_fasta(run, tmpdir, cores):
-    info_path = str(tmpdir.join("info.txt"))
+def test_info_file_fasta(run, tmp_path, cores):
+    info_path = tmp_path / "info.txt"
     # Just make sure that it runs
     run(["--cores", str(cores), "--info-file", info_path, "-a", "TTAGACATAT", "-g", "GAGATTGCCA", "--no-indels"],
         "no_indels.fasta", "no_indels.fasta")
@@ -455,8 +455,8 @@ def test_unconditional_cut_invalid_number():
         main(["-u", "a,b", datapath("small.fastq")])
 
 
-def test_untrimmed_output(run, cores, tmpdir):
-    path = str(tmpdir.join("untrimmed.fastq"))
+def test_untrimmed_output(run, cores, tmp_path):
+    path = tmp_path / "untrimmed.fastq"
     stats = run(["--cores", str(cores), "-a", "TTAGACATATCTCCGTCG", "--untrimmed-output", path],
         "small.trimmed.fastq", "small.fastq")
     assert_files_equal(cutpath("small.untrimmed.fastq"), path)
@@ -594,10 +594,10 @@ def test_linked_lowercase(run):
         'linked-lowercase.fasta', 'linked.fasta')
 
 
-def test_linked_info_file(tmpdir):
-    info_path = str(tmpdir.join('info.txt'))
-    main(['-a linkedadapter=^AAAAAAAAAA...TTTTTTTTTT', '--info-file', info_path,
-        '-o', str(tmpdir.join('out.fasta')), datapath('linked.fasta')])
+def test_linked_info_file(tmp_path):
+    info_path = tmp_path / 'info.txt'
+    main(['-a linkedadapter=^AAAAAAAAAA...TTTTTTTTTT', '--info-file', str(info_path),
+        '-o', str(tmp_path / 'out.fasta'), datapath('linked.fasta')])
     assert_files_equal(cutpath('linked-info.txt'), info_path)
 
 
@@ -633,14 +633,19 @@ def test_negative_length(run):
 
 
 @pytest.mark.timeout(0.5)
-def test_issue_296(tmpdir):
+def test_issue_296(tmp_path):
     # Hang when using both --no-trim and --info-file together
-    info_path = str(tmpdir.join('info.txt'))
-    reads_path = str(tmpdir.join('reads.fasta'))
-    out_path = str(tmpdir.join('out.fasta'))
-    with open(reads_path, 'w') as f:
-        f.write('>read\nCACAAA\n')
-    main(['--info-file', info_path, '--no-trim', '-g', 'TTTCAC', '-o', out_path, reads_path])
+    info_path = tmp_path / 'info.txt'
+    reads_path = tmp_path / 'reads.fasta'
+    out_path = tmp_path / 'out.fasta'
+    reads_path.write_text(">read\nCACAAA\n")
+    main([
+        "--info-file", str(info_path),
+        "--no-trim",
+        "-g", "TTTCAC",
+        "-o", str(out_path),
+        str(reads_path),
+    ])
     # Output should be unchanged because of --no-trim
     assert_files_equal(reads_path, out_path)
 
@@ -668,8 +673,8 @@ def test_cores_autodetect(run):
     run('--cores 0 -b TTAGACATATCTCCGTCG', 'small.fastq', 'underscore_fastq.gz')
 
 
-def test_write_compressed_fastq(cores, tmpdir):
-    main(['--cores', str(cores), '-o', str(tmpdir.join('out.fastq.gz')), datapath('small.fastq')])
+def test_write_compressed_fastq(cores, tmp_path):
+    main(['--cores', str(cores), '-o', str(tmp_path / 'out.fastq.gz'), datapath('small.fastq')])
 
 
 def test_minimal_report(run):
@@ -686,9 +691,9 @@ def test_empty_read_with_wildcard_in_adapter(run):
     run("-g CWC", "empty.fastq", "empty.fastq")
 
 
-def test_print_progress_to_tty(tmpdir, mocker):
+def test_print_progress_to_tty(tmp_path, mocker):
     mocker.patch("cutadapt.utils.sys.stderr").isatty.return_value = True
-    main(["-o", str(tmpdir.join("out.fastq")), datapath("small.fastq")])
+    main(["-o", str(tmp_path / "out.fastq"), datapath("small.fastq")])
 
 
 def test_adapter_order(run):
@@ -697,9 +702,9 @@ def test_adapter_order(run):
 
 
 def test_reverse_complement_no_rc_suffix(run, tmp_path):
-    out_path = str(tmp_path / "out.fastq")
+    out_path = tmp_path / "out.fastq"
     main([
-        "-o", out_path,
+        "-o", str(out_path),
         "--revcomp",
         "--no-index",
         "--rename", "{header}",
