@@ -356,14 +356,14 @@ def test_info_file(run, tmp_path, cores):
     info_path = tmp_path / "info.txt"
     run(["--cores", str(cores), "--info-file", info_path, "-a", "adapt=GCCGAACTTCTTAGACTGCCTTAAGGACGT"],
         "illumina.fastq", "illumina.fastq.gz")
-    assert_files_equal(cutpath("illumina.info.txt"), info_path)
+    assert_files_equal(cutpath("illumina.info.txt"), info_path, ignore_trailing_space=True)
 
 
 def test_info_file_times(run, tmp_path, cores):
     info_path = tmp_path / "info.txt"
     run(["--cores", str(cores), "--info-file", info_path, "--times", "2", "-a", "adapt=GCCGAACTTCTTA",
         "-a", "adapt2=GACTGCCTTAAGGACGT"], "illumina5.fastq", "illumina5.fastq")
-    assert_files_equal(cutpath('illumina5.info.txt'), info_path)
+    assert_files_equal(cutpath('illumina5.info.txt'), info_path, ignore_trailing_space=True)
 
 
 def test_info_file_fasta(run, tmp_path, cores):
@@ -598,7 +598,7 @@ def test_linked_info_file(tmp_path):
     info_path = tmp_path / 'info.txt'
     main(['-a linkedadapter=^AAAAAAAAAA...TTTTTTTTTT', '--info-file', str(info_path),
         '-o', str(tmp_path / 'out.fasta'), datapath('linked.fasta')])
-    assert_files_equal(cutpath('linked-info.txt'), info_path)
+    assert_files_equal(cutpath('linked-info.txt'), info_path, ignore_trailing_space=True)
 
 
 def test_linked_anywhere():

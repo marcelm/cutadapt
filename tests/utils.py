@@ -15,10 +15,12 @@ class FilesDifferent(Exception):
     pass
 
 
-def assert_files_equal(path1, path2):
+def assert_files_equal(path1, path2, ignore_trailing_space: bool = False):
     cmd = ["diff", "-u"]
     if sys.platform == "win32":
         cmd.append("--strip-trailing-cr")
+    if ignore_trailing_space:
+        cmd.append("--ignore-trailing-space")
     try:
         subprocess.check_output(cmd + [path1, path2], stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
