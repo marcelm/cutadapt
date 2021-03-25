@@ -8,6 +8,7 @@ development version
 * :issue:`517`: Report correct sequence in info file if read was reverse complemented
 * :issue:`517`: Added a column to the info file that shows whether the read was
   reverse-complemented (if ``--revcomp`` was used)
+* :issue:`320`: Fix (again) "Too many open files" when demultiplexing
 
 v3.3 (2021-03-04)
 -----------------
