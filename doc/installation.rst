@@ -132,6 +132,13 @@ system-installed packages::
 Installation on Windows
 -----------------------
 
+For some releases of Cutadapt, a single-file executable (``cutadapt.exe``)
+is made available on the
+`GitHub releases page <https://github.com/marcelm/cutadapt/releases>`_. Try that
+first, and if it does not work for you, please report the issue.
+
+To install Cutadapt manually, keep reading.
+
 There is no Bioconda package for Windows because Bioconda does not produce
 Windows packages. To install Cutadapt, you can use ``pip``, but because
 Cutadapt contains components that need to be compiled, you also need to install
