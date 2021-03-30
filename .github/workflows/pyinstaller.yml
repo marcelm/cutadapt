@@ -20,7 +20,7 @@ jobs:
         run: |
           echo "from cutadapt.__main__ import main" > script.py
           echo "sys.exit(main())" >> script.py
-          venv/Scripts/pyinstaller -F -w -n cutadapt script.py
+          venv/Scripts/pyinstaller -F -n cutadapt script.py
       - name: Run it
         run: dist/cutadapt.exe --version
       - uses: actions/upload-artifact@v2
