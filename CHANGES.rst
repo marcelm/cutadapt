@@ -2,9 +2,12 @@
 Changes
 =======
 
-development version
--------------------
+v3.4 (2021-03-30)
+-----------------
 
+* :issue:`481`: An experimental single-file Windows executable of Cutadapt
+  is `available for download on the GitHub "releases"
+  page <https://github.com/marcelm/cutadapt/releases>`_.
 * :issue:`517`: Report correct sequence in info file if read was reverse complemented
 * :issue:`517`: Added a column to the info file that shows whether the read was
   reverse-complemented (if ``--revcomp`` was used)
