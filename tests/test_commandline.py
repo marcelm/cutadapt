@@ -406,9 +406,8 @@ def test_compressed_output(tmp_path, cores, extension):
     main(params)
 
 
-if sys.version_info[:2] >= (3, 3):
-    def test_bzip2_multiblock(run):
-        run('-b TTAGACATATCTCCGTCG', 'small.fastq', 'multiblock.fastq.bz2')
+def test_bzip2_multiblock(run):
+    run("-b TTAGACATATCTCCGTCG", "small.fastq", "multiblock.fastq.bz2")
 
 
 def test_xz(run):
