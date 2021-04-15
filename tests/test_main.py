@@ -44,3 +44,6 @@ def test_setup_logging():
     logger = logging.getLogger(__name__)
     setup_logging(logger, log_to_stderr=False, quiet=False, minimal=False, debug=False)
     logger.info("Log message")
+    setup_logging(logger, log_to_stderr=False, debug=1)
+    setup_logging(logger, log_to_stderr=False, quiet=True)
+    setup_logging(logger, log_to_stderr=False, minimal=True)
