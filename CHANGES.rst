@@ -2,6 +2,11 @@
 Changes
 =======
 
+development version
+-------------------
+
+* :issue:`524`: Fix a memory leak when using ``--info-file`` with multiple cores.
+
 v3.4 (2021-03-30)
 -----------------
 

@@ -186,6 +186,7 @@ class Pipeline(ABC):
 
     def _set_output(self, outfiles: OutputFiles) -> None:
         self._filters = []
+        self._textiowrappers = []
         self._outfiles = outfiles
         filter_wrapper = self._filter_wrapper()
 
