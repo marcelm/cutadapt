@@ -1,13 +1,13 @@
 """
 Tests write output (should it return True or False or write)
 """
-from cutadapt.filters import NContentFilter, DISCARD, KEEP, PairedRedirector
+import pytest
 from dnaio import Sequence
 
-from pytest import mark
+from cutadapt.filters import NContentFilter, DISCARD, KEEP, PairedRedirector
 
 
-@mark.parametrize('seq,count,expected', [
+@pytest.mark.parametrize('seq,count,expected', [
     ('AAA', 0, KEEP),
     ('AAA', 1, KEEP),
     ('AAACCTTGGN', 1, KEEP),
@@ -23,7 +23,7 @@ def test_ncontentfilter(seq, count, expected):
     assert filter_(_seq, []) == expected
 
 
-@mark.parametrize('seq1,seq2,count,expected', [
+@pytest.mark.parametrize('seq1,seq2,count,expected', [
     ('AAA', 'AAA', 0, KEEP),
     ('AAAN', 'AAA', 0, DISCARD),
     ('AAA', 'AANA', 0, DISCARD),
@@ -38,3 +38,9 @@ def test_ncontentfilter_paired(seq1, seq2, count, expected):
     assert filter_legacy(read1, read2, [], []) == filter_(read1, [])
     # discard entire pair if one of the reads fulfills criteria
     assert filter_any(read1, read2, [], []) == expected
+
+
+def test_invalid_pair_filter_mode():
+    with pytest.raises(ValueError) as e:
+        PairedRedirector(None, None, None, "invalidmode")
+    assert "pair_filter_mode must be" in e.value.args[0]
