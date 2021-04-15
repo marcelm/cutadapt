@@ -633,6 +633,7 @@ class WorkerProcess(Process):
                 cur_stats = Statistics().collect(n, bp1, bp2, [], self._pipeline._filters)
                 stats += cur_stats
                 self._send_outfiles(outfiles, chunk_index, n)
+                self._pipeline.close()
 
             m = self._pipeline._modifiers
             modifier_stats = Statistics().collect(0, 0, 0 if self._pipeline.paired else None, m, [])
