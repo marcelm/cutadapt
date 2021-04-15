@@ -36,8 +36,7 @@ def run_interleaved(tmpdir):
         assert not (inpath1 and inpath2 and expected1 and expected2)
         assert not (expected2 and not expected1)
         assert not (inpath2 and not inpath1)
-        if type(params) is str:
-            params = params.split()
+        params = params.split()
         params += ["--interleaved", "--cores", str(cores), "--buffer-size=512"]
         tmp1 = str(tmpdir.join("out1-" + expected1))
         params += ["-o", tmp1]
@@ -544,8 +543,7 @@ def test_combinatorial_demultiplexing(tmpdir, discarduntrimmed, cores):
             path = cutpath(os.path.join("combinatorial", name))
             if should_exist:
                 assert tmpdir.join(name).check(), ("Output file missing", name)
-                if os.path.exists(path):
-                    assert_files_equal(path, str(tmpdir.join(name)))
+                assert_files_equal(path, str(tmpdir.join(name)))
             else:
                 assert not tmpdir.join(name).check(), ("Output file should not exist", name)
 
