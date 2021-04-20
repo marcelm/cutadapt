@@ -1,3 +1,4 @@
+import time
 from itertools import islice
 import dnaio
 
@@ -18,8 +19,9 @@ def test_raise_open_files_limit():
 
 
 def test_progress():
-    p = Progress()
+    p = Progress(every=1E-6)
     p.update(100)
+    time.sleep(0.001)
     p.update(100)
     p.update(1000)
     p.stop(100000)
