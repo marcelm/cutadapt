@@ -49,6 +49,17 @@ def test_quiet_and_report():
     # "Options --quiet and --report cannot be used at the same time"
 
 
+@pytest.mark.parametrize("args", [
+    ("--discard-trimmed", "--discard-untrimmed"),
+    ("--discard-trimmed", "--untrimmed-output", os.devnull),
+    ("--discard-untrimmed", "--untrimmed-output", os.devnull),
+])
+def test_only_one_of_discard_trimmed_discard_untrimmed_untrimmed_output(args):
+    with pytest.raises(SystemExit) as e:
+        main(["-o", os.devnull, *args, datapath("small.fastq")])
+    assert e.value.args[0] == 2
+
+
 def test_debug():
     main(["--debug", "--", datapath("small.fastq")])
 
