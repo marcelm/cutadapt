@@ -55,6 +55,7 @@ See https://cutadapt.readthedocs.io/ for full documentation.
 
 import sys
 import time
+import shutil
 import logging
 import platform
 import itertools
@@ -88,11 +89,7 @@ class CutadaptArgumentParser(ArgumentParser):
     """
     class CustomUsageHelpFormatter(HelpFormatter):
         def __init__(self, *args, **kwargs):
-            try:
-                import shutil
-                kwargs['width'] = min(24 + 80, shutil.get_terminal_size().columns)
-            except ImportError:
-                pass
+            kwargs['width'] = min(24 + 80, shutil.get_terminal_size().columns)
             super().__init__(*args, **kwargs)
 
         def add_usage(self, usage, actions, groups, prefix=None):
