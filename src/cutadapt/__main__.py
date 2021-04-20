@@ -93,7 +93,7 @@ class CutadaptArgumentParser(ArgumentParser):
             super().__init__(*args, **kwargs)
 
         def add_usage(self, usage, actions, groups, prefix=None):
-            if usage is not SUPPRESS:
+            if usage is not SUPPRESS:  # pragma: no cover
                 args = usage, actions, groups, ''
                 self._add_item(self._format_usage, args)
 
