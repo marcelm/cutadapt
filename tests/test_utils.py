@@ -1,8 +1,13 @@
 from itertools import islice
 import dnaio
 
-from cutadapt.utils import (raise_open_files_limit, Progress, DummyProgress, reverse_complement,
-    reverse_complemented_sequence)
+from cutadapt.utils import (
+    raise_open_files_limit,
+    Progress,
+    DummyProgress,
+    reverse_complement,
+    reverse_complemented_sequence,
+)
 
 
 def test_raise_open_files_limit():
