@@ -883,7 +883,6 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     else:
         progress = DummyProgress()
     paired = determine_paired(args)
-    assert paired in (False, True)
 
     try:
         is_interleaved_input = args.interleaved and len(args.inputs) == 1
