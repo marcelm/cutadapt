@@ -83,6 +83,9 @@ class Progress:
         self._start_time = self._time
         self._animation = self.scissors()
 
+    def __repr__(self):
+        return f"Progress(_n={self._n}, elapsed={self._time - self._start_time:.3f})"
+
     @staticmethod
     def scissors(width=10):
         while True:
