@@ -899,7 +899,6 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     except CommandLineError as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
         parser.error(str(e))
-        return
 
     logger.info("Processing reads on %d core%s in %s mode ...",
         cores, 's' if cores > 1 else '',
