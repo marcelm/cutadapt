@@ -200,6 +200,10 @@ def test_overlap_b(run):
     run("-O 10 -b TTAGACATATCTCCGTCG", "overlapb.fa", "overlapb.fa")
 
 
+def test_trim_n(run):
+    run("--trim-n", "trim-n.fasta", "trim-n.fasta")
+
+
 def test_qualtrim(run):
     """-q with low qualities"""
     run("-q 10 -a XXXXXX", "lowqual.fastq", "lowqual.fastq")
