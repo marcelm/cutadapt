@@ -816,7 +816,7 @@ def test_rename(run):
     ], "rename.fastq", "suffix.fastq")
 
 
-@pytest.mark.skipif(sys.platform == "win32")
+@pytest.mark.skipif(sys.platform == "win32", reason="Fails on Windows")
 @pytest.mark.timeout(1)
 def test_terminates_correctly_on_error_in_subprocess(tmp_path):
     params = [
