@@ -814,3 +814,14 @@ def test_rename(run):
         "-a", "OnlyT=TTTTTT",
         "-a", "OnlyG=GGGGGG",
     ], "rename.fastq", "suffix.fastq")
+
+
+@pytest.mark.timeout(1)
+def test_terminates_correctly_on_error_in_subprocess(tmp_path):
+    params = [
+        "-j", "2",
+        "-o", str(tmp_path / "out.fastq.gz"),
+        datapath("format-error.fastq"),
+    ]
+    with pytest.raises(SystemExit):
+        main(params)
