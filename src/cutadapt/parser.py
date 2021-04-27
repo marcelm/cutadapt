@@ -402,10 +402,10 @@ class AdapterParser:
         if spec.startswith('file:'):
             # read adapter sequences from a file
             with xopen(spec[5:], mode="rb", threads=0) as f:
-                fasta = FastaReader(f)
+                fasta = FastaReader(f)  # type: ignore
                 for record in fasta:
-                    name = record.name.split(None, 1)
-                    name = name[0] if name else None
+                    header = record.name.split(None, 1)
+                    name = header[0] if header else None
                     yield self._parse(record.sequence, cmdline_type, name=name)
         else:
             try:
