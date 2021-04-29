@@ -4,10 +4,9 @@ import sys
 import copy
 import logging
 import functools
-from queue import Empty
-from typing import List, Optional, BinaryIO, TextIO, Any, Tuple, Dict, Sequence
+from typing import List, Optional, BinaryIO, TextIO, Any, Tuple, Dict
 from abc import ABC, abstractmethod
-from multiprocessing import Process, Pipe, Queue, Event
+from multiprocessing import Process, Pipe, Queue
 from pathlib import Path
 import multiprocessing.connection
 from multiprocessing.connection import Connection
@@ -520,7 +519,7 @@ class PairedEndPipeline(Pipeline):
 
 class ReaderProcess(Process):
     """
-    Read chunks of FASTA or FASTQ data (single-end or paired) and send them to a worker.
+    Read chunks of FASTA or FASTQ data (single-end or paired) and send to a worker.
 
     The reader repeatedly
 
@@ -531,17 +530,7 @@ class ReaderProcess(Process):
     and finally sends the stop token -1 ("poison pills") to all connections.
     """
 
-    def __init__(
-        self,
-        path: str,
-        path2: Optional[str],
-        opener: FileOpener,
-        connections: Sequence[Connection],
-        queue: Queue,
-        shutdown_event,
-        buffer_size: int,
-        stdin_fd,
-    ):
+    def __init__(self, path: str, path2: Optional[str], opener: FileOpener, connections, queue, buffer_size, stdin_fd):
         """
         queue -- a Queue of worker indices. A worker writes its own index into this
             queue to notify the reader that it is ready to receive more data.
@@ -552,7 +541,6 @@ class ReaderProcess(Process):
         self.path2 = path2
         self.connections = connections
         self.queue = queue
-        self._shutdown_event = shutdown_event
         self.buffer_size = buffer_size
         self.stdin_fd = stdin_fd
         self._opener = opener
@@ -568,32 +556,19 @@ class ReaderProcess(Process):
                         for chunk_index, (chunk1, chunk2) in enumerate(
                                 dnaio.read_paired_chunks(f, f2, self.buffer_size)):
                             self.send_to_worker(chunk_index, chunk1, chunk2)
-                            if self._shutdown_event.is_set():
-                                break
                 else:
                     for chunk_index, chunk in enumerate(dnaio.read_chunks(f, self.buffer_size)):
                         self.send_to_worker(chunk_index, chunk)
-                        if self._shutdown_event.is_set():
-                            break
-            self.shutdown()
+
+            # Send poison pills to all workers
+            for _ in range(len(self.connections)):
+                worker_index = self.queue.get()
+                self.connections[worker_index].send(-1)
         except Exception as e:
             # TODO better send this to a common "something went wrong" Queue
-            logger.debug("Exception in ReaderProcess: %s", e)
             for connection in self.connections:
                 connection.send(-2)
                 connection.send((e, traceback.format_exc()))
-
-    def shutdown(self):
-        # Send poison pills to all workers
-        sent = len(self.connections)
-        while sent > 0 and not self._shutdown_event.is_set():
-            try:
-                worker_index = self.queue.get(block=True, timeout=0.1)
-            except Empty:
-                continue
-            # This could block, but shouldn’t because we send only a few, small objects
-            self.connections[worker_index].send(-1)
-            sent -= 1
 
     def send_to_worker(self, chunk_index, chunk1, chunk2=None):
         worker_index = self.queue.get()
@@ -667,7 +642,6 @@ class WorkerProcess(Process):
             self._write_pipe.send(-1)
             self._write_pipe.send(stats)
         except Exception as e:
-            logger.debug("Exception in WorkerProcess: %s", e)
             self._write_pipe.send(-2)
             self._write_pipe.send((e, traceback.format_exc()))
 
@@ -798,9 +772,8 @@ class ParallelPipelineRunner(PipelineRunner):
             # This happens during tests: pytest sets sys.stdin to an object
             # that does not have a file descriptor.
             fileno = -1
-        self._shutdown_event = Event()
         self._reader_process = ReaderProcess(path1, path2, self._opener, connw,
-            self._need_work_queue, self._shutdown_event, self._buffer_size, fileno)
+            self._need_work_queue, self._buffer_size, fileno)
         self._reader_process.daemon = True
         self._reader_process.start()
 
@@ -827,54 +800,49 @@ class ParallelPipelineRunner(PipelineRunner):
             writers.append(OrderedChunkWriter(f))
         stats = Statistics()
         n = 0  # A running total of the number of processed reads (for progress indicator)
-        try:
-            while connections:
-                ready_connections = multiprocessing.connection.wait(connections)
-                for connection in ready_connections:  # type: Any
-                    chunk_index = connection.recv()
-                    if chunk_index == -1:
-                        # the worker is done
-                        cur_stats = connection.recv()
-                        if stats == -2:
-                            # An exception has occurred in the worker (see below,
-                            # this happens only when there is an exception sending
-                            # the statistics)
-                            e, tb_str = connection.recv()
-                            logger.error('%s', tb_str)
-                            raise e
-                        stats += cur_stats
-                        connections.remove(connection)
-                        continue
-                    elif chunk_index == -2:
-                        # An exception has occurred in the worker
-                        e, tb_str = connection.recv()
-
-                        # We should use the worker's actual traceback object
-                        # here, but traceback objects are not picklable.
-                        logger.error('%s', tb_str)
-                        raise e
-
-                    # No. of reads processed in this chunk
-                    chunk_n = connection.recv()
-                    if chunk_n == -2:
+        while connections:
+            ready_connections = multiprocessing.connection.wait(connections)
+            for connection in ready_connections:  # type: Any
+                chunk_index = connection.recv()
+                if chunk_index == -1:
+                    # the worker is done
+                    cur_stats = connection.recv()
+                    if stats == -2:
+                        # An exception has occurred in the worker (see below,
+                        # this happens only when there is an exception sending
+                        # the statistics)
                         e, tb_str = connection.recv()
                         logger.error('%s', tb_str)
                         raise e
-                    n += chunk_n
-                    self._progress.update(n)
-                    for writer in writers:
-                        data = connection.recv_bytes()
-                        writer.write(data, chunk_index)
-            for writer in writers:
-                assert writer.wrote_everything()
-            self._progress.stop(n)
-        finally:
-            self._shutdown_event.set()
-            logger.debug("Joining workers")
-            for w in workers:
-                w.join()
-            logger.debug("Joining reader process")
-            self._reader_process.join()
+                    stats += cur_stats
+                    connections.remove(connection)
+                    continue
+                elif chunk_index == -2:
+                    # An exception has occurred in the worker
+                    e, tb_str = connection.recv()
+
+                    # We should use the worker's actual traceback object
+                    # here, but traceback objects are not picklable.
+                    logger.error('%s', tb_str)
+                    raise e
+
+                # No. of reads processed in this chunk
+                chunk_n = connection.recv()
+                if chunk_n == -2:
+                    e, tb_str = connection.recv()
+                    logger.error('%s', tb_str)
+                    raise e
+                n += chunk_n
+                self._progress.update(n)
+                for writer in writers:
+                    data = connection.recv_bytes()
+                    writer.write(data, chunk_index)
+        for writer in writers:
+            assert writer.wrote_everything()
+        for w in workers:
+            w.join()
+        self._reader_process.join()
+        self._progress.stop(n)
         return stats
 
     def close(self) -> None:
