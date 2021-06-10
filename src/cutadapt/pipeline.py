@@ -393,7 +393,7 @@ class PairedEndPipeline(Pipeline):
     """
     paired = True
 
-    def __init__(self, pair_filter_mode, file_opener: FileOpener):
+    def __init__(self, file_opener: FileOpener, pair_filter_mode: str):
         super().__init__(file_opener)
         self._modifiers = []  # type: List[PairedEndModifier]
         self._pair_filter_mode = pair_filter_mode

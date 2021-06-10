@@ -658,7 +658,7 @@ def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) ->
     if paired:
         pair_filter_mode = 'any' if args.pair_filter is None else args.pair_filter
         pipeline = PairedEndPipeline(
-            pair_filter_mode, file_opener
+            file_opener, pair_filter_mode
         )  # type: Any
     else:
         pipeline = SingleEndPipeline(file_opener)
