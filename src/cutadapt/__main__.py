@@ -669,26 +669,14 @@ def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) ->
             args.discard_untrimmed or args.untrimmed_output or args.untrimmed_paired_output):
         pipeline.override_untrimmed_pair_filter = True
 
-    add_unconditional_cutters(pipeline, args.cut, args.cut2, paired)
+    add_unconditional_cutters(pipeline, args.cut, args.cut2)
 
     pipeline_add = pipeline.add_both if paired else pipeline.add
 
     if args.nextseq_trim is not None:
         pipeline_add(NextseqQualityTrimmer(args.nextseq_trim, args.quality_base))
 
-    qtrimmers = [
-        QualityTrimmer(*parse_cutoffs(cutoff), args.quality_base)
-        if cutoff is not None and cutoff != "0" else None
-        for cutoff in (args.quality_cutoff, args.quality_cutoff2)
-    ]
-    if paired:
-        if args.quality_cutoff is not None and args.quality_cutoff2 is None:
-            qtrimmers[1] = copy.copy(qtrimmers[0])
-        if qtrimmers[0] is not None or qtrimmers[1] is not None:
-            pipeline.add(*qtrimmers)
-    elif qtrimmers[0] is not None:
-        assert isinstance(pipeline, SingleEndPipeline)
-        pipeline.add(qtrimmers[0])
+    add_quality_trimmers(pipeline, args.quality_cutoff, args.quality_cutoff2, args.quality_base)
 
     add_adapter_cutter(
         pipeline,
@@ -759,7 +747,7 @@ def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
     return adapters, adapters2
 
 
-def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[int], paired: bool):
+def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[int]):
     for i, cut_arg in enumerate([cut1, cut2]):
         # cut_arg is a list
         if not cut_arg:
@@ -772,8 +760,7 @@ def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[in
             if c == 0:
                 continue
             if i == 0:  # R1
-                if paired:
-                    assert isinstance(pipeline, PairedEndPipeline)
+                if isinstance(pipeline, PairedEndPipeline):
                     pipeline.add(UnconditionalCutter(c), None)
                 else:
                     assert isinstance(pipeline, SingleEndPipeline)
@@ -782,6 +769,27 @@ def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[in
                 # R2
                 assert isinstance(pipeline, PairedEndPipeline)
                 pipeline.add(None, UnconditionalCutter(c))
+
+
+def add_quality_trimmers(
+    pipeline: Pipeline,
+    cutoff1: Optional[str],
+    cutoff2: Optional[str],
+    quality_base: int,
+):
+    qtrimmers = [
+        QualityTrimmer(*parse_cutoffs(cutoff), quality_base)
+        if cutoff is not None and cutoff != "0" else None
+        for cutoff in (cutoff1, cutoff2)
+    ]
+    if isinstance(pipeline, PairedEndPipeline):
+        if cutoff1 is not None and cutoff2 is None:
+            qtrimmers[1] = copy.copy(qtrimmers[0])
+        if qtrimmers[0] is not None or qtrimmers[1] is not None:
+            pipeline.add(*qtrimmers)
+    elif qtrimmers[0] is not None:
+        assert isinstance(pipeline, SingleEndPipeline)
+        pipeline.add(qtrimmers[0])
 
 
 def add_adapter_cutter(
