@@ -329,7 +329,7 @@ def get_argument_parser() -> ArgumentParser:
              "or none are removed from each read pair.")
     # Setting the default for pair_filter to None allows us to find out whether
     # the option was used at all.
-    group.add_argument("--pair-filter", metavar='(any|both|first)', default=None,
+    group.add_argument("--pair-filter", default=None,
         choices=("any", "both", "first"),
         help="Which of the reads in a paired-end read have to match the "
             "filtering criterion in order for the pair to be filtered. "
