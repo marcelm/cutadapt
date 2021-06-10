@@ -66,8 +66,8 @@ class PairedEndModifierWrapper(PairedEndModifier):
             raise ValueError("Not both modifiers may be None")
 
     def __repr__(self):
-        return "PairedEndModifierWrapper(modifier1={!r}, modifier2={!r})".format(
-            self._modifier1, self._modifier2)
+        return "PairedEndModifierWrapper(" \
+            f"modifier1={self._modifier1!r}, modifier2={self._modifier2!r})"
 
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         if self._modifier1 is None:
@@ -114,8 +114,8 @@ class AdapterCutter(SingleEndModifier):
             raise ValueError("'retain' cannot be combined with times > 1")
 
     def __repr__(self):
-        return 'AdapterCutter(adapters={!r}, times={}, action={!r})'.format(
-            self.adapters, self.times, self.action)
+        return "AdapterCutter(" \
+            f"adapters={self.adapters!r}, times={self.times}, action='{self.action}')"
 
     def _regroup_into_indexed_adapters(self, adapters):
         prefix, suffix, single = self._split_adapters(adapters)
@@ -247,6 +247,9 @@ class ReverseComplementer(SingleEndModifier):
         self.reverse_complemented = 0
         self._suffix = rc_suffix
 
+    def __repr__(self):
+        return f"ReverseComplementer(adapter_cutter={self.adapter_cutter})"
+
     def __call__(self, read, info: ModificationInfo):
         reverse_read = reverse_complemented_sequence(read)
 
@@ -314,8 +317,7 @@ class PairedAdapterCutter(PairedEndModifier):
         self.adapter_statistics[1] = OrderedDict((a, a.create_statistics()) for a in adapters2)
 
     def __repr__(self):
-        return 'PairedAdapterCutter(adapters1={!r}, adapters2={!r})'.format(
-            self._adapters1, self._adapters2)
+        return f"PairedAdapterCutter(adapters1={self._adapters1!r}, adapters2={self._adapters2!r})"
 
     def __call__(self, read1, read2, info1, info2):
         """
@@ -367,6 +369,9 @@ class UnconditionalCutter(SingleEndModifier):
     def __init__(self, length: int):
         self.length = length
 
+    def __repr__(self):
+        return f"UnconditionalCutter(length={self.length})"
+
     def __call__(self, read, info: ModificationInfo):
         if self.length > 0:
             info.cut_prefix = read.sequence[:self.length]
@@ -384,6 +389,9 @@ class LengthTagModifier(SingleEndModifier):
         self.regex = re.compile(r"\b" + length_tag + r"[0-9]*\b")
         self.length_tag = length_tag
 
+    def __repr__(self):
+        return f"LengthTagModifier(length_tag='{self.length_tag}')"
+
     def __call__(self, read, info: ModificationInfo):
         read = read[:]
         if read.name.find(self.length_tag) >= 0:
@@ -397,6 +405,9 @@ class SuffixRemover(SingleEndModifier):
     """
     def __init__(self, suffix):
         self.suffix = suffix
+
+    def __repr__(self):
+        return f"SuffixRemover('{self.suffix}')"
 
     def __call__(self, read, info: ModificationInfo):
         read = read[:]
@@ -412,6 +423,9 @@ class PrefixSuffixAdder(SingleEndModifier):
     def __init__(self, prefix, suffix):
         self.prefix = prefix
         self.suffix = suffix
+
+    def __repr__(self):
+        return f"PrefixSuffixAdder(prefix='{self.prefix}', suffix='{self.suffix}')"
 
     def __call__(self, read, info):
         read = read[:]
@@ -458,7 +472,7 @@ class Renamer(SingleEndModifier):
         self._template = template
 
     def __repr__(self):
-        return f"Renamer('{self._template}')"
+        return f"{self.__class__.__name__}('{self._template}')"
 
     @staticmethod
     def raise_if_invalid_variable(tokens: List[Token], allowed: Set[str]) -> None:
@@ -599,8 +613,12 @@ class ZeroCapper(SingleEndModifier):
     Change negative quality values of a read to zero
     """
     def __init__(self, quality_base=33):
+        self.quality_base = quality_base
         qb = quality_base
         self.zero_cap_trans = str.maketrans(''.join(map(chr, range(qb))), chr(qb) * qb)
+
+    def __repr__(self):
+        return f"ZeroCapper(quality_base={self.quality_base})"
 
     def __call__(self, read, info: ModificationInfo):
         read = read[:]
@@ -614,6 +632,9 @@ class NextseqQualityTrimmer(SingleEndModifier):
         self.base = base
         self.trimmed_bases = 0
 
+    def __repr__(self):
+        return f"NextseqQualityTrimmer(cutoff={self.cutoff}, base={self.base})"
+
     def __call__(self, read, info: ModificationInfo):
         stop = nextseq_trim_index(read, self.cutoff, self.base)
         self.trimmed_bases += len(read) - stop
@@ -626,6 +647,10 @@ class QualityTrimmer(SingleEndModifier):
         self.cutoff_back = cutoff_back
         self.base = base
         self.trimmed_bases = 0
+
+    def __repr__(self):
+        return f"QualityTrimmer(cutoff_front={self.cutoff_front}, " \
+               f"cutoff_back={self.cutoff_back}, base={self.base})"
 
     def __call__(self, read, info: ModificationInfo):
         start, stop = quality_trim_index(read.qualities, self.cutoff_front, self.cutoff_back, self.base)
@@ -642,6 +667,9 @@ class Shortener(SingleEndModifier):
     def __init__(self, length):
         self.length = length
 
+    def __repr__(self):
+        return f"Shortener(length={self.length})"
+
     def __call__(self, read, info: ModificationInfo):
         if self.length >= 0:
             return read[:self.length]
@@ -654,6 +682,9 @@ class NEndTrimmer(SingleEndModifier):
     def __init__(self):
         self.start_trim = re.compile(r'^N+')
         self.end_trim = re.compile(r'N+$')
+
+    def __repr__(self):
+        return "NEndTrimmer()"
 
     def __call__(self, read, info: ModificationInfo):
         sequence = read.sequence
