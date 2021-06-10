@@ -52,7 +52,7 @@ http://dx.doi.org/10.14806/ej.17.1.200
 Run "cutadapt --help" to see all command-line options.
 See https://cutadapt.readthedocs.io/ for full documentation.
 """
-
+import copy
 import sys
 import time
 import shutil
@@ -320,6 +320,8 @@ def get_argument_parser() -> ArgumentParser:
         help="5'/3 adapter to be removed from R2")
     group.add_argument("-U", dest='cut2', action='append', default=[], type=int, metavar="LENGTH",
         help="Remove LENGTH bases from R2")
+    group.add_argument("-Q", dest="quality_cutoff2", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
+        help="Quality-trimming cutoff for R2. Default: same as for R1")
     group.add_argument("-p", "--paired-output", metavar="FILE",
         help="Write R2 to FILE.")
     group.add_argument("--pair-adapters", action="store_true",
@@ -562,7 +564,9 @@ def determine_paired(args) -> bool:
         or args.pair_filter
         or args.untrimmed_paired_output
         or args.too_short_paired_output
-        or args.too_long_paired_output)
+        or args.too_long_paired_output
+        or args.quality_cutoff2
+    )
 
 
 def setup_input_files(
@@ -671,9 +675,20 @@ def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) ->
 
     if args.nextseq_trim is not None:
         pipeline_add(NextseqQualityTrimmer(args.nextseq_trim, args.quality_base))
-    if args.quality_cutoff is not None:
-        cutoffs = parse_cutoffs(args.quality_cutoff)
-        pipeline_add(QualityTrimmer(cutoffs[0], cutoffs[1], args.quality_base))
+
+    qtrimmers = [
+        QualityTrimmer(*parse_cutoffs(cutoff), args.quality_base)
+        if cutoff is not None and cutoff != "0" else None
+        for cutoff in (args.quality_cutoff, args.quality_cutoff2)
+    ]
+    if paired:
+        if args.quality_cutoff is not None and args.quality_cutoff2 is None:
+            qtrimmers[1] = copy.copy(qtrimmers[0])
+        if qtrimmers[0] is not None or qtrimmers[1] is not None:
+            pipeline.add(*qtrimmers)
+    elif qtrimmers[0] is not None:
+        assert isinstance(pipeline, SingleEndPipeline)
+        pipeline.add(qtrimmers[0])
 
     add_adapter_cutter(
         pipeline,

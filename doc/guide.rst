@@ -993,6 +993,13 @@ of 10. To only trim the 5' end, use a cutoff of 0 for the 3' end, as in
 
 Quality trimming is done before any adapter trimming.
 
+For paired-end data, quality trimming is by default applied to both reads using
+the same cutoff(s). Use option ``-Q`` to specify different cutoffs for R2::
+
+    cutadapt -q 5 -Q 15,20 -o out.1.fastq -p out.2.fastq in.1.fastq in.2.fastq
+
+To disable quality-trimming of R2, use ``-Q 0``.
+
 By default, quality values are assumed to be encoded as
 ascii(phred quality + 33). Nowadays, this should always be the case.
 Some old Illumina FASTQ files encode qualities as ascii(phred quality + 64).
@@ -1000,6 +1007,10 @@ For those, you must add ``--quality-base=64`` to the command line.
 
 A :ref:`description of the quality-trimming algorithm is also
 available <quality-trimming-algorithm>`. The algorithm is the same as used by BWA.
+
+
+.. versionadded: 3.5
+    The ``-Q`` option
 
 
 .. _nextseq-trim:

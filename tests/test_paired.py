@@ -254,6 +254,27 @@ def test_paired_end_qualtrim_swapped(run_paired, cores):
     )
 
 
+def test_qualtrim_r2(run_paired):
+    run_paired(
+        "", in1="lowqual.fastq", in2="lowqual.fastq",
+        expected1="lowqual.unchanged.fastq", expected2="lowqual.unchanged.fastq", cores=1)
+    run_paired(
+        "-q 10", in1="lowqual.fastq", in2="lowqual.fastq",
+        expected1="lowqual.fastq", expected2="lowqual.fastq", cores=1)
+    run_paired(
+        "-Q 10", in1="lowqual.fastq", in2="lowqual.fastq",
+        expected1="lowqual.unchanged.fastq", expected2="lowqual.fastq", cores=1)
+    run_paired(
+        "-q 10 -Q 10", in1="lowqual.fastq", in2="lowqual.fastq",
+        expected1="lowqual.fastq", expected2="lowqual.fastq", cores=1)
+    run_paired(
+        "-q 10 -Q 0", in1="lowqual.fastq", in2="lowqual.fastq",
+        expected1="lowqual.fastq", expected2="lowqual.unchanged.fastq", cores=1)
+    run_paired(
+        "-q 0 -Q 10", in1="lowqual.fastq", in2="lowqual.fastq",
+        expected1="lowqual.unchanged.fastq", expected2="lowqual.fastq", cores=1)
+
+
 def test_paired_end_cut(run_paired, cores):
     run_paired(
         "-u 3 -u -1 -U 4 -U -2",

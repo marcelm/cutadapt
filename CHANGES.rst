@@ -5,6 +5,8 @@ Changes
 development version
 -------------------
 
+* Add option ``-Q``, which allows to specify a quality-trimming threshold for R2 that is
+  different from the one for R1.
 * :issue:`524`: Fix a memory leak when using ``--info-file`` with multiple cores.
 
 v3.4 (2021-03-30)
