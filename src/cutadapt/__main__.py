@@ -144,11 +144,10 @@ def get_argument_parser() -> ArgumentParser:
 
     group = parser.add_argument_group("Finding adapters",
         description="Parameters -a, -g, -b specify adapters to be removed from "
-            "each read (or from the first read in a pair if data is paired). "
+            "each read (or from R1 if data is paired-end. "
             "If specified multiple times, only the best matching adapter is "
-            "trimmed (but see the --times option). When the special notation "
-            "'file:FILE' is used, adapter sequences are read from the given "
-            "FASTA file.")
+            "trimmed (but see the --times option). Use notation "
+            "'file:FILE' to read adapter sequences from a FASTA file.")
     group.add_argument("-a", "--adapter", type=lambda x: ("back", x), action="append",
         default=[], metavar="ADAPTER", dest="adapters",
         help="Sequence of an adapter ligated to the 3' end (paired data: of the "
@@ -308,21 +307,21 @@ def get_argument_parser() -> ArgumentParser:
             "output to same file as trimmed reads")
 
     group = parser.add_argument_group("Paired-end options", description="The "
-        "-A/-G/-B/-U options work like their -a/-b/-g/-u counterparts, but "
-        "are applied to the second read in each pair.")
+        "-A/-G/-B/-U/-Q options work like their lowercase counterparts, but "
+        "are applied to R2 (second read in pair)")
     group.add_argument("-A", type=lambda x: ("back", x), dest='adapters2',
         action='append', default=[], metavar='ADAPTER',
-        help="3' adapter to be removed from second read in a pair.")
+        help="3' adapter to be removed from R2")
     group.add_argument("-G", type=lambda x: ("front", x), dest='adapters2',
         action='append', default=[], metavar='ADAPTER',
-        help="5' adapter to be removed from second read in a pair.")
+        help="5' adapter to be removed from R2")
     group.add_argument("-B", type=lambda x: ("anywhere", x), dest='adapters2',
         action='append', default=[], metavar='ADAPTER',
-        help="5'/3 adapter to be removed from second read in a pair.")
+        help="5'/3 adapter to be removed from R2")
     group.add_argument("-U", dest='cut2', action='append', default=[], type=int, metavar="LENGTH",
-        help="Remove LENGTH bases from second read in a pair.")
+        help="Remove LENGTH bases from R2")
     group.add_argument("-p", "--paired-output", metavar="FILE",
-        help="Write second read in a pair to FILE.")
+        help="Write R2 to FILE.")
     group.add_argument("--pair-adapters", action="store_true",
         help="Treat adapters given with -a/-A etc. as pairs. Either both "
              "or none are removed from each read pair.")
