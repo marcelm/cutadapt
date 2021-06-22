@@ -700,7 +700,7 @@ class PipelineRunner(ABC):
         self._progress = progress
 
     @abstractmethod
-    def run(self):
+    def run(self) -> Statistics:
         pass
 
     @abstractmethod

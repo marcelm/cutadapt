@@ -5,7 +5,7 @@ import sys
 from io import StringIO
 import textwrap
 from collections import Counter
-from typing import Any, Optional, List, Dict
+from typing import Any, Optional, List, Dict, Tuple, Iterator
 from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter, NonInternalFrontAdapter, PrefixAdapter,
     BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
@@ -153,6 +153,77 @@ class Statistics:
                 self.with_adapters[i] += modifier.adapter_cutter.with_adapters
                 self.adapter_stats[i] = list(modifier.adapter_cutter.adapter_statistics.values())
                 self.reverse_complemented = modifier.reverse_complemented
+
+    def as_json(self, gc_content: float) -> Dict:
+        """Return a dict representation suitable for dumping in JSON format"""
+        return {
+            "read_counts": {
+                "input": self.n,
+                "too_short": self.too_short,  # pairs or reads
+                "too_long": self.too_long,
+                "too_many_n": self.too_many_n,
+                "too_many_expected_errors": self.too_many_expected_errors,
+                "casava_filtered": self.casava_filtered,
+                "output": self.written,
+                "reverse_complemented": self.reverse_complemented,
+                "read1_with_adapter": self.with_adapters[0],
+                "read2_with_adapter": self.with_adapters[1] if self.paired else None,
+            },
+            "basepair_counts": {
+                "input": self.total,
+                "input_read1": self.total_bp[0],
+                "input_read2": self.total_bp[1] if self.paired else None,
+                "quality_trimmed": self.quality_trimmed,
+                "quality_trimmed_read1": self.quality_trimmed_bp[0],
+                "quality_trimmed_read2": self.quality_trimmed_bp[1] if self.paired else None,
+                "output": self.total_written_bp,
+                "output_read1": self.written_bp[0],
+                "output_read2": self.written_bp[1] if self.paired else None,
+            },
+            "adapter_statistics_read1": [
+                self._adapter_statistics_as_json(astats, self.n, gc_content)
+                for astats in self.adapter_stats[0]
+            ],
+            "adapter_statistics_read2": [
+                self._adapter_statistics_as_json(astats, self.n, gc_content)
+                for astats in self.adapter_stats[1]
+            ] if self.paired else None,
+        }
+
+    def _adapter_statistics_as_json(
+        self, adapter_statistics: AdapterStatistics, n: int, gc_content: float
+    ):
+        adapter = adapter_statistics.adapter
+        ends = []
+        for which_end, end_statistics in (
+            ("five_prime", adapter_statistics.front),
+            ("three_prime", adapter_statistics.back),
+        ):
+            total = sum(end_statistics.lengths.values())
+            if end_statistics.allows_partial_matches:
+                eranges = ErrorRanges(
+                    length=end_statistics.effective_length, error_rate=end_statistics.max_error_rate
+                ).lengths()
+            else:
+                eranges = None
+            base_stats = AdjacentBaseStatistics(end_statistics.adjacent_bases)
+            ends.append({
+                "which_end": which_end,
+                "error_rate": end_statistics.max_error_rate,
+                "error_lengths": eranges,
+                "trimmed_reads": total,
+                # "histogram": list(histogram_rows(end_statistics, n, gc_content)),
+                "dominant_adjacent_base": base_stats.warnbase,
+            })
+
+        return {
+            "name": adapter_statistics.name,
+            "type": adapter.description,
+            "specification": adapter.spec(),
+            "on_reverse_complement": adapter_statistics.reverse_complemented,
+            "total_trimmed_reads": ends[0]["trimmed_reads"] + ends[1]["trimmed_reads"],
+            "ends": ends,
+        }
 
     @property
     def total(self) -> int:
@@ -311,7 +382,7 @@ def histogram(end_statistics: EndStatistics, n: int, gc_content: float) -> str:
 
 
 def histogram_rows(
-    end_statistics: EndStatistics, n: int, gc_content: float
+    end_statistics: EndStatistics, n: int, gc_content: float,
 ) -> Iterator[Tuple[int, int, float, int, List[int]]]:
     """
     Yield tuples (length, count, expect, max_err, error_counts)
@@ -334,13 +405,14 @@ def histogram_rows(
         count = d[length]
         max_errors = max(errors[length].keys())
         error_counts = [errors[length][e] for e in range(max_errors + 1)]
-        yield (
+        t = (
             length,
             count,
             expect,
             int(end_statistics.max_error_rate * min(length, len(end_statistics.sequence))),
             error_counts,
         )
+        yield t
 
 
 class AdjacentBaseStatistics:
@@ -369,6 +441,10 @@ class AdjacentBaseStatistics:
     @property
     def should_warn(self) -> bool:
         return self._warnbase is not None
+
+    @property
+    def warnbase(self) -> Optional[str]:
+        return self._warnbase
 
     def __str__(self) -> str:
         if not self._fractions:

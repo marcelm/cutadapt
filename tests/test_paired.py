@@ -15,6 +15,7 @@ def run_paired(tmp_path):
         if type(params) is str:
             params = params.split()
         params += ["--cores", str(cores), "--buffer-size=512"]
+        params += ["--json", os.fspath(tmp_path / "stats.cutadapt.json")]
         path1 = os.fspath(tmp_path / expected1)
         path2 = os.fspath(tmp_path / expected2)
         params += ["-o", path1, "-p", path2]
@@ -38,6 +39,7 @@ def run_interleaved(tmp_path):
         assert not (inpath2 and not inpath1)
         params = params.split()
         params += ["--interleaved", "--cores", str(cores), "--buffer-size=512"]
+        params += ["--json", os.fspath(tmp_path / "stats.cutadapt.json")]
         tmp1 = os.fspath(tmp_path / ("out1-" + expected1))
         params += ["-o", tmp1]
         paths = [datapath(inpath1)]

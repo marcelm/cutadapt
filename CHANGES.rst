@@ -6,6 +6,7 @@ Changelog
 development version
 -------------------
 
+* Add preliminary support for dumping statistics in JSON format using ``--json``.
 * Add option ``-Q``, which allows to specify a quality-trimming threshold for R2 that is
   different from the one for R1.
 * :issue:`524`: Fix a memory leak when using ``--info-file`` with multiple cores.

@@ -53,13 +53,14 @@ Run "cutadapt --help" to see all command-line options.
 See https://cutadapt.readthedocs.io/ for full documentation.
 """
 import copy
+import json
 import sys
 import time
 import shutil
 import logging
 import platform
 import itertools
-from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union
+from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Dict
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
@@ -278,6 +279,8 @@ def get_argument_parser() -> ArgumentParser:
         help="Print only error messages.")
     group.add_argument("--report", choices=('full', 'minimal'), default=None,
         help="Which type of report to print: 'full' or 'minimal'. Default: full")
+    group.add_argument("--json", metavar="FILE",
+        help="Dump report in JSON format to FILE")
     group.add_argument("-o", "--output", metavar="FILE",
         help="Write trimmed reads to FILE. FASTQ or FASTA format is chosen "
             "depending on input. Summary report is sent to standard output. "
@@ -921,6 +924,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     except CommandLineError as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
         parser.error(str(e))
+        return
 
     logger.info("Processing reads on %d core%s in %s mode ...",
         cores, 's' if cores > 1 else '',
@@ -943,6 +947,18 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     else:
         report = full_report
     logger.log(REPORT, '%s', report(stats, elapsed, args.gc_content / 100))
+    if args.json is not None:
+        with open(args.json, "w") as f:
+            json_dict = json_report(
+                stats=stats,
+                cmdlineargs=cmdlineargs,
+                inpaths=inpaths,
+                cores=cores,
+                paired=paired,
+                gc_content=args.gc_content,
+            )
+            json.dump(json_dict, f, indent=2)
+            f.write("\n")
     if profiler is not None:
         import pstats
         profiler.disable()
@@ -1009,6 +1025,31 @@ def is_any_output_stdout(args):
         args.info_file == "-",
         args.wildcard_file == "-",
     ])
+
+
+def json_report(
+    stats: Statistics,
+    cmdlineargs: List[str],
+    inpaths: InputPaths,
+    cores: int,
+    paired: bool,
+    gc_content: float,
+) -> Dict:
+    d = {
+        "tag": "Cutadapt report v1",
+        "cutadapt_version": __version__,
+        "python_version": platform.python_version(),
+        "command_line_arguments": cmdlineargs,
+        "cores": cores,
+        "input": {
+            "path1": inpaths.path1,
+            "path2": inpaths.path2,
+            "paired": paired,
+            "interleaved": inpaths.interleaved,
+        },
+    }
+    d.update(stats.as_json(gc_content))
+    return d
 
 
 if __name__ == '__main__':  # pragma: no cover
