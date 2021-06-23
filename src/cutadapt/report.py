@@ -294,28 +294,53 @@ def histogram(end_statistics: EndStatistics, n: int, gc_content: float) -> str:
     n -- total no. of reads.
     """
     sio = StringIO()
+
+    print("length", "count", "expect", "max.err", "error counts", sep="\t", file=sio)
+    for row in histogram_rows(end_statistics, n, gc_content):
+        length, count, expect, max_err, error_counts = row
+        print(
+            length,
+            count,
+            "{:.1F}".format(expect),
+            max_err,
+            " ".join(str(e) for e in error_counts),
+            sep="\t",
+            file=sio,
+        )
+    return sio.getvalue() + "\n"
+
+
+def histogram_rows(
+    end_statistics: EndStatistics, n: int, gc_content: float
+) -> Iterator[Tuple[int, int, float, int, List[int]]]:
+    """
+    Yield tuples (length, count, expect, max_err, error_counts)
+
+    Include the no. of reads expected to be
+    trimmed by chance (assuming a uniform distribution of nucleotides in the reads).
+
+    adapter_statistics -- EndStatistics object
+    adapter_length -- adapter length
+    n -- total no. of reads.
+    """
     d = end_statistics.lengths
     errors = end_statistics.errors
 
     match_probabilities = end_statistics.random_match_probabilities(gc_content=gc_content)
-    print("length", "count", "expect", "max.err", "error counts", sep="\t", file=sio)
     for length in sorted(d):
         # when length surpasses adapter_length, the
         # probability does not increase anymore
         expect = n * match_probabilities[min(len(end_statistics.sequence), length)]
         count = d[length]
         max_errors = max(errors[length].keys())
-        errs = ' '.join(str(errors[length][e]) for e in range(max_errors + 1))
-        print(
+        error_counts = [errors[length][e] for e in range(max_errors + 1)]
+        yield (
             length,
             count,
-            "{:.1F}".format(expect),
+            expect,
             int(end_statistics.max_error_rate * min(length, len(end_statistics.sequence))),
-            errs,
-            sep="\t",
-            file=sio,
+            error_counts,
         )
-    return sio.getvalue() + "\n"
 
 
 class AdjacentBaseStatistics:
