@@ -362,6 +362,10 @@ class Adapter(Matchable, ABC):
     description = "adapter with one component"  # this is overriden in subclasses
 
     @abstractmethod
+    def spec(self) -> str:
+        """Return string representation of this adapter"""
+
+    @abstractmethod
     def create_statistics(self) -> AdapterStatistics:
         pass
 
@@ -513,6 +517,9 @@ class FrontAdapter(SingleAdapter):
             return None
         return RemoveBeforeMatch(*alignment, adapter=self, sequence=sequence)
 
+    def spec(self) -> str:
+        return f"{self.sequence}..."
+
 
 class BackAdapter(SingleAdapter):
     """A 3' adapter"""
@@ -540,6 +547,9 @@ class BackAdapter(SingleAdapter):
         if alignment is None:
             return None
         return RemoveAfterMatch(*alignment, adapter=self, sequence=sequence)
+
+    def spec(self) -> str:
+        return f"{self.sequence}"
 
 
 class AnywhereAdapter(SingleAdapter):
@@ -573,6 +583,9 @@ class AnywhereAdapter(SingleAdapter):
             match = RemoveAfterMatch(*alignment, adapter=self, sequence=sequence)  # type: ignore
         return match
 
+    def spec(self) -> str:
+        return f"...{self.sequence}..."
+
 
 class NonInternalFrontAdapter(FrontAdapter):
     """A non-internal 5' adapter"""
@@ -593,6 +606,9 @@ class NonInternalFrontAdapter(FrontAdapter):
         if alignment is None:
             return None
         return RemoveBeforeMatch(*alignment, adapter=self, sequence=sequence)  # type: ignore
+
+    def spec(self) -> str:
+        return f"X{self.sequence}..."
 
 
 class NonInternalBackAdapter(BackAdapter):
@@ -615,6 +631,9 @@ class NonInternalBackAdapter(BackAdapter):
             return None
         return RemoveAfterMatch(*alignment, adapter=self, sequence=sequence)  # type: ignore
 
+    def spec(self) -> str:
+        return f"{self.sequence}X"
+
 
 class PrefixAdapter(NonInternalFrontAdapter):
     """An anchored 5' adapter"""
@@ -634,6 +653,9 @@ class PrefixAdapter(NonInternalFrontAdapter):
         else:
             return self._make_aligner(Where.PREFIX.value)
 
+    def spec(self) -> str:
+        return f"^{self.sequence}..."
+
 
 class SuffixAdapter(NonInternalBackAdapter):
     """An anchored 3' adapter"""
@@ -652,6 +674,9 @@ class SuffixAdapter(NonInternalBackAdapter):
             )
         else:
             return self._make_aligner(Where.SUFFIX.value)
+
+    def spec(self) -> str:
+        return f"{self.sequence}$"
 
 
 class LinkedMatch(Match):
@@ -789,6 +814,9 @@ class LinkedAdapter(Adapter):
     @property
     def remove(self):
         return None
+
+    def spec(self) -> str:
+        return f"{self.front_adapter.spec()}...{self.back_adapter.spec()}"
 
 
 class MultipleAdapters(Matchable):
