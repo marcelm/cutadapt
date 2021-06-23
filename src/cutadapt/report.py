@@ -207,23 +207,80 @@ class Statistics:
         return safe_divide(self.casava_filtered, self.n)
 
 
-def error_ranges(adapter_statistics: EndStatistics) -> str:
-    length = adapter_statistics.effective_length
-    error_rate = adapter_statistics.max_error_rate
-    if adapter_statistics.allows_partial_matches:
+class ErrorRanges:
+    """
+    Representation of the lengths up to which a number of errors is allowed
+    for partial adapter matches.
+
+    >>> ErrorRanges(length=8, error_rate=0.1).lengths()
+    [8]
+    >>> ErrorRanges(length=19, error_rate=0.1).lengths()
+    [9, 19]
+    >>> ErrorRanges(length=20, error_rate=0.1).lengths()
+    [9, 19, 20]
+    >>> ErrorRanges(length=21, error_rate=0.1).lengths()
+    [9, 19, 21]
+
+    The entry at index i in the returned list is the length up to which
+    i errors are allowed. For example, the list [9, 19, 23] describes that
+    - 0 errors are allowed up to length 9
+    - 1 error is allowed up to length 19
+    - 2 errors are allowed up to length 23
+
+    The last number in the list is always the length of the adapter sequence.
+    """
+
+    def __init__(self, length: int, error_rate: float):
+        self.length = length
+        self.error_rate = error_rate
+        self._lengths = self._compute_lengths()
+
+    def _compute_lengths(self) -> List[int]:
+        lengths = [
+            int(errors / self.error_rate) - 1
+            for errors in range(1, int(self.error_rate * self.length) + 1)
+        ]
+        if not lengths or lengths[-1] < self.length:
+            lengths.append(self.length)
+        return lengths
+
+    def __repr__(self):
+        return (
+            "ErrorRanges("
+            f"length={self.length}, error_rate={self.error_rate}, _lengths={self._lengths})"
+        )
+
+    def __str__(self):
+        """
+        >>> str(ErrorRanges(length=8, error_rate=0.1))
+        '1-8 bp: 0'
+        >>> str(ErrorRanges(length=20, error_rate=0.1))
+        '1-9 bp: 0; 10-19 bp: 1; 20 bp: 2'
+        >>> str(ErrorRanges(length=23, error_rate=0.1))
+        '1-9 bp: 0; 10-19 bp: 1; 20-23 bp: 2'
+        """
         prev = 1
-        s = "\n"
-        for errors in range(1, int(error_rate * length) + 1):
-            r = int(errors / error_rate)
-            s += "{}-{} bp: {}; ".format(prev, r - 1, errors - 1)
-            prev = r
-        if prev == length:
-            s += "{} bp: {}".format(length, int(error_rate * length))
+        s = ""
+        for errors, r in enumerate(self._lengths[:-1]):
+            s += f"{prev}-{r} bp: {errors}; "
+            prev = r + 1
+        if prev == self._lengths[-1]:
+            s += f"{prev} bp: {len(self._lengths) - 1}"
         else:
-            s += "{}-{} bp: {}".format(prev, length, int(error_rate * length))
+            s += f"{prev}-{self._lengths[-1]} bp: {len(self._lengths) - 1}"
+        return s
+
+    def lengths(self):
+        return self._lengths
+
+
+def error_ranges(end_statistics: EndStatistics) -> str:
+    length = end_statistics.effective_length
+    error_rate = end_statistics.max_error_rate
+    if end_statistics.allows_partial_matches:
+        s = "\n" + str(ErrorRanges(length, error_rate))
     else:
         s = f" {int(error_rate * length)}"
-
     return "No. of allowed errors:" + s + "\n"
 
 
