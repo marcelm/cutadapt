@@ -21,9 +21,9 @@ def test_run_as_module():
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Perhaps this can be fixed")
-def test_standard_input_pipe(tmpdir, cores):
+def test_standard_input_pipe(tmp_path, cores):
     """Read FASTQ from standard input"""
-    out_path = str(tmpdir.join("out.fastq"))
+    out_path = os.fspath(tmp_path / "out.fastq")
     in_path = datapath("small.fastq")
     # Simulate that no file name is available for stdin
     with subprocess.Popen(["cat", in_path], stdout=subprocess.PIPE) as cat:
@@ -38,9 +38,9 @@ def test_standard_input_pipe(tmpdir, cores):
     assert_files_equal(cutpath("small.fastq"), out_path)
 
 
-def test_standard_output(tmpdir, cores):
+def test_standard_output(tmp_path, cores):
     """Write FASTQ to standard output (not using --output/-o option)"""
-    out_path = str(tmpdir.join("out.fastq"))
+    out_path = os.fspath(tmp_path / "out.fastq")
     with open(out_path, "w") as out_file:
         py = subprocess.Popen([
             sys.executable, "-m", "cutadapt", "--cores", str(cores),
@@ -50,10 +50,10 @@ def test_standard_output(tmpdir, cores):
     assert_files_equal(cutpath("small.fastq"), out_path)
 
 
-def test_explicit_standard_output(tmpdir, cores):
+def test_explicit_standard_output(tmp_path, cores):
     """Write FASTQ to standard output (using "-o -")"""
 
-    out_path = str(tmpdir.join("out.fastq"))
+    out_path = os.fspath(tmp_path / "out.fastq")
     with open(out_path, "w") as out_file:
         py = subprocess.Popen([
             sys.executable, "-m", "cutadapt", "-o", "-", "--cores", str(cores),
@@ -63,10 +63,10 @@ def test_explicit_standard_output(tmpdir, cores):
     assert_files_equal(cutpath("small.fastq"), out_path)
 
 
-def test_force_fasta_output(tmpdir, cores):
+def test_force_fasta_output(tmp_path, cores):
     """Write FASTA to standard output even on FASTQ input"""
 
-    out_path = str(tmpdir.join("out.fasta"))
+    out_path = os.fspath(tmp_path / "out.fasta")
     with open(out_path, "w") as out_file:
         py = subprocess.Popen([
             sys.executable, "-m", "cutadapt", "--fasta", "-o", "-", "--cores", str(cores),

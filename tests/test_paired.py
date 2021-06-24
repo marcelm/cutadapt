@@ -10,13 +10,13 @@ from utils import assert_files_equal, datapath, cutpath
 
 
 @pytest.fixture
-def run_paired(tmpdir):
+def run_paired(tmp_path):
     def _run(params, in1, in2, expected1, expected2, cores):
         if type(params) is str:
             params = params.split()
         params += ["--cores", str(cores), "--buffer-size=512"]
-        path1 = str(tmpdir.join(expected1))
-        path2 = str(tmpdir.join(expected2))
+        path1 = os.fspath(tmp_path / expected1)
+        path2 = os.fspath(tmp_path / expected2)
         params += ["-o", path1, "-p", path2]
         params += [datapath(in1), datapath(in2)]
         stats = main(params)
@@ -28,7 +28,7 @@ def run_paired(tmpdir):
 
 
 @pytest.fixture
-def run_interleaved(tmpdir):
+def run_interleaved(tmp_path):
     """
     Interleaved input or output (or both)
     """
@@ -38,13 +38,13 @@ def run_interleaved(tmpdir):
         assert not (inpath2 and not inpath1)
         params = params.split()
         params += ["--interleaved", "--cores", str(cores), "--buffer-size=512"]
-        tmp1 = str(tmpdir.join("out1-" + expected1))
+        tmp1 = os.fspath(tmp_path / ("out1-" + expected1))
         params += ["-o", tmp1]
         paths = [datapath(inpath1)]
         if inpath2:
             paths += [datapath(inpath2)]
         if expected2:
-            tmp2 = str(tmpdir.join("out2-" + expected2))
+            tmp2 = os.fspath(tmp_path / ("out2-" + expected2))
             params += ["-p", tmp2]
             stats = main(params + paths)
             assert_files_equal(cutpath(expected2), tmp2)
@@ -69,9 +69,9 @@ def test_paired_end_no_legacy(run_paired, cores):
     )
 
 
-def test_untrimmed_paired_output(tmpdir, run_paired):
-    untrimmed1 = str(tmpdir.join("untrimmed.1.fastq"))
-    untrimmed2 = str(tmpdir.join("untrimmed.2.fastq"))
+def test_untrimmed_paired_output(tmp_path, run_paired):
+    untrimmed1 = os.fspath(tmp_path / "untrimmed.1.fastq")
+    untrimmed2 = os.fspath(tmp_path / "untrimmed.2.fastq")
     run_paired(
         ["-a", "TTAGACATAT", "--pair-filter=first",
             "--untrimmed-output", untrimmed1,
@@ -84,13 +84,13 @@ def test_untrimmed_paired_output(tmpdir, run_paired):
     assert_files_equal(cutpath("paired-untrimmed.2.fastq"), untrimmed2)
 
 
-def test_untrimmed_paired_output_automatic_pair_filter(tmpdir, run_paired):
+def test_untrimmed_paired_output_automatic_pair_filter(tmp_path, run_paired):
     # When no R2 adapters are given, --pair-filter should be ignored for
     # --discard-untrimmed, --untrimmed-output, --untrimmed-paired-output
     # and always be "both" (with --pair-filter=any, all pairs would be
     # considered untrimmed because the R1 read is always untrimmed)
-    untrimmed1 = str(tmpdir.join("untrimmed.1.fastq"))
-    untrimmed2 = str(tmpdir.join("untrimmed.2.fastq"))
+    untrimmed1 = os.fspath(tmp_path / "untrimmed.1.fastq")
+    untrimmed2 = os.fspath(tmp_path / "untrimmed.2.fastq")
     run_paired(
         ["-a", "TTAGACATAT",
             "--untrimmed-output", untrimmed1,
@@ -103,10 +103,10 @@ def test_untrimmed_paired_output_automatic_pair_filter(tmpdir, run_paired):
     assert_files_equal(cutpath("paired-untrimmed.2.fastq"), untrimmed2)
 
 
-def test_explicit_format_with_paired(tmpdir, run_paired):
+def test_explicit_format_with_paired(tmp_path, run_paired):
     # Use FASTQ input files whose extension is .txt
-    txt1 = str(tmpdir.join("paired.1.txt"))
-    txt2 = str(tmpdir.join("paired.2.txt"))
+    txt1 = os.fspath(tmp_path / "paired.1.txt")
+    txt2 = os.fspath(tmp_path / "paired.2.txt")
     shutil.copyfile(datapath("paired.1.fastq"), txt1)
     shutil.copyfile(datapath("paired.2.fastq"), txt2)
     run_paired(
@@ -132,58 +132,58 @@ def test_no_trimming():
         datapath("paired.1.fastq"), datapath("paired.2.fastq")])
 
 
-def test_missing_file(tmpdir):
+def test_missing_file(tmp_path):
     with pytest.raises(SystemExit):
-        main(["--paired-output", str(tmpdir.join("out.fastq")), datapath("paired.1.fastq")])
+        main(["--paired-output", os.fspath(tmp_path / "out.fastq"), datapath("paired.1.fastq")])
 
 
-def test_first_too_short(tmpdir, cores):
+def test_first_too_short(tmp_path, cores):
     # Create a truncated file in which the last read is missing
-    trunc1 = tmpdir.join("truncated.1.fastq")
+    trunc1 = tmp_path / "truncated.1.fastq"
     with open(datapath("paired.1.fastq")) as f:
         lines = f.readlines()
         lines = lines[:-4]
-    trunc1.write("".join(lines))
+    trunc1.write_text("".join(lines))
 
     with pytest.raises(SystemExit):
         main([
             "-o", os.devnull,
-            "--paired-output", str(tmpdir.join("out.fastq")),
+            "--paired-output", os.fspath(tmp_path / "out.fastq"),
             "--cores", str(cores),
             str(trunc1), datapath("paired.2.fastq")
         ])
 
 
-def test_second_too_short(tmpdir, cores):
+def test_second_too_short(tmp_path, cores):
     # Create a truncated file in which the last read is missing
-    trunc2 = tmpdir.join("truncated.2.fastq")
+    trunc2 = tmp_path / "truncated.2.fastq"
     with open(datapath("paired.2.fastq")) as f:
         lines = f.readlines()
         lines = lines[:-4]
-    trunc2.write("".join(lines))
+    trunc2.write_text("".join(lines))
 
     with pytest.raises(SystemExit):
         main([
             "-o", os.devnull,
-            "--paired-output", str(tmpdir.join("out.fastq")),
+            "--paired-output", os.fspath(tmp_path / "out.fastq"),
             "--cores", str(cores),
             datapath("paired.1.fastq"), str(trunc2)
         ])
 
 
-def test_unmatched_read_names(tmpdir, cores):
+def test_unmatched_read_names(tmp_path, cores):
     # Create a file in which reads 2 and 1 are swapped
     with open(datapath("paired.1.fastq")) as f:
         lines = f.readlines()
         lines = lines[0:4] + lines[8:12] + lines[4:8] + lines[12:]
-    swapped = tmpdir.join("swapped.1.fastq")
+    swapped = tmp_path / "swapped.1.fastq"
 
-    swapped.write("".join(lines))
+    swapped.write_text("".join(lines))
 
     with pytest.raises(SystemExit):
         main([
-            "-o", str(tmpdir.join("out1.fastq")),
-            "--paired-output", str(tmpdir.join("out2.fastq")),
+            "-o", os.fspath(tmp_path / "out1.fastq"),
+            "--paired-output", os.fspath(tmp_path / "out2.fastq"),
             "--cores", str(cores),
             str(swapped), datapath("paired.2.fastq")
         ])
@@ -342,20 +342,20 @@ def test_interleaved_out(run_interleaved, cores):
     )
 
 
-def test_interleaved_neither_nor(tmpdir):
+def test_interleaved_neither_nor(tmp_path):
     """Option --interleaved used, but pairs of files given for input and output"""
-    p1 = str(tmpdir.join("temp-paired.1.fastq"))
-    p2 = str(tmpdir.join("temp-paired.2.fastq"))
+    p1 = os.fspath(tmp_path / "temp-paired.1.fastq")
+    p2 = os.fspath(tmp_path / "temp-paired.2.fastq")
     params = "-a XX --interleaved".split()
     params += ["-o", p1, "-p1", p2, "paired.1.fastq", "paired.2.fastq"]
     with pytest.raises(SystemExit):
         main(params)
 
 
-def test_interleaved_untrimmed_output(tmpdir):
-    o1 = str(tmpdir.join("out.1.fastq"))
-    o2 = str(tmpdir.join("out.2.fastq"))
-    untrimmed = str(tmpdir.join("untrimmed.interleaved.fastq"))
+def test_interleaved_untrimmed_output(tmp_path):
+    o1 = os.fspath(tmp_path / "out.1.fastq")
+    o2 = os.fspath(tmp_path / "out.2.fastq")
+    untrimmed = os.fspath(tmp_path / "untrimmed.interleaved.fastq")
     main([
         "--interleaved",
         "-a", "XXXX",
@@ -385,9 +385,9 @@ def test_pair_filter_first(run_paired, cores):
     )
 
 
-def test_too_short_paired_output(run_paired, tmpdir, cores):
-    p1 = str(tmpdir.join("too-short.1.fastq"))
-    p2 = str(tmpdir.join("too-short.2.fastq"))
+def test_too_short_paired_output(run_paired, tmp_path, cores):
+    p1 = os.fspath(tmp_path / "too-short.1.fastq")
+    p2 = os.fspath(tmp_path / "too-short.2.fastq")
     run_paired(
         " -a TTAGACATAT -A CAGTGGAGTA -m 14"
         " --too-short-output {}"
@@ -400,9 +400,9 @@ def test_too_short_paired_output(run_paired, tmpdir, cores):
     assert_files_equal(cutpath("paired-too-short.2.fastq"), p2)
 
 
-def test_too_long_output(run_paired, tmpdir, cores):
-    p1 = str(tmpdir.join("too-long.1.fastq"))
-    p2 = str(tmpdir.join("too-long.2.fastq"))
+def test_too_long_output(run_paired, tmp_path, cores):
+    p1 = os.fspath(tmp_path / "too-long.1.fastq")
+    p2 = os.fspath(tmp_path / "too-long.2.fastq")
     run_paired(
         " -a TTAGACATAT -A CAGTGGAGTA -M 14"
         " --too-long-output {}"
@@ -415,8 +415,8 @@ def test_too_long_output(run_paired, tmpdir, cores):
     assert_files_equal(cutpath("paired.2.fastq"), p2)
 
 
-def test_too_short_output_paired_option_missing(run_paired, tmpdir):
-    p1 = str(tmpdir.join("too-short.1.fastq"))
+def test_too_short_output_paired_option_missing(run_paired, tmp_path):
+    p1 = os.fspath(tmp_path / "too-short.1.fastq")
     with pytest.raises(SystemExit):
         run_paired(
             "-a TTAGACATAT -A CAGTGGAGTA -m 14 --too-short-output "
@@ -433,9 +433,9 @@ def test_nextseq_paired(run_paired, cores):
         cores=cores)
 
 
-def test_paired_demultiplex(tmpdir, cores):
-    multiout1 = str(tmpdir.join("demultiplexed.{name}.1.fastq"))
-    multiout2 = str(tmpdir.join("demultiplexed.{name}.2.fastq"))
+def test_paired_demultiplex(tmp_path, cores):
+    multiout1 = os.fspath(tmp_path / "demultiplexed.{name}.1.fastq")
+    multiout2 = os.fspath(tmp_path / "demultiplexed.{name}.2.fastq")
     params = [
         "--cores", str(cores),
         "-a", "first=AACATTAGACA", "-a", "second=CATTAGACATATCGG",
@@ -457,13 +457,13 @@ def test_paired_demultiplex(tmpdir, cores):
     range(1, 5),
     [(2, 3), (2, None), (None, 3)]
 )))
-def test_separate_minmaxlength(tmpdir, name_op, l1, l2, m):
+def test_separate_minmaxlength(tmp_path, name_op, l1, l2, m):
     """Separate minimum lengths for R1 and R2"""
     m1, m2 = m
     name, func = name_op
-    inpath = str(tmpdir.join("separate_minlength.fasta"))
-    expected = str(tmpdir.join("separate_minlength_expected.fasta"))
-    outpath = str(tmpdir.join("out.fasta"))
+    inpath = os.fspath(tmp_path / "separate_minlength.fasta")
+    expected = os.fspath(tmp_path / "separate_minlength_expected.fasta")
+    outpath = os.fspath(tmp_path / "out.fasta")
     record = ">r{}:{}\n{}\n".format(l1, l2, "A" * l1)
     record += ">r{}:{}\n{}".format(l1, l2, "A" * l2)
     with open(inpath, "w") as f:
@@ -507,25 +507,25 @@ def test_pair_adapters(run_paired, cores):
     )
 
 
-def test_pair_adapters_unequal_length(tmpdir):
+def test_pair_adapters_unequal_length(tmp_path):
     with pytest.raises(SystemExit):
         main([
             "--paired-adapters",
             "-a", "GTCTCCAGCT", "-a", "ACGTACGT",  # Two R1 adapters
             "-A", "TGCA",  # But only one R2 adapter
-            "-o", str(tmpdir.join("out.1.fastq")),
-            "-p", str(tmpdir.join("out.2.fastq")),
+            "-o", os.fspath(tmp_path / "out.1.fastq"),
+            "-p", os.fspath(tmp_path / "out.2.fastq"),
             datapath("paired.1.fastq"),
             datapath("paired.2.fastq"),
         ])
 
 
-def test_pair_adapters_demultiplexing(tmpdir, cores):
+def test_pair_adapters_demultiplexing(tmp_path, cores):
     params = "-g i1=AAAA -G i1=GGGG -g i2=CCCC -G i2=TTTT".split()
     params += ["--pair-adapters"]
     params += ["--cores", str(cores)]
-    params += ["-o", str(tmpdir.join("dual-{name}.1.fastq"))]
-    params += ["-p", str(tmpdir.join("dual-{name}.2.fastq"))]
+    params += ["-o", os.fspath(tmp_path / "dual-{name}.1.fastq")]
+    params += ["-p", os.fspath(tmp_path / "dual-{name}.2.fastq")]
     params += [datapath("dual-index.1.fastq"), datapath("dual-index.2.fastq")]
     main(params)
     for name in [
@@ -536,15 +536,15 @@ def test_pair_adapters_demultiplexing(tmpdir, cores):
         "dual-unknown.1.fastq",
         "dual-unknown.2.fastq",
     ]:
-        assert tmpdir.join(name).check()
-        assert_files_equal(cutpath(name), str(tmpdir.join(name)))
+        assert (tmp_path / name).exists()
+        assert_files_equal(cutpath(name), os.fspath(tmp_path / name))
 
 
 @pytest.mark.parametrize("discarduntrimmed", (False, True))
-def test_combinatorial_demultiplexing(tmpdir, discarduntrimmed, cores):
+def test_combinatorial_demultiplexing(tmp_path, discarduntrimmed, cores):
     params = "-g A=^AAAAAAAAAA -g C=^CCCCCCCCCC -G G=^GGGGGGGGGG -G T=^TTTTTTTTTT".split()
-    params += ["-o", str(tmpdir.join("combinatorial.{name1}_{name2}.1.fastq"))]
-    params += ["-p", str(tmpdir.join("combinatorial.{name1}_{name2}.2.fastq"))]
+    params += ["-o", os.fspath(tmp_path / "combinatorial.{name1}_{name2}.1.fastq")]
+    params += ["-p", os.fspath(tmp_path / "combinatorial.{name1}_{name2}.2.fastq")]
     params += ["--cores", str(cores)]
     params += [datapath("combinatorial.1.fastq"), datapath("combinatorial.2.fastq")]
     # third item in tuple says whether the file must exist
@@ -563,18 +563,18 @@ def test_combinatorial_demultiplexing(tmpdir, discarduntrimmed, cores):
             name = "combinatorial.{name1}_{name2}.{i}.fastq".format(name1=name1, name2=name2, i=i)
             path = cutpath(os.path.join("combinatorial", name))
             if should_exist:
-                assert tmpdir.join(name).check(), ("Output file missing", name)
-                assert_files_equal(path, str(tmpdir.join(name)))
+                assert (tmp_path / name).exists(), ("Output file missing", name)
+                assert_files_equal(path, os.fspath(tmp_path / name))
             else:
-                assert not tmpdir.join(name).check(), ("Output file should not exist", name)
+                assert not (tmp_path / name).exists(), ("Output file should not exist", name)
 
 
-def test_info_file(tmpdir):
-    info_path = str(tmpdir.join("info.txt"))
+def test_info_file(tmp_path):
+    info_path = os.fspath(tmp_path / "info.txt")
     params = [
         "--info-file", info_path,
-        "-o", str(tmpdir.join("out.1.fastq")),
-        "-p", str(tmpdir.join("out.2.fastq")),
+        "-o", os.fspath(tmp_path / "out.1.fastq"),
+        "-p", os.fspath(tmp_path / "out.2.fastq"),
         datapath("paired.1.fastq"),
         datapath("paired.2.fastq"),
     ]

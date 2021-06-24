@@ -1,3 +1,4 @@
+import os
 from textwrap import dedent
 import pytest
 
@@ -28,19 +29,22 @@ def test_expand_braces_fail():
             AdapterSpecification.expand_braces(expression)
 
 
-def test_parse_file_notation(tmpdir):
-    tmp_path = str(tmpdir.join('adapters.fasta'))
-    with open(tmp_path, 'w') as f:
-        f.write(dedent(""">first_name
+def test_parse_file_notation(tmp_path):
+    tmp = tmp_path / "adapters.fasta"
+    tmp.write_text(
+        dedent(
+            """>first_name
             ADAPTER1
             >second_name
             ADAPTER2
-            """))
+            """
+        )
+    )
     parser = AdapterParser(
         max_errors=0.2, min_overlap=4, read_wildcards=False,
         adapter_wildcards=False, indels=False)
 
-    adapters = list(parser.parse('file:' + tmp_path, cmdline_type='back'))
+    adapters = list(parser.parse('file:' + os.fspath(tmp), cmdline_type='back'))
     assert len(adapters) == 2
     assert adapters[0].name == 'first_name'
     assert adapters[0].sequence == 'ADAPTER1'
