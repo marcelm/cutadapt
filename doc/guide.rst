@@ -1697,10 +1697,51 @@ adapter name.
 Adapter names are also used in column 8 of :ref:`info files <info-file>`.
 
 
+.. _more-than-one:
+
+Trimming more than one adapter from each read
+---------------------------------------------
+
+By default, at most one adapter sequence is removed from each read, even if
+multiple adapter sequences were provided. This can be changed by using the
+``--times`` option (or its abbreviated form ``-n``). Cutadapt will then search
+for all the given adapter sequences repeatedly, either until no adapter match
+was found or until the specified number of rounds was reached.
+
+As an example, assume you have a protocol in which a 5' adapter gets ligated
+to your DNA fragment, but it's possible that the adapter is ligated more than
+once. So your sequence could look like this::
+
+    ADAPTERADAPTERADAPTERmysequence
+
+To be on the safe side, you assume that there are at most five copies of the
+adapter sequence. This command can be used to trim the reads correctly::
+
+    cutadapt -g ^ADAPTER -n 5 -o output.fastq.gz input.fastq.gz
+
+To search for a combination of a 5' and a 3' adapter, have a look
+at the :ref:`support for "linked adapters" <linked-adapters>` instead, which
+works better for that particular case because it is allows you to require that
+the 3' adapter is trimmed only when the 5' adapter also occurs, and it cannot
+happen that the same adapter is trimmed twice.
+
+Before Cutadapt supported linked adapters, the ``--times`` option was the
+recommended way to search for 5'/3' linked adapters. For completeness, we
+describe how it was done. For example, when the 5' adapter is *FIRST* and the
+3' adapter is *SECOND*, then the read could look like this::
+
+    FIRSTmysequenceSECOND
+
+That is, the sequence of interest is framed by the 5' and the 3' adapter. The
+following command would be used to trim such a read::
+
+    cutadapt -g ^FIRST -a SECOND -n 2 ...
+
+
 .. _demultiplexing:
 
 Demultiplexing
---------------
+==============
 
 Cutadapt supports demultiplexing, which means that reads are written to different
 output files depending on which adapter was found in them. To use this, include
@@ -1775,7 +1816,7 @@ More advice on demultiplexing:
 .. _combinatorial-demultiplexing:
 
 Demultiplexing paired-end reads with combinatorial dual indexes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------------------------------
 
 Illumina’s combinatorial dual indexing strategy uses a set of indexed adapters on R1 and another one
 on R2. Unlike
@@ -1834,7 +1875,7 @@ are your sample names. Then rename all files at once with ::
 .. _speed-up-demultiplexing:
 
 Speeding up demultiplexing
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 
 Finding many adapters/barcodes simultaneously (which is what demultiplexing in Cutadapt is about),
 can be sped up tremendously by using the right options since Cutadapt will then be able to create an
@@ -1872,7 +1913,7 @@ Hopefully some of the above restrictions will be lifted in the future.
 
 
 Demultiplexing paired-end reads in mixed orientation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------------------------
 
 For some protocols, the barcode will be located either on R1 or on R2
 depending on the orientation in which the DNA fragment was sequenced.
@@ -1903,47 +1944,6 @@ files as input, but also reverse the roles of R1 and R2 ::
         -o round2-{name}.R2.fastq.gz \
         -p round2-{name}.R1.fastq.gz \
         round1-unknown.R2.fastq.gz round1-unknown.R1.fastq.gz
-
-
-.. _more-than-one:
-
-Trimming more than one adapter from each read
----------------------------------------------
-
-By default, at most one adapter sequence is removed from each read, even if
-multiple adapter sequences were provided. This can be changed by using the
-``--times`` option (or its abbreviated form ``-n``). Cutadapt will then search
-for all the given adapter sequences repeatedly, either until no adapter match
-was found or until the specified number of rounds was reached.
-
-As an example, assume you have a protocol in which a 5' adapter gets ligated
-to your DNA fragment, but it's possible that the adapter is ligated more than
-once. So your sequence could look like this::
-
-    ADAPTERADAPTERADAPTERmysequence
-
-To be on the safe side, you assume that there are at most five copies of the
-adapter sequence. This command can be used to trim the reads correctly::
-
-    cutadapt -g ^ADAPTER -n 5 -o output.fastq.gz input.fastq.gz
-
-To search for a combination of a 5' and a 3' adapter, have a look
-at the :ref:`support for "linked adapters" <linked-adapters>` instead, which
-works better for that particular case because it is allows you to require that
-the 3' adapter is trimmed only when the 5' adapter also occurs, and it cannot
-happen that the same adapter is trimmed twice.
-
-Before Cutadapt supported linked adapters, the ``--times`` option was the
-recommended way to search for 5'/3' linked adapters. For completeness, we
-describe how it was done. For example, when the 5' adapter is *FIRST* and the
-3' adapter is *SECOND*, then the read could look like this::
-
-    FIRSTmysequenceSECOND
-
-That is, the sequence of interest is framed by the 5' and the 3' adapter. The
-following command would be used to trim such a read::
-
-    cutadapt -g ^FIRST -a SECOND -n 2 ...
 
 
 .. _truseq:
