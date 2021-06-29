@@ -30,7 +30,7 @@ v3.3 (2021-03-04)
   is replaced with "rc" if the read was reverse-complemented (and the empty string if not).
 * :issue:`512`: Fix issue :issue:`128` once more (the “Reads written” figure in the report
   incorrectly included both trimmed and untrimmed reads if ``--untrimmed-output`` was used).
-* :issue:`515`: The report is now send to stderr if any output file is
+* :issue:`515`: The report is now sent to stderr if any output file is
   written to stdout
 
 v3.2 (2021-01-07)
