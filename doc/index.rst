@@ -9,9 +9,8 @@ Table of contents
 
    installation
    guide
-   colorspace
-   algorithms
    recipes
+   algorithms
    ideas
    develop
    changes

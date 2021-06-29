@@ -330,7 +330,7 @@ Other
 
 * The options ``--no-trim`` and ``--mask-adapter`` should now be written as
   ``--action=mask`` and ``--action=none``. The old options still work.
-* This is the last release to support :ref:`colorspace data <colorspace>`.
+* This is the last release to support `colorspace data <https://cutadapt.readthedocs.io/en/v1.18/colorspace.html>`_
 * This is the last release to support Python 2.
 
 
