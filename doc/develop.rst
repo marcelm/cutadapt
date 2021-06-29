@@ -78,3 +78,5 @@ been uploaded.
 
 
 .. include:: ../CONTRIBUTING.rst
+
+.. include:: ideas.rst
