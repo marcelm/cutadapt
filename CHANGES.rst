@@ -1,6 +1,7 @@
-=======
-Changes
-=======
+
+=========
+Changelog
+=========
 
 development version
 -------------------
