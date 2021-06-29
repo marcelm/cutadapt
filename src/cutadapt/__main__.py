@@ -1036,7 +1036,8 @@ def json_report(
     gc_content: float,
 ) -> Dict:
     d = {
-        "tag": "Cutadapt report v1",
+        "tag": "Cutadapt report",
+        "schema_version": 0,
         "cutadapt_version": __version__,
         "python_version": platform.python_version(),
         "command_line_arguments": cmdlineargs,
