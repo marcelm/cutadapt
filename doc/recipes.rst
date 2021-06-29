@@ -1,9 +1,8 @@
-===============
-Recipes and FAQ
-===============
+=======
+Recipes
+=======
 
-This section gives answers to frequently asked questions. It shows you how to
-get Cutadapt to do what you want it to do!
+This section contains short how-to guides for doing certain tasks.
 
 
 Remove more than one adapter
@@ -276,26 +275,27 @@ stripped during adapter trimming.
 
 .. _file-format-conversion:
 
-File format conversion
+Convert FASTQ to FASTA
 ----------------------
 
-You can use Cutadapt to convert FASTQ to FASTA format::
+Cutadapt detects the output format from the output file name extension.
+Convert FASTQ to FASTA format::
 
     cutadapt -o output.fasta.gz input.fastq.gz
 
-Cutadapt detects that the file name extension of the output file is ``.fasta``
-and writes in FASTA format, omitting the qualities.
+Cutadapt detects FASTA output and omits the qualities.
 
-When writing to standard output, you need to use the ``--fasta`` option::
+If output is written to standard output, no output file name is available,
+so the same format as the input is used.
+
+To force FASTA output even in this case, use the ``--fasta`` option::
 
     cutadapt --fasta input.fastq.gz > out.fasta
 
-Without the option, Cutadapt writes in FASTQ format.
 
+Trim qualities
+--------------
 
-Other things (unfinished)
--------------------------
+Quality-trim 3' ends::
 
-* How to detect adapters
-* Use Cutadapt for quality-trimming only
-* Use it for minimum/maximum length filtering
+    cutadapt -q 20 -o output.fastq.gz input.fastq.gz
