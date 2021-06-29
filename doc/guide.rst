@@ -2051,6 +2051,7 @@ Cutadapt supports the following options to deal with ``N`` bases in your reads:
     quality trimming: ``N`` bases typically also have a low quality value
     associated with them.
 
+.. _cutadapt-s-output:
 
 Cutadapt's output
 =================
@@ -2103,7 +2104,7 @@ starts with something like this::
 
     Sequence: 'ACGTACGTACGTTAGCTAGC'; Length: 20; Trimmed: 2402 times.
 
-The meaning of this should be obvious. If option ``--revcomp`` was used,
+If option ``--revcomp`` was used,
 this line will additionally contain something like ``Reverse-complemented:
 984 times``. This describes how many times of the 2402 total times the
 adapter was found on the reverse complement of the read.
@@ -2182,6 +2183,94 @@ an error. In that case, it may look like this::
 We can see that no matches longer than 12 have zero errors. In this
 case, it indicates that the 13th base of the given adapter sequence is
 incorrect.
+
+JSON report
+-----------
+
+With ``--json=filename.cutadapt.json``, a report in JSON format is written to a separate file.
+
+* ``tag`` is always ``Cutadapt report``.
+* ``schema_version`` is 0 for now. If backwards incompatible changes to the schema are necessary,
+  this will be incremented.
+* Keys only relevant for paired-end data or when using certain command-line options are
+  always included, but when unused, get a value of ``null``.
+* For adapters that allow partial matches, ``error_lengths`` describes the lengths up to which
+  0, 1, 2 etc. errors are allowed. ``[9, 16]``: 0 errors up to a match of length 9, 1 error up to
+  a match of length 16. The last number in this list is the length of the adapter sequence.
+* ``dominant_adjacent_base`` is set to the appropriate nucleotide if the
+  :ref:`report warns <warnbase>`: "The adapter is preceded by "x" extremely often."
+  This is ``null`` if no such warning was printed.
+* For paired-end data, numbers in the ``read_counts`` section are the number of *read pairs*.
+* ``basepair_counts``
+
+Example (slightly reformatted) ::
+
+    {
+      "tag": "Cutadapt report",
+      "schema_version": 0,
+      "cutadapt_version": "3.5",
+      "python_version": "3.8.5",
+      "command_line_arguments": [
+        "--json=sample1.cutadapt.json",
+        "-q", "10",
+        "-m", "40",
+        "-a", "AACCGGTTAACCGGTT",
+        "-o", "/dev/null",
+        "sample1.fastq.gz"
+      ],
+      "cores": 1,
+      "input": {
+        "path1": "input.fastq.gz",
+        "path2": null,
+        "paired": false,
+        "interleaved": false
+      },
+      "read_counts": {
+        "input": 1000000,
+        "too_short": 18380,
+        "too_long": null,
+        "too_many_n": null,
+        "too_many_expected_errors": null,
+        "casava_filtered": null,
+        "output": 981620,
+        "reverse_complemented": null,
+        "read1_with_adapter": 233500,
+        "read2_with_adapter": null
+      },
+      "basepair_counts": {
+        "input": 101000000,
+        "input_read1": 101000000,
+        "input_read2": null,
+        "quality_trimmed": 7560458,
+        "quality_trimmed_read1": 7560458,
+        "quality_trimmed_read2": null,
+        "output": 92865797,
+        "output_read1": 92865797,
+        "output_read2": null
+      },
+      "adapter_statistics_read1": [
+        {
+          "name": "1",
+          "type": "regular 3'",
+          "specification": "AACCGGTTAACCGGTT",
+          "on_reverse_complement": 0,
+          "total_trimmed_reads": 233500,
+          "ends": [
+            {
+              "which_end": "three_prime",
+              "error_rate": 0.1,
+              "error_lengths": [9, 16],
+              "trimmed_reads": 233500,
+              "dominant_adjacent_base": "A"
+            }
+          ]
+        }
+      ],
+      "adapter_statistics_read2": null
+    }
+
+
+.. versionadded: 3.5
 
 
 .. _info-file:
