@@ -216,11 +216,12 @@ class Statistics:
                 "dominant_adjacent_base": base_stats.warnbase,
             })
 
+        on_reverse_complement = adapter_statistics.reverse_complemented if self.reverse_complemented else None
         return {
             "name": adapter_statistics.name,
             "type": adapter.description,
             "specification": adapter.spec(),
-            "on_reverse_complement": adapter_statistics.reverse_complemented,
+            "on_reverse_complement": on_reverse_complement,
             "total_trimmed_reads": ends[0]["trimmed_reads"] + ends[1]["trimmed_reads"],
             "ends": ends,
         }
