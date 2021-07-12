@@ -641,6 +641,10 @@ class PrefixAdapter(NonInternalFrontAdapter):
     description = "anchored 5'"
     allows_partial_matches = False
 
+    def __init__(self, sequence: str, *args, **kwargs):
+        kwargs["min_overlap"] = len(sequence)
+        super().__init__(sequence, *args, **kwargs)
+
     def _aligner(self):
         if not self.indels:  # TODO or if error rate allows 0 errors anyway
             return align.PrefixComparer(
@@ -662,6 +666,10 @@ class SuffixAdapter(NonInternalBackAdapter):
 
     description = "anchored 3'"
     allows_partial_matches = False
+
+    def __init__(self, sequence: str, *args, **kwargs):
+        kwargs["min_overlap"] = len(sequence)
+        super().__init__(sequence, *args, **kwargs)
 
     def _aligner(self):
         if not self.indels:  # TODO or if error rate allows 0 errors anyway

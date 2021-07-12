@@ -575,6 +575,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s(total_front, "times, it overlapped the 5' end of a read")
                 print_s(total_back, "times, it overlapped the 3' end or was within the read")
                 print_s()
+                print_s("Minimum overlap:", adapter.min_overlap)
                 print_s(error_ranges(adapter_statistics.front))
                 print_s("Overview of removed sequences (5')")
                 print_s(histogram(adapter_statistics.front, stats.n, gc_content))
@@ -583,6 +584,8 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s(histogram(adapter_statistics.back, stats.n, gc_content))
             elif isinstance(adapter, LinkedAdapter):
                 print_s()
+                print_s(f"Minimum overlap: "
+                        f"{adapter.front_adapter.min_overlap}+{adapter.back_adapter.min_overlap}")
                 print_s(error_ranges(adapter_statistics.front))
                 print_s(error_ranges(adapter_statistics.back))
                 print_s("Overview of removed sequences at 5' end")
@@ -592,12 +595,16 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s(histogram(adapter_statistics.back, stats.n, gc_content))
             elif isinstance(adapter, (FrontAdapter, NonInternalFrontAdapter, PrefixAdapter)):
                 print_s()
+                if not isinstance(adapter, PrefixAdapter):
+                    print_s("Minimum overlap:", adapter.min_overlap)
                 print_s(error_ranges(adapter_statistics.front))
                 print_s("Overview of removed sequences")
                 print_s(histogram(adapter_statistics.front, stats.n, gc_content))
             else:
                 assert isinstance(adapter, (BackAdapter, NonInternalBackAdapter, SuffixAdapter))
                 print_s()
+                if not isinstance(adapter, SuffixAdapter):
+                    print_s("Minimum overlap:", adapter.min_overlap)
                 print_s(error_ranges(adapter_statistics.back))
                 base_stats = AdjacentBaseStatistics(adapter_statistics.back.adjacent_bases)
                 warning = warning or base_stats.should_warn
