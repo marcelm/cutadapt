@@ -451,8 +451,8 @@ Input read                         Processed read
 Linked adapters (combined 5' and 3' adapter)
 --------------------------------------------
 
-If your sequence of interest is “framed” by a 5' and a 3' adapter, and you want
-to remove both adapters, then you may want to use a *linked adapter*. A linked
+If your sequence of interest is surrounded by a 5' and a 3' adapter, and you want
+to remove both adapters, then you can use a *linked adapter*. A linked
 adapter combines a 5' and a 3' adapter. By default, the adapters are not anchored,
 but in many cases, you should anchor the 5’ adapter by prefixing it with ``^``.
 
@@ -504,6 +504,10 @@ The 3' adapter in the last read is not trimmed because the anchored 5’ adapter
 missing in the read.
 
 Linked adapters do not work when used in combination with ``--info-file`` and ``--mask-adapter``.
+
+To provide :ref:`adapter-trimming parameters <trimming-parameters>`
+for linked adapters, they need to be set for each constituent adapter separately, as in
+``-g "ADAPTER1;min_overlap=5...ADAPTER2;min_overlap=6"``.
 
 .. versionadded:: 1.10
 
@@ -772,6 +776,9 @@ This minimum overlap length can be changed globally (for all adapters) with the 
 ``--overlap`` (or its short version ``-O``). Alternatively, use the adapter-specific
 parameter ``min_overlap`` to change it for a single adapter only. Example:
 ``-a "ADAPTER;min_overlap=5"`` (the quotation marks are necessary).
+
+In :ref:`linked adapters <linked-adapters>`, the minimum overlap length is applied
+separately to the 5' and the 3' adapter.
 
 If a read contains a partial adapter sequence shorter than the minimum overlap length,
 no match will be found (and therefore no bases are trimmed).
