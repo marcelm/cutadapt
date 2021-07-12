@@ -165,6 +165,17 @@ def test_parse_with_parameters(tmp_path):
         parser._parse("A", "invalid-cmdline-type")
     assert "cmdline_type cannot be" in e.value.args[0]
 
+    with pytest.raises(ValueError) as e:
+        parser._parse("ACGT$;min_overlap=3", "back")
+    assert "not possible" in e.value.args[0]
+    with pytest.raises(ValueError) as e:
+        parser._parse("^ACGT;min_overlap=3", "front")
+    assert "not possible" in e.value.args[0]
+
+    with pytest.raises(ValueError) as e:
+        parser._parse("ACGT;min_overlap=5", "back")
+    assert "exceeds" in e.value.args[0]
+
 
 def test_parse_with_adapter_sequence_as_a_path(tmp_path):
     parser = AdapterParser()
