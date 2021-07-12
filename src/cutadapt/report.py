@@ -559,7 +559,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                         adapter_statistics.back.sequence,
                         len(adapter_statistics.front.sequence),
                         len(adapter_statistics.back.sequence),
-                        total_front, total_back))
+                        total_front, total_back), end="")
             else:
                 print_s("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times".
                     format(adapter_statistics.front.sequence, adapter.description,
