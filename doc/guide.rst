@@ -626,6 +626,9 @@ than one adapter, it may be necessary to change parameters for each
 adapter individually. You can do so by adding a semicolon and ``parameter=value`` to the end
 of the adapter sequence, as in ``-a "ADAPTER;max_error_rate=0.2"``.
 Multiple parameters can also be set, as in ``-a "ADAPTER;max_error_rate=0.2;min_overlap=5"``.
+If using linked adapters, they have separate settings as in
+``-g "ADAPTER1;min_overlap=5...ADAPTER2;min_overlap=6"``.
+
 Remember to add the quotation marks; otherwise the shell will interpret the semicolon as a
 separator between two commands.
 
