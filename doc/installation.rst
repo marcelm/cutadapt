@@ -23,8 +23,8 @@ To then install Cutadapt into a new Conda environment, use this command::
 Here, ``cutadaptenv`` is the name of the Conda environment. You can
 choose a different name.
 
-An environment needs to be activated every time you want to use the
-programs in it, like this::
+Then activate the environment. This needs to be done every time you open a
+new shell before you can use Cutadapt::
 
     conda activate cutadaptenv
 
@@ -120,7 +120,7 @@ If you want to upgrade from an older version, use this command instead::
     sudo python3 -m pip install --upgrade cutadapt
 
 If the above does not work for you, then you can try to install Cutadapt
-into a virtual environment. This may lead to fewer conflicts with
+into a virtual environment. This leads to fewer conflicts with
 system-installed packages::
 
     sudo python3 -m venv /usr/local/cutadapt
