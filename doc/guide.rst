@@ -622,7 +622,7 @@ Adapter-trimming parameters
 ===========================
 
 The adapter-trimming algorithm has a few parameters specific to each adapter
-that steer how the adapter sequence is found. The command-line options ``-e``
+that control how the adapter sequence is found. The command-line options ``-e``
 and ``-O`` set the maximum error rate and minimum overlap parameters (see
 details in the following sections) for all
 adapters listed via the ``-a``/``-b``/``-g`` etc. options. When trimming more
@@ -641,11 +641,11 @@ The following parameters are supported at the moment:
 ================================================== ============= ================================
 Parameter                                          Global option Adapter-specific parameter
 ================================================== ============= ================================
-Maximum error rate                                 ``-e 0.2``    | ``ADAPTER;e=0.2`` or
+Maximum error rate (default: 0.1)                  ``-e 0.2``    | ``ADAPTER;e=0.2`` or
                                                                  | ``ADAPTER;max_errors=0.2`` or
                                                                  | ``ADAPTER;max_error_rate=0.2``
 
-Minimum overlap                                    ``-O 5``      | ``ADAPTER;o=5`` or
+Minimum overlap (default: 3)                       ``-O 5``      | ``ADAPTER;o=5`` or
                                                                  | ``ADAPTER;min_overlap=5``
 
 Allow matches anywhere                                           ``ADAPTER;anywhere``
