@@ -62,6 +62,7 @@ jobs:
       env:
         CIBW_BUILD: "cp3*-manylinux_x86_64"
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2010
+        CIBW_ENVIRONMENT: "CFLAGS=-g0"
         CIBW_TEST_COMMAND: "cutadapt --help"
     - name: Set up Python
       uses: actions/setup-python@v2
