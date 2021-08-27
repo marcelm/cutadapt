@@ -13,7 +13,7 @@ from .adapters import (
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
 from .filters import (WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter,
-    CasavaFilter, MaximumExpectedErrorsFilter)
+    CasavaFilter, MaximumExpectedErrorsFilter, DiscardTrimmedFilter, DiscardUntrimmedFilter)
 
 
 def safe_divide(numerator: Optional[int], denominator: int) -> float:
@@ -42,6 +42,8 @@ class Statistics:
         self.too_many_n: Optional[int] = None
         self.too_many_expected_errors: Optional[int] = None
         self.casava_filtered: Optional[int] = None
+        self.discard_trimmed: Optional[int] = None
+        self.discard_untrimmed: Optional[int] = None
         self.reverse_complemented: Optional[int] = None
         self.n = 0
         self.written = 0
@@ -72,6 +74,8 @@ class Statistics:
         self.too_many_n = add_if_not_none(self.too_many_n, other.too_many_n)
         self.too_many_expected_errors = add_if_not_none(
             self.too_many_expected_errors, other.too_many_expected_errors)
+        self.discard_trimmed = add_if_not_none(self.discard_trimmed, other.discard_trimmed)
+        self.discard_untrimmed = add_if_not_none(self.discard_untrimmed, other.discard_untrimmed)
         self.casava_filtered = add_if_not_none(self.casava_filtered, other.casava_filtered)
         for i in (0, 1):
             self.total_bp[i] += other.total_bp[i]
@@ -131,6 +135,10 @@ class Statistics:
                 self.too_many_expected_errors = w.filtered
             elif isinstance(w.filter, CasavaFilter):
                 self.casava_filtered = w.filtered
+            elif isinstance(w.filter, DiscardTrimmedFilter):
+                self.discard_trimmed = w.filtered
+            elif isinstance(w.filter, DiscardUntrimmedFilter):
+                self.discard_untrimmed = w.filtered
 
     def _collect_modifier(self, m) -> None:
         if isinstance(m, PairedAdapterCutter):
@@ -277,6 +285,14 @@ class Statistics:
     @property
     def casava_filtered_fraction(self) -> float:
         return safe_divide(self.casava_filtered, self.n)
+
+    @property
+    def discard_trimmed_fraction(self) -> float:
+        return safe_divide(self.discard_trimmed, self.n)
+
+    @property
+    def discard_untrimmed_fraction(self) -> float:
+        return safe_divide(self.discard_untrimmed, self.n)
 
 
 class ErrorRanges:
@@ -508,6 +524,12 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     if stats.casava_filtered is not None:
         report += "{pairs_or_reads} failed CASAVA filter:      " \
                   "{o.casava_filtered:13,d} ({o.casava_filtered_fraction:.1%})\n"
+    if stats.discard_trimmed is not None:
+        report += "{pairs_or_reads} discarded as trimmed:      " \
+                  "{o.discard_trimmed:13,d} ({o.discard_trimmed_fraction:.1%})\n"
+    if stats.discard_untrimmed is not None:
+        report += "{pairs_or_reads} discarded as untrimmed:    " \
+                  "{o.discard_untrimmed:13,d} ({o.discard_untrimmed_fraction:.1%})\n"
 
     report += textwrap.dedent("""\
     {pairs_or_reads} written (passing filters): {o.written:13,d} ({o.written_fraction:.1%})
