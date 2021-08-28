@@ -221,6 +221,7 @@ class Statistics:
                 "error_lengths": eranges,
                 "trimmed_reads": total,
                 # "histogram": list(histogram_rows(end_statistics, n, gc_content)),
+                "adjacent_bases": base_stats.as_json(),
                 "dominant_adjacent_base": base_stats.warnbase,
             })
 
@@ -476,6 +477,9 @@ class AdjacentBaseStatistics:
             print("    The provided adapter sequence could be incomplete at its 5' end.", file=sio)
             print("    Ignore this warning when trimming primers.", file=sio)
         return sio.getvalue()
+
+    def as_json(self) -> Dict[str, int]:
+        return {b: self.bases.get(b, 0) for b in ["A", "C", "G", "T", ""]}
 
 
 def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # noqa: C901
