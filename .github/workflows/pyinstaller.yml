@@ -23,6 +23,8 @@ jobs:
           venv/Scripts/pyinstaller -F -n cutadapt script.py
       - name: Run it
         run: dist/cutadapt.exe --version
+      - name: Test multicore
+        run: ( echo ">read" && echo "ACGT" ) | dist/cutadapt.exe -j 2 --quiet -
       - uses: actions/upload-artifact@v2
         with:
           name: cutadapt-exe

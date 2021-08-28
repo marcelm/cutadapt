@@ -60,6 +60,7 @@ import shutil
 import logging
 import platform
 import itertools
+import multiprocessing
 from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Dict
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
@@ -867,6 +868,7 @@ def log_header(cmdlineargs):
 
 def main_cli():  # pragma: no cover
     """Entry point for command-line script"""
+    multiprocessing.freeze_support()
     main(sys.argv[1:])
     return 0
 
