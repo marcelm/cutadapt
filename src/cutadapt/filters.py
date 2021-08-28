@@ -201,6 +201,8 @@ class PairedRedirector(PairedEndFilter):
 
 
 class TooShortReadFilter(SingleEndFilter):
+    name: str = "too_short"
+
     def __init__(self, minimum_length):
         self.minimum_length = minimum_length
 
@@ -212,6 +214,8 @@ class TooShortReadFilter(SingleEndFilter):
 
 
 class TooLongReadFilter(SingleEndFilter):
+    name: str = "too_long"
+
     def __init__(self, maximum_length):
         self.maximum_length = maximum_length
 
@@ -230,6 +234,8 @@ class MaximumExpectedErrorsFilter(SingleEndFilter):
     The idea comes from usearch's -fastq_maxee parameter
     (http://drive5.com/usearch/).
     """
+    name: str = "too_many_expected_errors"
+
     def __init__(self, max_errors):
         self.max_errors = max_errors
 
@@ -247,6 +253,8 @@ class NContentFilter(SingleEndFilter):
     of Ns as well as proportions. Note, for raw counts, it is a 'greater than' comparison,
     so a cutoff of '1' will keep reads with a single N in it.
     """
+    name: str = "too_many_n"
+
     def __init__(self, count):
         """
         Count -- if it is below 1.0, it will be considered a proportion, and above and equal to
@@ -275,6 +283,8 @@ class DiscardUntrimmedFilter(SingleEndFilter):
     """
     Return True if read is untrimmed.
     """
+    name: str = "discard_untrimmed"
+
     def __repr__(self):
         return "DiscardUntrimmedFilter()"
 
@@ -286,6 +296,8 @@ class DiscardTrimmedFilter(SingleEndFilter):
     """
     Return True if read is trimmed.
     """
+    name: str = "discard_trimmed"
+
     def __repr__(self):
         return "DiscardTrimmedFilter()"
 
@@ -301,6 +313,8 @@ class CasavaFilter(SingleEndFilter):
 
     Reads with unrecognized headers are kept.
     """
+    name: str = "casava_filtered"
+
     def __repr__(self):
         return "CasavaFilter()"
 

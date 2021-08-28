@@ -12,8 +12,7 @@ from .adapters import (
 )
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
-from .filters import (WithStatistics, TooShortReadFilter, TooLongReadFilter, NContentFilter,
-    CasavaFilter, MaximumExpectedErrorsFilter, DiscardTrimmedFilter, DiscardUntrimmedFilter)
+from .filters import WithStatistics
 
 
 def safe_divide(numerator: Optional[int], denominator: int) -> float:
@@ -29,6 +28,11 @@ def add_if_not_none(a: Optional[int], b: Optional[int]) -> Optional[int]:
     if b is None:
         return a
     return a + b
+
+
+def sum_with_none(values):
+    """Compute sum ignoring None values"""
+    return sum(0 if v is None else v for v in values)
 
 
 class Statistics:
@@ -124,21 +128,13 @@ class Statistics:
             for i in 0, 1:
                 self.written_bp[i] += written_bp[i]
                 self.written_lengths[i] += written_lengths[i]
-        if hasattr(w, "filter"):
-            if isinstance(w.filter, TooShortReadFilter):
-                self.too_short = w.filtered
-            elif isinstance(w.filter, TooLongReadFilter):
-                self.too_long = w.filtered
-            elif isinstance(w.filter, NContentFilter):
-                self.too_many_n = w.filtered
-            elif isinstance(w.filter, MaximumExpectedErrorsFilter):
-                self.too_many_expected_errors = w.filtered
-            elif isinstance(w.filter, CasavaFilter):
-                self.casava_filtered = w.filtered
-            elif isinstance(w.filter, DiscardTrimmedFilter):
-                self.discard_trimmed = w.filtered
-            elif isinstance(w.filter, DiscardUntrimmedFilter):
-                self.discard_untrimmed = w.filtered
+        if hasattr(w, "filter") and hasattr(w.filter, "name"):
+            filter_name = w.filter.name
+            if filter_name in {
+                "too_short", "too_long", "too_many_n", "too_many_expected_errors",
+                "casava_filtered", "discard_trimmed", "discard_untrimmed",
+            }:
+                setattr(self, filter_name, w.filtered)
 
     def _collect_modifier(self, m) -> None:
         if isinstance(m, PairedAdapterCutter):
@@ -164,14 +160,21 @@ class Statistics:
 
     def as_json(self, gc_content: float) -> Dict:
         """Return a dict representation suitable for dumping in JSON format"""
+        filtered = {
+            "too_short": self.too_short,
+            "too_long": self.too_long,
+            "too_many_n": self.too_many_n,
+            "too_many_expected_errors": self.too_many_expected_errors,
+            "casava_filtered": self.casava_filtered,
+            "discard_trimmed": self.discard_trimmed,
+            "discard_untrimmed": self.discard_untrimmed,
+        }
+        filtered_total = sum_with_none(filtered.values())
+        assert self.written + filtered_total == self.n
         return {
-            "read_counts": {
+            "read_counts": {  # pairs or reads
                 "input": self.n,
-                "too_short": self.too_short,  # pairs or reads
-                "too_long": self.too_long,
-                "too_many_n": self.too_many_n,
-                "too_many_expected_errors": self.too_many_expected_errors,
-                "casava_filtered": self.casava_filtered,
+                "filtered": filtered,
                 "output": self.written,
                 "reverse_complemented": self.reverse_complemented,
                 "read1_with_adapter": self.with_adapters[0],
