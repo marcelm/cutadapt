@@ -1506,11 +1506,6 @@ and ``--untrimmed-paired-output``, you can write ``--untrimmed-o`` and
 Paired adapters (dual indices)
 ------------------------------
 
-.. note::
-    This feature has been added on a provisional basis. It may still change.
-    For example, Cutadapt may require that the adapters from the R1 and the R2
-    sets have matching names, which would allow for better error checking.
-
 When processing paired-end data, Cutadapt has two sets of adapters to work with: The ones that
 are to be found and removed in the forward read (R1), specified with ``-a``/``-g``/``-b``,
 and the ones to be found and removed in the reverse read (R2), specified with ``-A``/``-G``/``-B``.
