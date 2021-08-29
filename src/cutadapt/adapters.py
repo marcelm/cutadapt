@@ -727,17 +727,12 @@ class LinkedMatch(Match):
             read = self.back_match.trimmed(read)
         return read
 
-    @property
-    def adjacent_base(self):
-        return self.back_match.adjacent_base
-
     def update_statistics(self, statistics):
         """Update AdapterStatistics in place"""
         if self.front_match:
-            statistics.front.errors[self.front_match.rstop][self.front_match.errors] += 1
+            self.front_match.update_statistics(statistics)
         if self.back_match:
-            length = len(self.back_match.sequence) - self.back_match.rstart
-            statistics.back.errors[length][self.back_match.errors] += 1
+            self.back_match.update_statistics(statistics)
 
     def remainder_interval(self) -> Tuple[int, int]:
         matches = [match for match in [self.front_match, self.back_match] if match is not None]
