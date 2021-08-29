@@ -517,6 +517,16 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
         report += "Reverse-complemented:            " \
                   "{o.reverse_complemented:13,d} ({o.reverse_complemented_fraction:.1%})\n"
 
+    if (
+        stats.too_short is not None
+        or stats.too_long is not None
+        or stats.too_many_n is not None
+        or stats.too_many_expected_errors is not None
+        or stats.casava_filtered is not None
+        or stats.discard_trimmed is not None
+        or stats.discard_untrimmed is not None
+    ):
+        report += "\n== Read fate breakdown ==\n"
     if stats.too_short is not None:
         report += "{pairs_or_reads} that were too short:       {o.too_short:13,d} ({o.too_short_fraction:.1%})\n"
     if stats.too_long is not None:
