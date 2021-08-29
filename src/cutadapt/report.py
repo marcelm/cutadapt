@@ -517,34 +517,10 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
         report += "Reverse-complemented:            " \
                   "{o.reverse_complemented:13,d} ({o.reverse_complemented_fraction:.1%})\n"
 
-    if (
-        stats.too_short is not None
-        or stats.too_long is not None
-        or stats.too_many_n is not None
-        or stats.too_many_expected_errors is not None
-        or stats.casava_filtered is not None
-        or stats.discard_trimmed is not None
-        or stats.discard_untrimmed is not None
-    ):
+    filter_report = format_filter_report(stats)
+    if filter_report:
         report += "\n== Read fate breakdown ==\n"
-    if stats.too_short is not None:
-        report += "{pairs_or_reads} that were too short:       {o.too_short:13,d} ({o.too_short_fraction:.1%})\n"
-    if stats.too_long is not None:
-        report += "{pairs_or_reads} that were too long:        {o.too_long:13,d} ({o.too_long_fraction:.1%})\n"
-    if stats.too_many_n is not None:
-        report += "{pairs_or_reads} with too many N:           {o.too_many_n:13,d} ({o.too_many_n_fraction:.1%})\n"
-    if stats.too_many_expected_errors is not None:
-        report += "{pairs_or_reads} with too many exp. errors: " \
-                  "{o.too_many_expected_errors:13,d} ({o.too_many_expected_errors_fraction:.1%})\n"
-    if stats.casava_filtered is not None:
-        report += "{pairs_or_reads} failed CASAVA filter:      " \
-                  "{o.casava_filtered:13,d} ({o.casava_filtered_fraction:.1%})\n"
-    if stats.discard_trimmed is not None:
-        report += "{pairs_or_reads} discarded as trimmed:      " \
-                  "{o.discard_trimmed:13,d} ({o.discard_trimmed_fraction:.1%})\n"
-    if stats.discard_untrimmed is not None:
-        report += "{pairs_or_reads} discarded as untrimmed:    " \
-                  "{o.discard_untrimmed:13,d} ({o.discard_untrimmed_fraction:.1%})\n"
+        report += filter_report
 
     report += textwrap.dedent("""\
     {pairs_or_reads} written (passing filters): {o.written:13,d} ({o.written_fraction:.1%})
@@ -656,6 +632,29 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
         print_s('    Please see the detailed output above.')
 
     return sio.getvalue().rstrip()
+
+
+def format_filter_report(stats):
+    report = ""
+    if stats.too_short is not None:
+        report += "{pairs_or_reads} that were too short:       {o.too_short:13,d} ({o.too_short_fraction:.1%})\n"
+    if stats.too_long is not None:
+        report += "{pairs_or_reads} that were too long:        {o.too_long:13,d} ({o.too_long_fraction:.1%})\n"
+    if stats.too_many_n is not None:
+        report += "{pairs_or_reads} with too many N:           {o.too_many_n:13,d} ({o.too_many_n_fraction:.1%})\n"
+    if stats.too_many_expected_errors is not None:
+        report += "{pairs_or_reads} with too many exp. errors: " \
+                  "{o.too_many_expected_errors:13,d} ({o.too_many_expected_errors_fraction:.1%})\n"
+    if stats.casava_filtered is not None:
+        report += "{pairs_or_reads} failed CASAVA filter:      " \
+                  "{o.casava_filtered:13,d} ({o.casava_filtered_fraction:.1%})\n"
+    if stats.discard_trimmed is not None:
+        report += "{pairs_or_reads} discarded as trimmed:      " \
+                  "{o.discard_trimmed:13,d} ({o.discard_trimmed_fraction:.1%})\n"
+    if stats.discard_untrimmed is not None:
+        report += "{pairs_or_reads} discarded as untrimmed:    " \
+                  "{o.discard_untrimmed:13,d} ({o.discard_untrimmed_fraction:.1%})\n"
+    return report
 
 
 def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
