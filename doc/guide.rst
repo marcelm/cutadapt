@@ -2199,6 +2199,9 @@ JSON report
 
 With ``--json=filename.cutadapt.json``, a report in JSON format is written to a separate file.
 
+We strongly recommend that you use the ``.cutadapt.json`` file name extension for this file for
+easier discoverability by log-parsing tools such as `MultiQC <https://multiqc.info>`_.
+
 * ``tag`` is always ``Cutadapt report``.
 * ``schema_version`` is 0 for now. If backwards incompatible changes to the schema are necessary,
   this will be incremented.
@@ -2206,9 +2209,11 @@ With ``--json=filename.cutadapt.json``, a report in JSON format is written to a 
   always included, but when unused, get a value of ``null``.
 * For adapters that allow partial matches, ``error_lengths`` describes the lengths up to which
   0, 1, 2 etc. errors are allowed. ``[9, 16]``: 0 errors up to a match of length 9, 1 error up to
-  a match of length 16. The last number in this list is the length of the adapter sequence.
+  a match of length 16. The last number in this list is the length of the adapter sequence. For
+  anchored adapter types, this is ``null``.
 * ``dominant_adjacent_base`` is set to the appropriate nucleotide if the
   :ref:`report warns <warnbase>`: "The adapter is preceded by "x" extremely often."
+  Statistics about adjacent bases are currently only kept for 3' adapters.
   This is ``null`` if no such warning was printed.
 * For paired-end data, numbers in the ``read_counts`` section are the number of *read pairs*.
 * ``basepair_counts``
