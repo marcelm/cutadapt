@@ -45,11 +45,23 @@ class PairedEndFilter(ABC):
         """
 
 
-class WithStatistics(ABC):
+class ReadLengthStatistics:
+    """
+    Keep track of the lengths of written reads or read pairs
+    """
     def __init__(self) -> None:
         # A defaultdict is much faster than a Counter
         self._written_lengths1: DefaultDict[int, int] = defaultdict(int)
         self._written_lengths2: DefaultDict[int, int] = defaultdict(int)
+
+    def update(self, read) -> None:
+        """Add a single-end read to the statistics"""
+        self._written_lengths1[len(read)] += 1
+
+    def update2(self, read1, read2) -> None:
+        """Add a paired-end read to the statistics"""
+        self._written_lengths1[len(read1)] += 1
+        self._written_lengths2[len(read2)] += 1
 
     def written_reads(self) -> int:
         """Return number of written reads or read pairs"""
@@ -69,21 +81,22 @@ class WithStatistics(ABC):
         return sum(length * count for length, count in counts.items())
 
 
-class SingleEndFilterWithStatistics(SingleEndFilter, WithStatistics, ABC):
+class SingleEndFilterWithStatistics(SingleEndFilter, ABC):
     def __init__(self):
         super().__init__()
+        self.statistics = ReadLengthStatistics()
 
     def update_statistics(self, read) -> None:
-        self._written_lengths1[len(read)] += 1
+        self.statistics.update(read)
 
 
-class PairedEndFilterWithStatistics(PairedEndFilter, WithStatistics, ABC):
+class PairedEndFilterWithStatistics(PairedEndFilter, ABC):
     def __init__(self):
         super().__init__()
+        self.statistics = ReadLengthStatistics()
 
     def update_statistics(self, read1, read2):
-        self._written_lengths1[len(read1)] += 1
-        self._written_lengths2[len(read2)] += 1
+        self.statistics.update2(read1, read2)
 
 
 class NoFilter(SingleEndFilterWithStatistics):

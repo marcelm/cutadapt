@@ -12,7 +12,7 @@ from .adapters import (
 )
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
-from .filters import WithStatistics
+from .filters import PairedEndFilterWithStatistics, SingleEndFilterWithStatistics
 
 
 def safe_divide(numerator: Optional[int], denominator: int) -> float:
@@ -121,10 +121,10 @@ class Statistics:
         return self
 
     def _collect_writer(self, w) -> None:
-        if isinstance(w, WithStatistics):
-            self.written += w.written_reads()
-            written_bp = w.written_bp()
-            written_lengths = w.written_lengths()
+        if isinstance(w, (PairedEndFilterWithStatistics, SingleEndFilterWithStatistics)):
+            self.written += w.statistics.written_reads()
+            written_bp = w.statistics.written_bp()
+            written_lengths = w.statistics.written_lengths()
             for i in 0, 1:
                 self.written_bp[i] += written_bp[i]
                 self.written_lengths[i] += written_lengths[i]
