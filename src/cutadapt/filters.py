@@ -292,6 +292,24 @@ class NContentFilter(SingleEndStep):
             return n_count > self.cutoff
 
 
+class CasavaFilter(SingleEndStep):
+    """
+    Remove reads that fail the CASAVA filter. These have header lines that
+    look like ``xxxx x:Y:x:x`` (with a ``Y``). Reads that pass the filter
+    have an ``N`` instead of ``Y``.
+
+    Reads with unrecognized headers are kept.
+    """
+    name: str = "casava_filtered"
+
+    def __repr__(self):
+        return "CasavaFilter()"
+
+    def __call__(self, read, info: ModificationInfo):
+        _, _, right = read.name.partition(' ')
+        return right[1:4] == ':Y:'  # discard if :Y: found
+
+
 class DiscardUntrimmedFilter(SingleEndStep):
     """
     Return True if read is untrimmed.
@@ -316,24 +334,6 @@ class DiscardTrimmedFilter(SingleEndStep):
 
     def __call__(self, read, info: ModificationInfo):
         return bool(info.matches)
-
-
-class CasavaFilter(SingleEndStep):
-    """
-    Remove reads that fail the CASAVA filter. These have header lines that
-    look like ``xxxx x:Y:x:x`` (with a ``Y``). Reads that pass the filter
-    have an ``N`` instead of ``Y``.
-
-    Reads with unrecognized headers are kept.
-    """
-    name: str = "casava_filtered"
-
-    def __repr__(self):
-        return "CasavaFilter()"
-
-    def __call__(self, read, info: ModificationInfo):
-        _, _, right = read.name.partition(' ')
-        return right[1:4] == ':Y:'  # discard if :Y: found
 
 
 class Demultiplexer(SingleEndFinalStep):
