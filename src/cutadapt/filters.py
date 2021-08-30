@@ -1,7 +1,8 @@
 """
 Filtering criteria
 """
-from .steps import SingleEndStep
+from abc import ABC, abstractmethod
+
 from .qualtrim import expected_errors
 from .modifiers import ModificationInfo
 
@@ -12,7 +13,15 @@ DISCARD = True
 KEEP = False
 
 
-class TooShortReadFilter(SingleEndStep):
+class Predicate(ABC):
+    @abstractmethod
+    def __call__(self, read, info: ModificationInfo) -> bool:
+        """
+        Return True if the filtering criterion matches.
+        """
+
+
+class TooShortReadFilter(Predicate):
     name: str = "too_short"
 
     def __init__(self, minimum_length):
@@ -25,7 +34,7 @@ class TooShortReadFilter(SingleEndStep):
         return len(read) < self.minimum_length
 
 
-class TooLongReadFilter(SingleEndStep):
+class TooLongReadFilter(Predicate):
     name: str = "too_long"
 
     def __init__(self, maximum_length):
@@ -38,7 +47,7 @@ class TooLongReadFilter(SingleEndStep):
         return len(read) > self.maximum_length
 
 
-class MaximumExpectedErrorsFilter(SingleEndStep):
+class MaximumExpectedErrorsFilter(Predicate):
     """
     Discard reads whose expected number of errors, according to the quality
     values, exceeds a threshold.
@@ -59,7 +68,7 @@ class MaximumExpectedErrorsFilter(SingleEndStep):
         return expected_errors(read.qualities) > self.max_errors
 
 
-class NContentFilter(SingleEndStep):
+class NContentFilter(Predicate):
     """
     Discard a read if it has too many 'N' bases. It handles both raw counts
     of Ns as well as proportions. Note, for raw counts, it is a 'greater than' comparison,
@@ -91,7 +100,7 @@ class NContentFilter(SingleEndStep):
             return n_count > self.cutoff
 
 
-class CasavaFilter(SingleEndStep):
+class CasavaFilter(Predicate):
     """
     Remove reads that fail the CASAVA filter. These have header lines that
     look like ``xxxx x:Y:x:x`` (with a ``Y``). Reads that pass the filter
@@ -109,7 +118,7 @@ class CasavaFilter(SingleEndStep):
         return right[1:4] == ':Y:'  # discard if :Y: found
 
 
-class DiscardUntrimmedFilter(SingleEndStep):
+class DiscardUntrimmedFilter(Predicate):
     """
     Return True if read is untrimmed.
     """
@@ -122,7 +131,7 @@ class DiscardUntrimmedFilter(SingleEndStep):
         return not info.matches
 
 
-class DiscardTrimmedFilter(SingleEndStep):
+class DiscardTrimmedFilter(Predicate):
     """
     Return True if read is trimmed.
     """
@@ -133,5 +142,3 @@ class DiscardTrimmedFilter(SingleEndStep):
 
     def __call__(self, read, info: ModificationInfo):
         return bool(info.matches)
-
-

@@ -155,7 +155,7 @@ class Pipeline(ABC):
 
     def __init__(self, file_opener: FileOpener):
         self._reader = None  # type: Any
-        self._filters = []  # type: List[Any]
+        self._steps = []  # type: List[Any]
         self._infiles = None  # type: Optional[InputFiles]
         self._outfiles = None  # type: Optional[OutputFiles]
         self._demultiplexer = None
@@ -186,12 +186,12 @@ class Pipeline(ABC):
         pass
 
     def _set_output(self, outfiles: OutputFiles) -> None:
-        self._filters = []
+        self._steps = []
         self._textiowrappers = []
         self._outfiles = outfiles
         filter_wrapper = self._filter_wrapper()
 
-        for filter_class, outfile in (
+        for step_class, outfile in (
             (RestFileWriter, outfiles.rest),
             (InfoFileWriter, outfiles.info),
             (WildcardFileWriter, outfiles.wildcard),
@@ -199,37 +199,37 @@ class Pipeline(ABC):
             if outfile:
                 textiowrapper = io.TextIOWrapper(outfile)
                 self._textiowrappers.append(textiowrapper)
-                self._filters.append(filter_wrapper(None, filter_class(textiowrapper), None))
+                self._steps.append(filter_wrapper(None, step_class(textiowrapper), None))
 
         # minimum length and maximum length
-        for lengths, file1, file2, filter_class in (
+        for lengths, file1, file2, predicate_class in (
                 (self._minimum_length, outfiles.too_short, outfiles.too_short2, TooShortReadFilter),
                 (self._maximum_length, outfiles.too_long, outfiles.too_long2, TooLongReadFilter)
         ):
             if lengths is None:
                 continue
             writer = self._open_writer(file1, file2) if file1 else None
-            f1 = filter_class(lengths[0]) if lengths[0] is not None else None
+            f1 = predicate_class(lengths[0]) if lengths[0] is not None else None
             if len(lengths) == 2 and lengths[1] is not None:
-                f2 = filter_class(lengths[1])
+                f2 = predicate_class(lengths[1])
             else:
                 f2 = None
-            self._filters.append(filter_wrapper(writer, filter=f1, filter2=f2))
+            self._steps.append(filter_wrapper(writer, filter=f1, filter2=f2))
 
         if self.max_n is not None:
             f1 = f2 = NContentFilter(self.max_n)
-            self._filters.append(filter_wrapper(None, f1, f2))
+            self._steps.append(filter_wrapper(None, f1, f2))
 
         if self.max_expected_errors is not None:
             if not self._reader.delivers_qualities:
                 logger.warning("Ignoring option --max-ee as input does not contain quality values")
             else:
                 f1 = f2 = MaximumExpectedErrorsFilter(self.max_expected_errors)
-                self._filters.append(filter_wrapper(None, f1, f2))
+                self._steps.append(filter_wrapper(None, f1, f2))
 
         if self.discard_casava:
             f1 = f2 = CasavaFilter()
-            self._filters.append(filter_wrapper(None, f1, f2))
+            self._steps.append(filter_wrapper(None, f1, f2))
 
         if int(self.discard_trimmed) + int(self.discard_untrimmed) + int(outfiles.untrimmed is not None) > 1:
             raise ValueError('discard_trimmed, discard_untrimmed and outfiles.untrimmed must not '
@@ -237,7 +237,7 @@ class Pipeline(ABC):
 
         if outfiles.demultiplex_out is not None or outfiles.combinatorial_out is not None:
             self._demultiplexer = self._create_demultiplexer(outfiles)
-            self._filters.append(self._demultiplexer)
+            self._steps.append(self._demultiplexer)
         else:
             # Allow overriding the wrapper for --discard-untrimmed/--untrimmed-(paired-)output
             untrimmed_filter_wrapper = self._untrimmed_filter_wrapper()
@@ -246,17 +246,17 @@ class Pipeline(ABC):
             # --discard-untrimmed and --untrimmed-output. These options
             # are mutually exclusive in order to avoid brain damage.
             if self.discard_trimmed:
-                self._filters.append(
+                self._steps.append(
                     filter_wrapper(None, DiscardTrimmedFilter(), DiscardTrimmedFilter()))
             elif self.discard_untrimmed:
-                self._filters.append(
+                self._steps.append(
                     untrimmed_filter_wrapper(None, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
             elif outfiles.untrimmed:
                 untrimmed_writer = self._open_writer(outfiles.untrimmed, outfiles.untrimmed2)
-                self._filters.append(
+                self._steps.append(
                     untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
-            self._filters.append(self._final_filter(outfiles))
-        logger.debug("Filters: %s", self._filters)
+            self._steps.append(self._final_filter(outfiles))
+        logger.debug("Filters: %s", self._steps)
 
     def flush(self) -> None:
         for f in self._textiowrappers:
@@ -333,7 +333,7 @@ class SingleEndPipeline(Pipeline):
             info = ModificationInfo(read)
             for modifier in self._modifiers:
                 read = modifier(read, info)
-            for filter_ in self._filters:
+            for filter_ in self._steps:
                 if filter_(read, info):
                     break
         return (n, total_bp, None)
@@ -437,7 +437,7 @@ class PairedEndPipeline(Pipeline):
             info2 = ModificationInfo(read2)
             for modifier in self._modifiers:
                 read1, read2 = modifier(read1, read2, info1, info2)
-            for filter_ in self._filters:
+            for filter_ in self._steps:
                 # Stop writing as soon as one of the filters was successful.
                 if filter_(read1, read2, info1, info2):
                     break
@@ -632,7 +632,7 @@ class WorkerProcess(Process):
                 self._pipeline.connect_io(infiles, outfiles)
                 (n, bp1, bp2) = self._pipeline.process_reads()
                 self._pipeline.flush()
-                cur_stats = Statistics().collect(n, bp1, bp2, [], self._pipeline._filters)
+                cur_stats = Statistics().collect(n, bp1, bp2, [], self._pipeline._steps)
                 stats += cur_stats
                 self._send_outfiles(outfiles, chunk_index, n)
                 self._pipeline.close()
@@ -872,7 +872,7 @@ class SerialPipelineRunner(PipelineRunner):
         # TODO
         modifiers = getattr(self._pipeline, "_modifiers", None)
         assert modifiers is not None
-        return Statistics().collect(n, total1_bp, total2_bp, modifiers, self._pipeline._filters)
+        return Statistics().collect(n, total1_bp, total2_bp, modifiers, self._pipeline._steps)
 
     def close(self) -> None:
         self._pipeline.close()
