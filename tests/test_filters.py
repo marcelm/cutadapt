@@ -4,7 +4,8 @@ Tests write output (should it return True or False or write)
 import pytest
 from dnaio import Sequence
 
-from cutadapt.filters import NContentFilter, DISCARD, KEEP, PairedRedirector
+from cutadapt.filters import NContentFilter, DISCARD, KEEP
+from cutadapt.steps import PairedRedirector
 
 
 @pytest.mark.parametrize('seq,count,expected', [

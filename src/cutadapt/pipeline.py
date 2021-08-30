@@ -17,11 +17,12 @@ import dnaio
 from .utils import Progress, FileOpener
 from .modifiers import SingleEndModifier, PairedEndModifier, PairedEndModifierWrapper, ModificationInfo
 from .report import Statistics
-from .filters import (Redirector, PairedRedirector, NoFilter, PairedNoFilter, InfoFileWriter,
-    RestFileWriter, WildcardFileWriter, TooShortReadFilter, TooLongReadFilter, NContentFilter,
+from .filters import (TooShortReadFilter, TooLongReadFilter, NContentFilter,
     MaximumExpectedErrorsFilter,
-    CasavaFilter, DiscardTrimmedFilter, DiscardUntrimmedFilter, Demultiplexer,
-    PairedDemultiplexer, CombinatorialDemultiplexer)
+    CasavaFilter, DiscardTrimmedFilter, DiscardUntrimmedFilter)
+from .steps import NoFilter, PairedNoFilter, Redirector, PairedRedirector, Demultiplexer, \
+    PairedDemultiplexer, CombinatorialDemultiplexer, RestFileWriter, WildcardFileWriter, \
+    InfoFileWriter
 
 logger = logging.getLogger()
 

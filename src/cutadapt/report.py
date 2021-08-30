@@ -12,7 +12,7 @@ from .adapters import (
 )
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
-from .filters import PairedEndFinalStep, SingleEndFinalStep
+from .steps import SingleEndFinalStep, PairedEndFinalStep
 
 
 def safe_divide(numerator: Optional[int], denominator: int) -> float:
