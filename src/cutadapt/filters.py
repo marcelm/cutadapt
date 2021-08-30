@@ -28,7 +28,7 @@ DISCARD = True
 KEEP = False
 
 
-class SingleEndFilter(ABC):
+class SingleEndStep(ABC):
     @abstractmethod
     def __call__(self, read, info: ModificationInfo) -> bool:
         """
@@ -36,7 +36,7 @@ class SingleEndFilter(ABC):
         """
 
 
-class PairedEndFilter(ABC):
+class PairedEndStep(ABC):
     @abstractmethod
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         """
@@ -81,7 +81,7 @@ class ReadLengthStatistics:
         return sum(length * count for length, count in counts.items())
 
 
-class SingleEndFilterWithStatistics(SingleEndFilter, ABC):
+class SingleEndFilterWithStatistics(SingleEndStep, ABC):
     def __init__(self):
         super().__init__()
         self.statistics = ReadLengthStatistics()
@@ -90,7 +90,7 @@ class SingleEndFilterWithStatistics(SingleEndFilter, ABC):
         self.statistics.update(read)
 
 
-class PairedEndFilterWithStatistics(PairedEndFilter, ABC):
+class PairedEndFilterWithStatistics(PairedEndStep, ABC):
     def __init__(self):
         super().__init__()
         self.statistics = ReadLengthStatistics()
@@ -133,11 +133,11 @@ class PairedNoFilter(PairedEndFilterWithStatistics):
         return DISCARD
 
 
-class Redirector(SingleEndFilter):
+class Redirector(SingleEndStep):
     """
     Redirect discarded reads to the given writer. This is for single-end reads.
     """
-    def __init__(self, writer, filter: SingleEndFilter, filter2=None):
+    def __init__(self, writer, filter: SingleEndStep, filter2=None):
         super().__init__()
         # TODO filter2 should really not be here
         self.filtered = 0
@@ -156,7 +156,7 @@ class Redirector(SingleEndFilter):
         return KEEP
 
 
-class PairedRedirector(PairedEndFilter):
+class PairedRedirector(PairedEndStep):
     """
     Redirect paired-end reads matching a filtering criterion to a writer.
     Different filtering styles are supported, differing by which of the
@@ -213,7 +213,7 @@ class PairedRedirector(PairedEndFilter):
         return KEEP
 
 
-class TooShortReadFilter(SingleEndFilter):
+class TooShortReadFilter(SingleEndStep):
     name: str = "too_short"
 
     def __init__(self, minimum_length):
@@ -226,7 +226,7 @@ class TooShortReadFilter(SingleEndFilter):
         return len(read) < self.minimum_length
 
 
-class TooLongReadFilter(SingleEndFilter):
+class TooLongReadFilter(SingleEndStep):
     name: str = "too_long"
 
     def __init__(self, maximum_length):
@@ -239,7 +239,7 @@ class TooLongReadFilter(SingleEndFilter):
         return len(read) > self.maximum_length
 
 
-class MaximumExpectedErrorsFilter(SingleEndFilter):
+class MaximumExpectedErrorsFilter(SingleEndStep):
     """
     Discard reads whose expected number of errors, according to the quality
     values, exceeds a threshold.
@@ -260,7 +260,7 @@ class MaximumExpectedErrorsFilter(SingleEndFilter):
         return expected_errors(read.qualities) > self.max_errors
 
 
-class NContentFilter(SingleEndFilter):
+class NContentFilter(SingleEndStep):
     """
     Discard a read if it has too many 'N' bases. It handles both raw counts
     of Ns as well as proportions. Note, for raw counts, it is a 'greater than' comparison,
@@ -292,7 +292,7 @@ class NContentFilter(SingleEndFilter):
             return n_count > self.cutoff
 
 
-class DiscardUntrimmedFilter(SingleEndFilter):
+class DiscardUntrimmedFilter(SingleEndStep):
     """
     Return True if read is untrimmed.
     """
@@ -305,7 +305,7 @@ class DiscardUntrimmedFilter(SingleEndFilter):
         return not info.matches
 
 
-class DiscardTrimmedFilter(SingleEndFilter):
+class DiscardTrimmedFilter(SingleEndStep):
     """
     Return True if read is trimmed.
     """
@@ -318,7 +318,7 @@ class DiscardTrimmedFilter(SingleEndFilter):
         return bool(info.matches)
 
 
-class CasavaFilter(SingleEndFilter):
+class CasavaFilter(SingleEndStep):
     """
     Remove reads that fail the CASAVA filter. These have header lines that
     look like ``xxxx x:Y:x:x`` (with a ``Y``). Reads that pass the filter
@@ -417,7 +417,7 @@ class CombinatorialDemultiplexer(PairedEndFilterWithStatistics):
         return DISCARD
 
 
-class RestFileWriter(SingleEndFilter):
+class RestFileWriter(SingleEndStep):
     def __init__(self, file):
         self.file = file
 
@@ -430,7 +430,7 @@ class RestFileWriter(SingleEndFilter):
         return KEEP
 
 
-class WildcardFileWriter(SingleEndFilter):
+class WildcardFileWriter(SingleEndStep):
     def __init__(self, file):
         self.file = file
 
@@ -441,7 +441,7 @@ class WildcardFileWriter(SingleEndFilter):
         return KEEP
 
 
-class InfoFileWriter(SingleEndFilter):
+class InfoFileWriter(SingleEndStep):
     RC_MAP = {None: "", True: "1", False: "0"}
 
     def __init__(self, file):
