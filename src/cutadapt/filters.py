@@ -81,7 +81,7 @@ class ReadLengthStatistics:
         return sum(length * count for length, count in counts.items())
 
 
-class SingleEndFilterWithStatistics(SingleEndStep, ABC):
+class SingleEndFinalStep(SingleEndStep, ABC):
     def __init__(self):
         super().__init__()
         self.statistics = ReadLengthStatistics()
@@ -90,7 +90,7 @@ class SingleEndFilterWithStatistics(SingleEndStep, ABC):
         self.statistics.update(read)
 
 
-class PairedEndFilterWithStatistics(PairedEndStep, ABC):
+class PairedEndFinalStep(PairedEndStep, ABC):
     def __init__(self):
         super().__init__()
         self.statistics = ReadLengthStatistics()
@@ -99,7 +99,7 @@ class PairedEndFilterWithStatistics(PairedEndStep, ABC):
         self.statistics.update2(read1, read2)
 
 
-class NoFilter(SingleEndFilterWithStatistics):
+class NoFilter(SingleEndFinalStep):
     """
     No filtering, just send each read to the given writer.
     """
@@ -116,7 +116,7 @@ class NoFilter(SingleEndFilterWithStatistics):
         return DISCARD
 
 
-class PairedNoFilter(PairedEndFilterWithStatistics):
+class PairedNoFilter(PairedEndFinalStep):
     """
     No filtering, just send each paired-end read to the given writer.
     """
@@ -336,7 +336,7 @@ class CasavaFilter(SingleEndStep):
         return right[1:4] == ':Y:'  # discard if :Y: found
 
 
-class Demultiplexer(SingleEndFilterWithStatistics):
+class Demultiplexer(SingleEndFinalStep):
     """
     Demultiplex trimmed reads. Reads are written to different output files
     depending on which adapter matches.
@@ -365,7 +365,7 @@ class Demultiplexer(SingleEndFilterWithStatistics):
         return DISCARD
 
 
-class PairedDemultiplexer(PairedEndFilterWithStatistics):
+class PairedDemultiplexer(PairedEndFinalStep):
     """
     Demultiplex trimmed paired-end reads. Reads are written to different output files
     depending on which adapter (in read 1) matches.
@@ -387,7 +387,7 @@ class PairedDemultiplexer(PairedEndFilterWithStatistics):
         return DISCARD
 
 
-class CombinatorialDemultiplexer(PairedEndFilterWithStatistics):
+class CombinatorialDemultiplexer(PairedEndFinalStep):
     """
     Demultiplex paired-end reads depending on which adapter matches, taking into account
     matches on R1 and R2.
