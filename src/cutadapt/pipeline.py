@@ -17,9 +17,8 @@ import dnaio
 from .utils import Progress, FileOpener
 from .modifiers import SingleEndModifier, PairedEndModifier, PairedEndModifierWrapper, ModificationInfo
 from .report import Statistics
-from .filters import (TooShortReadFilter, TooLongReadFilter, NContentFilter,
-    MaximumExpectedErrorsFilter,
-    CasavaFilter, DiscardTrimmedFilter, DiscardUntrimmedFilter)
+from .filters import (TooShort, TooLong, TooManyN, TooManyExpectedErrors, CasavaFiltered,
+    DiscardTrimmed, DiscardUntrimmed)
 from .steps import NoFilter, PairedNoFilter, Redirector, PairedRedirector, Demultiplexer, \
     PairedDemultiplexer, CombinatorialDemultiplexer, RestFileWriter, WildcardFileWriter, \
     InfoFileWriter
@@ -203,8 +202,8 @@ class Pipeline(ABC):
 
         # minimum length and maximum length
         for lengths, file1, file2, predicate_class in (
-                (self._minimum_length, outfiles.too_short, outfiles.too_short2, TooShortReadFilter),
-                (self._maximum_length, outfiles.too_long, outfiles.too_long2, TooLongReadFilter)
+                (self._minimum_length, outfiles.too_short, outfiles.too_short2, TooShort),
+                (self._maximum_length, outfiles.too_long, outfiles.too_long2, TooLong)
         ):
             if lengths is None:
                 continue
@@ -217,18 +216,18 @@ class Pipeline(ABC):
             self._steps.append(filter_wrapper(writer, filter=f1, filter2=f2))
 
         if self.max_n is not None:
-            f1 = f2 = NContentFilter(self.max_n)
+            f1 = f2 = TooManyN(self.max_n)
             self._steps.append(filter_wrapper(None, f1, f2))
 
         if self.max_expected_errors is not None:
             if not self._reader.delivers_qualities:
                 logger.warning("Ignoring option --max-ee as input does not contain quality values")
             else:
-                f1 = f2 = MaximumExpectedErrorsFilter(self.max_expected_errors)
+                f1 = f2 = TooManyExpectedErrors(self.max_expected_errors)
                 self._steps.append(filter_wrapper(None, f1, f2))
 
         if self.discard_casava:
-            f1 = f2 = CasavaFilter()
+            f1 = f2 = CasavaFiltered()
             self._steps.append(filter_wrapper(None, f1, f2))
 
         if int(self.discard_trimmed) + int(self.discard_untrimmed) + int(outfiles.untrimmed is not None) > 1:
@@ -247,14 +246,14 @@ class Pipeline(ABC):
             # are mutually exclusive in order to avoid brain damage.
             if self.discard_trimmed:
                 self._steps.append(
-                    filter_wrapper(None, DiscardTrimmedFilter(), DiscardTrimmedFilter()))
+                    filter_wrapper(None, DiscardTrimmed(), DiscardTrimmed()))
             elif self.discard_untrimmed:
                 self._steps.append(
-                    untrimmed_filter_wrapper(None, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
+                    untrimmed_filter_wrapper(None, DiscardUntrimmed(), DiscardUntrimmed()))
             elif outfiles.untrimmed:
                 untrimmed_writer = self._open_writer(outfiles.untrimmed, outfiles.untrimmed2)
                 self._steps.append(
-                    untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmedFilter(), DiscardUntrimmedFilter()))
+                    untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmed(), DiscardUntrimmed()))
             self._steps.append(self._final_filter(outfiles))
         logger.debug("Filters: %s", self._steps)
 

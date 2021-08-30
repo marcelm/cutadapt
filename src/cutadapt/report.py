@@ -10,6 +10,7 @@ from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter, NonInternalFrontAdapter, PrefixAdapter,
     BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
 )
+from .filters import Predicate
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
 from .steps import SingleEndFinalStep, PairedEndFinalStep
@@ -128,8 +129,8 @@ class Statistics:
             for i in 0, 1:
                 self.written_bp[i] += written_bp[i]
                 self.written_lengths[i] += written_lengths[i]
-        if hasattr(w, "filter") and hasattr(w.filter, "name"):
-            filter_name = w.filter.name
+        if hasattr(w, "filter") and isinstance(w.filter, Predicate):
+            filter_name = w.filter.descriptive_identifier()
             if filter_name in {
                 "too_short", "too_long", "too_many_n", "too_many_expected_errors",
                 "casava_filtered", "discard_trimmed", "discard_untrimmed",

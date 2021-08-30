@@ -4,7 +4,7 @@ Tests write output (should it return True or False or write)
 import pytest
 from dnaio import Sequence
 
-from cutadapt.filters import NContentFilter, DISCARD, KEEP
+from cutadapt.filters import TooManyN, DISCARD, KEEP
 from cutadapt.steps import PairedRedirector
 
 
@@ -17,9 +17,9 @@ from cutadapt.steps import PairedRedirector
     ('ANAAAA', 1 / 6, KEEP),
     ('ANAAAA', 0, DISCARD),
 ])
-def test_ncontentfilter(seq, count, expected):
+def test_too_many_n(seq, count, expected):
     # third parameter is True if read should be discarded
-    filter_ = NContentFilter(count=count)
+    filter_ = TooManyN(count=count)
     _seq = Sequence('read1', seq, qualities='#'*len(seq))
     assert filter_(_seq, []) == expected
 
@@ -30,8 +30,8 @@ def test_ncontentfilter(seq, count, expected):
     ('AAA', 'AANA', 0, DISCARD),
     ('ANAA', 'AANA', 1, KEEP),
 ])
-def test_ncontentfilter_paired(seq1, seq2, count, expected):
-    filter_ = NContentFilter(count=count)
+def test_too_many_n_paired(seq1, seq2, count, expected):
+    filter_ = TooManyN(count=count)
     filter_legacy = PairedRedirector(None, filter_, filter_, pair_filter_mode='first')
     filter_any = PairedRedirector(None, filter_, filter_, pair_filter_mode='any')
     read1 = Sequence('read1', seq1, qualities='#'*len(seq1))
