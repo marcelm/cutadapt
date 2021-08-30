@@ -17,14 +17,13 @@ from collections import defaultdict, Counter
 from abc import ABC, abstractmethod
 from typing import Tuple, Optional, Dict, Any, DefaultDict
 
+from .utils import reverse_complemented_sequence
 from .qualtrim import expected_errors
 from .modifiers import ModificationInfo
 
 
 # Constants used when returning from a Filter’s __call__ method to improve
 # readability (it is unintuitive that "return True" means "discard the read").
-from .utils import reverse_complemented_sequence
-
 DISCARD = True
 KEEP = False
 
@@ -50,7 +49,8 @@ class ReadLengthStatistics:
     Keep track of the lengths of written reads or read pairs
     """
     def __init__(self) -> None:
-        # A defaultdict is much faster than a Counter
+        # It would be more natural to use a Counter, but a
+        # defaultdict is much faster
         self._written_lengths1: DefaultDict[int, int] = defaultdict(int)
         self._written_lengths2: DefaultDict[int, int] = defaultdict(int)
 
@@ -339,14 +339,13 @@ class CasavaFilter(SingleEndFilter):
 class Demultiplexer(SingleEndFilterWithStatistics):
     """
     Demultiplex trimmed reads. Reads are written to different output files
-    depending on which adapter matches. Files are created when the first read
-    is written to them.
+    depending on which adapter matches.
 
     Untrimmed reads are sent to writers[None] if that key exists.
     """
     def __init__(self, writers: Dict[Optional[str], Any]):
         """
-        out is a dictionary that maps an adapter name to a writer
+        writers maps an adapter name to a writer
         """
         super().__init__()
         self._writers = writers
