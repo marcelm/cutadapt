@@ -7,12 +7,6 @@ from .qualtrim import expected_errors
 from .modifiers import ModificationInfo
 
 
-# Constants used when returning from a Filter’s __call__ method to improve
-# readability (it is unintuitive that "return True" means "discard the read").
-DISCARD = True
-KEEP = False
-
-
 class Predicate(ABC):
     @abstractmethod
     def __call__(self, read, info: ModificationInfo) -> bool:

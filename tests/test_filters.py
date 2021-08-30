@@ -4,31 +4,31 @@ Tests write output (should it return True or False or write)
 import pytest
 from dnaio import Sequence
 
-from cutadapt.filters import TooManyN, DISCARD, KEEP
+from cutadapt.filters import TooManyN
 from cutadapt.steps import PairedRedirector
 
 
 @pytest.mark.parametrize('seq,count,expected', [
-    ('AAA', 0, KEEP),
-    ('AAA', 1, KEEP),
-    ('AAACCTTGGN', 1, KEEP),
-    ('AAACNNNCTTGGN', 0.5, KEEP),
-    ('NNNNNN', 1, DISCARD),
-    ('ANAAAA', 1 / 6, KEEP),
-    ('ANAAAA', 0, DISCARD),
+    ('AAA', 0, False),
+    ('AAA', 1, False),
+    ('AAACCTTGGN', 1, False),
+    ('AAACNNNCTTGGN', 0.5, False),
+    ('NNNNNN', 1, True),
+    ('ANAAAA', 1 / 6, False),
+    ('ANAAAA', 0, True),
 ])
 def test_too_many_n(seq, count, expected):
-    # third parameter is True if read should be discarded
+    # third parameter is True if read should be Trueed
     filter_ = TooManyN(count=count)
     _seq = Sequence('read1', seq, qualities='#'*len(seq))
     assert filter_(_seq, []) == expected
 
 
 @pytest.mark.parametrize('seq1,seq2,count,expected', [
-    ('AAA', 'AAA', 0, KEEP),
-    ('AAAN', 'AAA', 0, DISCARD),
-    ('AAA', 'AANA', 0, DISCARD),
-    ('ANAA', 'AANA', 1, KEEP),
+    ('AAA', 'AAA', 0, False),
+    ('AAAN', 'AAA', 0, True),
+    ('AAA', 'AANA', 0, True),
+    ('ANAA', 'AANA', 1, False),
 ])
 def test_too_many_n_paired(seq1, seq2, count, expected):
     filter_ = TooManyN(count=count)
@@ -37,7 +37,7 @@ def test_too_many_n_paired(seq1, seq2, count, expected):
     read1 = Sequence('read1', seq1, qualities='#'*len(seq1))
     read2 = Sequence('read1', seq2, qualities='#'*len(seq2))
     assert filter_legacy(read1, read2, [], []) == filter_(read1, [])
-    # discard entire pair if one of the reads fulfills criteria
+    # True entire pair if one of the reads fulfills criteria
     assert filter_any(read1, read2, [], []) == expected
 
 
