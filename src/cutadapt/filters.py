@@ -1,5 +1,5 @@
 """
-Filtering criteria
+Filtering criteria (predicates)
 """
 from abc import ABC, abstractmethod
 
@@ -25,6 +25,8 @@ class Predicate(ABC):
 
 
 class TooShort(Predicate):
+    """Select reads that are shorter than the specified minimum length"""
+
     def __init__(self, minimum_length: int):
         self.minimum_length = minimum_length
 
@@ -36,6 +38,8 @@ class TooShort(Predicate):
 
 
 class TooLong(Predicate):
+    """Select reads that are longer than the specified maximum length"""
+
     def __init__(self, maximum_length: int):
         self.maximum_length = maximum_length
 
@@ -48,7 +52,7 @@ class TooLong(Predicate):
 
 class TooManyExpectedErrors(Predicate):
     """
-    Discard reads whose expected number of errors, according to the quality
+    Select reads whose expected number of errors, according to the quality
     values, exceeds a threshold.
 
     The idea comes from usearch's -fastq_maxee parameter
@@ -67,13 +71,13 @@ class TooManyExpectedErrors(Predicate):
 
 class TooManyN(Predicate):
     """
-    Discard a read if it has too many 'N' bases. It handles both raw counts
-    of Ns as well as proportions. Note, for raw counts, it is a 'greater than' comparison,
-    so a cutoff of '1' will keep reads with a single N in it.
+    Select reads that have too many 'N' bases.
+
+    Both a raw count or a proportion (relative to the sequence length) can be used.
     """
     def __init__(self, count: float):
         """
-        Count -- if it is below 1.0, it will be considered a proportion, and above and equal to
+        count -- if it is below 1.0, it will be considered a proportion, and above and equal to
         1 will be considered as discarding reads with a number of N's greater than this cutoff.
         """
         assert count >= 0
@@ -84,7 +88,6 @@ class TooManyN(Predicate):
         return f"TooManyN(cutoff={self.cutoff}, is_proportion={self.is_proportion})"
 
     def __call__(self, read, info: ModificationInfo):
-        """Return True when the read should be discarded"""
         n_count = read.sequence.lower().count('n')
         if self.is_proportion:
             if len(read) == 0:
@@ -96,11 +99,11 @@ class TooManyN(Predicate):
 
 class CasavaFiltered(Predicate):
     """
-    Remove reads that fail the CASAVA filter. These have header lines that
-    look like ``xxxx x:Y:x:x`` (with a ``Y``). Reads that pass the filter
+    Select reads that have failed the CASAVA filter according to the read header.
+    The headers look like ``xxxx x:Y:x:x`` (with a ``Y``). Reads that pass the filter
     have an ``N`` instead of ``Y``.
 
-    Reads with unrecognized headers are kept.
+    Reads with unrecognized headers are not selected.
     """
     def __repr__(self):
         return "CasavaFiltered()"
@@ -112,7 +115,7 @@ class CasavaFiltered(Predicate):
 
 class DiscardUntrimmed(Predicate):
     """
-    Return True if read is untrimmed.
+    Select reads for which no adapter match was found
     """
     def __repr__(self):
         return "DiscardUntrimmed()"
@@ -123,7 +126,7 @@ class DiscardUntrimmed(Predicate):
 
 class DiscardTrimmed(Predicate):
     """
-    Return True if read is trimmed.
+    Select reads for which at least one adapter match was found
     """
     def __repr__(self):
         return "DiscardTrimmed()"

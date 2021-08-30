@@ -19,8 +19,8 @@ from abc import ABC, abstractmethod
 from collections import defaultdict, Counter
 from typing import DefaultDict, Tuple, Dict, Optional, Any
 
-from cutadapt.modifiers import ModificationInfo
-from cutadapt.utils import reverse_complemented_sequence
+from .modifiers import ModificationInfo
+from .utils import reverse_complemented_sequence
 
 # Constants used when returning from a Filter’s __call__ method to improve
 # readability (it is unintuitive that "return True" means "discard the read").

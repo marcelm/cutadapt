@@ -202,8 +202,8 @@ class Pipeline(ABC):
 
         # minimum length and maximum length
         for lengths, file1, file2, predicate_class in (
-                (self._minimum_length, outfiles.too_short, outfiles.too_short2, TooShort),
-                (self._maximum_length, outfiles.too_long, outfiles.too_long2, TooLong)
+            (self._minimum_length, outfiles.too_short, outfiles.too_short2, TooShort),
+            (self._maximum_length, outfiles.too_long, outfiles.too_long2, TooLong)
         ):
             if lengths is None:
                 continue
@@ -254,6 +254,7 @@ class Pipeline(ABC):
                 untrimmed_writer = self._open_writer(outfiles.untrimmed, outfiles.untrimmed2)
                 self._steps.append(
                     untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmed(), DiscardUntrimmed()))
+
             self._steps.append(self._final_filter(outfiles))
         logger.debug("Filters: %s", self._steps)
 
