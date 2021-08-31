@@ -134,9 +134,10 @@ class PairedNoFilter(PairedEndFinalStep):
         return DISCARD
 
 
-class Redirector(SingleEndStep):
+class SingleEndFilter(SingleEndStep):
     """
-    Redirect discarded reads to the given writer. This is for single-end reads.
+    A pipeline step that can filter reads, can redirect filtered ones to a writer, and
+    counts how many were filtered.
     """
     def __init__(self, writer, predicate: Predicate):
         super().__init__()
@@ -145,7 +146,7 @@ class Redirector(SingleEndStep):
         self.predicate = predicate
 
     def __repr__(self):
-        return "Redirector(writer={}, predicate={})".format(self.writer, self.predicate)
+        return "SingleEndFilter(writer={}, predicate={})".format(self.writer, self.predicate)
 
     def descriptive_identifier(self) -> str:
         return self.predicate.descriptive_identifier()
@@ -159,9 +160,11 @@ class Redirector(SingleEndStep):
         return KEEP
 
 
-class PairedRedirector(PairedEndStep):
+class PairedEndFilter(PairedEndStep):
     """
-    Redirect paired-end reads matching a filtering criterion to a writer.
+    A pipeline step that can filter paired-end reads, redirect them to a file, and counts
+    how many read pairs were filtered.
+
     Different filtering styles are supported, differing by which of the
     two reads in a pair have to fulfill the filtering criterion.
     """
@@ -192,7 +195,7 @@ class PairedRedirector(PairedEndStep):
             self._is_filtered = self._is_filtered_first
 
     def __repr__(self):
-        return f"PairedRedirector(writer={self.writer}, predicate1={self.predicate1}, " \
+        return f"PairedEndFilter(writer={self.writer}, predicate1={self.predicate1}, " \
                f"predicate2={self.predicate2}, pair_filter_mode='{self._pair_filter_mode}')"
 
     def descriptive_identifier(self) -> str:

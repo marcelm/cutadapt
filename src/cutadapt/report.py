@@ -13,7 +13,7 @@ from .adapters import (
 from .filters import Predicate
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
-from .steps import SingleEndFinalStep, PairedEndFinalStep, Redirector, PairedRedirector
+from .steps import SingleEndFinalStep, PairedEndFinalStep, SingleEndFilter, PairedEndFilter
 
 
 def safe_divide(numerator: Optional[int], denominator: int) -> float:
@@ -129,7 +129,7 @@ class Statistics:
             for i in 0, 1:
                 self.written_bp[i] += written_bp[i]
                 self.written_lengths[i] += written_lengths[i]
-        if isinstance(w, (Redirector, PairedRedirector)):
+        if isinstance(w, (SingleEndFilter, PairedEndFilter)):
             predicate_name = w.descriptive_identifier()
             if predicate_name in {
                 "too_short", "too_long", "too_many_n", "too_many_expected_errors",

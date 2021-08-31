@@ -19,7 +19,7 @@ from .modifiers import SingleEndModifier, PairedEndModifier, PairedEndModifierWr
 from .report import Statistics
 from .filters import (TooShort, TooLong, TooManyN, TooManyExpectedErrors, CasavaFiltered,
     DiscardTrimmed, DiscardUntrimmed, Predicate)
-from .steps import NoFilter, PairedNoFilter, Redirector, PairedRedirector, Demultiplexer, \
+from .steps import NoFilter, PairedNoFilter, SingleEndFilter, PairedEndFilter, Demultiplexer, \
     PairedDemultiplexer, CombinatorialDemultiplexer, RestFileWriter, WildcardFileWriter, \
     InfoFileWriter, SingleEndStep, PairedSingleEndStep
 
@@ -356,10 +356,10 @@ class SingleEndPipeline(Pipeline):
 
     def _make_filter(self, writer, predicate1: Predicate, predicate2: Predicate):
         _ignored = predicate2
-        return Redirector(writer, predicate1)
+        return SingleEndFilter(writer, predicate1)
 
     def _make_untrimmed_filter(self, writer):
-        return Redirector(writer, DiscardUntrimmed())
+        return SingleEndFilter(writer, DiscardUntrimmed())
 
     def _final_filter(self, outfiles: OutputFiles):
         assert outfiles.out2 is None and outfiles.out is not None
@@ -474,7 +474,7 @@ class PairedEndPipeline(Pipeline):
     def _make_filter(self, writer, predicate1: Predicate, predicate2: Predicate, pair_filter_mode=None):
         if pair_filter_mode is None:
             pair_filter_mode = self._pair_filter_mode
-        return PairedRedirector(writer, predicate1, predicate2, pair_filter_mode=pair_filter_mode)
+        return PairedEndFilter(writer, predicate1, predicate2, pair_filter_mode=pair_filter_mode)
 
     def _make_untrimmed_filter(self, writer):
         """

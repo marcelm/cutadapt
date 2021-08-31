@@ -5,7 +5,7 @@ import pytest
 from dnaio import Sequence
 
 from cutadapt.filters import TooManyN
-from cutadapt.steps import PairedRedirector
+from cutadapt.steps import PairedEndFilter
 
 
 @pytest.mark.parametrize('seq,count,expected', [
@@ -32,8 +32,8 @@ def test_too_many_n(seq, count, expected):
 ])
 def test_too_many_n_paired(seq1, seq2, count, expected):
     predicate = TooManyN(count=count)
-    filter_legacy = PairedRedirector(None, predicate, predicate, pair_filter_mode='first')
-    filter_any = PairedRedirector(None, predicate, predicate, pair_filter_mode='any')
+    filter_legacy = PairedEndFilter(None, predicate, predicate, pair_filter_mode='first')
+    filter_any = PairedEndFilter(None, predicate, predicate, pair_filter_mode='any')
     read1 = Sequence('read1', seq1, qualities='#'*len(seq1))
     read2 = Sequence('read1', seq2, qualities='#'*len(seq2))
     assert filter_legacy(read1, read2, [], []) == predicate.test(read1, [])
@@ -43,5 +43,5 @@ def test_too_many_n_paired(seq1, seq2, count, expected):
 
 def test_invalid_pair_filter_mode():
     with pytest.raises(ValueError) as e:
-        PairedRedirector(None, None, None, "invalidmode")
+        PairedEndFilter(None, None, None, "invalidmode")
     assert "pair_filter_mode must be" in e.value.args[0]
