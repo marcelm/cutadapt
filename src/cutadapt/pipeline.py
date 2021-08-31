@@ -18,7 +18,7 @@ from .utils import Progress, FileOpener
 from .modifiers import SingleEndModifier, PairedEndModifier, PairedEndModifierWrapper, ModificationInfo
 from .report import Statistics
 from .filters import (TooShort, TooLong, TooManyN, TooManyExpectedErrors, CasavaFiltered,
-    DiscardTrimmed, DiscardUntrimmed)
+    DiscardTrimmed, DiscardUntrimmed, Predicate)
 from .steps import NoFilter, PairedNoFilter, Redirector, PairedRedirector, Demultiplexer, \
     PairedDemultiplexer, CombinatorialDemultiplexer, RestFileWriter, WildcardFileWriter, \
     InfoFileWriter, SingleEndStep, PairedSingleEndStep
@@ -188,7 +188,6 @@ class Pipeline(ABC):
         self._steps = []
         self._textiowrappers = []
         self._outfiles = outfiles
-        filter_wrapper = self._filter_wrapper()
 
         for step_class, outfile in (
             (RestFileWriter, outfiles.rest),
@@ -213,11 +212,11 @@ class Pipeline(ABC):
                 f2 = predicate_class(lengths[1])
             else:
                 f2 = None
-            self._steps.append(filter_wrapper(writer, filter=f1, filter2=f2))
+            self._steps.append(self._make_filter(writer, predicate1=f1, predicate2=f2))
 
         if self.max_n is not None:
             f1 = f2 = TooManyN(self.max_n)
-            self._steps.append(filter_wrapper(None, f1, f2))
+            self._steps.append(self._make_filter(None, f1, f2))
 
         if self.max_expected_errors is not None:
             if not self._reader.delivers_qualities:
@@ -225,11 +224,11 @@ class Pipeline(ABC):
                     "Ignoring option --max-ee because input does not contain quality values")
             else:
                 f1 = f2 = TooManyExpectedErrors(self.max_expected_errors)
-                self._steps.append(filter_wrapper(None, f1, f2))
+                self._steps.append(self._make_filter(None, f1, f2))
 
         if self.discard_casava:
             f1 = f2 = CasavaFiltered()
-            self._steps.append(filter_wrapper(None, f1, f2))
+            self._steps.append(self._make_filter(None, f1, f2))
 
         if int(self.discard_trimmed) + int(self.discard_untrimmed) + int(outfiles.untrimmed is not None) > 1:
             raise ValueError('discard_trimmed, discard_untrimmed and outfiles.untrimmed must not '
@@ -239,22 +238,22 @@ class Pipeline(ABC):
             self._demultiplexer = self._create_demultiplexer(outfiles)
             self._steps.append(self._demultiplexer)
         else:
-            # Allow overriding the wrapper for --discard-untrimmed/--untrimmed-(paired-)output
-            untrimmed_filter_wrapper = self._untrimmed_filter_wrapper()
+            # Some special handling to allow overriding the wrapper for
+            # --discard-untrimmed/--untrimmed-(paired-)output
 
             # Set up the remaining filters to deal with --discard-trimmed,
             # --discard-untrimmed and --untrimmed-output. These options
             # are mutually exclusive in order to avoid brain damage.
             if self.discard_trimmed:
                 self._steps.append(
-                    filter_wrapper(None, DiscardTrimmed(), DiscardTrimmed()))
+                    self._make_filter(None, DiscardTrimmed(), DiscardTrimmed()))
             elif self.discard_untrimmed:
                 self._steps.append(
-                    untrimmed_filter_wrapper(None, DiscardUntrimmed(), DiscardUntrimmed()))
+                    self._make_untrimmed_filter(None))
             elif outfiles.untrimmed:
                 untrimmed_writer = self._open_writer(outfiles.untrimmed, outfiles.untrimmed2)
                 self._steps.append(
-                    untrimmed_filter_wrapper(untrimmed_writer, DiscardUntrimmed(), DiscardUntrimmed()))
+                    self._make_untrimmed_filter(untrimmed_writer))
 
             self._steps.append(self._final_filter(outfiles))
         for i, step in enumerate(self._steps, 1):
@@ -294,11 +293,11 @@ class Pipeline(ABC):
         pass
 
     @abstractmethod
-    def _filter_wrapper(self):
+    def _make_filter(self, writer, predicate1: Predicate, predicate2: Predicate):
         pass
 
     @abstractmethod
-    def _untrimmed_filter_wrapper(self):
+    def _make_untrimmed_filter(self, writer):
         pass
 
     @abstractmethod
@@ -355,11 +354,12 @@ class SingleEndPipeline(Pipeline):
         return self.file_opener.dnaio_open_raise_limit(
             file, mode="w", qualities=self.uses_qualities, fileformat="fasta" if force_fasta else None)
 
-    def _filter_wrapper(self):
-        return Redirector
+    def _make_filter(self, writer, predicate1: Predicate, predicate2: Predicate):
+        _ignored = predicate2
+        return Redirector(writer, predicate1)
 
-    def _untrimmed_filter_wrapper(self):
-        return Redirector
+    def _make_untrimmed_filter(self, writer):
+        return Redirector(writer, DiscardUntrimmed())
 
     def _final_filter(self, outfiles: OutputFiles):
         assert outfiles.out2 is None and outfiles.out is not None
@@ -471,20 +471,22 @@ class PairedEndPipeline(Pipeline):
             interleaved=file2 is None,
         )
 
-    def _filter_wrapper(self, pair_filter_mode=None):
+    def _make_filter(self, writer, predicate1: Predicate, predicate2: Predicate, pair_filter_mode=None):
         if pair_filter_mode is None:
             pair_filter_mode = self._pair_filter_mode
-        return functools.partial(PairedRedirector, pair_filter_mode=pair_filter_mode)
+        return PairedRedirector(writer, predicate1, predicate2, pair_filter_mode=pair_filter_mode)
 
-    def _untrimmed_filter_wrapper(self):
+    def _make_untrimmed_filter(self, writer):
         """
         Return a different filter wrapper when adapters were given only for R1
         or only for R2 (then override_untrimmed_pair_filter will be set)
         """
-        if self.override_untrimmed_pair_filter:
-            return self._filter_wrapper(pair_filter_mode='both')
-        else:
-            return self._filter_wrapper()
+        return self._make_filter(
+            writer,
+            DiscardUntrimmed(),
+            DiscardUntrimmed(),
+            pair_filter_mode='both' if self.override_untrimmed_pair_filter else None,
+        )
 
     def _final_filter(self, outfiles):
         writer = self._open_writer(outfiles.out, outfiles.out2, force_fasta=outfiles.force_fasta)

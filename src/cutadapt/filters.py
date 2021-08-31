@@ -9,7 +9,7 @@ from .modifiers import ModificationInfo
 
 class Predicate(ABC):
     @abstractmethod
-    def __call__(self, read, info: ModificationInfo) -> bool:
+    def test(self, read, info: ModificationInfo) -> bool:
         """
         Return True if the filtering criterion matches.
         """
@@ -33,7 +33,7 @@ class TooShort(Predicate):
     def __repr__(self):
         return f"TooShort(minimum_length={self.minimum_length})"
 
-    def __call__(self, read, info: ModificationInfo):
+    def test(self, read, info: ModificationInfo):
         return len(read) < self.minimum_length
 
 
@@ -46,7 +46,7 @@ class TooLong(Predicate):
     def __repr__(self):
         return f"TooLong(maximum_length={self.maximum_length})"
 
-    def __call__(self, read, info: ModificationInfo):
+    def test(self, read, info: ModificationInfo):
         return len(read) > self.maximum_length
 
 
@@ -64,8 +64,7 @@ class TooManyExpectedErrors(Predicate):
     def __repr__(self):
         return f"TooManyExpectedErrors(max_errors={self.max_errors})"
 
-    def __call__(self, read, info: ModificationInfo):
-        """Return True when the read should be discarded"""
+    def test(self, read, info: ModificationInfo):
         return expected_errors(read.qualities) > self.max_errors
 
 
@@ -87,7 +86,7 @@ class TooManyN(Predicate):
     def __repr__(self):
         return f"TooManyN(cutoff={self.cutoff}, is_proportion={self.is_proportion})"
 
-    def __call__(self, read, info: ModificationInfo):
+    def test(self, read, info: ModificationInfo):
         n_count = read.sequence.lower().count('n')
         if self.is_proportion:
             if len(read) == 0:
@@ -108,7 +107,7 @@ class CasavaFiltered(Predicate):
     def __repr__(self):
         return "CasavaFiltered()"
 
-    def __call__(self, read, info: ModificationInfo):
+    def test(self, read, info: ModificationInfo):
         _, _, right = read.name.partition(' ')
         return right[1:4] == ':Y:'  # discard if :Y: found
 
@@ -120,7 +119,7 @@ class DiscardUntrimmed(Predicate):
     def __repr__(self):
         return "DiscardUntrimmed()"
 
-    def __call__(self, read, info: ModificationInfo):
+    def test(self, read, info: ModificationInfo):
         return not info.matches
 
 
@@ -131,5 +130,5 @@ class DiscardTrimmed(Predicate):
     def __repr__(self):
         return "DiscardTrimmed()"
 
-    def __call__(self, read, info: ModificationInfo):
+    def test(self, read, info: ModificationInfo):
         return bool(info.matches)

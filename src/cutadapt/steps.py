@@ -19,6 +19,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict, Counter
 from typing import DefaultDict, Tuple, Dict, Optional, Any
 
+from .filters import Predicate
 from .modifiers import ModificationInfo
 from .utils import reverse_complemented_sequence
 
@@ -137,18 +138,20 @@ class Redirector(SingleEndStep):
     """
     Redirect discarded reads to the given writer. This is for single-end reads.
     """
-    def __init__(self, writer, filter: SingleEndStep, filter2=None):
+    def __init__(self, writer, predicate: Predicate):
         super().__init__()
-        # TODO filter2 should really not be here
         self.filtered = 0
         self.writer = writer
-        self.filter = filter
+        self.predicate = predicate
 
     def __repr__(self):
-        return "Redirector(writer={}, filter={})".format(self.writer, self.filter)
+        return "Redirector(writer={}, predicate={})".format(self.writer, self.predicate)
+
+    def descriptive_identifier(self) -> str:
+        return self.predicate.descriptive_identifier()
 
     def __call__(self, read, info: ModificationInfo):
-        if self.filter(read, info):
+        if self.predicate.test(read, info):
             self.filtered += 1
             if self.writer is not None:
                 self.writer.write(read)
@@ -162,7 +165,7 @@ class PairedRedirector(PairedEndStep):
     Different filtering styles are supported, differing by which of the
     two reads in a pair have to fulfill the filtering criterion.
     """
-    def __init__(self, writer, filter, filter2, pair_filter_mode='any'):
+    def __init__(self, writer, predicate1: Predicate, predicate2: Predicate, pair_filter_mode="any"):
         """
         pair_filter_mode -- these values are allowed:
             'any': The pair is discarded if any read matches.
@@ -175,11 +178,11 @@ class PairedRedirector(PairedEndStep):
         self._pair_filter_mode = pair_filter_mode
         self.filtered = 0
         self.writer = writer
-        self.filter = filter
-        self.filter2 = filter2
-        if filter2 is None:
+        self.predicate1 = predicate1
+        self.predicate2 = predicate2
+        if predicate2 is None:
             self._is_filtered = self._is_filtered_first
-        elif filter is None:
+        elif predicate1 is None:
             self._is_filtered = self._is_filtered_second
         elif pair_filter_mode == 'any':
             self._is_filtered = self._is_filtered_any
@@ -189,20 +192,26 @@ class PairedRedirector(PairedEndStep):
             self._is_filtered = self._is_filtered_first
 
     def __repr__(self):
-        return "PairedRedirector(writer={}, filter={}, filter2={}, pair_filter_mode='{}')".format(
-            self.writer, self.filter, self.filter2, self._pair_filter_mode)
+        return f"PairedRedirector(writer={self.writer}, predicate1={self.predicate1}, " \
+               f"predicate2={self.predicate2}, pair_filter_mode='{self._pair_filter_mode}')"
+
+    def descriptive_identifier(self) -> str:
+        if self.predicate1 is not None:
+            return self.predicate1.descriptive_identifier()
+        else:
+            return self.predicate2.descriptive_identifier()
 
     def _is_filtered_any(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
-        return self.filter(read1, info1) or self.filter2(read2, info2)
+        return self.predicate1.test(read1, info1) or self.predicate2.test(read2, info2)
 
     def _is_filtered_both(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
-        return self.filter(read1, info1) and self.filter2(read2, info2)
+        return self.predicate1.test(read1, info1) and self.predicate2.test(read2, info2)
 
     def _is_filtered_first(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
-        return self.filter(read1, info1)
+        return self.predicate1.test(read1, info1)
 
     def _is_filtered_second(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
-        return self.filter2(read2, info2)
+        return self.predicate2.test(read2, info2)
 
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         if self._is_filtered(read1, read2, info1, info2):

@@ -19,9 +19,9 @@ from cutadapt.steps import PairedRedirector
 ])
 def test_too_many_n(seq, count, expected):
     # third parameter is True if read should be Trueed
-    filter_ = TooManyN(count=count)
+    predicate = TooManyN(count=count)
     _seq = Sequence('read1', seq, qualities='#'*len(seq))
-    assert filter_(_seq, []) == expected
+    assert predicate.test(_seq, []) == expected
 
 
 @pytest.mark.parametrize('seq1,seq2,count,expected', [
@@ -31,12 +31,12 @@ def test_too_many_n(seq, count, expected):
     ('ANAA', 'AANA', 1, False),
 ])
 def test_too_many_n_paired(seq1, seq2, count, expected):
-    filter_ = TooManyN(count=count)
-    filter_legacy = PairedRedirector(None, filter_, filter_, pair_filter_mode='first')
-    filter_any = PairedRedirector(None, filter_, filter_, pair_filter_mode='any')
+    predicate = TooManyN(count=count)
+    filter_legacy = PairedRedirector(None, predicate, predicate, pair_filter_mode='first')
+    filter_any = PairedRedirector(None, predicate, predicate, pair_filter_mode='any')
     read1 = Sequence('read1', seq1, qualities='#'*len(seq1))
     read2 = Sequence('read1', seq2, qualities='#'*len(seq2))
-    assert filter_legacy(read1, read2, [], []) == filter_(read1, [])
+    assert filter_legacy(read1, read2, [], []) == predicate.test(read1, [])
     # True entire pair if one of the reads fulfills criteria
     assert filter_any(read1, read2, [], []) == expected
 

@@ -13,7 +13,7 @@ from .adapters import (
 from .filters import Predicate
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
-from .steps import SingleEndFinalStep, PairedEndFinalStep
+from .steps import SingleEndFinalStep, PairedEndFinalStep, Redirector, PairedRedirector
 
 
 def safe_divide(numerator: Optional[int], denominator: int) -> float:
@@ -129,13 +129,13 @@ class Statistics:
             for i in 0, 1:
                 self.written_bp[i] += written_bp[i]
                 self.written_lengths[i] += written_lengths[i]
-        if hasattr(w, "filter") and isinstance(w.filter, Predicate):
-            filter_name = w.filter.descriptive_identifier()
-            if filter_name in {
+        if isinstance(w, (Redirector, PairedRedirector)):
+            predicate_name = w.descriptive_identifier()
+            if predicate_name in {
                 "too_short", "too_long", "too_many_n", "too_many_expected_errors",
                 "casava_filtered", "discard_trimmed", "discard_untrimmed",
             }:
-                setattr(self, filter_name, w.filtered)
+                setattr(self, predicate_name, w.filtered)
 
     def _collect_modifier(self, m) -> None:
         if isinstance(m, PairedAdapterCutter):
