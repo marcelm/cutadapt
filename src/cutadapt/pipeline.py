@@ -3,7 +3,6 @@ import os
 import sys
 import copy
 import logging
-import functools
 from typing import List, Optional, BinaryIO, TextIO, Any, Tuple, Dict
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe, Queue
@@ -355,7 +354,7 @@ class SingleEndPipeline(Pipeline):
             file, mode="w", qualities=self.uses_qualities, fileformat="fasta" if force_fasta else None)
 
     def _make_filter(self, writer, predicate1: Predicate, predicate2: Predicate):
-        _ignored = predicate2
+        _ = predicate2
         return SingleEndFilter(writer, predicate1)
 
     def _make_untrimmed_filter(self, writer):

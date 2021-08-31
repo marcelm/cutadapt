@@ -10,7 +10,6 @@ from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter, NonInternalFrontAdapter, PrefixAdapter,
     BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
 )
-from .filters import Predicate
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
 from .steps import SingleEndFinalStep, PairedEndFinalStep, SingleEndFilter, PairedEndFilter

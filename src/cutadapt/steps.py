@@ -297,8 +297,8 @@ class PairedSingleEndStep(PairedEndStep):
         return f"PairedSingleEndStep(step={self._step})"
 
     def __call__(self, read1, read2, info1, info2):
-        _ignored_read = read2
-        _ignored_info = info2
+        _ = read2  # intentionally ignored
+        _ = info2
         return self._step(read1, info1)
 
 
