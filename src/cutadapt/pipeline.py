@@ -21,7 +21,7 @@ from .filters import (TooShort, TooLong, TooManyN, TooManyExpectedErrors, Casava
     DiscardTrimmed, DiscardUntrimmed)
 from .steps import NoFilter, PairedNoFilter, Redirector, PairedRedirector, Demultiplexer, \
     PairedDemultiplexer, CombinatorialDemultiplexer, RestFileWriter, WildcardFileWriter, \
-    InfoFileWriter
+    InfoFileWriter, SingleEndStep, PairedSingleEndStep
 
 logger = logging.getLogger()
 
@@ -198,7 +198,7 @@ class Pipeline(ABC):
             if outfile:
                 textiowrapper = io.TextIOWrapper(outfile)
                 self._textiowrappers.append(textiowrapper)
-                self._steps.append(filter_wrapper(None, step_class(textiowrapper), None))
+                self._steps.append(self._wrap_single_end_step(step_class(textiowrapper)))
 
         # minimum length and maximum length
         for lengths, file1, file2, predicate_class in (
@@ -309,6 +309,10 @@ class Pipeline(ABC):
     def _create_demultiplexer(self, outfiles: OutputFiles):
         pass
 
+    @abstractmethod
+    def _wrap_single_end_step(self, step: SingleEndStep):
+        pass
+
 
 class SingleEndPipeline(Pipeline):
     """
@@ -370,6 +374,9 @@ class SingleEndPipeline(Pipeline):
         for name, file in outfiles.demultiplex_out.items():
             writers[name] = self._open_writer(file, force_fasta=outfiles.force_fasta)
         return Demultiplexer(writers)
+
+    def _wrap_single_end_step(self, step: SingleEndStep):
+        return step
 
     @property
     def minimum_length(self):
@@ -500,6 +507,9 @@ class PairedEndPipeline(Pipeline):
             for name, file in outfiles.demultiplex_out.items():
                 writers[name] = open_writer(file, outfiles.demultiplex_out2[name])
             return PairedDemultiplexer(writers)
+
+    def _wrap_single_end_step(self, step: SingleEndStep):
+        return PairedSingleEndStep(step)
 
     @property
     def minimum_length(self):
