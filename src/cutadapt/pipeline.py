@@ -56,7 +56,7 @@ class OutputFiles:
     """
     The attributes are either None or open file-like objects except for demultiplex_out
     and demultiplex_out2, which are dictionaries that map an adapter name
-    to file-like objects.
+    to a file-like object.
     """
     def __init__(
         self,
@@ -221,7 +221,8 @@ class Pipeline(ABC):
 
         if self.max_expected_errors is not None:
             if not self._reader.delivers_qualities:
-                logger.warning("Ignoring option --max-ee as input does not contain quality values")
+                logger.warning(
+                    "Ignoring option --max-ee because input does not contain quality values")
             else:
                 f1 = f2 = TooManyExpectedErrors(self.max_expected_errors)
                 self._steps.append(filter_wrapper(None, f1, f2))
