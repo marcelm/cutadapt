@@ -215,25 +215,31 @@ class PairedRedirector(PairedEndStep):
 
 class RestFileWriter(SingleEndStep):
     def __init__(self, file):
-        self.file = file
+        self._file = file
+
+    def __repr__(self):
+        return f"RestFileWriter(file={self._file})"
 
     def __call__(self, read, info):
         # TODO this fails with linked adapters
         if info.matches:
             rest = info.matches[-1].rest()
             if len(rest) > 0:
-                print(rest, read.name, file=self.file)
+                print(rest, read.name, file=self._file)
         return KEEP
 
 
 class WildcardFileWriter(SingleEndStep):
     def __init__(self, file):
-        self.file = file
+        self._file = file
+
+    def __repr__(self):
+        return f"WildcardFileWriter(file={self._file})"
 
     def __call__(self, read, info):
         # TODO this fails with linked adapters
         if info.matches:
-            print(info.matches[-1].wildcards(), read.name, file=self.file)
+            print(info.matches[-1].wildcards(), read.name, file=self._file)
         return KEEP
 
 
@@ -241,7 +247,10 @@ class InfoFileWriter(SingleEndStep):
     RC_MAP = {None: "", True: "1", False: "0"}
 
     def __init__(self, file):
-        self.file = file
+        self._file = file
+
+    def __repr__(self):
+        return f"InfoFileWriter(file={self._file})"
 
     def __call__(self, read, info: ModificationInfo):
         current_read = info.original_read
@@ -252,12 +261,12 @@ class InfoFileWriter(SingleEndStep):
                 for info_record in match.get_info_records(current_read):
                     # info_record[0] is the read name suffix
                     print(read.name + info_record[0], *info_record[1:], self.RC_MAP[info.is_rc],
-                        sep='\t', file=self.file)
+                        sep="\t", file=self._file)
                 current_read = match.trimmed(current_read)
         else:
             seq = read.sequence
             qualities = read.qualities if read.qualities is not None else ''
-            print(read.name, -1, seq, qualities, sep='\t', file=self.file)
+            print(read.name, -1, seq, qualities, sep="\t", file=self._file)
 
         return KEEP
 
@@ -276,6 +285,9 @@ class Demultiplexer(SingleEndFinalStep):
         super().__init__()
         self._writers = writers
         self._untrimmed_writer = self._writers.get(None, None)
+
+    def __repr__(self):
+        return f"<Demultiplexer len(writers)={len(self._writers)}>"
 
     def __call__(self, read, info):
         """
