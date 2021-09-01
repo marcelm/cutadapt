@@ -178,11 +178,11 @@ class Statistics:
                 "output_read1": self.written_bp[0],
                 "output_read2": self.written_bp[1] if self.paired else None,
             },
-            "adapter_statistics_read1": [
+            "adapters_read1": [
                 self._adapter_statistics_as_json(astats, self.n, gc_content)
                 for astats in self.adapter_stats[0]
             ],
-            "adapter_statistics_read2": [
+            "adapters_read2": [
                 self._adapter_statistics_as_json(astats, self.n, gc_content)
                 for astats in self.adapter_stats[1]
             ] if self.paired else None,
@@ -193,10 +193,7 @@ class Statistics:
     ):
         adapter = adapter_statistics.adapter
         ends = []
-        for which_end, end_statistics in (
-            ("five_prime", adapter_statistics.front),
-            ("three_prime", adapter_statistics.back),
-        ):
+        for end_statistics in adapter_statistics.front, adapter_statistics.back:
             total = sum(end_statistics.lengths.values())
             if end_statistics.allows_partial_matches:
                 eranges = ErrorRanges(
@@ -206,13 +203,12 @@ class Statistics:
                 eranges = None
             base_stats = AdjacentBaseStatistics(end_statistics.adjacent_bases)
             ends.append({
-                "which_end": which_end,
                 "error_rate": end_statistics.max_error_rate,
                 "error_lengths": eranges,
                 "trimmed_reads": total,
-                # "histogram": list(histogram_rows(end_statistics, n, gc_content)),
                 "adjacent_bases": base_stats.as_json(),
                 "dominant_adjacent_base": base_stats.warnbase,
+                # "histogram": list(histogram_rows(end_statistics, n, gc_content)),
             })
 
         on_reverse_complement = adapter_statistics.reverse_complemented if self.reverse_complemented else None
@@ -220,9 +216,10 @@ class Statistics:
             "name": adapter_statistics.name,
             "type": adapter.description,
             "specification": adapter.spec(),
-            "on_reverse_complement": on_reverse_complement,
             "total_trimmed_reads": ends[0]["trimmed_reads"] + ends[1]["trimmed_reads"],
-            "ends": ends,
+            "on_reverse_complement": on_reverse_complement,
+            "five_prime": ends[0],
+            "three_prime": ends[1],
         }
 
     @property
