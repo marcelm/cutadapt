@@ -1,20 +1,22 @@
 """
-Read processing steps (filters)
+Steps of the read output pipeline
 
-Classes for writing and filtering of processed reads.
+After all read modifications have been done, a read is written to at
+most one output file. For this, a pipeline represented as a list of "steps"
+(SingleEndSteps or PairedEndSteps) is used. Each pipeline step can consume
+(discard) a read or pass it on to the next step.
 
-A Filter is a callable that has the read as its only argument. If it is called,
-it returns True if the read should be filtered (discarded), and False if not.
+Steps are added to the pipeline in a certain order:
 
-To be used, a filter needs to be wrapped in one of the redirector classes.
-They are called so because they can redirect filtered reads to a file if so
-desired. They also keep statistics.
-
-To determine what happens to a read, a list of redirectors with different
-filters is created and each redirector is called in turn until one returns True.
-The read is then assumed to have been "consumed", that is, either written
-somewhere or filtered (should be discarded).
+1. First RestFileWriter, InfoFileWriter, WildcardFileWriter because
+   they should see all reads before filtering.
+2. Filters come next. These are implemented as SingleEndFilter or PairedEndFilter
+   instances with an appropriate Predicate. Filters can optionally send each
+   consumed/filtered read to an output file.
+3. The last pipeline step should be one of the "Sinks", which consume all reads.
+   Demultiplexers are sinks, for example.
 """
+
 from abc import ABC, abstractmethod
 from collections import defaultdict, Counter
 from typing import DefaultDict, Tuple, Dict, Optional, Any
@@ -23,7 +25,7 @@ from .filters import Predicate
 from .modifiers import ModificationInfo
 from .utils import reverse_complemented_sequence
 
-# Constants used when returning from a Filter’s __call__ method to improve
+# Constants used when returning from a step’s __call__ method to improve
 # readability (it is unintuitive that "return True" means "discard the read").
 DISCARD = True
 KEEP = False
@@ -70,7 +72,8 @@ class SingleEndStep(ABC):
     @abstractmethod
     def __call__(self, read, info: ModificationInfo) -> bool:
         """
-        Process a single read
+        Process a single read. Return True if the read has been consumed
+        (and should thus not be passed on to subsequent steps).
         """
 
 
@@ -78,60 +81,20 @@ class PairedEndStep(ABC):
     @abstractmethod
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         """
-        Process read pair (read1, read2)
+        Process read pair (read1, read2). Return True if the read pair
+        has been consumed (and should thus not be passed on to subsequent steps).
         """
 
 
 class HasStatistics(ABC):
-    """Used for the final steps that keep track of read length statistics"""
+    """
+    Used for the final steps (sinks), which also need to keep
+    track of read length statistics
+    """
 
     @abstractmethod
     def get_statistics(self) -> ReadLengthStatistics:
         pass
-
-
-class SingleEndSink(SingleEndStep, HasStatistics):
-    """
-    Send each read to a writer and keep read length statistics.
-    This is used as the last step in a pipeline.
-    """
-    def __init__(self, writer):
-        super().__init__()
-        self.writer = writer
-        self._statistics = ReadLengthStatistics()
-
-    def __repr__(self):
-        return "NoFilter({})".format(self.writer)
-
-    def __call__(self, read, info: ModificationInfo) -> bool:
-        self.writer.write(read)
-        self._statistics.update(read)
-        return DISCARD
-
-    def get_statistics(self) -> ReadLengthStatistics:
-        return self._statistics
-
-
-class PairedEndSink(PairedEndStep, HasStatistics):
-    """
-    Send each read pair to a writer and keep read length statistics.
-    This is used as the last step in a pipeline.
-    """
-    def __init__(self, writer):
-        super().__init__()
-        self.writer = writer
-        self._statistics = ReadLengthStatistics()
-
-    def __repr__(self):
-        return "PairedNoFilter({})".format(self.writer)
-
-    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
-        self.writer.write(read1, read2)
-        self._statistics.update2(read1, read2)
-        return DISCARD
-
-    def get_statistics(self) -> ReadLengthStatistics:
-        return self._statistics
 
 
 class SingleEndFilter(SingleEndStep):
@@ -249,7 +212,7 @@ class WildcardFileWriter(SingleEndStep):
     def __repr__(self):
         return f"WildcardFileWriter(file={self._file})"
 
-    def __call__(self, read, info):
+    def __call__(self, read, info) -> bool:
         # TODO this fails with linked adapters
         if info.matches:
             print(info.matches[-1].wildcards(), read.name, file=self._file)
@@ -301,6 +264,55 @@ class PairedSingleEndStep(PairedEndStep):
         _ = read2  # intentionally ignored
         _ = info2
         return self._step(read1, info1)
+
+
+# The following steps are used as final step in a pipeline.
+# They send each read or read pair to the final intended output file,
+# and they all track the lengths of written reads.
+
+
+class SingleEndSink(SingleEndStep, HasStatistics):
+    """
+    Send each read to a writer and keep read length statistics.
+    This is used as the last step in a pipeline.
+    """
+    def __init__(self, writer):
+        super().__init__()
+        self.writer = writer
+        self._statistics = ReadLengthStatistics()
+
+    def __repr__(self):
+        return "NoFilter({})".format(self.writer)
+
+    def __call__(self, read, info: ModificationInfo) -> bool:
+        self.writer.write(read)
+        self._statistics.update(read)
+        return DISCARD
+
+    def get_statistics(self) -> ReadLengthStatistics:
+        return self._statistics
+
+
+class PairedEndSink(PairedEndStep, HasStatistics):
+    """
+    Send each read pair to a writer and keep read length statistics.
+    This is used as the last step in a pipeline.
+    """
+    def __init__(self, writer):
+        super().__init__()
+        self.writer = writer
+        self._statistics = ReadLengthStatistics()
+
+    def __repr__(self):
+        return "PairedNoFilter({})".format(self.writer)
+
+    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
+        self.writer.write(read1, read2)
+        self._statistics.update2(read1, read2)
+        return DISCARD
+
+    def get_statistics(self) -> ReadLengthStatistics:
+        return self._statistics
 
 
 class Demultiplexer(SingleEndStep, HasStatistics):
