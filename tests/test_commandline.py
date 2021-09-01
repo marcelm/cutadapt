@@ -139,7 +139,7 @@ def test_too_short(run, tmp_path, cores):
         "--too-short-output", too_short_path
     ], "minlen.fa", "lengths.fa")
     assert_files_equal(datapath('tooshort.fa'), too_short_path)
-    assert stats.too_short == 5
+    assert stats.filtered["too_short"] == 5
 
 
 @pytest.mark.parametrize("redirect", (False, True))
@@ -151,7 +151,7 @@ def test_too_short_statistics(redirect):
     assert stats.with_adapters[0] == 2
     assert stats.written == 2
     assert stats.written_bp[0] == 58
-    assert stats.too_short == 1
+    assert stats.filtered["too_short"] == 1
 
 
 def test_maximum_length(run):
@@ -169,7 +169,7 @@ def test_too_long(run, tmp_path, cores):
         "--too-long-output", too_long_path
     ], "maxlen.fa", "lengths.fa")
     assert_files_equal(datapath('toolong.fa'), too_long_path)
-    assert stats.too_long == 5
+    assert stats.filtered["too_long"] == 5
 
 
 def test_length_tag(run):
@@ -557,11 +557,11 @@ def test_multiple_suffix_adapters_noindels(run):
 
 
 def test_max_n(run):
-    assert run('--max-n 0', 'maxn0.fasta', 'maxn.fasta').too_many_n == 4
-    assert run('--max-n 1', 'maxn1.fasta', 'maxn.fasta').too_many_n == 2
-    assert run('--max-n 2', 'maxn2.fasta', 'maxn.fasta').too_many_n == 1
-    assert run('--max-n 0.2', 'maxn0.2.fasta', 'maxn.fasta').too_many_n == 3
-    assert run('--max-n 0.4', 'maxn0.4.fasta', 'maxn.fasta').too_many_n == 2
+    assert run('--max-n 0', 'maxn0.fasta', 'maxn.fasta').filtered["too_many_n"] == 4
+    assert run('--max-n 1', 'maxn1.fasta', 'maxn.fasta').filtered["too_many_n"] == 2
+    assert run('--max-n 2', 'maxn2.fasta', 'maxn.fasta').filtered["too_many_n"] == 1
+    assert run('--max-n 0.2', 'maxn0.2.fasta', 'maxn.fasta').filtered["too_many_n"] == 3
+    assert run('--max-n 0.4', 'maxn0.4.fasta', 'maxn.fasta').filtered["too_many_n"] == 2
 
 
 def test_quiet_is_quiet():
@@ -687,7 +687,7 @@ def test_adapterx(run):
 
 def test_discard_casava(run):
     stats = run('--discard-casava', 'casava.fastq', 'casava.fastq')
-    assert stats.casava_filtered == 1
+    assert stats.filtered["casava_filtered"] == 1
 
 
 def test_underscore(run):
@@ -781,7 +781,7 @@ def test_reverse_complement_and_info_file(run, tmp_path, cores):
 
 def test_max_expected_errors(run, cores):
     stats = run("--max-ee=0.9", "maxee.fastq", "maxee.fastq")
-    assert stats.too_many_expected_errors == 2
+    assert stats.filtered["too_many_expected_errors"] == 2
 
 
 def test_max_expected_errors_fasta(tmp_path):

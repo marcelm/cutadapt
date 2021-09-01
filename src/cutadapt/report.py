@@ -4,7 +4,7 @@ Routines for printing a report.
 import sys
 from io import StringIO
 import textwrap
-from collections import Counter
+from collections import Counter, defaultdict
 from typing import Any, Optional, List, Dict, Tuple, Iterator
 from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter, NonInternalFrontAdapter, PrefixAdapter,
@@ -13,6 +13,16 @@ from .adapters import (
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
 from .steps import SingleEndFilter, PairedEndFilter, HasStatistics
+
+FILTERS = {
+    "too_short": "that were too short",
+    "too_long": "that were too long",
+    "too_many_n": "with too many N",
+    "too_many_expected_errors": "with too many exp. errors",
+    "casava_filtered": "failed CASAVA filter",
+    "discard_trimmed": "discarded as trimmed",
+    "discard_untrimmed": "discarded as untrimmed",
+}
 
 
 def safe_divide(numerator: Optional[int], denominator: int) -> float:
@@ -41,13 +51,8 @@ class Statistics:
         """
         self.paired: Optional[bool] = None
         self.did_quality_trimming: Optional[bool] = None
-        self.too_short: Optional[int] = None
-        self.too_long: Optional[int] = None
-        self.too_many_n: Optional[int] = None
-        self.too_many_expected_errors: Optional[int] = None
-        self.casava_filtered: Optional[int] = None
-        self.discard_trimmed: Optional[int] = None
-        self.discard_untrimmed: Optional[int] = None
+        # Map a filter name to the number of filtered reads/read pairs
+        self.filtered: Dict[str, int] = defaultdict(int)
         self.reverse_complemented: Optional[int] = None
         self.n = 0
         self.written = 0
@@ -73,14 +78,10 @@ class Statistics:
 
         self.reverse_complemented = add_if_not_none(
             self.reverse_complemented, other.reverse_complemented)
-        self.too_short = add_if_not_none(self.too_short, other.too_short)
-        self.too_long = add_if_not_none(self.too_long, other.too_long)
-        self.too_many_n = add_if_not_none(self.too_many_n, other.too_many_n)
-        self.too_many_expected_errors = add_if_not_none(
-            self.too_many_expected_errors, other.too_many_expected_errors)
-        self.discard_trimmed = add_if_not_none(self.discard_trimmed, other.discard_trimmed)
-        self.discard_untrimmed = add_if_not_none(self.discard_untrimmed, other.discard_untrimmed)
-        self.casava_filtered = add_if_not_none(self.casava_filtered, other.casava_filtered)
+
+        for filter_name, count in other.filtered.items():
+            self.filtered[filter_name] += count
+
         for i in (0, 1):
             self.total_bp[i] += other.total_bp[i]
             self.written_bp[i] += other.written_bp[i]
@@ -130,12 +131,8 @@ class Statistics:
                 self.written_bp[i] += written_bp[i]
                 self.written_lengths[i] += written_lengths[i]
         if isinstance(step, (SingleEndFilter, PairedEndFilter)):
-            predicate_name = step.descriptive_identifier()
-            if predicate_name in {
-                "too_short", "too_long", "too_many_n", "too_many_expected_errors",
-                "casava_filtered", "discard_trimmed", "discard_untrimmed",
-            }:
-                setattr(self, predicate_name, step.filtered)
+            name = step.descriptive_identifier()
+            self.filtered[name] = step.filtered
 
     def _collect_modifier(self, m) -> None:
         if isinstance(m, PairedAdapterCutter):
@@ -162,13 +159,7 @@ class Statistics:
     def as_json(self, gc_content: float) -> Dict:
         """Return a dict representation suitable for dumping in JSON format"""
         filtered = {
-            "too_short": self.too_short,
-            "too_long": self.too_long,
-            "too_many_n": self.too_many_n,
-            "too_many_expected_errors": self.too_many_expected_errors,
-            "casava_filtered": self.casava_filtered,
-            "discard_trimmed": self.discard_trimmed,
-            "discard_untrimmed": self.discard_untrimmed,
+            name: self.filtered.get(name) for name in FILTERS.keys()
         }
         filtered_total = sum_with_none(filtered.values())
         assert self.written + filtered_total == self.n
@@ -271,33 +262,8 @@ class Statistics:
     def reverse_complemented_fraction(self) -> float:
         return safe_divide(self.reverse_complemented, self.n)
 
-    @property
-    def too_short_fraction(self) -> float:
-        return safe_divide(self.too_short, self.n)
-
-    @property
-    def too_long_fraction(self) -> float:
-        return safe_divide(self.too_long, self.n)
-
-    @property
-    def too_many_n_fraction(self) -> float:
-        return safe_divide(self.too_many_n, self.n)
-
-    @property
-    def too_many_expected_errors_fraction(self) -> float:
-        return safe_divide(self.too_many_expected_errors, self.n)
-
-    @property
-    def casava_filtered_fraction(self) -> float:
-        return safe_divide(self.casava_filtered, self.n)
-
-    @property
-    def discard_trimmed_fraction(self) -> float:
-        return safe_divide(self.discard_trimmed, self.n)
-
-    @property
-    def discard_untrimmed_fraction(self) -> float:
-        return safe_divide(self.discard_untrimmed, self.n)
+    def filtered_fraction(self, filter_name: str) -> float:
+        return safe_divide(self.filtered.get(filter_name), self.n)
 
 
 class ErrorRanges:
@@ -640,24 +606,14 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
 
 def format_filter_report(stats):
     report = ""
-    if stats.too_short is not None:
-        report += "{pairs_or_reads} that were too short:       {o.too_short:13,d} ({o.too_short_fraction:.1%})\n"
-    if stats.too_long is not None:
-        report += "{pairs_or_reads} that were too long:        {o.too_long:13,d} ({o.too_long_fraction:.1%})\n"
-    if stats.too_many_n is not None:
-        report += "{pairs_or_reads} with too many N:           {o.too_many_n:13,d} ({o.too_many_n_fraction:.1%})\n"
-    if stats.too_many_expected_errors is not None:
-        report += "{pairs_or_reads} with too many exp. errors: " \
-                  "{o.too_many_expected_errors:13,d} ({o.too_many_expected_errors_fraction:.1%})\n"
-    if stats.casava_filtered is not None:
-        report += "{pairs_or_reads} failed CASAVA filter:      " \
-                  "{o.casava_filtered:13,d} ({o.casava_filtered_fraction:.1%})\n"
-    if stats.discard_trimmed is not None:
-        report += "{pairs_or_reads} discarded as trimmed:      " \
-                  "{o.discard_trimmed:13,d} ({o.discard_trimmed_fraction:.1%})\n"
-    if stats.discard_untrimmed is not None:
-        report += "{pairs_or_reads} discarded as untrimmed:    " \
-                  "{o.discard_untrimmed:13,d} ({o.discard_untrimmed_fraction:.1%})\n"
+    for name, description in FILTERS.items():
+        if name not in stats.filtered:
+            continue
+        value = stats.filtered[name]
+        fraction = stats.filtered_fraction(name)
+        line = ("{pairs_or_reads} " + (description + ":").ljust(27)
+            + f"{value:13,d} ({fraction:.1%})\n")
+        report += line
     return report
 
 
@@ -666,16 +622,13 @@ def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
     _ = time
     _ = gc_content
 
-    def none(value):
-        return 0 if value is None else value
-
     fields = [
         "OK",
         stats.n,  # reads/pairs in
         stats.total,  # bases in
-        none(stats.too_short),  # reads/pairs
-        none(stats.too_long),  # reads/pairs
-        none(stats.too_many_n),  # reads/pairs
+        stats.filtered.get("too_short", 0),  # reads/pairs
+        stats.filtered.get("too_long", 0),  # reads/pairs
+        stats.filtered.get("too_many_n", 0),  # reads/pairs
         stats.written,  # reads/pairs out
         stats.with_adapters[0],  # reads
         stats.quality_trimmed_bp[0],  # bases
