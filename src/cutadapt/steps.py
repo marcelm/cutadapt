@@ -102,7 +102,7 @@ class NoFilter(SingleEndStep, HasStatistics):
     def __repr__(self):
         return "NoFilter({})".format(self.writer)
 
-    def __call__(self, read, info: ModificationInfo):
+    def __call__(self, read, info: ModificationInfo) -> bool:
         self.writer.write(read)
         self._statistics.update(read)
         return DISCARD
@@ -123,7 +123,7 @@ class PairedNoFilter(PairedEndStep, HasStatistics):
     def __repr__(self):
         return "PairedNoFilter({})".format(self.writer)
 
-    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         self.writer.write(read1, read2)
         self._statistics.update2(read1, read2)
         return DISCARD
@@ -149,7 +149,7 @@ class SingleEndFilter(SingleEndStep):
     def descriptive_identifier(self) -> str:
         return self.predicate.descriptive_identifier()
 
-    def __call__(self, read, info: ModificationInfo):
+    def __call__(self, read, info: ModificationInfo) -> bool:
         if self.predicate.test(read, info):
             self.filtered += 1
             if self.writer is not None:
@@ -181,6 +181,7 @@ class PairedEndFilter(PairedEndStep):
         self.writer = writer
         self.predicate1 = predicate1
         self.predicate2 = predicate2
+        self._is_filtered: Any
         if predicate2 is None:
             self._is_filtered = self._is_filtered_first
         elif predicate1 is None:
@@ -202,19 +203,19 @@ class PairedEndFilter(PairedEndStep):
         else:
             return self.predicate2.descriptive_identifier()
 
-    def _is_filtered_any(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+    def _is_filtered_any(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         return self.predicate1.test(read1, info1) or self.predicate2.test(read2, info2)
 
-    def _is_filtered_both(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+    def _is_filtered_both(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         return self.predicate1.test(read1, info1) and self.predicate2.test(read2, info2)
 
-    def _is_filtered_first(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+    def _is_filtered_first(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         return self.predicate1.test(read1, info1)
 
-    def _is_filtered_second(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+    def _is_filtered_second(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         return self.predicate2.test(read2, info2)
 
-    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         if self._is_filtered(read1, read2, info1, info2):
             self.filtered += 1
             if self.writer is not None:
