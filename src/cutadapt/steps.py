@@ -82,56 +82,54 @@ class PairedEndStep(ABC):
         """
 
 
-class SingleEndFinalStep(SingleEndStep, ABC):
-    def __init__(self):
-        super().__init__()
-        self.statistics = ReadLengthStatistics()
+class HasStatistics(ABC):
+    """Used for the final steps that keep track of read length statistics"""
 
-    def update_statistics(self, read) -> None:
-        self.statistics.update(read)
-
-
-class PairedEndFinalStep(PairedEndStep, ABC):
-    def __init__(self):
-        super().__init__()
-        self.statistics = ReadLengthStatistics()
-
-    def update_statistics(self, read1, read2):
-        self.statistics.update2(read1, read2)
+    @abstractmethod
+    def get_statistics(self) -> ReadLengthStatistics:
+        pass
 
 
-class NoFilter(SingleEndFinalStep):
+class NoFilter(SingleEndStep, HasStatistics):
     """
     No filtering, just send each read to the given writer.
     """
     def __init__(self, writer):
         super().__init__()
         self.writer = writer
+        self._statistics = ReadLengthStatistics()
 
     def __repr__(self):
         return "NoFilter({})".format(self.writer)
 
     def __call__(self, read, info: ModificationInfo):
         self.writer.write(read)
-        self.update_statistics(read)
+        self._statistics.update(read)
         return DISCARD
 
+    def get_statistics(self) -> ReadLengthStatistics:
+        return self._statistics
 
-class PairedNoFilter(PairedEndFinalStep):
+
+class PairedNoFilter(PairedEndStep, HasStatistics):
     """
     No filtering, just send each paired-end read to the given writer.
     """
     def __init__(self, writer):
         super().__init__()
         self.writer = writer
+        self._statistics = ReadLengthStatistics()
 
     def __repr__(self):
         return "PairedNoFilter({})".format(self.writer)
 
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
         self.writer.write(read1, read2)
-        self.update_statistics(read1, read2)
+        self._statistics.update2(read1, read2)
         return DISCARD
+
+    def get_statistics(self) -> ReadLengthStatistics:
+        return self._statistics
 
 
 class SingleEndFilter(SingleEndStep):
@@ -302,7 +300,7 @@ class PairedSingleEndStep(PairedEndStep):
         return self._step(read1, info1)
 
 
-class Demultiplexer(SingleEndFinalStep):
+class Demultiplexer(SingleEndStep, HasStatistics):
     """
     Demultiplex trimmed reads. Reads are written to different output files
     depending on which adapter matches.
@@ -316,6 +314,7 @@ class Demultiplexer(SingleEndFinalStep):
         super().__init__()
         self._writers = writers
         self._untrimmed_writer = self._writers.get(None, None)
+        self._statistics = ReadLengthStatistics()
 
     def __repr__(self):
         return f"<Demultiplexer len(writers)={len(self._writers)}>"
@@ -326,15 +325,18 @@ class Demultiplexer(SingleEndFinalStep):
         """
         if info.matches:
             name = info.matches[-1].adapter.name
-            self.update_statistics(read)
+            self._statistics.update(read)
             self._writers[name].write(read)
         elif self._untrimmed_writer is not None:
-            self.update_statistics(read)
+            self._statistics.update(read)
             self._untrimmed_writer.write(read)
         return DISCARD
 
+    def get_statistics(self) -> ReadLengthStatistics:
+        return self._statistics
 
-class PairedDemultiplexer(PairedEndFinalStep):
+
+class PairedDemultiplexer(PairedEndStep, HasStatistics):
     """
     Demultiplex trimmed paired-end reads. Reads are written to different output files
     depending on which adapter (in read 1) matches.
@@ -343,20 +345,24 @@ class PairedDemultiplexer(PairedEndFinalStep):
         super().__init__()
         self._writers = writers
         self._untrimmed_writer = self._writers.get(None, None)
+        self._statistics = ReadLengthStatistics()
 
-    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo):
+    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         assert read2 is not None
         if info1.matches:
             name = info1.matches[-1].adapter.name  # type: ignore
-            self.update_statistics(read1, read2)
+            self._statistics.update2(read1, read2)
             self._writers[name].write(read1, read2)
         elif self._untrimmed_writer is not None:
-            self.update_statistics(read1, read2)
+            self._statistics.update2(read1, read2)
             self._untrimmed_writer.write(read1, read2)
         return DISCARD
 
+    def get_statistics(self) -> ReadLengthStatistics:
+        return self._statistics
 
-class CombinatorialDemultiplexer(PairedEndFinalStep):
+
+class CombinatorialDemultiplexer(PairedEndStep, HasStatistics):
     """
     Demultiplex paired-end reads depending on which adapter matches, taking into account
     matches on R1 and R2.
@@ -370,8 +376,9 @@ class CombinatorialDemultiplexer(PairedEndFinalStep):
         """
         super().__init__()
         self._writers = writers
+        self._statistics = ReadLengthStatistics()
 
-    def __call__(self, read1, read2, info1, info2):
+    def __call__(self, read1, read2, info1, info2) -> bool:
         """
         Write the read to the proper output file according to the most recent matches both on
         R1 and R2
@@ -381,6 +388,9 @@ class CombinatorialDemultiplexer(PairedEndFinalStep):
         name2 = info2.matches[-1].adapter.name if info2.matches else None
         key = (name1, name2)
         if key in self._writers:
-            self.update_statistics(read1, read2)
+            self._statistics.update2(read1, read2)
             self._writers[key].write(read1, read2)
         return DISCARD
+
+    def get_statistics(self) -> ReadLengthStatistics:
+        return self._statistics
