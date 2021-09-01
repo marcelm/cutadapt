@@ -90,9 +90,10 @@ class HasStatistics(ABC):
         pass
 
 
-class NoFilter(SingleEndStep, HasStatistics):
+class SingleEndSink(SingleEndStep, HasStatistics):
     """
-    No filtering, just send each read to the given writer.
+    Send each read to a writer and keep read length statistics.
+    This is used as the last step in a pipeline.
     """
     def __init__(self, writer):
         super().__init__()
@@ -111,9 +112,10 @@ class NoFilter(SingleEndStep, HasStatistics):
         return self._statistics
 
 
-class PairedNoFilter(PairedEndStep, HasStatistics):
+class PairedEndSink(PairedEndStep, HasStatistics):
     """
-    No filtering, just send each paired-end read to the given writer.
+    Send each read pair to a writer and keep read length statistics.
+    This is used as the last step in a pipeline.
     """
     def __init__(self, writer):
         super().__init__()

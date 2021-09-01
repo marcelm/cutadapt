@@ -18,7 +18,7 @@ from .modifiers import SingleEndModifier, PairedEndModifier, PairedEndModifierWr
 from .report import Statistics
 from .filters import (TooShort, TooLong, TooManyN, TooManyExpectedErrors, CasavaFiltered,
     DiscardTrimmed, DiscardUntrimmed, Predicate)
-from .steps import NoFilter, PairedNoFilter, SingleEndFilter, PairedEndFilter, Demultiplexer, \
+from .steps import SingleEndSink, PairedEndSink, SingleEndFilter, PairedEndFilter, Demultiplexer, \
     PairedDemultiplexer, CombinatorialDemultiplexer, RestFileWriter, WildcardFileWriter, \
     InfoFileWriter, SingleEndStep, PairedSingleEndStep
 
@@ -363,7 +363,7 @@ class SingleEndPipeline(Pipeline):
     def _final_filter(self, outfiles: OutputFiles):
         assert outfiles.out2 is None and outfiles.out is not None
         writer = self._open_writer(outfiles.out, force_fasta=outfiles.force_fasta)
-        return NoFilter(writer)
+        return SingleEndSink(writer)
 
     def _create_demultiplexer(self, outfiles: OutputFiles):
         writers = dict()  # type: Dict[Optional[str], Any]
@@ -489,7 +489,7 @@ class PairedEndPipeline(Pipeline):
 
     def _final_filter(self, outfiles):
         writer = self._open_writer(outfiles.out, outfiles.out2, force_fasta=outfiles.force_fasta)
-        return PairedNoFilter(writer)
+        return PairedEndSink(writer)
 
     def _create_demultiplexer(self, outfiles):
         def open_writer(file, file2):
