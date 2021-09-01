@@ -40,11 +40,6 @@ def add_if_not_none(a: Optional[int], b: Optional[int]) -> Optional[int]:
     return a + b
 
 
-def sum_with_none(values):
-    """Compute sum ignoring None values"""
-    return sum(0 if v is None else v for v in values)
-
-
 class Statistics:
     def __init__(self) -> None:
         """
@@ -161,7 +156,7 @@ class Statistics:
         filtered = {
             name: self.filtered.get(name) for name in FILTERS.keys()
         }
-        filtered_total = sum_with_none(filtered.values())
+        filtered_total = sum(self.filtered.values())
         assert self.written + filtered_total == self.n
         return {
             "read_counts": {  # pairs or reads
