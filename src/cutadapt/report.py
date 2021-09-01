@@ -97,7 +97,7 @@ class Statistics:
                 self.adapter_stats[i] = other.adapter_stats[i]
         return self
 
-    def collect(self, n: int, total_bp1: int, total_bp2: Optional[int], modifiers, writers):
+    def collect(self, n: int, total_bp1: int, total_bp2: Optional[int], modifiers, steps):
         """
         n -- total number of reads
         total_bp1 -- number of bases in first reads
@@ -111,8 +111,8 @@ class Statistics:
             self.paired = True
             self.total_bp[1] = total_bp2
 
-        for writer in writers:
-            self._collect_writer(writer)
+        for step in steps:
+            self._collect_step(step)
         assert self.written is not None
         for modifier in modifiers:
             self._collect_modifier(modifier)
@@ -120,22 +120,22 @@ class Statistics:
         # For chaining
         return self
 
-    def _collect_writer(self, w) -> None:
-        if isinstance(w, HasStatistics):
-            statistics = w.get_statistics()
+    def _collect_step(self, step) -> None:
+        if isinstance(step, HasStatistics):
+            statistics = step.get_statistics()
             self.written += statistics.written_reads()
             written_bp = statistics.written_bp()
             written_lengths = statistics.written_lengths()
             for i in 0, 1:
                 self.written_bp[i] += written_bp[i]
                 self.written_lengths[i] += written_lengths[i]
-        if isinstance(w, (SingleEndFilter, PairedEndFilter)):
-            predicate_name = w.descriptive_identifier()
+        if isinstance(step, (SingleEndFilter, PairedEndFilter)):
+            predicate_name = step.descriptive_identifier()
             if predicate_name in {
                 "too_short", "too_long", "too_many_n", "too_many_expected_errors",
                 "casava_filtered", "discard_trimmed", "discard_untrimmed",
             }:
-                setattr(self, predicate_name, w.filtered)
+                setattr(self, predicate_name, step.filtered)
 
     def _collect_modifier(self, m) -> None:
         if isinstance(m, PairedAdapterCutter):
