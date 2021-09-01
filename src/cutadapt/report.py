@@ -443,8 +443,11 @@ class AdjacentBaseStatistics:
             print("    Ignore this warning when trimming primers.", file=sio)
         return sio.getvalue()
 
-    def as_json(self) -> Dict[str, int]:
-        return {b: self.bases.get(b, 0) for b in ["A", "C", "G", "T", ""]}
+    def as_json(self) -> Optional[Dict[str, int]]:
+        if self._fractions:
+            return {b: self.bases.get(b, 0) for b in ["A", "C", "G", "T", ""]}
+        else:
+            return None
 
 
 def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # noqa: C901
