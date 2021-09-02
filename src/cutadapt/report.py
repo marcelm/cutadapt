@@ -193,7 +193,11 @@ class Statistics:
     ):
         adapter = adapter_statistics.adapter
         ends = []
+        total_trimmed_reads = 0
         for end_statistics in adapter_statistics.front, adapter_statistics.back:
+            if end_statistics is None:
+                ends.append(None)
+                continue
             total = sum(end_statistics.lengths.values())
             if end_statistics.allows_partial_matches:
                 eranges = ErrorRanges(
@@ -210,13 +214,14 @@ class Statistics:
                 "dominant_adjacent_base": base_stats.warnbase,
                 # "histogram": list(histogram_rows(end_statistics, n, gc_content)),
             })
+            total_trimmed_reads += total
 
         on_reverse_complement = adapter_statistics.reverse_complemented if self.reverse_complemented else None
         return {
             "name": adapter_statistics.name,
             "type": adapter.description,
             "specification": adapter.spec(),
-            "total_trimmed_reads": ends[0]["trimmed_reads"] + ends[1]["trimmed_reads"],
+            "total_trimmed_reads": total_trimmed_reads,
             "on_reverse_complement": on_reverse_complement,
             "five_prime": ends[0],
             "three_prime": ends[1],
@@ -513,8 +518,14 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     warning = False
     for which_in_pair in (0, 1):
         for adapter_statistics in stats.adapter_stats[which_in_pair]:
-            total_front = sum(adapter_statistics.front.lengths.values())
-            total_back = sum(adapter_statistics.back.lengths.values())
+            if adapter_statistics.front is not None:
+                total_front = sum(adapter_statistics.front.lengths.values())
+            else:
+                total_front = 0
+            if adapter_statistics.back is not None:
+                total_back = sum(adapter_statistics.back.lengths.values())
+            else:
+                total_back = 0
             total = total_front + total_back
             reverse_complemented = adapter_statistics.reverse_complemented
             adapter = adapter_statistics.adapter
@@ -541,8 +552,8 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                         total_front, total_back), end="")
             else:
                 print_s("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times".
-                    format(adapter_statistics.front.sequence, adapter.description,
-                        len(adapter_statistics.front.sequence), total), end="")
+                    format(adapter.sequence, adapter.description,
+                        len(adapter.sequence), total), end="")
             if stats.reverse_complemented is not None:
                 print_s("; Reverse-complemented: {} times".format(reverse_complemented))
             else:

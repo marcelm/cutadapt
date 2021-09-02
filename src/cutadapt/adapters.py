@@ -120,16 +120,13 @@ class AdapterStatistics:
     def __init__(
         self,
         adapter: "Adapter",
-        front: "SingleAdapter",
-        back: Optional["SingleAdapter"] = None,
+        front: Optional["SingleAdapter"],
+        back: Optional["SingleAdapter"],
     ):
         self.name = adapter.name
         self.adapter = adapter
-        self.front = EndStatistics(front)
-        if back is None:
-            self.back = EndStatistics(front)
-        else:
-            self.back = EndStatistics(back)
+        self.front = EndStatistics(front) if front is not None else None
+        self.back = EndStatistics(back) if back is not None else None
         self.reverse_complemented = 0
 
     def __repr__(self):
@@ -140,8 +137,14 @@ class AdapterStatistics:
         )
 
     def __iadd__(self, other: "AdapterStatistics"):
-        self.front += other.front
-        self.back += other.back
+        if self.front is not None:
+            if other.front is None:
+                raise ValueError("Incompatible AdapterStatistics")
+            self.front += other.front
+        if self.back is not None:
+            if other.back is None:
+                raise ValueError("Incompatible AdapterStatistics")
+            self.back += other.back
         self.reverse_complemented += other.reverse_complemented
         return self
 
@@ -486,9 +489,6 @@ class SingleAdapter(Adapter, ABC):
     def __len__(self) -> int:
         return len(self.sequence)
 
-    def create_statistics(self) -> AdapterStatistics:
-        return AdapterStatistics(self, self)
-
 
 class FrontAdapter(SingleAdapter):
     """A 5' adapter"""
@@ -520,6 +520,9 @@ class FrontAdapter(SingleAdapter):
     def spec(self) -> str:
         return f"{self.sequence}..."
 
+    def create_statistics(self) -> AdapterStatistics:
+        return AdapterStatistics(self, front=self, back=None)
+
 
 class BackAdapter(SingleAdapter):
     """A 3' adapter"""
@@ -550,6 +553,9 @@ class BackAdapter(SingleAdapter):
 
     def spec(self) -> str:
         return f"{self.sequence}"
+
+    def create_statistics(self) -> AdapterStatistics:
+        return AdapterStatistics(self, front=None, back=self)
 
 
 class AnywhereAdapter(SingleAdapter):
@@ -585,6 +591,9 @@ class AnywhereAdapter(SingleAdapter):
 
     def spec(self) -> str:
         return f"...{self.sequence}..."
+
+    def create_statistics(self) -> AdapterStatistics:
+        return AdapterStatistics(self, front=self, back=self)
 
 
 class NonInternalFrontAdapter(FrontAdapter):
@@ -808,7 +817,7 @@ class LinkedAdapter(Adapter):
         return LinkedMatch(front_match, back_match, self)
 
     def create_statistics(self) -> AdapterStatistics:
-        return AdapterStatistics(self, self.front_adapter, self.back_adapter)
+        return AdapterStatistics(self, front=self.front_adapter, back=self.back_adapter)
 
     @property
     def sequence(self):

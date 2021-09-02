@@ -8,12 +8,9 @@ def test_statistics():
     adapters = [BackAdapter("CCCC", max_errors=0.1)]
     cutter = AdapterCutter(adapters, times=3)
     cutter(read, ModificationInfo(read))
-    # TODO make this a lot simpler
-    trimmed_bp = 0
-    for adapter in adapters:
-        for d in (cutter.adapter_statistics[adapter].front.lengths,
-                cutter.adapter_statistics[adapter].back.lengths):
-            trimmed_bp += sum(seqlen * count for (seqlen, count) in d.items())
+    assert cutter.adapter_statistics[adapters[0]].front is None
+    lengths = cutter.adapter_statistics[adapters[0]].back.lengths
+    trimmed_bp = sum(seqlen * count for (seqlen, count) in lengths.items())
     assert trimmed_bp <= len(read), trimmed_bp
 
 
