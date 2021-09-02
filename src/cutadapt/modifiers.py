@@ -7,7 +7,6 @@ import re
 from types import SimpleNamespace
 from typing import Sequence, List, Tuple, Optional, Set
 from abc import ABC, abstractmethod
-from collections import OrderedDict
 
 from dnaio import record_names_match, Sequence as DnaSequence
 
@@ -105,7 +104,7 @@ class AdapterCutter(SingleEndModifier):
         assert action in ("trim", "mask", "lowercase", "retain", None)
         self.action = action
         self.with_adapters = 0
-        self.adapter_statistics = OrderedDict((a, a.create_statistics()) for a in adapters)
+        self.adapter_statistics = {a: a.create_statistics() for a in adapters}
         if index:
             self.adapters = MultipleAdapters(self._regroup_into_indexed_adapters(adapters))
         else:
@@ -313,8 +312,8 @@ class PairedAdapterCutter(PairedEndModifier):
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = [None, None]
-        self.adapter_statistics[0] = OrderedDict((a, a.create_statistics()) for a in adapters1)
-        self.adapter_statistics[1] = OrderedDict((a, a.create_statistics()) for a in adapters2)
+        self.adapter_statistics[0] = {a: a.create_statistics() for a in adapters1}
+        self.adapter_statistics[1] = {a: a.create_statistics() for a in adapters2}
 
     def __repr__(self):
         return f"PairedAdapterCutter(adapters1={self._adapters1!r}, adapters2={self._adapters2!r})"
