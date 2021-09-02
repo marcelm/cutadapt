@@ -206,13 +206,18 @@ class Statistics:
             else:
                 eranges = None
             base_stats = AdjacentBaseStatistics(end_statistics.adjacent_bases)
+            trimmed_lengths = [
+                (length, count, error_counts)
+                for (length, count, _, _, error_counts)
+                in histogram_rows(end_statistics, n, gc_content)
+            ]
             ends.append({
                 "error_rate": end_statistics.max_error_rate,
                 "error_lengths": eranges,
                 "trimmed_reads": total,
                 "adjacent_bases": base_stats.as_json(),
                 "dominant_adjacent_base": base_stats.warnbase,
-                # "histogram": list(histogram_rows(end_statistics, n, gc_content)),
+                "trimmed_lengths": trimmed_lengths,
             })
             total_trimmed_reads += total
 
