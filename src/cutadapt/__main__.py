@@ -53,7 +53,6 @@ Run "cutadapt --help" to see all command-line options.
 See https://cutadapt.readthedocs.io/ for full documentation.
 """
 import copy
-import json
 import sys
 import time
 import shutil
@@ -68,6 +67,7 @@ import dnaio
 
 from cutadapt import __version__
 from cutadapt.adapters import warn_duplicate_adapters, Adapter, InvalidCharacter
+from cutadapt.json import OneLine, dumps as json_dumps
 from cutadapt.parser import AdapterParser
 from cutadapt.modifiers import (SingleEndModifier, LengthTagModifier, SuffixRemover,
     PrefixSuffixAdder,
@@ -959,7 +959,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
                 paired=paired,
                 gc_content=args.gc_content,
             )
-            json.dump(json_dict, f, indent=2)
+            f.write(json_dumps(json_dict))
             f.write("\n")
     if profiler is not None:
         import pstats
@@ -1039,7 +1039,7 @@ def json_report(
 ) -> Dict:
     d = {
         "tag": "Cutadapt report",
-        "schema_version": 0,
+        "schema_version": OneLine([0, 1]),
         "cutadapt_version": __version__,
         "python_version": platform.python_version(),
         "python_executable": sys.executable,

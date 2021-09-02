@@ -292,7 +292,7 @@ class PairedAdapterCutter(PairedEndModifier):
     def __init__(self, adapters1, adapters2, action='trim'):
         """
         adapters1 -- list of Adapters to be removed from R1
-        adapters2 -- list of Adapters to be removed from R1
+        adapters2 -- list of Adapters to be removed from R2
 
         Both lists must have the same, non-zero length.
          read pair is trimmed if adapters1[i] is found in R1 and adapters2[i] in R2.

@@ -10,6 +10,7 @@ from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter,
     BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
 )
+from .json import OneLine
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
 from .steps import SingleEndFilter, PairedEndFilter, HasStatistics
@@ -207,13 +208,13 @@ class Statistics:
                 eranges = None
             base_stats = AdjacentBaseStatistics(end_statistics.adjacent_bases)
             trimmed_lengths = [
-                (length, count, error_counts)
+                OneLine((length, count, error_counts))
                 for (length, count, _, _, error_counts)
                 in histogram_rows(end_statistics, n, gc_content)
             ]
             ends.append({
                 "error_rate": end_statistics.max_error_rate,
-                "error_lengths": eranges,
+                "error_lengths": OneLine(eranges),
                 "matches": total,
                 "adjacent_bases": base_stats.as_json(),
                 "dominant_adjacent_base": base_stats.warnbase,
