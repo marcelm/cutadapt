@@ -2203,26 +2203,36 @@ We strongly recommend that you use the ``.cutadapt.json`` file name extension fo
 easier discoverability by log-parsing tools such as `MultiQC <https://multiqc.info>`_.
 
 * ``tag`` is always ``Cutadapt report``.
-* ``schema_version`` is 0 for now. If backwards incompatible changes to the schema are necessary,
-  this will be incremented.
+* ``schema_version`` is a tuple of two ints, the major and minor version.
+  If additions are made to the schema, the minor version is increased. If backwards incompatible
+  changes to the schema are made, the major version is increased.
 * Keys only relevant for paired-end data or when using certain command-line options are
   always included, but when unused, get a value of ``null``.
 * For adapters that allow partial matches, ``error_lengths`` describes the lengths up to which
   0, 1, 2 etc. errors are allowed. ``[9, 16]``: 0 errors up to a match of length 9, 1 error up to
   a match of length 16. The last number in this list is the length of the adapter sequence. For
   anchored adapter types, this is ``null``.
+* ``adjacent_bases``: Statistics about adjacent bases are currently only kept for 3' adapters.
 * ``dominant_adjacent_base`` is set to the appropriate nucleotide if the
   :ref:`report warns <warnbase>`: "The adapter is preceded by "x" extremely often."
-  Statistics about adjacent bases are currently only kept for 3' adapters.
   This is ``null`` if no such warning was printed.
 * For paired-end data, numbers in the ``read_counts`` section are the number of *read pairs*.
+* The adapter type is one of these strings:
+     - ``"regular_five_prime"``
+     - ``"regular_three_prime"``
+     - ``"noninternal_five_prime"``
+     - ``"noninternal_three_prime"``
+     - ``"anchored_five_prime"``
+     - ``"anchored_three_prime"``
+     - ``"anywhere"``
+     - ``"linked"``
 * ``basepair_counts``
 
 Example (slightly reformatted) ::
 
     {
       "tag": "Cutadapt report",
-      "schema_version": 0,
+      "schema_version": [0, 1],
       "cutadapt_version": "3.5",
       "python_version": "3.8.5",
       "command_line_arguments": [
