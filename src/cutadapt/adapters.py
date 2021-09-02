@@ -45,13 +45,13 @@ class EndStatistics:
     """Statistics about the 5' or 3' end"""
 
     def __init__(self, adapter: "SingleAdapter"):
-        self.max_error_rate = adapter.max_error_rate  # type: float
-        self.sequence = adapter.sequence  # type: str
-        self.effective_length = adapter.effective_length  # type: int
-        self.has_wildcards = adapter.adapter_wildcards  # type: bool
+        self.max_error_rate: float = adapter.max_error_rate
+        self.sequence: str = adapter.sequence
+        self.effective_length: int = adapter.effective_length
+        self.has_wildcards: bool = adapter.adapter_wildcards
         self.allows_partial_matches: bool = adapter.allows_partial_matches
-        # self.errors[l][e] == n iff n times a sequence of length l matching at e errors was removed
-        self.errors = defaultdict(returns_defaultdict_int)  # type: Dict[int, Dict[int, int]]
+        # self.errors[l][e] == n iff a sequence of length l matching at e errors was removed n times
+        self.errors: Dict[int, Dict[int, int]] = defaultdict(returns_defaultdict_int)
         self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
         # TODO avoid hard-coding the list of classes
         self._remove_prefix = isinstance(adapter, (FrontAdapter, NonInternalFrontAdapter, PrefixAdapter))
@@ -186,18 +186,18 @@ class SingleMatch(Match, ABC):
         sequence: str,
     ):
         self.adjacent_base = ""
-        self.astart = astart  # type: int
-        self.astop = astop  # type: int
-        self.rstart = rstart  # type: int
-        self.rstop = rstop  # type: int
-        self.matches = matches  # type: int
-        self.errors = errors  # type: int
-        self.adapter = adapter  # type: SingleAdapter
+        self.astart: int = astart
+        self.astop: int = astop
+        self.rstart: int = rstart
+        self.rstop: int = rstop
+        self.matches: int = matches
+        self.errors: int = errors
+        self.adapter: SingleAdapter = adapter
         self.sequence = sequence
         # Number of aligned characters in the adapter. If there are
         # indels, this may be different from the number of characters
         # in the read.
-        self.length = astop - astart  # type: int
+        self.length: int = astop - astart
 
     def __repr__(self):
         return 'SingleMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
@@ -412,16 +412,16 @@ class SingleAdapter(Adapter, ABC):
         name: Optional[str] = None,
         indels: bool = True,
     ):
-        self.name = _generate_adapter_name() if name is None else name  # type: str
+        self.name: str = _generate_adapter_name() if name is None else name
         super().__init__(self.name)
-        self._debug = False  # type: bool
-        self.sequence = sequence.upper().replace("U", "T")  # type: str
+        self._debug: bool = False
+        self.sequence: str = sequence.upper().replace("U", "T")
         if not self.sequence:
             raise ValueError("Adapter sequence is empty")
         if max_errors >= 1:
             max_errors /= len(self.sequence)
-        self.max_error_rate = max_errors  # type: float
-        self.min_overlap = min(min_overlap, len(self.sequence))  # type: int
+        self.max_error_rate: float = max_errors
+        self.min_overlap: int = min(min_overlap, len(self.sequence))
         iupac = frozenset('ABCDGHKMNRSTUVWXY')
         if adapter_wildcards and not set(self.sequence) <= iupac:
             for c in self.sequence:
@@ -430,9 +430,9 @@ class SingleAdapter(Adapter, ABC):
                         'not a valid IUPAC code. Use only characters '
                         'ABCDGHKMNRSTUVWXY.'.format(c, self.sequence))
         # Optimization: Use non-wildcard matching if only ACGT is used
-        self.adapter_wildcards = adapter_wildcards and not set(self.sequence) <= set("ACGT")  # type: bool
-        self.read_wildcards = read_wildcards  # type: bool
-        self.indels = indels  # type: bool
+        self.adapter_wildcards: bool = adapter_wildcards and not set(self.sequence) <= set("ACGT")
+        self.read_wildcards: bool = read_wildcards
+        self.indels: bool = indels
         self.aligner = self._aligner()
 
     def _make_aligner(self, flags: int) -> align.Aligner:
@@ -510,7 +510,7 @@ class FrontAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        alignment = self.aligner.locate(sequence)  # type: Optional[Tuple[int,int,int,int,int,int]]
+        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(sequence)
         if self._debug:
             print(self.aligner.dpmatrix)
         if alignment is None:
@@ -541,7 +541,7 @@ class BackAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        alignment = self.aligner.locate(sequence)  # type: Optional[Tuple[int,int,int,int,int,int]]
+        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(sequence)
         if self._debug:
             print(self.aligner.dpmatrix)  # pragma: no cover
         if alignment is None:
@@ -693,9 +693,9 @@ class LinkedMatch(Match):
     """
     def __init__(self, front_match: RemoveBeforeMatch, back_match: RemoveAfterMatch, adapter: "LinkedAdapter"):
         assert front_match is not None or back_match is not None
-        self.front_match = front_match  # type: RemoveBeforeMatch
-        self.back_match = back_match  # type: RemoveAfterMatch
-        self.adapter = adapter  # type: LinkedAdapter
+        self.front_match: RemoveBeforeMatch = front_match
+        self.back_match: RemoveAfterMatch = back_match
+        self.adapter: LinkedAdapter = adapter
 
     def __repr__(self):
         return '<LinkedMatch(front_match={!r}, back_match={}, adapter={})>'.format(
@@ -934,7 +934,7 @@ class IndexedAdapters(Matchable, ABC):
 
     def _make_index(self) -> Tuple[List[int], "AdapterIndex"]:
         logger.info('Building index of %s adapters ...', len(self._adapters))
-        index = dict()  # type: IndexedAdapters.AdapterIndex
+        index: Dict[str, Tuple[SingleAdapter, int, int]] = dict()
         lengths = set()
         has_warned = False
         for adapter in self._adapters:
@@ -985,7 +985,7 @@ class IndexedAdapters(Matchable, ABC):
         affix = sequence.upper()
 
         # Check all the prefixes or suffixes (affixes) that could match
-        best_adapter = None  # type: Optional[SingleAdapter]
+        best_adapter: Optional[SingleAdapter] = None
         best_length = 0
         best_m = -1
         best_e = 1000
