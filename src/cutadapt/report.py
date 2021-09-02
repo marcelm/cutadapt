@@ -7,7 +7,7 @@ import textwrap
 from collections import Counter, defaultdict
 from typing import Any, Optional, List, Dict, Tuple, Iterator
 from .adapters import (
-    EndStatistics, AdapterStatistics, FrontAdapter, NonInternalFrontAdapter, PrefixAdapter,
+    EndStatistics, AdapterStatistics, FrontAdapter,
     BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
 )
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
@@ -518,9 +518,9 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
             total = total_front + total_back
             reverse_complemented = adapter_statistics.reverse_complemented
             adapter = adapter_statistics.adapter
-            if isinstance(adapter, (BackAdapter, NonInternalBackAdapter, SuffixAdapter)):
+            if isinstance(adapter, BackAdapter):
                 assert total_front == 0
-            if isinstance(adapter, (FrontAdapter, NonInternalFrontAdapter, PrefixAdapter)):
+            if isinstance(adapter, FrontAdapter):
                 assert total_back == 0
 
             if stats.paired:
@@ -572,17 +572,17 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s()
                 print_s("Overview of removed sequences at 3' end")
                 print_s(histogram(adapter_statistics.back, stats.n, gc_content))
-            elif isinstance(adapter, (FrontAdapter, NonInternalFrontAdapter, PrefixAdapter)):
+            elif isinstance(adapter, FrontAdapter):
                 print_s()
-                if not isinstance(adapter, PrefixAdapter):
+                if adapter.allows_partial_matches:
                     print_s("Minimum overlap:", adapter.min_overlap)
                 print_s(error_ranges(adapter_statistics.front))
                 print_s("Overview of removed sequences")
                 print_s(histogram(adapter_statistics.front, stats.n, gc_content))
             else:
-                assert isinstance(adapter, (BackAdapter, NonInternalBackAdapter, SuffixAdapter))
+                assert isinstance(adapter, BackAdapter)
                 print_s()
-                if not isinstance(adapter, SuffixAdapter):
+                if adapter.allows_partial_matches:
                     print_s("Minimum overlap:", adapter.min_overlap)
                 print_s(error_ranges(adapter_statistics.back))
                 base_stats = AdjacentBaseStatistics(adapter_statistics.back.adjacent_bases)
