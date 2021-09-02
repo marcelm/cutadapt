@@ -219,12 +219,12 @@ class Statistics:
         on_reverse_complement = adapter_statistics.reverse_complemented if self.reverse_complemented else None
         return {
             "name": adapter_statistics.name,
-            "type": adapter.description,
+            "type": adapter.descriptive_identifier(),
             "specification": adapter.spec(),
             "total_trimmed_reads": total_trimmed_reads,
             "on_reverse_complement": on_reverse_complement,
-            "five_prime": ends[0],
-            "three_prime": ends[1],
+            "five_prime_statistics": ends[0],
+            "three_prime_statistics": ends[1],
         }
 
     @property

@@ -372,6 +372,10 @@ class Adapter(Matchable, ABC):
     def create_statistics(self) -> AdapterStatistics:
         pass
 
+    @abstractmethod
+    def descriptive_identifier(self) -> str:
+        pass
+
 
 class SingleAdapter(Adapter, ABC):
     """
@@ -499,6 +503,9 @@ class FrontAdapter(SingleAdapter):
         self._force_anywhere = kwargs.pop("force_anywhere", False)
         super().__init__(*args, **kwargs)
 
+    def descriptive_identifier(self) -> str:
+        return "regular_five_prime"
+
     def _aligner(self) -> align.Aligner:
         return self._make_aligner(Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value)
 
@@ -533,6 +540,9 @@ class BackAdapter(SingleAdapter):
         self._force_anywhere = kwargs.pop("force_anywhere", False)
         super().__init__(*args, **kwargs)
 
+    def descriptive_identifier(self) -> str:
+        return "regular_three_prime"
+
     def _aligner(self):
         return self._make_aligner(Where.ANYWHERE.value if self._force_anywhere else Where.BACK.value)
 
@@ -565,6 +575,9 @@ class AnywhereAdapter(SingleAdapter):
     """
 
     description = "variable 5'/3'"
+
+    def descriptive_identifier(self) -> str:
+        return "anywhere"
 
     def _aligner(self):
         return self._make_aligner(Where.ANYWHERE.value)
@@ -601,6 +614,9 @@ class NonInternalFrontAdapter(FrontAdapter):
 
     description = "non-internal 5'"
 
+    def descriptive_identifier(self) -> str:
+        return "noninternal_five_prime"
+
     def _aligner(self):
         return self._make_aligner(Where.FRONT_NOT_INTERNAL.value)
 
@@ -624,6 +640,9 @@ class NonInternalBackAdapter(BackAdapter):
     """A non-internal 3' adapter"""
 
     description = "non-internal 3'"
+
+    def descriptive_identifier(self) -> str:
+        return "noninternal_three_prime"
 
     def _aligner(self):
         return self._make_aligner(Where.BACK_NOT_INTERNAL.value)
@@ -654,6 +673,9 @@ class PrefixAdapter(NonInternalFrontAdapter):
         kwargs["min_overlap"] = len(sequence)
         super().__init__(sequence, *args, **kwargs)
 
+    def descriptive_identifier(self) -> str:
+        return "anchored_five_prime"
+
     def _aligner(self):
         if not self.indels:  # TODO or if error rate allows 0 errors anyway
             return align.PrefixComparer(
@@ -679,6 +701,9 @@ class SuffixAdapter(NonInternalBackAdapter):
     def __init__(self, sequence: str, *args, **kwargs):
         kwargs["min_overlap"] = len(sequence)
         super().__init__(sequence, *args, **kwargs)
+
+    def descriptive_identifier(self) -> str:
+        return "anchored_three_prime"
 
     def _aligner(self):
         if not self.indels:  # TODO or if error rate allows 0 errors anyway
@@ -797,6 +822,9 @@ class LinkedAdapter(Adapter):
         self.front_adapter = front_adapter
         self.front_adapter.name = self.name
         self.back_adapter = back_adapter
+
+    def descriptive_identifier(self) -> str:
+        return "linked"
 
     def enable_debug(self):
         self.front_adapter.enable_debug()
