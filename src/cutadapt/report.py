@@ -214,7 +214,7 @@ class Statistics:
             ends.append({
                 "error_rate": end_statistics.max_error_rate,
                 "error_lengths": eranges,
-                "trimmed_reads": total,
+                "matches": total,
                 "adjacent_bases": base_stats.as_json(),
                 "dominant_adjacent_base": base_stats.warnbase,
                 "trimmed_lengths": trimmed_lengths,
@@ -226,7 +226,7 @@ class Statistics:
             "name": adapter_statistics.name,
             "type": adapter.descriptive_identifier(),
             "specification": adapter.spec(),
-            "total_trimmed_reads": total_trimmed_reads,
+            "total_matches": total_trimmed_reads,
             "on_reverse_complement": on_reverse_complement,
             "five_prime_statistics": ends[0],
             "three_prime_statistics": ends[1],
