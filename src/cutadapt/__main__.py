@@ -64,6 +64,7 @@ from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Dict
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
+import xopen as xopen
 
 from cutadapt import __version__
 from cutadapt.adapters import warn_duplicate_adapters, Adapter, InvalidCharacter
@@ -892,6 +893,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     log_header(cmdlineargs)
     profiler = setup_profiler_if_requested(args.profile)
 
+    log_system_info()
     if args.quiet and args.report:
         parser.error("Options --quiet and --report cannot be used at the same time")
 
@@ -966,6 +968,12 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         profiler.disable()
         pstats.Stats(profiler).sort_stats('time').print_stats(20)
     return stats
+
+
+def log_system_info():
+    logger.debug("Python executable: %s", sys.executable)
+    logger.debug("dnaio version: %s", dnaio.__version__)
+    logger.debug("xopen version: %s", xopen.__version__)
 
 
 def setup_runner(
