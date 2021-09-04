@@ -1050,7 +1050,6 @@ def json_report(
         "schema_version": OneLine([0, 1]),
         "cutadapt_version": __version__,
         "python_version": platform.python_version(),
-        "python_executable": sys.executable,
         "command_line_arguments": cmdlineargs,
         "cores": cores,
         "input": {
