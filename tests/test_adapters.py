@@ -205,22 +205,22 @@ def test_info_record():
 
 def test_random_match_probabilities():
     a = BackAdapter('A', max_errors=0.1).create_statistics()
-    assert a.back.random_match_probabilities(0.5) == [1, 0.25]
-    assert a.back.random_match_probabilities(0.2) == [1, 0.4]
+    assert a.end.random_match_probabilities(0.5) == [1, 0.25]
+    assert a.end.random_match_probabilities(0.2) == [1, 0.4]
 
     for s in ('ACTG', 'XMWH'):
         a = BackAdapter(s, max_errors=0.1).create_statistics()
-        assert a.back.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
-        assert a.back.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
+        assert a.end.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
+        assert a.end.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
     a = FrontAdapter('GTCA', max_errors=0.1).create_statistics()
-    assert a.front.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
-    assert a.front.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
+    assert a.end.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
+    assert a.end.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
 
 
 def test_add_adapter_statistics():
     stats = BackAdapter('A', name='name', max_errors=0.1).create_statistics()
-    end_stats = stats.back
+    end_stats = stats.end
     end_stats.adjacent_bases['A'] = 7
     end_stats.adjacent_bases['C'] = 19
     end_stats.adjacent_bases['G'] = 23
@@ -235,7 +235,7 @@ def test_add_adapter_statistics():
     end_stats.errors[20][2] = 6
 
     stats2 = BackAdapter('A', name='name', max_errors=0.1).create_statistics()
-    end_stats2 = stats2.back
+    end_stats2 = stats2.end
     end_stats2.adjacent_bases['A'] = 43
     end_stats2.adjacent_bases['C'] = 31
     end_stats2.adjacent_bases['G'] = 27
@@ -249,7 +249,7 @@ def test_add_adapter_statistics():
     end_stats2.errors[15][2] = 2
 
     stats += stats2
-    r = stats.back
+    r = stats.end
 
     assert r.adjacent_bases == {'A': 50, 'C': 50, 'G': 50, 'T': 50, '': 50}
     assert r.errors == {

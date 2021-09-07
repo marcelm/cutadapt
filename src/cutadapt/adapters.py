@@ -7,7 +7,7 @@ The ...Match classes trim the reads.
 import logging
 from enum import Enum
 from collections import defaultdict
-from typing import Optional, Tuple, Sequence, Dict, Any, List
+from typing import Optional, Tuple, Sequence, Dict, Any, List, Union
 from abc import ABC, abstractmethod
 
 from . import align
@@ -110,43 +110,151 @@ class EndStatistics:
         return probabilities
 
 
-class AdapterStatistics:
+class AdapterStatistics(ABC):
+
+    reverse_complemented: int = 0
+    name: str
+    adapter: "Adapter"
+
+    @abstractmethod
+    def __iadd__(self, other):
+        pass
+
+    @abstractmethod
+    def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
+        pass
+
+    @abstractmethod
+    def add_match(self, match) -> None:
+        pass
+
+
+class SingleAdapterStatistics(AdapterStatistics, ABC):
     """
-    Statistics about an adapter. An adapter can work on the 5' end (front)
-    or 3' end (back) of a read, and statistics for that are captured
-    separately in EndStatistics objects.
+    Statistics about a 5' or 3' adapter, where we only need to keep track of sequences
+    removed from one "end".
+    """
+
+    def __init__(self, adapter: "SingleAdapter"):
+        self.name = adapter.name
+        self.adapter = adapter
+        self.end = EndStatistics(adapter)
+
+    def __repr__(self):
+        return f"SingleAdapterStatistics(name={self.name}, end={self.end})"
+
+    def __iadd__(self, other: "SingleAdapterStatistics"):
+        if not isinstance(other, self.__class__):
+            raise ValueError("Cannot iadd")
+        self.end += other.end
+        self.reverse_complemented += other.reverse_complemented
+        return self
+
+
+class FrontAdapterStatistics(SingleAdapterStatistics):
+
+    def add_match(self, match: "RemoveBeforeMatch"):
+        self.end.errors[match.removed_sequence_length()][match.errors] += 1
+
+    def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
+        return self.end, None
+
+
+class BackAdapterStatistics(SingleAdapterStatistics):
+
+    def add_match(self, match: "RemoveAfterMatch"):
+        adjacent_base = match.adjacent_base()
+        self.end.errors[match.removed_sequence_length()][match.errors] += 1
+        try:
+            self.end.adjacent_bases[adjacent_base] += 1
+        except KeyError:
+            self.end.adjacent_bases[""] = 1
+
+    def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
+        return None, self.end
+
+
+class LinkedAdapterStatistics(AdapterStatistics):
+    """
+    Statistics about sequences removed by a lined adapter.
     """
 
     def __init__(
         self,
-        adapter: "Adapter",
-        front: Optional["SingleAdapter"],
-        back: Optional["SingleAdapter"],
+        adapter: "LinkedAdapter",
+        front: "SingleAdapter",
+        back: "SingleAdapter",
     ):
         self.name = adapter.name
         self.adapter = adapter
-        self.front = EndStatistics(front) if front is not None else None
-        self.back = EndStatistics(back) if back is not None else None
+        self.front = EndStatistics(front)
+        self.back = EndStatistics(back)
         self.reverse_complemented = 0
 
     def __repr__(self):
-        return "AdapterStatistics(name={}, front={}, back={})".format(
-            self.name,
-            self.front,
-            self.back,
-        )
+        return f"LinkedAdapterStatistics(name={self.name}, front={self.front}, back={self.back})"
 
-    def __iadd__(self, other: "AdapterStatistics"):
-        if self.front is not None:
-            if other.front is None:
-                raise ValueError("Incompatible AdapterStatistics")
-            self.front += other.front
-        if self.back is not None:
-            if other.back is None:
-                raise ValueError("Incompatible AdapterStatistics")
-            self.back += other.back
+    def __iadd__(self, other: "LinkedAdapterStatistics"):
+        if not isinstance(other, self.__class__):
+            raise ValueError("Cannot iadd")
+        self.front += other.front
+        self.back += other.back
         self.reverse_complemented += other.reverse_complemented
         return self
+
+    def add_match(self, match: "LinkedMatch"):
+        # TODO this is duplicated code
+        if match.front_match:
+            self.front.errors[match.front_match.removed_sequence_length()][match.errors] += 1
+        if match.back_match:
+            adjacent_base = match.back_match.adjacent_base()
+            self.back.errors[match.back_match.removed_sequence_length()][match.errors] += 1
+            try:
+                self.back.adjacent_bases[adjacent_base] += 1
+            except KeyError:
+                self.back.adjacent_bases[""] = 1
+
+    def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
+        return self.front, self.back
+
+
+class AnywhereAdapterStatistics(AdapterStatistics):
+    """
+    Statistics about sequences removed by a lined adapter.
+    """
+
+    def __init__(self, adapter: "AnywhereAdapter"):
+        self.name = adapter.name
+        self.adapter = adapter
+        self.front = EndStatistics(adapter)
+        self.back = EndStatistics(adapter)
+        self.reverse_complemented = 0
+
+    def __repr__(self):
+        return f"AnywhereAdapterStatistics(name={self.name}, front={self.front}, back={self.back})"
+
+    def __iadd__(self, other: "AnywhereAdapterStatistics"):
+        if not isinstance(other, AnywhereAdapterStatistics):
+            raise ValueError("Cannot add")
+        self.front += other.front
+        self.back += other.back
+        self.reverse_complemented += other.reverse_complemented
+        return self
+
+    def add_match(self, match: Union["RemoveBeforeMatch", "RemoveAfterMatch"]) -> None:
+        # TODO contains duplicated code from the other add_match() methods
+        if isinstance(match, RemoveBeforeMatch):
+            self.front.errors[match.removed_sequence_length()][match.errors] += 1
+        else:
+            adjacent_base = match.adjacent_base()
+            self.back.errors[match.removed_sequence_length()][match.errors] += 1
+            try:
+                self.back.adjacent_bases[adjacent_base] += 1
+            except KeyError:
+                self.back.adjacent_bases[""] = 1
+
+    def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
+        return self.front, self.back
 
 
 class Match(ABC):
@@ -188,7 +296,6 @@ class SingleMatch(Match, ABC):
         adapter: "SingleAdapter",
         sequence: str,
     ):
-        self.adjacent_base = ""
         self.astart: int = astart
         self.astop: int = astop
         self.rstart: int = rstart
@@ -257,6 +364,10 @@ class SingleMatch(Match, ABC):
 
         return [info]
 
+    @abstractmethod
+    def removed_sequence_length(self) -> int:
+        pass
+
 
 class RemoveBeforeMatch(SingleMatch):
     """A match that removes sequence before the match"""
@@ -291,9 +402,8 @@ class RemoveBeforeMatch(SingleMatch):
     def trimmed(self, read):
         return read[self.rstop:]
 
-    def update_statistics(self, statistics: AdapterStatistics):
-        """Update AdapterStatistics in place"""
-        statistics.front.errors[self.rstop][self.errors] += 1  # type: ignore
+    def removed_sequence_length(self) -> int:
+        return self.rstop
 
 
 class RemoveAfterMatch(SingleMatch):
@@ -329,14 +439,11 @@ class RemoveAfterMatch(SingleMatch):
     def trimmed(self, read):
         return read[:self.rstart]
 
-    def update_statistics(self, statistics: AdapterStatistics):
-        """Update AdapterStatistics in place"""
-        adjacent_base = self.sequence[self.rstart - 1:self.rstart]
-        statistics.back.errors[len(self.sequence) - self.rstart][self.errors] += 1  # type: ignore
-        try:
-            statistics.back.adjacent_bases[adjacent_base] += 1  # type: ignore
-        except KeyError:
-            statistics.back.adjacent_bases[""] = 1  # type: ignore
+    def adjacent_base(self) -> str:
+        return self.sequence[self.rstart - 1:self.rstart]
+
+    def removed_sequence_length(self) -> int:
+        return len(self.sequence) - self.rstart
 
 
 def _generate_adapter_name(_start=[1]) -> str:
@@ -527,8 +634,8 @@ class FrontAdapter(SingleAdapter):
     def spec(self) -> str:
         return f"{self.sequence}..."
 
-    def create_statistics(self) -> AdapterStatistics:
-        return AdapterStatistics(self, front=self, back=None)
+    def create_statistics(self) -> FrontAdapterStatistics:
+        return FrontAdapterStatistics(self)
 
 
 class BackAdapter(SingleAdapter):
@@ -564,8 +671,8 @@ class BackAdapter(SingleAdapter):
     def spec(self) -> str:
         return f"{self.sequence}"
 
-    def create_statistics(self) -> AdapterStatistics:
-        return AdapterStatistics(self, front=None, back=self)
+    def create_statistics(self) -> BackAdapterStatistics:
+        return BackAdapterStatistics(self)
 
 
 class AnywhereAdapter(SingleAdapter):
@@ -605,8 +712,8 @@ class AnywhereAdapter(SingleAdapter):
     def spec(self) -> str:
         return f"...{self.sequence}..."
 
-    def create_statistics(self) -> AdapterStatistics:
-        return AdapterStatistics(self, front=self, back=self)
+    def create_statistics(self) -> AnywhereAdapterStatistics:
+        return AnywhereAdapterStatistics(self)
 
 
 class NonInternalFrontAdapter(FrontAdapter):
@@ -761,13 +868,6 @@ class LinkedMatch(Match):
             read = self.back_match.trimmed(read)
         return read
 
-    def update_statistics(self, statistics):
-        """Update AdapterStatistics in place"""
-        if self.front_match:
-            self.front_match.update_statistics(statistics)
-        if self.back_match:
-            self.back_match.update_statistics(statistics)
-
     def remainder_interval(self) -> Tuple[int, int]:
         matches = [match for match in [self.front_match, self.back_match] if match is not None]
         return remainder(matches)
@@ -844,8 +944,8 @@ class LinkedAdapter(Adapter):
             return None
         return LinkedMatch(front_match, back_match, self)
 
-    def create_statistics(self) -> AdapterStatistics:
-        return AdapterStatistics(self, front=self.front_adapter, back=self.back_adapter)
+    def create_statistics(self) -> LinkedAdapterStatistics:
+        return LinkedAdapterStatistics(self, front=self.front_adapter, back=self.back_adapter)
 
     @property
     def sequence(self):

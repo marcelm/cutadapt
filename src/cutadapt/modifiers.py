@@ -85,7 +85,7 @@ class AdapterCutter(SingleEndModifier):
 
     def __init__(
         self,
-        adapters: List[Adapter],
+        adapters: Sequence[Adapter],
         times: int = 1,
         action: Optional[str] = "trim",
         index: bool = True,
@@ -188,7 +188,7 @@ class AdapterCutter(SingleEndModifier):
         if matches:
             self.with_adapters += 1
             for match in matches:
-                match.update_statistics(self.adapter_statistics[match.adapter])
+                self.adapter_statistics[match.adapter].add_match(match)
         info.matches.extend(matches)  # TODO extend or overwrite?
         return trimmed_read
 
@@ -274,7 +274,7 @@ class ReverseComplementer(SingleEndModifier):
             self.adapter_cutter.with_adapters += 1
             for match in matches:
                 stats = self.adapter_cutter.adapter_statistics[match.adapter]
-                match.update_statistics(stats)
+                stats.add_match(match)
                 stats.reverse_complemented += bool(use_reverse_complement)
             info.matches.extend(matches)  # TODO extend or overwrite?
         return trimmed_read
@@ -338,7 +338,7 @@ class PairedAdapterCutter(PairedEndModifier):
                 trimmed_read.sequence = trimmed_read.sequence.upper()
 
             trimmed_read = match.trimmed(trimmed_read)
-            match.update_statistics(self.adapter_statistics[i][match.adapter])
+            self.adapter_statistics[i][match.adapter].add_match(match)
 
             if self.action == 'trim':
                 # read is already trimmed, nothing to do
