@@ -8,7 +8,7 @@ from collections import Counter, defaultdict
 from typing import Any, Optional, List, Dict, Tuple, Iterator
 from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter,
-    BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
+    BackAdapter, AnywhereAdapter, LinkedAdapter,
     SingleAdapter,
 )
 from .json import OneLine

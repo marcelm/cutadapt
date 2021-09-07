@@ -54,7 +54,7 @@ class EndStatistics:
         self.errors: Dict[int, Dict[int, int]] = defaultdict(returns_defaultdict_int)
         self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
         # TODO avoid hard-coding the list of classes
-        self._remove_prefix = isinstance(adapter, (FrontAdapter, NonInternalFrontAdapter, PrefixAdapter))
+        self._remove_prefix = isinstance(adapter, FrontAdapter)
 
     def __repr__(self):
         errors = {k: dict(v) for k, v in self.errors.items()}
