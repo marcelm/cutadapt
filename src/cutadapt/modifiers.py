@@ -4,6 +4,7 @@ A modifier must be callable and typically implemented as a class with a
 __call__ method.
 """
 import re
+import logging
 from types import SimpleNamespace
 from typing import Sequence, List, Tuple, Optional, Set
 from abc import ABC, abstractmethod
@@ -15,6 +16,8 @@ from .adapters import MultipleAdapters, SingleAdapter, IndexedPrefixAdapters, In
     Match, remainder, Adapter
 from .tokenizer import tokenize_braces, TokenizeError, Token, BraceToken
 from .utils import reverse_complemented_sequence
+
+logger = logging.getLogger()
 
 
 # If the number of prefix or suffix adapters is higher than this, switch to using an index
@@ -306,6 +309,9 @@ class PairedAdapterCutter(PairedEndModifier):
                 "Given: {} for R1, {} for R2".format(len(adapters1), len(adapters2)))
         if not adapters1:
             raise PairedAdapterCutterError("No adapters given")
+        logger.debug("Adapter pairs:")
+        for a1, a2 in zip(adapters1, adapters2):
+            logger.debug(" • %s=%s -- %s=%s", a1.name, a1.spec(), a2.name, a2.spec())
         self._adapters1 = MultipleAdapters(adapters1)
         self._adapter_indices = {a: i for i, a in enumerate(adapters1)}
         self._adapters2 = MultipleAdapters(adapters2)
