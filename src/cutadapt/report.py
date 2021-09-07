@@ -402,7 +402,7 @@ def histogram_rows(
             length,
             count,
             expect,
-            int(end_statistics.max_error_rate * min(length, len(end_statistics.sequence))),
+            int(end_statistics.max_error_rate * min(length, end_statistics.effective_length)),
             error_counts,
         )
         yield t
