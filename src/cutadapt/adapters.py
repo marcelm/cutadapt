@@ -168,7 +168,7 @@ class BackAdapterStatistics(SingleAdapterStatistics):
         try:
             self.end.adjacent_bases[adjacent_base] += 1
         except KeyError:
-            self.end.adjacent_bases[""] = 1
+            self.end.adjacent_bases[""] += 1
 
     def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
         return None, self.end
@@ -212,7 +212,7 @@ class LinkedAdapterStatistics(AdapterStatistics):
             try:
                 self.back.adjacent_bases[adjacent_base] += 1
             except KeyError:
-                self.back.adjacent_bases[""] = 1
+                self.back.adjacent_bases[""] += 1
 
     def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
         return self.front, self.back
@@ -251,7 +251,7 @@ class AnywhereAdapterStatistics(AdapterStatistics):
             try:
                 self.back.adjacent_bases[adjacent_base] += 1
             except KeyError:
-                self.back.adjacent_bases[""] = 1
+                self.back.adjacent_bases[""] += 1
 
     def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
         return self.front, self.back
