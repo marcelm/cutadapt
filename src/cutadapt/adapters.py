@@ -293,7 +293,7 @@ class RemoveBeforeMatch(SingleMatch):
 
     def update_statistics(self, statistics: AdapterStatistics):
         """Update AdapterStatistics in place"""
-        statistics.front.errors[self.rstop][self.errors] += 1
+        statistics.front.errors[self.rstop][self.errors] += 1  # type: ignore
 
 
 class RemoveAfterMatch(SingleMatch):
@@ -332,11 +332,11 @@ class RemoveAfterMatch(SingleMatch):
     def update_statistics(self, statistics: AdapterStatistics):
         """Update AdapterStatistics in place"""
         adjacent_base = self.sequence[self.rstart - 1:self.rstart]
-        statistics.back.errors[len(self.sequence) - self.rstart][self.errors] += 1
+        statistics.back.errors[len(self.sequence) - self.rstart][self.errors] += 1  # type: ignore
         try:
-            statistics.back.adjacent_bases[adjacent_base] += 1
+            statistics.back.adjacent_bases[adjacent_base] += 1  # type: ignore
         except KeyError:
-            statistics.back.adjacent_bases[''] = 1
+            statistics.back.adjacent_bases[""] = 1  # type: ignore
 
 
 def _generate_adapter_name(_start=[1]) -> str:

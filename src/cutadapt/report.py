@@ -9,6 +9,7 @@ from typing import Any, Optional, List, Dict, Tuple, Iterator
 from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter,
     BackAdapter, NonInternalBackAdapter, SuffixAdapter, AnywhereAdapter, LinkedAdapter,
+    SingleAdapter,
 )
 from .json import OneLine
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
@@ -193,7 +194,7 @@ class Statistics:
         self, adapter_statistics: AdapterStatistics, n: int, gc_content: float
     ):
         adapter = adapter_statistics.adapter
-        ends = []
+        ends: List[Optional[Dict[str, Any]]] = []
         total_trimmed_reads = 0
         for end_statistics in adapter_statistics.front, adapter_statistics.back:
             if end_statistics is None:
@@ -549,6 +550,8 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
             print_s()
 
             if isinstance(adapter, LinkedAdapter):
+                assert adapter_statistics.front is not None
+                assert adapter_statistics.back is not None
                 print_s("Sequence: {}...{}; Type: linked; Length: {}+{}; "
                     "5' trimmed: {} times; 3' trimmed: {} times".format(
                         adapter_statistics.front.sequence,
@@ -557,6 +560,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                         len(adapter_statistics.back.sequence),
                         total_front, total_back), end="")
             else:
+                assert isinstance(adapter, SingleAdapter)
                 print_s("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times".
                     format(adapter.sequence, adapter.description,
                         len(adapter.sequence), total), end="")
@@ -568,6 +572,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s()
                 continue
             if isinstance(adapter, AnywhereAdapter):
+                assert adapter_statistics.front is not None and adapter_statistics.back is not None
                 print_s(total_front, "times, it overlapped the 5' end of a read")
                 print_s(total_back, "times, it overlapped the 3' end or was within the read")
                 print_s()
@@ -579,6 +584,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s("Overview of removed sequences (3' or within)")
                 print_s(histogram(adapter_statistics.back, stats.n, gc_content))
             elif isinstance(adapter, LinkedAdapter):
+                assert adapter_statistics.front is not None and adapter_statistics.back is not None
                 print_s()
                 print_s(f"Minimum overlap: "
                         f"{adapter.front_adapter.min_overlap}+{adapter.back_adapter.min_overlap}")
@@ -590,6 +596,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s("Overview of removed sequences at 3' end")
                 print_s(histogram(adapter_statistics.back, stats.n, gc_content))
             elif isinstance(adapter, FrontAdapter):
+                assert adapter_statistics.front is not None
                 print_s()
                 if adapter.allows_partial_matches:
                     print_s("Minimum overlap:", adapter.min_overlap)
@@ -598,6 +605,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s(histogram(adapter_statistics.front, stats.n, gc_content))
             else:
                 assert isinstance(adapter, BackAdapter)
+                assert adapter_statistics.back is not None
                 print_s()
                 if adapter.allows_partial_matches:
                     print_s("Minimum overlap:", adapter.min_overlap)
@@ -656,7 +664,8 @@ def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
     warning = False
     for which_in_pair in (0, 1):
         for adapter_statistics in stats.adapter_stats[which_in_pair]:
-            if isinstance(adapter_statistics.adapter, (BackAdapter, NonInternalBackAdapter, SuffixAdapter)):
+            if isinstance(adapter_statistics.adapter, BackAdapter):
+                assert adapter_statistics.back is not None
                 if AdjacentBaseStatistics(adapter_statistics.back.adjacent_bases).should_warn:
                     warning = True
                     break
