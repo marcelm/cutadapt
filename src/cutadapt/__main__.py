@@ -112,7 +112,7 @@ class CutadaptArgumentParser(ArgumentParser):
         """
         print('Run "cutadapt --help" to see command-line options.', file=sys.stderr)
         print('See https://cutadapt.readthedocs.io/ for full documentation.', file=sys.stderr)
-        self.exit(2, "\n{prog}: error: {message}\n".format(prog=self.prog, message=message))
+        self.exit(2, f"\n{self.prog}: error: {message}\n")
 
 
 class CommandLineError(Exception):
@@ -368,7 +368,7 @@ def parse_cutoffs(s: str) -> Tuple[int, int]:
     try:
         cutoffs = [int(value) for value in s.split(",")]
     except ValueError as e:
-        raise CommandLineError("Quality cutoff value not recognized: {}".format(e))
+        raise CommandLineError(f"Quality cutoff value not recognized: {e}")
 
     if len(cutoffs) == 1:
         cutoffs = [0, cutoffs[0]]
@@ -397,9 +397,9 @@ def parse_lengths(s: str) -> Tuple[Optional[int], ...]:
     try:
         values = tuple(int(f) if f != '' else None for f in fields)
     except ValueError as e:
-        raise CommandLineError("Value not recognized: {}".format(e))
+        raise CommandLineError(f"Value not recognized: {e}")
     if len(values) == 2 and values[0] is None and values[1] is None:
-        raise CommandLineError("Cannot parse {!r}: At least one length needs to be given".format(s))
+        raise CommandLineError(f"Cannot parse '{s}': At least one length needs to be given")
     return tuple(values)
 
 
@@ -588,7 +588,7 @@ def setup_input_files(
             "You provided {} input file names, but either one or two are expected. ".format(
                 len(inputs))
             + "The file names were:\n - "
-            + "\n - ".join("'{}'".format(p) for p in inputs)
+            + "\n - ".join(f"'{p}'" for p in inputs)
             + "\nHint: If your path contains spaces, you need to enclose it in quotes")
     input_filename = inputs[0]
     if paired and not interleaved:
@@ -943,7 +943,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         sys.exit(1)
     except (dnaio.FileFormatError, dnaio.UnknownFileFormat, EOFError) as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
-        sys.exit("cutadapt: error: {}".format(e))
+        sys.exit(f"cutadapt: error: {e}")
 
     elapsed = time.time() - start_time
     if args.report == 'minimal':

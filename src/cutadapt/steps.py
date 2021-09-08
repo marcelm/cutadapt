@@ -109,7 +109,7 @@ class SingleEndFilter(SingleEndStep):
         self.predicate = predicate
 
     def __repr__(self):
-        return "SingleEndFilter(writer={}, predicate={})".format(self.writer, self.predicate)
+        return f"SingleEndFilter(writer={self.writer}, predicate={self.predicate})"
 
     def descriptive_identifier(self) -> str:
         return self.predicate.descriptive_identifier()
@@ -282,7 +282,7 @@ class SingleEndSink(SingleEndStep, HasStatistics):
         self._statistics = ReadLengthStatistics()
 
     def __repr__(self):
-        return "NoFilter({})".format(self.writer)
+        return f"NoFilter({self.writer})"
 
     def __call__(self, read, info: ModificationInfo) -> bool:
         self.writer.write(read)
@@ -304,7 +304,7 @@ class PairedEndSink(PairedEndStep, HasStatistics):
         self._statistics = ReadLengthStatistics()
 
     def __repr__(self):
-        return "PairedNoFilter({})".format(self.writer)
+        return f"PairedNoFilter({self.writer})"
 
     def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
         self.writer.write(read1, read2)

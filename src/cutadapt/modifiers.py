@@ -472,7 +472,7 @@ class Renamer(SingleEndModifier):
         try:
             self._tokens = list(tokenize_braces(template))
         except TokenizeError as e:
-            raise InvalidTemplate("Error in template '{}': {}".format(template, e))
+            raise InvalidTemplate(f"Error in template '{template}': {e}")
         self.raise_if_invalid_variable(self._tokens, self.variables)
         self._template = template
 
@@ -487,7 +487,7 @@ class Renamer(SingleEndModifier):
             value = token.value
             if value not in allowed:
                 raise InvalidTemplate(
-                    "Error in template: Variable '{}' not recognized".format(value)
+                    f"Error in template: Variable '{value}' not recognized"
                 )
 
     @staticmethod
@@ -531,7 +531,7 @@ class PairedEndRenamer(PairedEndModifier):
         try:
             self._tokens = list(tokenize_braces(template))
         except TokenizeError as e:
-            raise InvalidTemplate("Error in template '{}': {}".format(template, e))
+            raise InvalidTemplate(f"Error in template '{template}': {e}")
         Renamer.raise_if_invalid_variable(self._tokens, self._get_allowed_variables())
         self._template = template
 
@@ -550,7 +550,7 @@ class PairedEndRenamer(PairedEndModifier):
         id1, comment1 = Renamer.parse_name(read1.name)
         id2, comment2 = Renamer.parse_name(read2.name)
         if not record_names_match(read1.name, read2.name):
-            raise ValueError("Input read IDs not identical: '{}' != '{}'".format(id1, id2))
+            raise ValueError(f"Input read IDs not identical: '{id1}' != '{id2}'")
         name1, name2 = self.get_new_headers(
             id1=id1,
             id2=id2,

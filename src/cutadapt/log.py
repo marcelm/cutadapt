@@ -26,7 +26,7 @@ class NiceFormatter(logging.Formatter):
     """
     def format(self, record):
         if record.levelno not in (logging.INFO, REPORT):
-            record.msg = '{}: {}'.format(record.levelname, record.msg)
+            record.msg = f"{record.levelname}: {record.msg}"
         return super().format(record)
 
 

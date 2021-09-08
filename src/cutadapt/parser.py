@@ -91,7 +91,7 @@ class AdapterSpecification:
             elif prev == '{':
                 prev = int(s)
                 if not 0 <= prev <= 10000:
-                    raise ValueError('Value {} invalid'.format(prev))
+                    raise ValueError(f"Value {prev} invalid")
             elif isinstance(prev, int):
                 if s != '}':
                     raise ValueError('"}" expected')
@@ -149,7 +149,7 @@ class AdapterSpecification:
                 raise ValueError('No value given')
             key = key.strip()
             if key not in cls.allowed_parameters:
-                raise KeyError('Unknown parameter {}'.format(key))
+                raise KeyError(f"Unknown parameter {key}")
             # unabbreviate
             while cls.allowed_parameters[key] is not None:
                 key = cls.allowed_parameters[key]  # type: ignore
@@ -162,7 +162,7 @@ class AdapterSpecification:
                 except ValueError:
                     value = float(value)
             if key in result:
-                raise KeyError('Key {} specified twice'.format(key))
+                raise KeyError(f"Key {key} specified twice")
             result[key] = value
         if 'optional' in result and 'required' in result:
             raise ValueError("'optional' and 'required' cannot be specified at the same time")
@@ -267,7 +267,7 @@ class AdapterSpecification:
                 return NonInternalFrontAdapter
             else:
                 raise ValueError(
-                    'Value {} for a front restriction not allowed'.format(restriction))
+                    f"Value {restriction} for a front restriction not allowed")
         elif cmdline_type == 'back':
             if restriction is None:
                 return BackAdapter
@@ -277,7 +277,7 @@ class AdapterSpecification:
                 return NonInternalBackAdapter
             else:
                 raise ValueError(
-                    'Value {} for a back restriction not allowed'.format(restriction))
+                    f"Value {restriction} for a back restriction not allowed")
         else:
             assert cmdline_type == 'anywhere'
             if restriction is None:
@@ -310,7 +310,7 @@ class AdapterParser:
         is 'back', ``-b`` is 'anywhere', and ``-g`` is 'front').
         """
         if cmdline_type not in ('front', 'back', 'anywhere'):
-            raise ValueError('cmdline_type cannot be {!r}'.format(cmdline_type))
+            raise ValueError(f"cmdline_type cannot be '{cmdline_type}'")
         spec1, middle, spec2 = spec.partition('...')
         if middle == '...' and spec1 and spec2:
             return self._parse_linked(spec1, spec2, name, cmdline_type)
@@ -421,9 +421,9 @@ class AdapterParser:
                 yield self._parse(spec, cmdline_type, name=None)
             except InvalidCharacter as e:
                 if Path(spec).exists():
-                    extra_message = "A file exists named '{}'. ".format(spec) +\
+                    extra_message = f"A file exists named '{spec}'. " +\
                         "To use the sequences in that file as adapter sequences, write 'file:' " +\
-                        "before the path, as in 'file:{}'.".format(spec)
+                        f"before the path, as in 'file:{spec}'."
                     raise InvalidCharacter(e.args[0] + "\n" + extra_message)
                 else:
                     raise

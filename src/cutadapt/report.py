@@ -365,7 +365,7 @@ def histogram(end_statistics: EndStatistics, n: int, gc_content: float) -> str:
         print(
             length,
             count,
-            "{:.1F}".format(expect),
+            f"{expect:.1F}",
             max_err,
             " ".join(str(e) for e in error_counts),
             sep="\t",
@@ -429,7 +429,7 @@ class AdjacentBaseStatistics:
                 self._warnbase = None
 
     def __repr__(self):
-        return 'AdjacentBaseStatistics(bases={})'.format(self.bases)
+        return f"AdjacentBaseStatistics(bases={self.bases})"
 
     @property
     def should_warn(self) -> bool:
@@ -445,10 +445,10 @@ class AdjacentBaseStatistics:
         sio = StringIO()
         print('Bases preceding removed adapters:', file=sio)
         for text, fraction in self._fractions:
-            print('  {}: {:.1%}'.format(text, fraction), file=sio)
+            print(f"  {text}: {fraction:.1%}", file=sio)
         if self.should_warn:
             print('WARNING:', file=sio)
-            print('    The adapter is preceded by "{}" extremely often.'.format(self._warnbase), file=sio)
+            print(f"    The adapter is preceded by '{self._warnbase}' extremely often.", file=sio)
             print("    The provided adapter sequence could be incomplete at its 5' end.", file=sio)
             print("    Ignore this warning when trimming primers.", file=sio)
         return sio.getvalue()
@@ -565,7 +565,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                     format(adapter.sequence, adapter.description,
                         len(adapter.sequence), total), end="")
             if stats.reverse_complemented is not None:
-                print_s("; Reverse-complemented: {} times".format(reverse_complemented))
+                print_s(f"; Reverse-complemented: {reverse_complemented} times")
             else:
                 print_s()
             if total == 0:

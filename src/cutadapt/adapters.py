@@ -1037,7 +1037,7 @@ class IndexedAdapters(Matchable, ABC):
         self._make_affix = self._get_make_affix()
 
     def __repr__(self):
-        return "{}(adapters={!r})".format(self.__class__.__name__, self._adapters)
+        return f"{self.__class__.__name__}(adapters={self._adapters!r})"
 
     def match_to(self, sequence: str):
         """Never called because it gets overwritten in __init__"""
