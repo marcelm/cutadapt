@@ -124,14 +124,17 @@ class Progress:
         per_second = delta / time_delta
         per_item = time_delta / delta
 
+        animation = next(self._animation)
+        if _final:
+            animation = "Done".ljust(len(animation))
         print(
             "\r"
             "{animation} {hours:02d}:{minutes:02d}:{seconds:02d} "
-            "{total:13,d} reads  @  {per_item:7.1F} µs/read; {per_minute:6.2F} M reads/minute"
+            "{total:13,d} reads @ {per_item:5.1F} µs/read; {per_minute:6.2F} M reads/minute"
             "".format(
                 hours=hours, minutes=minutes, seconds=seconds,
                 total=total, per_item=per_item * 1E6, per_minute=per_second * 60 / 1E6,
-                animation=next(self._animation)),
+                animation=animation),
             end="", file=sys.stderr
         )
         self._n = total
