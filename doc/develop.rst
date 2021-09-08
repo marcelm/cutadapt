@@ -3,7 +3,7 @@ Developing
 
 The `Cutadapt source code is on GitHub <https://github.com/marcelm/cutadapt/>`_.
 Cutadapt is written in Python 3 with some extension modules that are written
-in Cython. Support for Python 2 has been dropped.
+in Cython.
 
 
 Development installation
@@ -14,30 +14,34 @@ using a virtualenv. This sequence of commands should work::
 
     git clone https://github.com/marcelm/cutadapt.git  # or clone your own fork
     cd cutadapt
-    python3 -m venv venv
-    venv/bin/pip3 install Cython pytest nose tox
-    venv/bin/pip3 install -e .
+    virtualenv venv
+    source venv/bin/activate
+    pip install Cython pytest tox
+    pip install -e .
 
-Then you can run Cutadapt like this (or activate the virtualenv and omit the
-``venv/bin`` part)::
+Then you should be able to run Cutadapt::
 
-    venv/bin/cutadapt --help
+    cutadapt --version
+
+Remember that you do not need to activate a virtualenv to run binaries in it, so
+this works even when the environment is activated::
+
+    venv/bin/cutadapt --version
 
 The tests can then be run like this::
 
-    venv/bin/pytest
+    pytest
 
 Or with tox (but then you will need to have binaries for all tested Python
 versions installed)::
 
-    venv/bin/tox
+    tox
 
 
 Making a release
 ----------------
 
-Since version 1.17, Travis CI is used to automatically deploy a new Cutadapt release
-(both as an sdist and as wheels) whenever a new tag is pushed to the Git repository.
+A new release is automatically deployed to PyPI whenever a new tag is pushed to the Git repository.
 
 Cutadapt uses `setuptools_scm <https://github.com/pypa/setuptools_scm>`_ to automatically manage
 version numbers. This means that the version is not stored in the source code but derived from
@@ -63,7 +67,7 @@ release.
 
        git push --tags
 
-#. Wait for Travis to finish and to deploy to PyPI.
+#. Wait for the GitHub Action to finish and to deploy to PyPI.
 
 #. The `bioconda recipe <https://github.com/bioconda/bioconda-recipes/blob/master/recipes/cutadapt/meta.yaml>`_
    also needs to be updated, but the bioconda bot will likely do this automatically

@@ -6,6 +6,7 @@
 
    /installation
    /guide
+   /reference
    /recipes
    /algorithms
    /develop
