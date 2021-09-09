@@ -299,3 +299,24 @@ Trim qualities
 Quality-trim 3' ends::
 
     cutadapt -q 20 -o output.fastq.gz input.fastq.gz
+
+
+.. _json-jq:
+
+Extract information from the JSON report with ``jq``
+----------------------------------------------------
+
+The :ref:`JSON report <json-report-format>` that is written when using the ``--json``
+option can be read by `jq <https://stedolan.github.io/jq/>`_.
+
+Get the number of reads (or read pairs) written::
+
+   jq '.read_counts.output' mysample.cutadapt.json
+
+Get the percentage of reads that contain an adapter::
+
+   jq '.read_counts.read1_with_adapter / .read_counts.input * 100' mysample.cutadapt.json
+
+Get how often the first adapter was found::
+
+   jq '.adapters_read1[0].total_matches' mysample.cutadapt.json

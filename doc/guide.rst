@@ -1963,7 +1963,7 @@ As an example for how to use that information with Cutadapt, we show
 how to trim TruSeq adapters. The document gives the adapter sequence
 for read 1 as ``AGATCGGAAGAGCACACGTCTGAACTCCAGTCA`` and for read 2
 as ``AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT``. When using Cutadapt, this
-means you should trim your paired-end data as follows:
+means you should trim your paired-end data as follows::
 
     cutadapt \
         -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA \

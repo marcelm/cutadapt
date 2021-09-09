@@ -7,54 +7,26 @@ Reference guide
 JSON report format
 ==================
 
+The JSON reported is generated if ``--json=filename.cutadapt.json`` is used. The file name
+extension must be ``.cutadapt.json`` for the file to be recognized by log-parsing tools such
+as `MultiQC <https://multiqc.info>`_. (However, at the time of writing, MultiQC does not support
+Cutadapt’s JSON report format.)
 
-* ``tag`` is always ``Cutadapt report``.
-* ``schema_version`` is a tuple of two ints, the major and minor version.
-  If additions are made to the schema, the minor version is increased. If backwards incompatible
-  changes to the schema are made, the major version is increased.
-* Keys only relevant for paired-end data or when using certain command-line options are
-  always included, but when unused, get a value of ``null``.
-* For adapters that allow partial matches, ``error_lengths`` describes the lengths up to which
-  0, 1, 2 etc. errors are allowed. ``[9, 16]``: 0 errors up to a match of length 9, 1 error up to
-  a match of length 16. The last number in this list is the length of the adapter sequence. For
-  anchored adapter types, this is ``null``.
-* ``adjacent_bases``: Statistics about adjacent bases are currently only kept for 3' adapters.
-* ``dominant_adjacent_base`` is set to the appropriate nucleotide if the
-  :ref:`report warns <warnbase>`: "The adapter is preceded by "x" extremely often."
-  This is ``null`` if no such warning was printed.
-* For paired-end data, numbers in the ``read_counts`` section are the number of *read pairs*.
-* The adapter type is one of these strings:
-     - ``"regular_five_prime"``
-     - ``"regular_three_prime"``
-     - ``"noninternal_five_prime"``
-     - ``"noninternal_three_prime"``
-     - ``"anchored_five_prime"``
-     - ``"anchored_three_prime"``
-     - ``"anywhere"``
-     - ``"linked"``
-* ``basepair_counts``
+See how to :ref:`extract information from the JSON report with jq <json-jq>`.
 
-Example (slightly reformatted) ::
+Example
+-------
+
+This example was reformatted to use less vertical space::
 
     {
       "tag": "Cutadapt report",
       "schema_version": [0, 1],
-      "cutadapt_version": "3.5.dev121+g18b10ed.d20210908",
+      "cutadapt_version": "3.5",
       "python_version": "3.8.10",
       "command_line_arguments": [
-        "--json=out.cutadapt.json",
-        "-m",
-        "20",
-        "--too-short-output=tooshort.fasta",
-        "-a",
-        "ACGTAC",
-        "-q",
-        "20",
-        "--discard-trimmed",
-        "-o",
-        "/dev/null",
-        "reads.fastq"
-      ],
+        "--json=out.cutadapt.json", "-m", "20", "-a", "ACGTAC", "-q", "20",
+        "--discard-trimmed", "-o", "out.fastq.gz", "reads.fastq"],
       "cores": 1,
       "input": {
         "path1": "reads.fastq",
@@ -109,27 +81,287 @@ Example (slightly reformatted) ::
               "": 6
             },
             "dominant_adjacent_base": null,
-            "trimmed_lengths": [
-              [3, 1220, [1220]],
-              [4, 319, [319]],
-              [5, 30, [30]],
-              [6, 4, [4]],
-              [7, 5, [5]],
-              [8, 7, [7]],
-              [9, 4, [4]],
-              [10, 7, [7]],
-              [11, 7, [7]],
-              [12, 6, [6]],
-              [13, 8, [8]],
-              [14, 1, [1]],
-              [15, 2, [2]],
-              [16, 3, [3]],
-            ]
+            "trimmed_lengths": {
+              3: {"counts": [1220]},
+              4: {"counts": [319]},
+              5: {"counts": [30]},
+              6: {"counts": [4]},
+              7: {"counts": [5]},
+              8: {"counts": [7]},
+              9: {"counts": [4]},
+              10: {"counts": [7]},
+              11: {"counts": [7]},
+              12: {"counts": [6]},
+              13: {"counts": [8, 2]},
+              14: {"counts": [1, 1]},
+              15: {"counts": [2, 0]},
+              16: {"counts": [3, 1]},
+            }
           }
         }
       ],
       "adapters_read2": null
     }
+
+
+Schema
+------
+
+Some concepts used in the JSON file:
+
+* Keys are always included. If a key is not applicable, its value is set to null.
+* Single-end data appears as "paired-end data without read 2". That is, values for
+  read 1 are filled in and values for read 2 are set to null.
+
+The file defines the following keys. For nested objects (dictionaries), a dot notation is used,
+as in "outer_key.inner_key".
+
+tag : string
+   Always ``"Cutadapt report"``. A marker so that this can be recognized as a file produced by
+   Cutadapt.
+
+schema_version : list of two integers
+   Major and minor version of the schema.
+   If additions are made to the schema, the minor version is increased.
+   If backwards incompatible changes are made, the major version is increased.
+
+   Example: ``[0, 1]``
+
+cutadapt_version : str
+   The version of Cutadapt that generated the report.
+
+   Example: ``"3.5"``
+
+python_version : str
+   The Python version used to run Cutadapt.
+
+   Example: ``"3.9"``
+
+command_line_arguments : list of strings
+   The command-line arguments for this invocation. Only for information, do not parse this.
+
+   Example: ``["-a", "ACGT", "-o", "out.fastq", "input.fastq"]```
+
+cores : int
+   Number of cores used
+
+input : dictionary
+   Input files
+
+input.path1 : str
+   Path to the first input file.
+
+   Example: ``"reads.1.fastq"``
+
+input.path2 : str | null
+   Path to the second input file if given, null otherwise.
+
+input.paired : bool
+   True if input was paired-end reads, false if input was single-end reads.
+   If this is true and input.path2 is null, input was interleaved.
+
+read_counts : dictionary
+   Read count statistics
+
+read_counts.input : int
+   Number of reads (for single-end data) or read pairs (for paired-end data) in the input.
+
+read_counts.filtered : dictionary
+   Statistics about filtered reads. Keys of the dictionary correspond to a filter.
+   If a filter was not used, its value is set to null.
+
+read_counts.filtered.too_short : int | null
+   Number of reads or read pairs that were filtered because they were too short
+
+read_counts.filtered.too_long : int | null
+   Number of reads or read pairs that were filtered because they were too long
+
+read_counts.filtered.too_many_n : int | null
+   Number of reads or read pairs that were filtered because they had too many N bases
+
+read_counts.filtered.too_many_expected_errors : int | null
+   Number of reads or read pairs that were filtered because they had too many expected errors
+
+read_counts.filtered.casava_filtered : int | null
+   Number of reads or read pairs that were filtered because the CASAVA filter was ``Y``
+
+read_counts.filtered.discard_trimmed : int | null
+   Number of reads or read pairs that were filtered because at least one adapter match was found for them
+
+read_counts.filtered.discard_untrimmed : int | null
+   Number of reads or read pairs that were filtered because no adapter match was found for them
+
+read_counts.output : int
+   Number of reads written to the final output.
+   This plus the sum of all filtered reads/read will equal the number of input reads.
+
+read_counts.reverse_complemented : int | null
+   If ``--revcomp`` was used, the number of reads that were output reverse-complemented,
+   null otherwise.
+
+read_counts.read1_with_adapter : int | null
+   Number of R1 reads (or single-end reads) with at least one adapter match,
+   null if no adapter trimming was done.
+
+read_counts.read2_with_adapter : int | null
+   Number of R2 reads with at least one adapter match, null if input is single end or no
+   adapter trimming was done.
+
+basepair_counts : dictionary
+   Statistics about the number of basepairs.
+
+basepair_counts.input : int
+   Total number of basepairs in the input. (The sum of the lengths of all input reads.)
+
+basepair_counts.input_read1 : int
+   Number of basepairs in the input, read 1 only.
+
+basepair_counts.input_read2 : int | null
+   If paired-end, number of basepairs in the input counting read 2 only, null otherwise.
+
+basepair_counts.quality_trimmed : int | null
+   Total number of basepairs removed due to quality trimming, null if no quality trimming was done.
+
+basepair_counts.quality_trimmed_read1 : int | null
+   Number of basepairs removed from read 1 due to quality trimming, null if no quality trimming
+   was done.
+
+basepair_counts.quality_trimmed_read2 : int
+   Number of basepairs removed from read 2 due to quality trimming, null if no quality trimming was
+   done or if input was single end.
+
+basepair_counts.output : int
+   Total number of basepairs in the final output.
+
+basepair_counts.output_read1 : int
+   Number of basepairs written to the read 1 final output.
+
+basepair_counts.output_read2 : int | null
+   Number of basepairs written to the read 2 final output.
+
+adapters_read1 : list of dictionaries
+   A list with statistics about all adapters that were matched against read 1.
+   The list is empty if no adapter trimming was done. The schema for the items in this list is
+   described below.
+
+adapters_read2 : list of dictionaries | null
+   A list with statistics about all adapters that were matched against read 2.
+   The list is empty if no adapter trimming was done against R2. The value is set to null if
+   the input was single end reads. The schema for the items in this list is described below.
+
+
+Adapter statistics
+------------------
+
+The statistics about each adapter (items in the adapters_read1 and adapters_read2 list) are
+dictionaries with the following keys.
+
+name : str
+   The adapter name. If no adapter name was given, a name is automatically generated as
+   "1", "2", "3" etc.
+
+type : str
+   Type of this adapter. One of these strings:
+     - ``"regular_five_prime"``
+     - ``"regular_three_prime"``
+     - ``"noninternal_five_prime"``
+     - ``"noninternal_three_prime"``
+     - ``"anchored_five_prime"``
+     - ``"anchored_three_prime"``
+     - ``"anywhere"``
+     - ``"linked"``
+
+sequence : str
+   Sequence of this adapter
+
+   Example: ``"AACCGGTT"``
+
+total_matches : int
+   Number of times this adapter was found on a read. If ``--times`` is used, multiple matches
+   per read are possible.
+
+on_reverse_complement : int | null
+   If ``--revcomp`` was used, the number of times the adapter was found on the reverse-complemented
+   read, null otherwise.
+
+five_prime_statistics : dictionary | null
+   Statistics about matches to the 5' end.
+
+   If the adapter is of type regular_five_prime, noninternal_five_prime or anchored_five_prime,
+   all its matches are summarized here.
+
+   If the adapter is of type "linked", the matches of its 5' component are summarized here.
+
+   If the adapter is of type "anywhere", the matches that were determined to be 5' matches are
+   summarized here.
+
+   This is null for the other adapter types.
+
+three_prime_statistics : dictionary | null
+   Statistics about matches to the 3' end.
+
+   If the adapter is of type regular_three_prime, noninternal_three_prime or anchored_three_prime,
+   all its matches are summarized here.
+
+   If the adapter is of type "linked", the matches of its 3' component are summarized here.
+
+   If the adapter is of type "anywhere", the matches that were determined to be 3' matches are
+   summarized here.
+
+   This is null for the other adapter types.
+
+three/five_prime_statistics.error_rate : float
+   Error rate for this adapter
+
+three/five_prime_statistics.error_lengths : list of ints
+   If the adapter type allows partial matches, this lists the lengths up to which 0, 1, 2 etc.
+   errors are allowed. Example: ``[9, 16]`` means: 0 errors allowed up to a match of length 9,
+   1 error up to a match of length 16. The last number in this list is the length of the adapter
+   sequence.
+
+   For anchored adapter types, this is null.
+
+three/five_prime_statistics.matches : int
+   The number of matches of this adapter against the 5' or 3' end.
+
+three/five_prime_statistics.adjacent_bases : dictionary | null
+   For 3' adapter types, this shows which bases occurred adjacent to (upstream of) the 3' adapter
+   match. It is a dictionary mapping the strings "A", "C", "G", "T" and "" (empty string) to
+   the number of occurrences. The empty string covers those cases in which the adjacent base
+   was not one of A, C, G or T or in which there was no adjacent base (3' adapter found at the
+   beginning of the read).
+
+   This is null for 5' adapters (adjacent base statistics are currently not tracked for those).
+
+three/five_prime_statistics.dominant_adjacent_base : str | null
+   This is set to the dominant adjacent base if adjacent_bases exist and were determined to be
+   sufficiently skewed, corresponding to the :ref:`warning <warnbase>`:
+   "The adapter is preceded by "x" extremely often."
+
+   This is null otherwise.
+
+three/five_prime_statistics.trimmed_lengths : dictionary
+   The histogram of the lengths of removed sequences. The dictionary maps a length to
+   a dictionary describing how many often a sequence of that length was removed,
+   broken down by the number of errors in the adapter match.
+
+   Example::
+
+      "trimmed_lengths": {
+        4: {"counts": [319]},
+        5: {"counts": [30]},
+        6: {"counts": [4]},
+        7: {"counts": [5]},
+        15: {"counts": [2, 1]},
+      }
+
+three/five_prime_statistics.trimmed_lengths.counts : list of int
+   trimmed_lengths[length]["counts"][errors]: How often a sequence of length *length*
+   was removed due to an adapter match with *errors* errors.
+
+   Example (5 sequences had 0 errors in the adapter matches, 3 had 1 and 1 had 2)::
+
+   ``[5, 3, 1]``
 
 
 .. _info-file-format:
@@ -143,8 +375,8 @@ to the given file. It is a tab-separated text file that contains at
 least one row per input read. Normally, there is exactly one row per
 input read, but in the following cases, multiple rows may be output:
 
-  * The option ``--times`` is in use.
-  * A linked adapter is used.
+ - The option ``--times`` is in use.
+ - A linked adapter is used.
 
 A row is written for *all* input reads, even those that are discarded
 from the final FASTA/FASTQ output due to filtering options.
