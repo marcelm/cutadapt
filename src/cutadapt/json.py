@@ -32,6 +32,10 @@ def dumps(obj, indent: int = 2, _level: int = 0) -> str:
       },
       "d": {"x": 7, "y": 8}
     }
+    >>> print(dumps({"a": []}))
+    {
+      "a": []
+    }
     """
     if isinstance(obj, (float, int, str, bool, OneLine)) or obj is None:
         if isinstance(obj, OneLine):
@@ -42,6 +46,8 @@ def dumps(obj, indent: int = 2, _level: int = 0) -> str:
     sep = "," + start
     end = "\n" + _level * indent * " "
     if isinstance(obj, (tuple, list)):
+        if not obj:
+            return "[]"
         return (
             "["
             + start
@@ -50,6 +56,8 @@ def dumps(obj, indent: int = 2, _level: int = 0) -> str:
             + "]"
         )
     elif isinstance(obj, dict):
+        if not obj:
+            return "{}"
         return (
             "{"
             + start
