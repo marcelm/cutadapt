@@ -2,6 +2,7 @@
 Routines for printing a report.
 """
 import sys
+from dataclasses import dataclass
 from io import StringIO
 import textwrap
 from collections import Counter, defaultdict
@@ -209,11 +210,10 @@ class Statistics:
             else:
                 eranges = None
             base_stats = AdjacentBaseStatistics(end_statistics.adjacent_bases)
-            trimmed_lengths = [
-                OneLine((length, count, error_counts))
-                for (length, count, _, _, error_counts)
-                in histogram_rows(end_statistics, n, gc_content)
-            ]
+            trimmed_lengths = {
+                row.length: OneLine({"counts": row.error_counts})
+                for row in histogram_rows(end_statistics, n, gc_content)
+            }
             ends.append({
                 "error_rate": end_statistics.max_error_rate,
                 "error_lengths": OneLine(eranges),
@@ -361,30 +361,38 @@ def histogram(end_statistics: EndStatistics, n: int, gc_content: float) -> str:
 
     print("length", "count", "expect", "max.err", "error counts", sep="\t", file=sio)
     for row in histogram_rows(end_statistics, n, gc_content):
-        length, count, expect, max_err, error_counts = row
         print(
-            length,
-            count,
-            f"{expect:.1F}",
-            max_err,
-            " ".join(str(e) for e in error_counts),
+            row.length,
+            row.count,
+            f"{row.expect:.1F}",
+            row.max_err,
+            " ".join(str(e) for e in row.error_counts),
             sep="\t",
             file=sio,
         )
     return sio.getvalue() + "\n"
 
 
+@dataclass
+class HistogramRow:
+    """One row in the "trimmed lengths" histogram"""
+
+    length: int
+    count: int
+    expect: float
+    max_err: int
+    error_counts: List[int]
+
+
 def histogram_rows(
     end_statistics: EndStatistics, n: int, gc_content: float,
-) -> Iterator[Tuple[int, int, float, int, List[int]]]:
+) -> Iterator[HistogramRow]:
     """
-    Yield tuples (length, count, expect, max_err, error_counts)
+    Yield histogram rows
 
     Include the no. of reads expected to be
     trimmed by chance (assuming a uniform distribution of nucleotides in the reads).
 
-    adapter_statistics -- EndStatistics object
-    adapter_length -- adapter length
     n -- total no. of reads.
     """
     d = end_statistics.lengths
@@ -398,14 +406,14 @@ def histogram_rows(
         count = d[length]
         max_errors = max(errors[length].keys())
         error_counts = [errors[length][e] for e in range(max_errors + 1)]
-        t = (
-            length,
-            count,
-            expect,
-            int(end_statistics.max_error_rate * min(length, end_statistics.effective_length)),
-            error_counts,
+        row = HistogramRow(
+            length=length,
+            count=count,
+            expect=expect,
+            max_err=int(end_statistics.max_error_rate * min(length, end_statistics.effective_length)),
+            error_counts=error_counts,
         )
-        yield t
+        yield row
 
 
 class AdjacentBaseStatistics:
