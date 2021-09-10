@@ -213,10 +213,10 @@ class Statistics:
             else:
                 eranges = None
             base_stats = AdjacentBaseStatistics(end_statistics.adjacent_bases)
-            trimmed_lengths = {
-                row.length: OneLine({"counts": row.error_counts})
+            trimmed_lengths = [
+                OneLine({"len": row.length, "counts": row.error_counts})
                 for row in histogram_rows(end_statistics, n, gc_content)
-            }
+            ]
             ends.append({
                 "error_rate": end_statistics.max_error_rate,
                 "error_lengths": OneLine(eranges),

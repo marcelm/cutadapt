@@ -81,22 +81,22 @@ This example was reformatted to use less vertical space::
               "": 6
             },
             "dominant_adjacent_base": null,
-            "trimmed_lengths": {
-              3: {"counts": [1220]},
-              4: {"counts": [319]},
-              5: {"counts": [30]},
-              6: {"counts": [4]},
-              7: {"counts": [5]},
-              8: {"counts": [7]},
-              9: {"counts": [4]},
-              10: {"counts": [7]},
-              11: {"counts": [7]},
-              12: {"counts": [6]},
-              13: {"counts": [8, 2]},
-              14: {"counts": [1, 1]},
-              15: {"counts": [2, 0]},
-              16: {"counts": [3, 1]},
-            }
+            "trimmed_lengths": [
+              {"len": 3, "counts": [1220]},
+              {"len": 4, "counts": [319]},
+              {"len": 5, "counts": [30]},
+              {"len": 6, "counts": [4]},
+              {"len": 7, "counts": [5]},
+              {"len": 8, "counts": [7]},
+              {"len": 9, "counts": [4]},
+              {"len": 10, "counts": [7]},
+              {"len": 11, "counts": [7]},
+              {"len": 12, "counts": [6]},
+              {"len": 13, "counts": [8, 2]},
+              {"len": 14, "counts": [1, 1]},
+              {"len": 15, "counts": [2, 0]},
+              {"len": 16, "counts": [3, 1]},
+            ]
           }
         }
       ],
@@ -340,28 +340,28 @@ three/five_prime_statistics.dominant_adjacent_base : str | null
 
    This is null otherwise.
 
-three/five_prime_statistics.trimmed_lengths : dictionary
-   The histogram of the lengths of removed sequences. The dictionary maps a length to
-   a dictionary describing how many often a sequence of that length was removed,
+three/five_prime_statistics.trimmed_lengths : list of dictionaries
+   The histogram of the lengths of removed sequences. Each item in the list is a dictionary
+   that describes how often a sequence of a certain length was removed,
    broken down by the number of errors in the adapter match.
 
    Example::
 
-      "trimmed_lengths": {
-        4: {"counts": [319]},
-        5: {"counts": [30]},
-        6: {"counts": [4]},
-        7: {"counts": [5]},
-        15: {"counts": [2, 1]},
-      }
+      "trimmed_lengths": [
+        {"len": 4, "counts": [319]},
+        {"len": 5, "counts": [30]},
+        {"len": 6, "counts": [4]},
+        {"len": 7, "counts": [5]},
+        {"len": 15, "counts": [2, 1]},
+      ]
 
 three/five_prime_statistics.trimmed_lengths.counts : list of int
-   trimmed_lengths[length]["counts"][errors]: How often a sequence of length *length*
-   was removed due to an adapter match with *errors* errors.
+   How often a sequence of length *length* was removed due to an adapter match
+   with *errors* errors.
 
    Example (5 sequences had 0 errors in the adapter matches, 3 had 1 and 1 had 2)::
 
-   ``[5, 3, 1]``
+   [5, 3, 1]
 
 
 .. _info-file-format:
