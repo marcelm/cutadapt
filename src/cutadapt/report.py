@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from io import StringIO
 import textwrap
 from collections import Counter, defaultdict
-from typing import Any, Optional, List, Dict, Tuple, Iterator
+from typing import Any, Optional, List, Dict, Iterator
 from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter,
     BackAdapter, AnywhereAdapter, LinkedAdapter,
@@ -49,7 +49,6 @@ class Statistics:
         """
         """
         self.paired: Optional[bool] = None
-        self.did_quality_trimming: Optional[bool] = None
         # Map a filter name to the number of filtered reads/read pairs
         self.filtered: Dict[str, int] = defaultdict(int)
         self.reverse_complemented: Optional[int] = None
@@ -58,11 +57,14 @@ class Statistics:
         self.total_bp = [0, 0]
         self.written_bp = [0, 0]
         self.written_lengths: List[Counter] = [Counter(), Counter()]
-        self.with_adapters = [0, 0]
-        self.quality_trimmed_bp = [0, 0]
+        self.with_adapters: List[Optional[int]] = [None, None]
+        self.quality_trimmed_bp: List[Optional[int]] = [None, None]
         self.adapter_stats: List[List[AdapterStatistics]] = [[], []]
+        self._collected: bool = False
 
     def __iadd__(self, other: Any):
+        if not isinstance(other, Statistics):
+            raise ValueError(f"Cannot add {other.__type__.__name__}")
         self.n += other.n
         self.written += other.written
 
@@ -70,10 +72,6 @@ class Statistics:
             self.paired = other.paired
         elif self.paired != other.paired:
             raise ValueError('Incompatible Statistics: paired is not equal')
-        if self.did_quality_trimming is None:
-            self.did_quality_trimming = other.did_quality_trimming
-        elif self.did_quality_trimming != other.did_quality_trimming:
-            raise ValueError('Incompatible Statistics: did_quality_trimming is not equal')
 
         self.reverse_complemented = add_if_not_none(
             self.reverse_complemented, other.reverse_complemented)
@@ -85,8 +83,9 @@ class Statistics:
             self.total_bp[i] += other.total_bp[i]
             self.written_bp[i] += other.written_bp[i]
             self.written_lengths[i] += other.written_lengths[i]
-            self.with_adapters[i] += other.with_adapters[i]
-            self.quality_trimmed_bp[i] += other.quality_trimmed_bp[i]
+            self.with_adapters[i] = add_if_not_none(self.with_adapters[i], other.with_adapters[i])
+            self.quality_trimmed_bp[i] = add_if_not_none(
+                self.quality_trimmed_bp[i], other.quality_trimmed_bp[i])
             if self.adapter_stats[i] and other.adapter_stats[i]:
                 if len(self.adapter_stats[i]) != len(other.adapter_stats[i]):
                     raise ValueError('Incompatible Statistics objects (adapter_stats length)')
@@ -103,6 +102,8 @@ class Statistics:
         total_bp1 -- number of bases in first reads
         total_bp2 -- number of bases in second reads. None for single-end data.
         """
+        if self._collected:
+            raise ValueError("Cannot call Statistics.collect more than once")
         self.n = n
         self.total_bp[0] = total_bp1
         if total_bp2 is None:
@@ -116,6 +117,7 @@ class Statistics:
         assert self.written is not None
         for modifier in modifiers:
             self._collect_modifier(modifier)
+        self._collected = True
 
         # For chaining
         return self
@@ -136,7 +138,7 @@ class Statistics:
     def _collect_modifier(self, m) -> None:
         if isinstance(m, PairedAdapterCutter):
             for i in 0, 1:
-                self.with_adapters[i] += m.with_adapters
+                self.with_adapters[i] = m.with_adapters
                 self.adapter_stats[i] = list(m.adapter_statistics[i].values())
             return
         if isinstance(m, PairedEndModifierWrapper):
@@ -146,12 +148,13 @@ class Statistics:
         for i, modifier in modifiers_list:
             if isinstance(modifier, (QualityTrimmer, NextseqQualityTrimmer)):
                 self.quality_trimmed_bp[i] = modifier.trimmed_bases
-                self.did_quality_trimming = True
             elif isinstance(modifier, AdapterCutter):
-                self.with_adapters[i] += modifier.with_adapters
+                assert self.with_adapters[i] is None
+                self.with_adapters[i] = modifier.with_adapters
                 self.adapter_stats[i] = list(modifier.adapter_statistics.values())
             elif isinstance(modifier, ReverseComplementer):
-                self.with_adapters[i] += modifier.adapter_cutter.with_adapters
+                assert self.with_adapters[i] is None
+                self.with_adapters[i] = modifier.adapter_cutter.with_adapters
                 self.adapter_stats[i] = list(modifier.adapter_cutter.adapter_statistics.values())
                 self.reverse_complemented = modifier.reverse_complemented
 
@@ -175,9 +178,9 @@ class Statistics:
                 "input": self.total,
                 "input_read1": self.total_bp[0],
                 "input_read2": self.total_bp[1] if self.paired else None,
-                "quality_trimmed": self.quality_trimmed if self.did_quality_trimming else None,
-                "quality_trimmed_read1": self.quality_trimmed_bp[0] if self.did_quality_trimming else None,
-                "quality_trimmed_read2": self.quality_trimmed_bp[1] if self.paired else None,
+                "quality_trimmed": self.quality_trimmed,
+                "quality_trimmed_read1": self.quality_trimmed_bp[0],
+                "quality_trimmed_read2": self.quality_trimmed_bp[1],
                 "output": self.total_written_bp,
                 "output_read1": self.written_bp[0],
                 "output_read2": self.written_bp[1] if self.paired else None,
@@ -240,8 +243,8 @@ class Statistics:
         return sum(self.total_bp)
 
     @property
-    def quality_trimmed(self) -> int:
-        return sum(self.quality_trimmed_bp)
+    def quality_trimmed(self) -> Optional[int]:
+        return add_if_not_none(*self.quality_trimmed_bp)
 
     @property
     def total_written_bp(self) -> int:
@@ -489,16 +492,17 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
 
     report = "\n=== Summary ===\n\n"
     if stats.paired:
-        report += textwrap.dedent("""\
-        Total read pairs processed:      {o.n:13,d}
-          Read 1 with adapter:           {o.with_adapters[0]:13,d} ({o.with_adapters_fraction[0]:.1%})
-          Read 2 with adapter:           {o.with_adapters[1]:13,d} ({o.with_adapters_fraction[1]:.1%})
-        """)
+        report += f"Total read pairs processed:      {stats.n:13,d}\n"
+        for i in (0, 1):
+            if stats.with_adapters[i] is not None:
+                report += f"  Read {i+1} with adapter:           " \
+                    f"{stats.with_adapters[i]:13,d} ({stats.with_adapters_fraction[i]:.1%})\n"
     else:
-        report += textwrap.dedent("""\
-        Total reads processed:           {o.n:13,d}
-        Reads with adapters:             {o.with_adapters[0]:13,d} ({o.with_adapters_fraction[0]:.1%})
-        """)
+        report += f"Total reads processed:           {stats.n:13,d}\n"
+        if stats.with_adapters[0] is not None:
+            report += f"Reads with adapters:             " \
+                f"{stats.with_adapters[0]:13,d} ({stats.with_adapters_fraction[0]:.1%})\n"
+
     if stats.reverse_complemented is not None:
         report += "Reverse-complemented:            " \
                   "{o.reverse_complemented:13,d} ({o.reverse_complemented_fraction:.1%})\n"
@@ -517,13 +521,16 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
         report += "  Read 1: {o.total_bp[0]:13,d} bp\n"
         report += "  Read 2: {o.total_bp[1]:13,d} bp\n"
 
-    if stats.did_quality_trimming:
-        report += "Quality-trimmed:           {o.quality_trimmed:13,d} bp ({o.quality_trimmed_fraction:.1%})\n"
+    if stats.quality_trimmed is not None:
+        report += "Quality-trimmed:           " \
+            f"{stats.quality_trimmed:13,d} bp ({stats.quality_trimmed_fraction:.1%})\n"
         if stats.paired:
-            report += "  Read 1: {o.quality_trimmed_bp[0]:13,d} bp\n"
-            report += "  Read 2: {o.quality_trimmed_bp[1]:13,d} bp\n"
+            for i in (0, 1):
+                if stats.quality_trimmed_bp[i] is not None:
+                    report += f"  Read {i + 1}: {stats.quality_trimmed_bp[i]:13,d} bp\n"
 
-    report += "Total written (filtered):  {o.total_written_bp:13,d} bp ({o.total_written_bp_fraction:.1%})\n"
+    report += "Total written (filtered):  " \
+        "{o.total_written_bp:13,d} bp ({o.total_written_bp_fraction:.1%})\n"
     if stats.paired:
         report += "  Read 1: {o.written_bp[0]:13,d} bp\n"
         report += "  Read 2: {o.written_bp[1]:13,d} bp\n"
@@ -658,14 +665,14 @@ def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
         stats.filtered.get("too_long", 0),  # reads/pairs
         stats.filtered.get("too_many_n", 0),  # reads/pairs
         stats.written,  # reads/pairs out
-        stats.with_adapters[0],  # reads
-        stats.quality_trimmed_bp[0],  # bases
+        stats.with_adapters[0] if stats.with_adapters[0] is not None else 0,  # reads
+        stats.quality_trimmed_bp[0] if stats.quality_trimmed_bp[0] is not None else 0,  # bases
         stats.written_bp[0],  # bases out
     ]
     if stats.paired:
         fields += [
-            stats.with_adapters[1],  # reads/pairs
-            stats.quality_trimmed_bp[1],  # bases
+            stats.with_adapters[1] if stats.with_adapters[1] is not None else 0,  # reads/pairs
+            stats.quality_trimmed_bp[1] if stats.quality_trimmed_bp[1] is not None else 0,  # bases
             stats.written_bp[1],  # bases
         ]
 
