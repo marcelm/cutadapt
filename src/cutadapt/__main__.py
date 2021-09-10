@@ -1056,7 +1056,6 @@ def json_report(
             "path1": inpaths.path1,
             "path2": inpaths.path2,
             "paired": paired,
-            "interleaved": inpaths.interleaved if paired else None,
         },
     }
     d.update(stats.as_json(gc_content))
