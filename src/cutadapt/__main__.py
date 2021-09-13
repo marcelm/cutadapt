@@ -950,7 +950,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         report = minimal_report
     else:
         report = full_report
-    logger.log(REPORT, '%s', report(stats, elapsed, args.gc_content / 100))
+    logger.log(REPORT, '%s', report(stats, elapsed, args.gc_content / 100.0))
     if args.json is not None:
         with open(args.json, "w") as f:
             json_dict = json_report(
@@ -959,7 +959,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
                 inpaths=inpaths,
                 cores=cores,
                 paired=paired,
-                gc_content=args.gc_content,
+                gc_content=args.gc_content / 100.0,
             )
             f.write(json_dumps(json_dict))
             f.write("\n")

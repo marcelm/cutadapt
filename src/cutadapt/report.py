@@ -214,7 +214,7 @@ class Statistics:
                 eranges = None
             base_stats = AdjacentBaseStatistics(end_statistics.adjacent_bases)
             trimmed_lengths = [
-                OneLine({"len": row.length, "counts": row.error_counts})
+                OneLine({"len": row.length, "expect": round(row.expect, 1), "counts": row.error_counts})
                 for row in histogram_rows(end_statistics, n, gc_content)
             ]
             ends.append({

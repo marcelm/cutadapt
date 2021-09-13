@@ -94,6 +94,7 @@ class EndStatistics:
         i bases of this adapter match a random sequence with
         GC content gc_content.
         """
+        assert 0.0 <= gc_content <= 1.0
         seq = self.sequence
         # FIXME this is broken for 'anywhere' adapters
         if self._remove_prefix:

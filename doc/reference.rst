@@ -82,20 +82,20 @@ This example was reformatted to use less vertical space::
             },
             "dominant_adjacent_base": null,
             "trimmed_lengths": [
-              {"len": 3, "counts": [1220]},
-              {"len": 4, "counts": [319]},
-              {"len": 5, "counts": [30]},
-              {"len": 6, "counts": [4]},
-              {"len": 7, "counts": [5]},
-              {"len": 8, "counts": [7]},
-              {"len": 9, "counts": [4]},
-              {"len": 10, "counts": [7]},
-              {"len": 11, "counts": [7]},
-              {"len": 12, "counts": [6]},
-              {"len": 13, "counts": [8, 2]},
-              {"len": 14, "counts": [1, 1]},
-              {"len": 15, "counts": [2, 0]},
-              {"len": 16, "counts": [3, 1]},
+              {"len": 3, "expect": 1562.5, "counts": [1220]},
+              {"len": 4, "expect": 390.6, "counts": [319]},
+              {"len": 5, "expect": 97.7, "counts": [30]},
+              {"len": 6, "expect": 24.4, "counts": [4]},
+              {"len": 7, "expect": 24.4, "counts": [5]},
+              {"len": 8, "expect": 24.4, "counts": [7]},
+              {"len": 9, "expect": 24.4, "counts": [4]},
+              {"len": 10, "expect": 24.4, "counts": [7]},
+              {"len": 11, "expect": 24.4, "counts": [7]},
+              {"len": 12, "expect": 24.4, "counts": [6]},
+              {"len": 13, "expect": 24.4, "counts": [8, 2]},
+              {"len": 14, "expect": 24.4, "counts": [1, 1]},
+              {"len": 15, "expect": 24.4, "counts": [2, 0]},
+              {"len": 16, "expect": 24.4, "counts": [3, 1]},
             ]
           }
         }
@@ -348,21 +348,23 @@ three/five_prime_statistics.trimmed_lengths : list of dictionaries
    Example::
 
       "trimmed_lengths": [
-        {"len": 4, "counts": [319]},
-        {"len": 5, "counts": [30]},
-        {"len": 6, "counts": [4]},
-        {"len": 7, "counts": [5]},
-        {"len": 15, "counts": [2, 1]},
+        {"len": 4, "expect": 390.6, "counts": [319]},
+        {"len": 5, "expect": 97.7, "counts": [30]},
+        {"len": 6, "expect": 24.4, "counts": [4]},
+        {"len": 7, "expect": 24.4, "counts": [5]},
+        {"len": 15, "expect": 24.4, "counts": [2, 1]},
       ]
 
+three/five_prime_statistics.trimmed_lengths.expect : float
+   How often a sequence of length *len* would be expected to be removed due to random chance.
+
 three/five_prime_statistics.trimmed_lengths.counts : list of int
-   How often a sequence of length *length* was removed due to an adapter match
-   with *errors* errors.
+   Element at index *i* in this list gives how often a sequence of length *len* was removed due to
+   an adapter match with *i* errors. Sum these values to get the total count.
 
    Example (5 sequences had 0 errors in the adapter matches, 3 had 1 and 1 had 2)::
 
    [5, 3, 1]
-
 
 .. _info-file-format:
 
