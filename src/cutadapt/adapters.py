@@ -49,6 +49,8 @@ class EndStatistics:
         self.sequence: str = adapter.sequence
         self.effective_length: int = adapter.effective_length
         self.has_wildcards: bool = adapter.adapter_wildcards
+        self.indels: bool = adapter.indels
+        self.adapter_type: str = adapter.descriptive_identifier()
         self.allows_partial_matches: bool = adapter.allows_partial_matches
         # self.errors[l][e] == n iff a sequence of length l matching at e errors was removed n times
         self.errors: Dict[int, Dict[int, int]] = defaultdict(returns_defaultdict_int)
@@ -71,6 +73,7 @@ class EndStatistics:
             self.max_error_rate != other.max_error_rate
             or self.sequence != other.sequence
             or self.effective_length != other.effective_length
+            or self.indels != other.indels
         ):
             raise RuntimeError('Incompatible EndStatistics, cannot be added')
         for base in ('A', 'C', 'G', 'T', ''):

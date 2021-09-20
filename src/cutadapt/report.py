@@ -218,7 +218,10 @@ class Statistics:
                 for row in histogram_rows(end_statistics, n, gc_content)
             ]
             ends.append({
+                "type": end_statistics.adapter_type,
+                "sequence": end_statistics.sequence,
                 "error_rate": end_statistics.max_error_rate,
+                "indels": end_statistics.indels,
                 "error_lengths": OneLine(eranges),
                 "matches": total,
                 "adjacent_bases": base_stats.as_json(),
@@ -230,12 +233,11 @@ class Statistics:
         on_reverse_complement = adapter_statistics.reverse_complemented if self.reverse_complemented else None
         return {
             "name": adapter_statistics.name,
-            "type": adapter.descriptive_identifier(),
-            "specification": adapter.spec(),
             "total_matches": total_trimmed_reads,
             "on_reverse_complement": on_reverse_complement,
-            "five_prime_statistics": ends[0],
-            "three_prime_statistics": ends[1],
+            "linked": isinstance(adapter, LinkedAdapter),
+            "five_prime_end": ends[0],
+            "three_prime_end": ends[1],
         }
 
     @property

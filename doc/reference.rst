@@ -25,8 +25,8 @@ This example was reformatted to use less vertical space::
       "cutadapt_version": "3.5",
       "python_version": "3.8.10",
       "command_line_arguments": [
-        "--json=out.cutadapt.json", "-m", "20", "-a", "ACGTAC", "-q", "20",
-        "--discard-trimmed", "-o", "out.fastq.gz", "reads.fastq"],
+        "--json=out.cutadapt.json", "-m", "20", "-a", "AACCGGTTACGTTGCA",
+        "-q", "20", "--discard-trimmed", "-o", "out.fastq.gz", "reads.fastq"],
       "cores": 1,
       "input": {
         "path1": "reads.fastq",
@@ -64,13 +64,15 @@ This example was reformatted to use less vertical space::
       "adapters_read1": [
         {
           "name": "1",
-          "type": "regular_three_prime",
-          "specification": "ACGTAC",
           "total_matches": 2254,
           "on_reverse_complement": null,
-          "five_prime_statistics": null,
-          "three_prime_statistics": {
+          "linked": false,
+          "five_prime_end": null,
+          "three_prime_end": {
+            "type": "regular_three_prime",
+            "sequence": "AACCGGTTACGTTGCA",
             "error_rate": 0.1,
+            "indels": true,
             "error_lengths": [6],
             "matches": 2254,
             "adjacent_bases": {
@@ -260,22 +262,6 @@ name : str
    The adapter name. If no adapter name was given, a name is automatically generated as
    "1", "2", "3" etc.
 
-type : str
-   Type of this adapter. One of these strings:
-     - ``"regular_five_prime"``
-     - ``"regular_three_prime"``
-     - ``"noninternal_five_prime"``
-     - ``"noninternal_three_prime"``
-     - ``"anchored_five_prime"``
-     - ``"anchored_three_prime"``
-     - ``"anywhere"``
-     - ``"linked"``
-
-sequence : str
-   Sequence of this adapter
-
-   Example: ``"AACCGGTT"``
-
 total_matches : int
    Number of times this adapter was found on a read. If ``--times`` is used, multiple matches
    per read are possible.
@@ -284,36 +270,64 @@ on_reverse_complement : int | null
    If ``--revcomp`` was used, the number of times the adapter was found on the reverse-complemented
    read, null otherwise.
 
-five_prime_statistics : dictionary | null
-   Statistics about matches to the 5' end.
+linked : bool
+   Whether this is a linked adapter. If true, then both ``five_prime_end`` and ``three_prime_end``
+   (below) are filled in and describe the 5' and 3' components, respectively, of the linked adapter.
+
+five_prime_end : dictionary | null
+   Statistics about matches of this adapter to the 5' end, that is, causing a prefix of the
+   read to be removed.
 
    If the adapter is of type regular_five_prime, noninternal_five_prime or anchored_five_prime,
    all its matches are summarized here.
 
-   If the adapter is of type "linked", the matches of its 5' component are summarized here.
+   If the adapter is a linked adapter (``linked`` is true), the matches of its 5' component are
+   summarized here.
 
    If the adapter is of type "anywhere", the matches that were determined to be 5' matches are
    summarized here.
 
    This is null for the other adapter types.
 
-three_prime_statistics : dictionary | null
-   Statistics about matches to the 3' end.
+three_prime_end : dictionary | null
+   Statistics about matches of this adapter to the 3' end, that is, causing a suffix of the read
+   to be removed.
 
    If the adapter is of type regular_three_prime, noninternal_three_prime or anchored_three_prime,
    all its matches are summarized here.
 
-   If the adapter is of type "linked", the matches of its 3' component are summarized here.
+   If the adapter is a linked adapter (``linked`` is true), the matches of its 3' component are
+   summarized here.
 
    If the adapter is of type "anywhere", the matches that were determined to be 3' matches are
    summarized here.
 
    This is null for the other adapter types.
 
-three/five_prime_statistics.error_rate : float
-   Error rate for this adapter
+three/five_prime_end.type : str
+   Type of the adapter. One of these strings:
+     - ``"regular_five_prime"``
+     - ``"regular_three_prime"``
+     - ``"noninternal_five_prime"``
+     - ``"noninternal_three_prime"``
+     - ``"anchored_five_prime"``
+     - ``"anchored_three_prime"``
+     - ``"anywhere"``
 
-three/five_prime_statistics.error_lengths : list of ints
+   For linked adapters, this is the type of its 5' or 3' component.
+
+three/five_prime_end.sequence : str
+   Sequence of this adapter. For linked adapters, this is the sequence of its 5' or 3' component.
+
+   Example: ``"AACCGGTT"``
+
+three/five_prime_end.error_rate : float
+   Error rate for this adapter. For linked adapters, the error rate for the respective end.
+
+three/five_prime_end.indels : bool
+   Whether indels are allowed when matching this adapter against the read.
+
+three/five_prime_end.error_lengths : list of ints
    If the adapter type allows partial matches, this lists the lengths up to which 0, 1, 2 etc.
    errors are allowed. Example: ``[9, 16]`` means: 0 errors allowed up to a match of length 9,
    1 error up to a match of length 16. The last number in this list is the length of the adapter
@@ -321,10 +335,10 @@ three/five_prime_statistics.error_lengths : list of ints
 
    For anchored adapter types, this is null.
 
-three/five_prime_statistics.matches : int
+three/five_prime_end.matches : int
    The number of matches of this adapter against the 5' or 3' end.
 
-three/five_prime_statistics.adjacent_bases : dictionary | null
+three/five_prime_end.adjacent_bases : dictionary | null
    For 3' adapter types, this shows which bases occurred adjacent to (upstream of) the 3' adapter
    match. It is a dictionary mapping the strings "A", "C", "G", "T" and "" (empty string) to
    the number of occurrences. The empty string covers those cases in which the adjacent base
@@ -333,14 +347,14 @@ three/five_prime_statistics.adjacent_bases : dictionary | null
 
    This is null for 5' adapters (adjacent base statistics are currently not tracked for those).
 
-three/five_prime_statistics.dominant_adjacent_base : str | null
+three/five_prime_end.dominant_adjacent_base : str | null
    This is set to the dominant adjacent base if adjacent_bases exist and were determined to be
    sufficiently skewed, corresponding to the :ref:`warning <warnbase>`:
    "The adapter is preceded by "x" extremely often."
 
    This is null otherwise.
 
-three/five_prime_statistics.trimmed_lengths : list of dictionaries
+three/five_prime_end.trimmed_lengths : list of dictionaries
    The histogram of the lengths of removed sequences. Each item in the list is a dictionary
    that describes how often a sequence of a certain length was removed,
    broken down by the number of errors in the adapter match.
@@ -355,16 +369,17 @@ three/five_prime_statistics.trimmed_lengths : list of dictionaries
         {"len": 15, "expect": 24.4, "counts": [2, 1]},
       ]
 
-three/five_prime_statistics.trimmed_lengths.expect : float
+three/five_prime_end.trimmed_lengths.expect : float
    How often a sequence of length *len* would be expected to be removed due to random chance.
 
-three/five_prime_statistics.trimmed_lengths.counts : list of int
+three/five_prime_end.trimmed_lengths.counts : list of int
    Element at index *i* in this list gives how often a sequence of length *len* was removed due to
    an adapter match with *i* errors. Sum these values to get the total count.
 
    Example (5 sequences had 0 errors in the adapter matches, 3 had 1 and 1 had 2)::
 
    [5, 3, 1]
+
 
 .. _info-file-format:
 
