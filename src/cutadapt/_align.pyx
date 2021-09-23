@@ -323,9 +323,9 @@ cdef class Aligner:
         The alignment itself is not returned.
         """
         cdef:
-            char* s1 = self._reference
+            const char* s1 = self._reference
             bytes query_bytes = query.encode('ascii')
-            char* s2
+            const char* s2
             int m = self.m
             int n = len(query)
             _Entry* column = self.column  # Current column of the DP matrix
