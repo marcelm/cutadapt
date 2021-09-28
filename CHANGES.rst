@@ -12,6 +12,8 @@ development version
   ``--discard-trimmed``. With this, the numbers in that section should add up to 100%.
 * Add option ``-Q``, which allows to specify a quality-trimming threshold for R2 that is
   different from the one for R1.
+* :issue:`570`: Fix ``--pair-adapters`` not finding some pairs when reads contain
+  more than one adapter.
 * :issue:`524`: Fix a memory leak when using ``--info-file`` with multiple cores.
 * :issue:`559`: Fix adjacent base statistics not being shown for linked adapters.
 

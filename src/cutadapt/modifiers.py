@@ -315,16 +315,14 @@ class PairedAdapterCutter(PairedEndModifier):
         super().__init__()
         if len(adapters1) != len(adapters2):
             raise PairedAdapterCutterError(
-                "The number of reads to trim from R1 and R2 must be the same. "
+                "The number of adapters to trim from R1 and R2 must be the same. "
                 "Given: {} for R1, {} for R2".format(len(adapters1), len(adapters2)))
         if not adapters1:
             raise PairedAdapterCutterError("No adapters given")
+        self._adapter_pairs = list(zip(adapters1, adapters2))
         logger.debug("Adapter pairs:")
-        for a1, a2 in zip(adapters1, adapters2):
+        for a1, a2 in self._adapter_pairs:
             logger.debug(" • %s=%s -- %s=%s", a1.name, a1.spec(), a2.name, a2.spec())
-        self._adapters1 = MultipleAdapters(adapters1)
-        self._adapter_indices = {a: i for i, a in enumerate(adapters1)}
-        self._adapters2 = MultipleAdapters(adapters2)
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = [None, None]
@@ -332,20 +330,15 @@ class PairedAdapterCutter(PairedEndModifier):
         self.adapter_statistics[1] = {a: a.create_statistics() for a in adapters2}
 
     def __repr__(self):
-        return f"PairedAdapterCutter(adapters1={self._adapters1!r}, adapters2={self._adapters2!r})"
+        return f"PairedAdapterCutter(adapter_pairs={self._adapter_pairs!r})"
 
     def __call__(self, read1, read2, info1, info2):
         """
         """
-        match1 = self._adapters1.match_to(read1.sequence)
-        if match1 is None:
+        best_matches = self._find_best_matches(read1.sequence, read2.sequence)
+        if best_matches is None:
             return read1, read2
-        adapter1 = match1.adapter
-        adapter2 = self._adapters2[self._adapter_indices[adapter1]]
-        match2 = adapter2.match_to(read2.sequence)
-        if match2 is None:
-            return read1, read2
-
+        match1, match2 = best_matches
         self.with_adapters += 1
         result = []
         for i, match, read in zip([0, 1], [match1, match2], [read1, read2]):
@@ -372,6 +365,29 @@ class PairedAdapterCutter(PairedEndModifier):
         info1.matches.append(match1)
         info2.matches.append(match2)
         return result
+
+    def _find_best_matches(self, sequence1: str, sequence2: str) -> Optional[Tuple[Match, Match]]:
+        best = None
+        best_matches = None
+        best_errors = None
+        for adapter1, adapter2 in self._adapter_pairs:
+            match1 = adapter1.match_to(sequence1)
+            if match1 is None:
+                continue
+            match2 = adapter2.match_to(sequence2)
+            if match2 is None:
+                continue
+            total_matches = match1.matches + match2.matches
+            total_errors = match1.errors + match2.errors
+            if (
+                best is None
+                or total_matches > best_matches
+                or (total_matches == best_matches and total_errors < best_errors)
+            ):
+                best = match1, match2
+                best_matches = total_matches
+                best_errors = total_errors
+        return best
 
 
 class UnconditionalCutter(SingleEndModifier):

@@ -109,24 +109,42 @@ def test_adapter_cutter_indexing():
     assert len(ac.adapters) == len(adapters)
 
 
-@pytest.mark.parametrize("action,expected_trimmed1,expected_trimmed2", [
-    (None, "CCCCGGTTAACCCC", "TTTTAACCGGTTTT"),
-    ("trim", "CCCC", "TTTT"),
-    ("lowercase", "CCCCggttaacccc", "TTTTaaccggtttt"),
-    ("mask", "CCCCNNNNNNNNNN", "TTTTNNNNNNNNNN"),
-    ("retain", "CCCCGGTTAA", "TTTTAACCGG"),
-])
-def test_paired_adapter_cutter_actions(action, expected_trimmed1, expected_trimmed2):
-    a1 = BackAdapter("GGTTAA")
-    a2 = BackAdapter("AACCGG")
-    s1 = Sequence("name", "CCCCGGTTAACCCC")
-    s2 = Sequence("name", "TTTTAACCGGTTTT")
-    pac = PairedAdapterCutter([a1], [a2], action=action)
-    info1 = ModificationInfo(s1)
-    info2 = ModificationInfo(s2)
-    trimmed1, trimmed2 = pac(s1, s2, info1, info2)
-    assert expected_trimmed1 == trimmed1.sequence
-    assert expected_trimmed2 == trimmed2.sequence
+class TestPairedAdapterCutter:
+
+    @pytest.mark.parametrize("action,expected_trimmed1,expected_trimmed2", [
+        (None, "CCCCGGTTAACCCC", "TTTTAACCGGTTTT"),
+        ("trim", "CCCC", "TTTT"),
+        ("lowercase", "CCCCggttaacccc", "TTTTaaccggtttt"),
+        ("mask", "CCCCNNNNNNNNNN", "TTTTNNNNNNNNNN"),
+        ("retain", "CCCCGGTTAA", "TTTTAACCGG"),
+    ])
+    def test_actions(self, action, expected_trimmed1, expected_trimmed2):
+        a1 = BackAdapter("GGTTAA")
+        a2 = BackAdapter("AACCGG")
+        s1 = Sequence("name", "CCCCGGTTAACCCC")
+        s2 = Sequence("name", "TTTTAACCGGTTTT")
+        pac = PairedAdapterCutter([a1], [a2], action=action)
+        info1 = ModificationInfo(s1)
+        info2 = ModificationInfo(s2)
+        trimmed1, trimmed2 = pac(s1, s2, info1, info2)
+        assert expected_trimmed1 == trimmed1.sequence
+        assert expected_trimmed2 == trimmed2.sequence
+
+    def test_multiple_occurrences(self):
+        r1_a1 = BackAdapter("AAAAAA")
+        r1_a2 = BackAdapter("CCCC")
+        r2_a1 = BackAdapter("GGGG")
+        r2_a2 = BackAdapter("TTTT")
+        s1 = Sequence("name", "TTAAAAAATTCCCCTT")
+        s2 = Sequence("name", "ACACTTTTACAC")
+        pac = PairedAdapterCutter([r1_a1, r1_a2], [r2_a1, r2_a2], action="lowercase")
+        info1 = ModificationInfo(s1)
+        info2 = ModificationInfo(s2)
+        trimmed1, trimmed2 = pac(s1, s2, info1, info2)
+        assert len(info1.matches) == 1 and info1.matches[0].adapter is r1_a2
+        assert len(info2.matches) == 1 and info2.matches[0].adapter is r2_a2
+        assert "TTAAAAAATTcccctt" == trimmed1.sequence
+        assert "ACACttttacac" == trimmed2.sequence
 
 
 def test_retain_times():
