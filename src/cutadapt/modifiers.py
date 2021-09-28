@@ -39,6 +39,16 @@ class ModificationInfo:
         self.cut_suffix = None
         self.is_rc = None
 
+    def __repr__(self):
+        return (
+            "ModificationInfo("
+            f"matches={self.matches!r}, "
+            f"original_read={self.original_read}, "
+            f"cut_prefix={self.cut_prefix}, "
+            f"cut_suffix={self.cut_suffix}, "
+            f"is_rc={self.is_rc})"
+        )
+
 
 class SingleEndModifier(ABC):
     @abstractmethod
