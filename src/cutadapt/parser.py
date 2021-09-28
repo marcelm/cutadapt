@@ -187,9 +187,7 @@ class AdapterSpecification:
         """
         if cmdline_type not in ("front", "back", "anywhere"):
             raise ValueError("cmdline_type must be front, back or anywhere")
-        error = ValueError(
-            "You cannot use multiple placement restrictions for an adapter at the same time. "
-            "Choose one of ^ADAPTER, ADAPTER$, XADAPTER or ADAPTERX")
+
         spec, middle, parameters_spec = spec.partition(';')
         name, spec = cls._extract_name(spec)
         spec = spec.strip()
@@ -201,29 +199,12 @@ class AdapterSpecification:
         if len(spec.strip('X')) == 0:
             return name, None, spec, {}
 
-        front_restriction = None
-        if spec.startswith('^'):
-            front_restriction = 'anchored'
-            spec = spec[1:]
-        if spec.upper().startswith('X'):
-            if front_restriction is not None:
-                raise error
-            front_restriction = 'noninternal'
-            spec = spec.lstrip('xX')
-
-        back_restriction = None
-        if spec.endswith('$'):
-            back_restriction = 'anchored'
-            spec = spec[:-1]
-        if spec.upper().endswith('X'):
-            if back_restriction is not None:
-                raise error
-            back_restriction = 'noninternal'
-            spec = spec.rstrip('xX')
-
-        n_placement_restrictions = int(bool(front_restriction)) + int(bool(back_restriction))
-        if n_placement_restrictions > 1:
-            raise error
+        try:
+            front_restriction, back_restriction, spec = cls._parse_restrictions(spec)
+        except ValueError:
+            raise ValueError(
+                "You cannot use multiple placement restrictions for an adapter at the same time. "
+                "Choose one of ^ADAPTER, ADAPTER$, XADAPTER or ADAPTERX") from None
 
         if cmdline_type == 'front' and back_restriction:
             raise ValueError(
@@ -232,7 +213,6 @@ class AdapterSpecification:
             raise ValueError(
                 "Allowed placement restrictions for a 3' adapter are ADAPTERX and ADAPTER$")
 
-        assert front_restriction is None or back_restriction is None
         if front_restriction is not None:
             restriction = front_restriction
         else:
@@ -252,6 +232,34 @@ class AdapterSpecification:
             )
 
         return name, restriction, spec, parameters
+
+    @staticmethod
+    def _parse_restrictions(spec: str) -> Tuple[Optional[str], Optional[str], str]:
+        front_restriction = None
+        if spec.startswith('^'):
+            front_restriction = 'anchored'
+            spec = spec[1:]
+        if spec.upper().startswith('X'):
+            if front_restriction is not None:
+                raise ValueError("two front restrictions")
+            front_restriction = 'noninternal'
+            spec = spec.lstrip('xX')
+
+        back_restriction = None
+        if spec.endswith('$'):
+            back_restriction = 'anchored'
+            spec = spec[:-1]
+        if spec.upper().endswith('X'):
+            if back_restriction is not None:
+                raise ValueError("two back restrictions")
+            back_restriction = 'noninternal'
+            spec = spec.rstrip('xX')
+
+        n_placement_restrictions = int(bool(front_restriction)) + int(bool(back_restriction))
+        if n_placement_restrictions > 1:
+            raise ValueError("front and back restrictions")
+        assert front_restriction is None or back_restriction is None
+        return front_restriction, back_restriction, spec
 
     @staticmethod
     def _restriction_to_class(cmdline_type, restriction):
