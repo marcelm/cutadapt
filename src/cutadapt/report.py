@@ -5,8 +5,8 @@ import sys
 from dataclasses import dataclass
 from io import StringIO
 import textwrap
-from collections import Counter, defaultdict
-from typing import Any, Optional, List, Dict, Iterator
+from collections import defaultdict
+from typing import Any, Optional, List, Dict, Iterator, Tuple
 from .adapters import (
     EndStatistics, AdapterStatistics, FrontAdapter,
     BackAdapter, AnywhereAdapter, LinkedAdapter,
@@ -54,10 +54,8 @@ class Statistics:
         self.filtered: Dict[str, int] = defaultdict(int)
         self.reverse_complemented: Optional[int] = None
         self.n = 0
-        self.written = 0
         self.total_bp = [0, 0]
-        self.written_bp = [0, 0]
-        self.written_lengths: List[Counter] = [Counter(), Counter()]
+        self.read_length_statistics = ReadLengthStatistics()
         self.with_adapters: List[Optional[int]] = [None, None]
         self.quality_trimmed_bp: List[Optional[int]] = [None, None]
         self.adapter_stats: List[List[AdapterStatistics]] = [[], []]
@@ -67,7 +65,7 @@ class Statistics:
         if not isinstance(other, Statistics):
             raise ValueError(f"Cannot add {other.__type__.__name__}")
         self.n += other.n
-        self.written += other.written
+        self.read_length_statistics += other.read_length_statistics
 
         if self.paired is None:
             self.paired = other.paired
@@ -82,8 +80,6 @@ class Statistics:
 
         for i in (0, 1):
             self.total_bp[i] += other.total_bp[i]
-            self.written_bp[i] += other.written_bp[i]
-            self.written_lengths[i] += other.written_lengths[i]
             self.with_adapters[i] = add_if_not_none(self.with_adapters[i], other.with_adapters[i])
             self.quality_trimmed_bp[i] = add_if_not_none(
                 self.quality_trimmed_bp[i], other.quality_trimmed_bp[i])
@@ -115,7 +111,6 @@ class Statistics:
 
         for step in steps:
             self._collect_step(step)
-        assert self.written is not None
         for modifier in modifiers:
             self._collect_modifier(modifier)
         self._collected = True
@@ -125,13 +120,7 @@ class Statistics:
 
     def _collect_step(self, step) -> None:
         if isinstance(step, HasStatistics):
-            statistics = step.get_statistics()
-            self.written += statistics.written_reads()
-            written_bp = statistics.written_bp()
-            written_lengths = statistics.written_lengths()
-            for i in 0, 1:
-                self.written_bp[i] += written_bp[i]
-                self.written_lengths[i] += written_lengths[i]
+            self.read_length_statistics += step.get_statistics()
         if isinstance(step, (SingleEndFilter, PairedEndFilter)):
             name = step.descriptive_identifier()
             self.filtered[name] = step.filtered
@@ -165,12 +154,14 @@ class Statistics:
             name: self.filtered.get(name) for name in FILTERS.keys()
         }
         filtered_total = sum(self.filtered.values())
-        assert self.written + filtered_total == self.n
+        written_reads = self.read_length_statistics.written_reads()
+        written_bp = self.read_length_statistics.written_bp()
+        assert written_reads + filtered_total == self.n
         return {
             "read_counts": {  # pairs or reads
                 "input": self.n,
                 "filtered": filtered,
-                "output": self.written,
+                "output": self.read_length_statistics.written_reads(),
                 "reverse_complemented": self.reverse_complemented,
                 "read1_with_adapter": self.with_adapters[0],
                 "read2_with_adapter": self.with_adapters[1] if self.paired else None,
@@ -183,8 +174,8 @@ class Statistics:
                 "quality_trimmed_read1": self.quality_trimmed_bp[0],
                 "quality_trimmed_read2": self.quality_trimmed_bp[1],
                 "output": self.total_written_bp,
-                "output_read1": self.written_bp[0],
-                "output_read2": self.written_bp[1] if self.paired else None,
+                "output_read1": written_bp[0],
+                "output_read2": written_bp[1] if self.paired else None,
             },
             "adapters_read1": [
                 self._adapter_statistics_as_json(astats, self.n, gc_content)
@@ -251,11 +242,15 @@ class Statistics:
 
     @property
     def total_written_bp(self) -> int:
-        return sum(self.written_bp)
+        return sum(self.read_length_statistics.written_bp())
+
+    @property
+    def written(self) -> int:
+        return self.read_length_statistics.written_reads()
 
     @property
     def written_fraction(self) -> float:
-        return safe_divide(self.written, self.n)
+        return safe_divide(self.read_length_statistics.written_reads(), self.n)
 
     @property
     def with_adapters_fraction(self) -> List[float]:
@@ -264,6 +259,10 @@ class Statistics:
     @property
     def quality_trimmed_fraction(self) -> float:
         return safe_divide(self.quality_trimmed, self.total)
+
+    @property
+    def written_bp(self) -> Tuple[int, int]:
+        return self.read_length_statistics.written_bp()
 
     @property
     def total_written_bp_fraction(self) -> float:
@@ -667,16 +666,16 @@ def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
         stats.filtered.get("too_short", 0),  # reads/pairs
         stats.filtered.get("too_long", 0),  # reads/pairs
         stats.filtered.get("too_many_n", 0),  # reads/pairs
-        stats.written,  # reads/pairs out
+        stats.read_length_statistics.written_reads(),  # reads/pairs out
         stats.with_adapters[0] if stats.with_adapters[0] is not None else 0,  # reads
         stats.quality_trimmed_bp[0] if stats.quality_trimmed_bp[0] is not None else 0,  # bases
-        stats.written_bp[0],  # bases out
+        stats.read_length_statistics.written_bp()[0],  # bases out
     ]
     if stats.paired:
         fields += [
             stats.with_adapters[1] if stats.with_adapters[1] is not None else 0,  # reads/pairs
             stats.quality_trimmed_bp[1] if stats.quality_trimmed_bp[1] is not None else 0,  # bases
-            stats.written_bp[1],  # bases
+            stats.read_length_statistics.written_bp()[1],  # bases
         ]
 
     warning = False
