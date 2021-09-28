@@ -18,54 +18,17 @@ Steps are added to the pipeline in a certain order:
 """
 
 from abc import ABC, abstractmethod
-from collections import defaultdict, Counter
-from typing import DefaultDict, Tuple, Dict, Optional, Any
+from typing import Tuple, Dict, Optional, Any
 
 from .filters import Predicate
 from .modifiers import ModificationInfo
+from .statistics import ReadLengthStatistics
 from .utils import reverse_complemented_sequence
 
 # Constants used when returning from a step’s __call__ method to improve
 # readability (it is unintuitive that "return True" means "discard the read").
 DISCARD = True
 KEEP = False
-
-
-class ReadLengthStatistics:
-    """
-    Keep track of the lengths of written reads or read pairs
-    """
-    def __init__(self) -> None:
-        # It would be more natural to use a Counter, but a
-        # defaultdict is much faster
-        self._written_lengths1: DefaultDict[int, int] = defaultdict(int)
-        self._written_lengths2: DefaultDict[int, int] = defaultdict(int)
-
-    def update(self, read) -> None:
-        """Add a single-end read to the statistics"""
-        self._written_lengths1[len(read)] += 1
-
-    def update2(self, read1, read2) -> None:
-        """Add a paired-end read to the statistics"""
-        self._written_lengths1[len(read1)] += 1
-        self._written_lengths2[len(read2)] += 1
-
-    def written_reads(self) -> int:
-        """Return number of written reads or read pairs"""
-        return sum(self._written_lengths1.values())
-
-    def written_bp(self) -> Tuple[int, int]:
-        return (
-            self._compute_total_bp(self._written_lengths1),
-            self._compute_total_bp(self._written_lengths2),
-        )
-
-    def written_lengths(self) -> Tuple[Counter, Counter]:
-        return (Counter(self._written_lengths1), Counter(self._written_lengths2))
-
-    @staticmethod
-    def _compute_total_bp(counts: DefaultDict[int, int]) -> int:
-        return sum(length * count for length, count in counts.items())
 
 
 class SingleEndStep(ABC):

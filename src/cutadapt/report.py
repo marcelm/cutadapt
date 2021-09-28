@@ -16,6 +16,7 @@ from .adapters import (
 from .json import OneLine
 from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
     AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
+from .statistics import ReadLengthStatistics
 from .steps import SingleEndFilter, PairedEndFilter, HasStatistics
 
 FILTERS = {
