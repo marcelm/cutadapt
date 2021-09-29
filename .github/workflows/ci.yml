@@ -55,8 +55,13 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0  # required for setuptools_scm
+    - name: Test if dev tag
+      if: contains(github.ref, '.dev')
+      run: echo yes this is a dev tag
+    - name: Test if not dev tag
+      if: !contains(github.ref, '.dev')
     - name: Build wheels
-      uses: pypa/cibuildwheel@v2.1.1
+      uses: pypa/cibuildwheel@v2.1.2
       with:
         output-dir: dist/
       env:
@@ -73,13 +78,16 @@ jobs:
         python -m pip install build
         python -m build --sdist
         ls -l dist/
-    - name: Test if dev tag
+    - name: Publish dev release to test PyPI
       if: contains(github.ref, '.dev')
-      run: echo yes this is a dev tag
+      uses: pypa/gh-action-pypi-publish@v1.4.2
+      with:
+        user: __token__
+        password: ${{ secrets.test_pypi_password }}
+        repository_url: https://test.pypi.org/legacy/
     #- name: Publish to PyPI
-      #uses: pypa/gh-action-pypi-publish@v1.4.1
+      #if: !contains(github.ref, '.dev')
+      #uses: pypa/gh-action-pypi-publish@v1.4.2
       #with:
         #user: __token__
         #password: ${{ secrets.pypi_password }}
-        #password: ${{ secrets.test_pypi_password }}
-        #repository_url: https://test.pypi.org/legacy/
