@@ -3,8 +3,8 @@
 Changelog
 =========
 
-development version
--------------------
+v3.5 (2021-09-29)
+-----------------
 
 * :issue:`555`: Add support for dumping statistics in JSON format using ``--json``.
 * :issue:`541`: Add a "Read fate breakdown" section heading to the report, and also
