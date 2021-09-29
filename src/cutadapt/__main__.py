@@ -433,7 +433,11 @@ def open_output_files(
     demultiplex_mode = determine_demultiplex_mode(args)
     if demultiplex_mode and args.discard_trimmed:
         raise CommandLineError("Do not use --discard-trimmed when demultiplexing.")
-
+    if demultiplex_mode == "combinatorial" and args.pair_adapters:
+        raise CommandLineError(
+            "With --pair-adapters, you can only use {name} in your output file name template, "
+            "not {name1} and {name2} (no combinatorial demultiplexing)."
+        )
     if demultiplex_mode == "normal":
         out = out2 = None
         combinatorial_out = combinatorial_out2 = None

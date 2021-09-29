@@ -299,7 +299,7 @@ class PairedAdapterCutterError(Exception):
 
 class PairedAdapterCutter(PairedEndModifier):
     """
-    A Modifier that trims adapter pairs from R1 and R2.
+    Trim adapters in pairs from R1 and R2.
     """
 
     def __init__(self, adapters1, adapters2, action='trim'):
@@ -335,7 +335,7 @@ class PairedAdapterCutter(PairedEndModifier):
     def __call__(self, read1, read2, info1, info2):
         """
         """
-        best_matches = self._find_best_matches(read1.sequence, read2.sequence)
+        best_matches = self._find_best_match_pair(read1.sequence, read2.sequence)
         if best_matches is None:
             return read1, read2
         match1, match2 = best_matches
@@ -366,7 +366,7 @@ class PairedAdapterCutter(PairedEndModifier):
         info2.matches.append(match2)
         return result
 
-    def _find_best_matches(self, sequence1: str, sequence2: str) -> Optional[Tuple[Match, Match]]:
+    def _find_best_match_pair(self, sequence1: str, sequence2: str) -> Optional[Tuple[Match, Match]]:
         best = None
         best_matches = None
         best_errors = None
