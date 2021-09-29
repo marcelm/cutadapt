@@ -60,6 +60,7 @@ jobs:
       run: echo yes this is a dev tag
     - name: Test if not dev tag
       if: !contains(github.ref, '.dev')
+      run: echo no this is not a dev tag
     - name: Build wheels
       uses: pypa/cibuildwheel@v2.1.2
       with:
