@@ -636,7 +636,7 @@ If using linked adapters, they have separate settings as in
 Remember to add the quotation marks; otherwise the shell will interpret the semicolon as a
 separator between two commands.
 
-The following parameters are supported at the moment:
+The following parameters are supported:
 
 ================================================== ============= ================================
 Parameter                                          Global option Adapter-specific parameter
@@ -648,6 +648,8 @@ Maximum error rate (default: 0.1)                  ``-e 0.2``    | ``ADAPTER;e=0
 Minimum overlap (default: 3)                       ``-O 5``      | ``ADAPTER;o=5`` or
                                                                  | ``ADAPTER;min_overlap=5``
 
+Disallow indels                                                  ``ADAPTER;noindels``
+Allow indels (this is the default)                               ``ADAPTER;indels``
 Allow matches anywhere                                           ``ADAPTER;anywhere``
 
 :ref:`Linked adapter required <linked-override>`                 ``ADAPTER;required``
@@ -658,6 +660,10 @@ Adapter-specific parameters override the global option.
 
 .. versionadded: 1.18
     Syntax for setting adapter-specific parameters
+
+.. versionadded: 3.5
+    The ``indels`` and ``noindels`` parameters.
+
 
 .. _error-tolerance:
 

@@ -6,12 +6,14 @@ Changelog
 development version
 -------------------
 
-* :issue:`555`: Add preliminary support for dumping statistics in JSON format using ``--json``.
+* :issue:`555`: Add support for dumping statistics in JSON format using ``--json``.
 * :issue:`541`: Add a "Read fate breakdown" section heading to the report, and also
   add statistics for reads discarded because of ``--discard-untrimmed`` and
   ``--discard-trimmed``. With this, the numbers in that section should add up to 100%.
 * Add option ``-Q``, which allows to specify a quality-trimming threshold for R2 that is
   different from the one for R1.
+* :issue:`567`: Add ``noindels`` adapter-trimming parameter. You can now write
+  ``-a "ADAPTER;noindels"`` to disallow indels for a single adapter only.
 * :issue:`570`: Fix ``--pair-adapters`` not finding some pairs when reads contain
   more than one adapter.
 * :issue:`524`: Fix a memory leak when using ``--info-file`` with multiple cores.

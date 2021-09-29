@@ -123,6 +123,8 @@ def test_parse_parameters():
     assert p('anywhere') == {'anywhere': True}
     assert p('required') == {'required': True}
     assert p('optional') == {'required': False}
+    assert p('noindels') == {'indels': False}
+    assert p('indels') == {'indels': True}
 
     with pytest.raises(ValueError):
         p('e=hallo')
@@ -154,6 +156,14 @@ def test_parse_with_parameters(tmp_path):
     assert isinstance(a, BackAdapter)
     assert a.max_error_rate == 0.11
     assert a.min_overlap == 5
+
+    a = parser._parse('ACGTAAAA; noindels', 'back')
+    assert isinstance(a, BackAdapter)
+    assert a.indels is False
+
+    a = parser._parse('ACGTAAAA; indels', 'back')
+    assert isinstance(a, BackAdapter)
+    assert a.indels is True
 
     for spec in ('thename=ACG;e=0.15 ... TGT;e=0.17', 'thename=ACG;e=0.15...TGT;e=0.17'):
         a = parser._parse(spec, 'back')

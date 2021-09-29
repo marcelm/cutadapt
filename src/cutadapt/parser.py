@@ -132,6 +132,8 @@ class AdapterSpecification:
         'anywhere': None,
         'required': None,
         'optional': None,  # If this is specified, 'required' will be set to False
+        'indels': None,
+        'noindels': None,
     }
 
     @classmethod
@@ -166,9 +168,14 @@ class AdapterSpecification:
             result[key] = value
         if 'optional' in result and 'required' in result:
             raise ValueError("'optional' and 'required' cannot be specified at the same time")
+        if 'indels' in result and 'noindels' in result:
+            raise ValueError("'indels' and 'noindels' cannot be specified at the same time")
         if 'optional' in result:
             result['required'] = False
             del result['optional']
+        if 'noindels' in result:
+            result['indels'] = False
+            del result['noindels']
         return result
 
     @classmethod
