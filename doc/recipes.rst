@@ -320,3 +320,16 @@ Get the percentage of reads that contain an adapter::
 Get how often the first adapter was found::
 
    jq '.adapters_read1[0].total_matches' mysample.cutadapt.json
+
+
+Quickly test how Cutadapt trims a single sequence
+-------------------------------------------------
+
+Use ``echo`` to write the sequence in FASTA format, and run Cutadapt with ``--quiet``::
+
+    echo -e ">r\nAACCGGTT" | cutadapt --quiet -a CCGGTTGGAA -
+
+Output::
+
+    >r
+    AA
