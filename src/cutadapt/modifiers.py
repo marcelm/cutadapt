@@ -124,6 +124,8 @@ class AdapterCutter(SingleEndModifier):
             self.adapters = MultipleAdapters(adapters)
         if action == "retain" and times > 1:
             raise ValueError("'retain' cannot be combined with times > 1")
+        if self.times == 1 and self.action == "trim":
+            self.match_and_trim = self._match_and_trim_once_action_trim  # type: ignore
 
     def __repr__(self):
         return "AdapterCutter(" \
@@ -246,6 +248,16 @@ class AdapterCutter(SingleEndModifier):
             trimmed_read = read[:]
 
         return trimmed_read, matches
+
+    def _match_and_trim_once_action_trim(self, read):
+        """
+        Specalization of match_and_trim for the case that self.times == 1 and self.action == 'trim'
+        """
+        match = self.adapters.match_to(read.sequence)
+        if match is not None:
+            return match.trimmed(read), [match]
+        else:
+            return read, []
 
 
 class ReverseComplementer(SingleEndModifier):
