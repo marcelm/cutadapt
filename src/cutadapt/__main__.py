@@ -1021,7 +1021,7 @@ def warn_if_en_dashes(args):
 
 
 def estimate_compression_threads(cores: int) -> Optional[int]:
-    return max(0, min(cores, 4))
+    return max(0, min(cores - 1, 4))
 
 
 def is_any_output_stdout(args):
