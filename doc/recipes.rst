@@ -37,7 +37,7 @@ Trim poly-A tails
 
 If you want to trim a poly-A tail from the 3' end of your reads, use the 3'
 adapter type (``-a``) with an adapter sequence of many repeated ``A``
-nucleotides. Starting with version 1.8 of Cutadapt, you can use the
+nucleotides. Use the
 following notation to specify a sequence that consists of 100 ``A``::
 
     cutadapt -a "A{100}" -o output.fastq input.fastq
@@ -65,7 +65,7 @@ alternative, forcing the match to be located as much to the left as possible,
 while still allowing for non-``A`` bases towards the end of the read.
 
 
-Trim a fixed number of bases after adapter trimming
+Trim a fixed number of bases preceding each adapter
 ---------------------------------------------------
 
 If the adapters you want to remove are preceded by some unknown sequence (such
@@ -88,14 +88,34 @@ would match the end of every read (because ``N`` matches anything), and ten
 bases would then be removed from every read.
 
 
-Trimming (amplicon-) primers from both ends of paired-end reads
----------------------------------------------------------------
+Trimming (amplicon-) primers from paired-end reads
+--------------------------------------------------
 
-If you want to remove primer sequences that flank your sequence of
-interest, you should use a :ref:`"linked adapter" <linked-adapters>`
-to remove them. If you have paired-end data (with R1 and R2), you
-can correctly trim both R1 and R2 by using linked adapters for both
-R1 and R2. Here is how to do this.
+If the reads are shorter than the amplicon, use ::
+
+    cutadapt -g ^FWDPRIMER -G ^REVPRIMER --discard-untrimmed -o out.1.fastq.gz -p out.2.fastq.gz in.1.fastq.gz in.2.fastq.gz
+
+If the reads can be longer than the amplicon, use a :ref:`"linked adapter" <linked-adapters>`::
+
+    cutadapt -a ^FWDPRIMER...RCREVPRIMER -A ^REVPRIMER...RCFWDPRIMER --discard-untrimmed -o out.1.fastq.gz -p out.2.fastq.gz in.1.fastq.gz in.2.fastq.gz
+
+You need to insert your own sequences as follows. The three dots ``...`` need to be written as they
+are.
+
+FWDPRIMER
+    Sequence of the forward primer
+
+REVPRIMER
+    Sequence of the reverse primer
+
+RCFWDPRIMER
+    Reverse-complemented sequence of the forward primer
+
+RCREVPRIMER
+    Reverse-complemented sequence of the reverse primer
+
+Explanation
+~~~~~~~~~~~
 
 The full DNA fragment that is put on the sequencer looks like this
 (looking only at the forward strand):
@@ -104,34 +124,33 @@ The full DNA fragment that is put on the sequencer looks like this
 
 Since sequencing of R1 starts after the 5' sequencing primer, R1 will
 start with the forward primer and then continue into the sequence of
-interest and into the two primers to the right of it, depending on
-the read length and how long the sequence of interest is. For R1,
-the linked adapter option that needs to be used is therefore ::
+interest and possibly into the two primers to the right of it, depending on
+the read length and how long the sequence of interest is.
 
-    -a FWDPRIMER...RCREVPRIMER
+If the reads are sufficiently short, R1 will not extend into the reverse primer, and
+R2 will not extend into the forward primer. In that case, only the forward primer on R1
+and the reverse primer on R2 need to be removed::
 
-where ``FWDPRIMER`` needs to be replaced with the sequence of your
-forward primer and ``RCREVPRIMER`` with the reverse complement of
-the reverse primer. The three dots ``...`` need to be entered
-as they are -- they tell Cutadapt that this is a linked adapter
-with a 5' and a 3' part.
+    -g ^FWDPRIMER -G ^REVPRIMER --discard-untrimmed
+
+If the reads are so long that they can possibly extend into the primer on the respective other side,
+:ref:`linked adapters <linked-adapters>` for both R1 and R2 can be used. For R1::
+
+    -a ^FWDPRIMER...RCREVPRIMER
 
 Sequencing of R2 starts before the 3' sequencing primer and
 proceeds along the reverse-complementary strand. For the correct
 linked adapter, the sequences from above therefore need to be
 swapped and reverse-complemented::
 
-    -A REVPRIMER...RCFWDPRIMER
+    -A ^REVPRIMER...RCFWDPRIMER
 
-The uppercase ``-A`` specifies that this option is
-meant to work on R2. Similar to above, ``REVPRIMER`` is
-the sequence of the reverse primer and ``RCFWDPRIMER`` is the
-reverse-complement of the forward primer. Note that Cutadapt
-does not reverse-complement any sequences of its own; you
+The uppercase ``-A`` specifies that this option is meant to work on R2.
+Cutadapt does not reverse-complement any sequences of its own; you
 will have to do that yourself.
 
 Finally, you may want to filter the trimmed read pairs.
-Use ``--discard-untrimmed`` to throw away all read pairs in
+Option ``--discard-untrimmed`` throws away all read pairs in
 which R1 doesn’t start with ``FWDPRIMER`` or in which R2
 does not start with ``REVPRIMER``.
 
@@ -140,18 +159,12 @@ the first part (before the ``...``) is anchored. Anchored
 sequences *must* occur. If they don’t, then the other sequence
 (after the ``...``) is not even searched for and the entire
 read is internally marked as “untrimmed”. This is done for both
-R1 and R2 and as soon as *any* of them is marked as “untrimmed”,
+R1 and R2 and as soon as any of them is marked as “untrimmed”,
 the entire pair is considered to be “untrimmed”. If
 ``--discard-untrimmed`` is used, this means that the entire
 pair is discarded if R1 or R2 are untrimmed. (Option
 ``--pair-filter=both`` can be used to change this to require
 that *both* were marked as untrimmed.)
-
-In summary, this is how to trim your data and discard all
-read pairs that do not contain the primer sequences that
-you know must be there::
-
-    cutadapt -a FWDPRIMER...RCREVPRIMER -A REVPRIMER...RCFWDPRIMER --discard-untrimmed -o out.1.fastq.gz -p out.2.fastq.gz in.1.fastq.gz in.2.fastq.gz
 
 
 Piping paired-end data
@@ -179,31 +192,23 @@ Support for concatenated compressed files
 Cutadapt supports concatenated gzip and bzip2 input files.
 
 
-Paired-end read name check
---------------------------
+Check whether a FASTQ file is properly formatted
+------------------------------------------------
 
-When reading paired-end files, Cutadapt checks whether the read names match.
-Only the part of the read name before the first space is considered. If the
-read name ends with ``1`` or ``2`` or ``3``, then that is also ignored. For example,
-two FASTQ headers that would be considered to denote properly paired reads are::
+    cutadapt -o /dev/null input.fastq
 
-    @my_read/1 a comment
+Any problems with the FASTQ file will be detected and reported.
 
-and::
 
-    @my_read/2 another comment
+Check whether FASTQ files are properly paired
+---------------------------------------------
 
-This is an example for *improperly paired* read names::
+    cutadapt -o /dev/null -p /dev/null input.R1.fastq input.R2.fastq
 
-    @my_read/1;1
+Any problems with the individual FASTQ files or improperly paired reads
+(mismatching read ids) will be detected and reported.
 
-and::
-
-    @my_read/2;1
-
-Since the ``1`` and ``2`` (and ``3``) are ignored only if the occur at the end of the read
-name, and since the ``;1`` is considered to be part of the read name, these
-reads will not be considered to be propely paired.
+See :ref:`the requirements for properly paired reads <properly-paired-reads>`.
 
 
 Rescuing single reads from paired-end reads that were filtered
