@@ -1426,7 +1426,7 @@ The ``--pair-filter`` option determines how to combine the filters for
 R1 and R2 into a single decision about the read pair.
 
 The default is ``--pair-filter=any``, which means that a read pair is discarded
-(or redirected) if *one of* the reads (R1 or R2) fulfills the filtering criterion.
+(or redirected) if at least *one of* the reads (R1 or R2) fulfills the filtering criterion.
 As an example, if option ``--minimum-length=20`` is used and paired-end data is
 processed, a read pair is discarded if at least one of the reads is shorter than
 20 nt.
@@ -1455,6 +1455,8 @@ The following table describes the effect for some filtering options.
 | ``--max-n``                | one of the reads contains too many ``N`` bases | both reads contain too many ``N`` bases |
 +----------------------------+------------------------------------------------+-----------------------------------------+
 
+There is currently no way to change the pair-filter mode for each filter individually.
+
 .. note::
 
     As an exception, when you specify adapters *only* for R1 (``-a``/``-g``/``-b``) or *only* for
@@ -1464,6 +1466,10 @@ The following table describes the effect for some filtering options.
     Otherwise, with the default ``--pair-filter=any`` setting, all pairs would be considered
     untrimmed because it would always be the case that one of the reads in the pair does not contain
     an adapter.
+
+    The pair-filter mode for the other filtering options, such as ``--minimum-length``, is
+    not overridden in the same way and remains ``any`` unless changed explicitly with the
+    ``--pair-filter`` option.
 
 These are the paired-end specific filtering and output options:
 
