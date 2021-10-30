@@ -1,4 +1,5 @@
 __all__ = [
+    'EndSkip',
     'Aligner',
     'PrefixComparer',
     'SuffixComparer',
@@ -8,26 +9,29 @@ __all__ = [
     'edit_distance',
 ]
 
+from enum import IntFlag
 from typing import Iterator, Tuple
 
 from cutadapt._align import Aligner, PrefixComparer, SuffixComparer
 
-# flags for global alignment
-
-# The interpretation of the first flag is:
-# An initial portion of seq1 may be skipped at no cost.
-# This is equivalent to saying that in the alignment,
-# gaps in the beginning of seq2 are free.
-#
-# The other flags have an equivalent meaning.
+# Deprecated, use the EndSkip enum instead
 START_WITHIN_SEQ1 = 1
 START_WITHIN_SEQ2 = 2
 STOP_WITHIN_SEQ1 = 4
 STOP_WITHIN_SEQ2 = 8
+SEMIGLOBAL = 15
 
-# Use this to get regular semiglobal alignment
-# (all gaps in the beginning or end are free)
-SEMIGLOBAL = START_WITHIN_SEQ1 | START_WITHIN_SEQ2 | STOP_WITHIN_SEQ1 | STOP_WITHIN_SEQ2
+
+class EndSkip(IntFlag):
+    """
+    Flags for the Aligner that indicate which ends of reference or query may be skipped at
+    no cost. Setting all four flags at the same time results in semiglobal alignment.
+    """
+    REFERENCE_START = 1  # a prefix of the reference may be skipped at no cost
+    QUERY_START = 2  # a prefix of the query may be skipped at no cost
+    REFERENCE_END = 4  # a suffix of the reference may be skipeed at no cost
+    QUERY_STOP = 8  # a suffix of the query may be skipeed at no cost
+    SEMIGLOBAL = 15  # all of the above
 
 
 def edit_distance(s: str, t: str) -> int:

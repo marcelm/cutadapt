@@ -1,12 +1,12 @@
 import pytest
 
 from cutadapt.align import (
+    EndSkip,
     Aligner,
     PrefixComparer,
     SuffixComparer,
     hamming_sphere,
     edit_environment,
-    SEMIGLOBAL,
     edit_distance,
     naive_edit_environment, slow_edit_environment,
 )
@@ -16,7 +16,7 @@ from utils import binomial
 
 
 # convenience function (to avoid having to instantiate an Aligner manually)
-def locate(reference, query, max_error_rate, flags=SEMIGLOBAL, wildcard_ref=False,
+def locate(reference, query, max_error_rate, flags=EndSkip.SEMIGLOBAL, wildcard_ref=False,
         wildcard_query=False, min_overlap=1):
     aligner = Aligner(reference, max_error_rate, flags, wildcard_ref, wildcard_query, min_overlap=min_overlap)
     return aligner.locate(query)

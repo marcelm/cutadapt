@@ -5,12 +5,12 @@ The ...Adapter classes are responsible for finding adapters.
 The ...Match classes trim the reads.
 """
 import logging
-from enum import Enum
+from enum import IntFlag
 from collections import defaultdict
 from typing import Optional, Tuple, Sequence, Dict, Any, List, Union
 from abc import ABC, abstractmethod
 
-from . import align
+from .align import EndSkip, Aligner, PrefixComparer, SuffixComparer, edit_environment, hamming_environment
 
 logger = logging.getLogger()
 
@@ -19,19 +19,21 @@ class InvalidCharacter(Exception):
     pass
 
 
-class Where(Enum):
-    # Constants for the Aligner.locate() function.
-    # The function is called with SEQ1 as the adapter, SEQ2 as the read.
-    # TODO get rid of those constants, use strings instead
-    BACK = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
-    FRONT = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ2 | align.START_WITHIN_SEQ1
-    PREFIX = align.STOP_WITHIN_SEQ2
-    SUFFIX = align.START_WITHIN_SEQ2
+# TODO remove this enum, this should be within each Adapter class
+class Where(IntFlag):
+    """
+    Aligner flag combinations for all adapter types.
+
+    "REFERENCE" is the adapter sequence, "QUERY" is the read sequence
+    """
+    BACK = EndSkip.QUERY_START | EndSkip.QUERY_STOP | EndSkip.REFERENCE_END
+    FRONT = EndSkip.QUERY_START | EndSkip.QUERY_STOP | EndSkip.REFERENCE_START
+    PREFIX = EndSkip.QUERY_STOP
+    SUFFIX = EndSkip.QUERY_START
     # Just like FRONT/BACK, but without internal matches
-    FRONT_NOT_INTERNAL = align.START_WITHIN_SEQ1 | align.STOP_WITHIN_SEQ2
-    BACK_NOT_INTERNAL = align.START_WITHIN_SEQ2 | align.STOP_WITHIN_SEQ1
-    ANYWHERE = align.SEMIGLOBAL
-    LINKED = 'linked'
+    FRONT_NOT_INTERNAL = EndSkip.REFERENCE_START | EndSkip.QUERY_STOP
+    BACK_NOT_INTERNAL = EndSkip.QUERY_START | EndSkip.REFERENCE_END
+    ANYWHERE = EndSkip.SEMIGLOBAL
 
 
 def returns_defaultdict_int():
@@ -559,12 +561,12 @@ class SingleAdapter(Adapter, ABC):
         self.indels: bool = indels
         self.aligner = self._aligner()
 
-    def _make_aligner(self, flags: int) -> align.Aligner:
+    def _make_aligner(self, flags: int) -> Aligner:
         # TODO
         # Indels are suppressed by setting their cost very high, but a different algorithm
         # should be used instead.
         indel_cost = 1 if self.indels else 100000
-        return align.Aligner(
+        return Aligner(
             self.sequence,
             self.max_error_rate,
             flags=flags,
@@ -623,7 +625,7 @@ class FrontAdapter(SingleAdapter):
     def descriptive_identifier(self) -> str:
         return "regular_five_prime"
 
-    def _aligner(self) -> align.Aligner:
+    def _aligner(self) -> Aligner:
         return self._make_aligner(Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value)
 
     def match_to(self, sequence: str):
@@ -795,7 +797,7 @@ class PrefixAdapter(NonInternalFrontAdapter):
 
     def _aligner(self):
         if not self.indels:  # TODO or if error rate allows 0 errors anyway
-            return align.PrefixComparer(
+            return PrefixComparer(
                 self.sequence,
                 self.max_error_rate,
                 wildcard_ref=self.adapter_wildcards,
@@ -824,7 +826,7 @@ class SuffixAdapter(NonInternalBackAdapter):
 
     def _aligner(self):
         if not self.indels:  # TODO or if error rate allows 0 errors anyway
-            return align.SuffixComparer(
+            return SuffixComparer(
                 self.sequence,
                 self.max_error_rate,
                 wildcard_ref=self.adapter_wildcards,
@@ -927,7 +929,7 @@ class LinkedAdapter(Adapter):
         self.back_required = back_required
 
         # The following attributes are needed for the report
-        self.where = Where.LINKED
+        self.where = "linked"
         self.name = _generate_adapter_name() if name is None else name
         self.front_adapter = front_adapter
         self.front_adapter.name = self.name
@@ -1087,7 +1089,7 @@ class IndexedAdapters(Matchable, ABC):
         for adapter in self._adapters:
             sequence = adapter.sequence
             k = int(adapter.max_error_rate * len(sequence))
-            environment = align.edit_environment if adapter.indels else align.hamming_environment
+            environment = edit_environment if adapter.indels else hamming_environment
             for s, errors, matches in environment(sequence, k):
                 if s in index:
                     other_adapter, other_errors, other_matches = index[s]
