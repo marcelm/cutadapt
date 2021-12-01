@@ -3,7 +3,7 @@ import os
 import sys
 import copy
 import logging
-from typing import List, Optional, BinaryIO, TextIO, Any, Tuple, Dict
+from typing import List, Optional, BinaryIO, TextIO, Any, Tuple, Dict, Sequence
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe, Queue
 from pathlib import Path
@@ -533,7 +533,7 @@ class PairedEndPipeline(Pipeline):
 
 class ReaderProcess(Process):
     """
-    Read chunks of FASTA or FASTQ data (single-end or paired) and send to a worker.
+    Read chunks of FASTA or FASTQ data (single-end or paired) and send them to a worker.
 
     The reader repeatedly
 
@@ -544,7 +544,16 @@ class ReaderProcess(Process):
     and finally sends the stop token -1 ("poison pills") to all connections.
     """
 
-    def __init__(self, path: str, path2: Optional[str], opener: FileOpener, connections, queue, buffer_size, stdin_fd):
+    def __init__(
+        self,
+        path: str,
+        path2: Optional[str],
+        opener: FileOpener,
+        connections: Sequence[Connection],
+        queue: Queue,
+        buffer_size: int,
+        stdin_fd,
+    ):
         """
         queue -- a Queue of worker indices. A worker writes its own index into this
             queue to notify the reader that it is ready to receive more data.
