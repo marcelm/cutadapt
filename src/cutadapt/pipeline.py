@@ -826,35 +826,16 @@ class ParallelPipelineRunner(PipelineRunner):
         while connections:
             ready_connections = multiprocessing.connection.wait(connections)
             for connection in ready_connections:  # type: Any
-                chunk_index = connection.recv()
+                chunk_index = self._try_receive(connection)
                 if chunk_index == -1:
                     # the worker is done
-                    cur_stats = connection.recv()
-                    if stats == -2:
-                        # An exception has occurred in the worker (see below,
-                        # this happens only when there is an exception sending
-                        # the statistics)
-                        e, tb_str = connection.recv()
-                        logger.error('%s', tb_str)
-                        raise e
+                    cur_stats = self._try_receive(connection)
                     stats += cur_stats
                     connections.remove(connection)
                     continue
-                elif chunk_index == -2:
-                    # An exception has occurred in the worker
-                    e, tb_str = connection.recv()
-
-                    # We should use the worker's actual traceback object
-                    # here, but traceback objects are not picklable.
-                    logger.error('%s', tb_str)
-                    raise e
 
                 # No. of reads processed in this chunk
-                chunk_n = connection.recv()
-                if chunk_n == -2:
-                    e, tb_str = connection.recv()
-                    logger.error('%s', tb_str)
-                    raise e
+                chunk_n = self._try_receive(connection)
                 n += chunk_n
                 self._progress.update(n)
                 for writer in writers:
@@ -867,6 +848,24 @@ class ParallelPipelineRunner(PipelineRunner):
         self._reader_process.join()
         self._progress.stop(n)
         return stats
+
+    @staticmethod
+    def _try_receive(connection):
+        """
+        Try to receive data over self.connection and return it.
+        If an exception was received, raise it.
+        """
+        result = connection.recv()
+        if result == -2:
+            # An exception has occurred on the other end
+            e, tb_str = connection.recv()
+            # Under some conditions, the Make sure the error is printed
+            logger.error('%s', e)
+            # The other end does not send an actual traceback object because these are
+            # not picklable, but a string representation.
+            logger.debug('%s', tb_str)
+            raise e
+        return result
 
     def close(self) -> None:
         self._outfiles.close()
