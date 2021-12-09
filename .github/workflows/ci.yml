@@ -21,6 +21,19 @@ jobs:
     - name: Run tox ${{ matrix.toxenv }}
       run: tox -e ${{ matrix.toxenv }}
 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+    - name: Install dependencies
+      run: python -m pip install build
+    - name: Build temporary sdist and wheel
+      run: python -m build
+
   test:
     timeout-minutes: 10
     runs-on: ${{ matrix.os }}
