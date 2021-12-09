@@ -3,6 +3,7 @@ Build Cutadapt.
 """
 from setuptools import setup, Extension, find_packages
 from Cython.Build import cythonize
+import setuptools_scm  # noqa  Ensure it’s installed
 
 with open("README.rst", encoding="utf-8") as f:
     long_description = f.read()
