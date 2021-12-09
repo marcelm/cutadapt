@@ -1,13 +1,10 @@
 """
 Build Cutadapt.
 """
-import sys
-
 from setuptools import setup, Extension, find_packages
 from Cython.Build import cythonize
 
-encoding_arg = {'encoding': 'utf-8'} if sys.version_info[0] >= 3 else dict()
-with open('README.rst', **encoding_arg) as f:
+with open("README.rst", encoding="utf-8") as f:
     long_description = f.read()
 
 extensions = [
