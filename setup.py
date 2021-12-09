@@ -4,27 +4,7 @@ Build Cutadapt.
 import sys
 
 from setuptools import setup, Extension, find_packages
-from distutils.version import LooseVersion
 from Cython.Build import cythonize
-
-MIN_CYTHON_VERSION = '0.28'
-
-
-def check_cython_version():
-    """Exit if Cython was not found or is too old"""
-    try:
-        from Cython import __version__ as cyversion
-    except ImportError:
-        sys.stdout.write(
-            "ERROR: Cython is not installed. Install at least Cython version " +
-            str(MIN_CYTHON_VERSION) + " to continue.\n")
-        sys.exit(1)
-    if LooseVersion(cyversion) < LooseVersion(MIN_CYTHON_VERSION):
-        sys.stdout.write(
-            "ERROR: Your Cython is at version '" + str(cyversion) +
-            "', but at least version " + str(MIN_CYTHON_VERSION) + " is required.\n")
-        sys.exit(1)
-
 
 encoding_arg = {'encoding': 'utf-8'} if sys.version_info[0] >= 3 else dict()
 with open('README.rst', **encoding_arg) as f:
