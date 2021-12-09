@@ -27,8 +27,8 @@ setup(
     packages=find_packages('src'),
     entry_points={'console_scripts': ['cutadapt = cutadapt.__main__:main_cli']},
     install_requires=[
-        'dnaio~=0.5',
-        'xopen~=1.1',
+        'dnaio>=0.5',
+        'xopen>=1.1',
         "dataclasses>=0.8; python_version<'3.7'",
     ],
     extras_require={
