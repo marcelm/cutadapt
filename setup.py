@@ -14,7 +14,6 @@ extensions = [
 
 setup(
     name='cutadapt',
-    use_scm_version={'write_to': 'src/cutadapt/_version.py'},
     author='Marcel Martin',
     author_email='marcel.martin@scilifelab.se',
     url='https://cutadapt.readthedocs.io/',
