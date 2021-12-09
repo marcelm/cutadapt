@@ -775,8 +775,8 @@ Since Cutadapt allows partial matches between the read and the adapter sequence,
 short matches can occur by chance, leading to erroneously trimmed bases. For
 example, roughly 25% of all reads end with a base that is identical to the
 first base of the adapter. To reduce the number of falsely trimmed bases,
-the alignment algorithm requires that, by default, at least *three bases* match between
-adapter and read.
+the alignment algorithm requires that at least *three bases* of the adapter
+are aligned to the read.
 
 This minimum overlap length can be changed globally (for all adapters) with the parameter
 ``--overlap`` (or its short version ``-O``). Alternatively, use the adapter-specific
@@ -798,6 +798,14 @@ overlap length of 3, only about 0.07 bases are lost per read.
 When choosing an appropriate minimum overlap length, take into account that
 true adapter matches are also lost when the overlap length is higher than
 zero, reducing Cutadapt's sensitivity.
+
+It is possible that fewer bases are removed from a read than the minimum
+overlap length seems to imply. The overlap length is the number of bases
+in the adapter that got aligned to the read, which means that if there are
+deletions in the adapter, the corresponding part in the read will be shorter.
+(This is only relevant when the maximum allowed error rate and/or the minimum
+overlap length are changed such that at least one error is allowed over the
+given length.)
 
 
 Allowing partial matches at both ends
