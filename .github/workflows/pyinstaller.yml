@@ -1,6 +1,9 @@
 name: PyInstaller
 
-on: push
+on:
+  schedule:
+  - cron: "0 15 6 * *"
+  workflow_dispatch:
 
 jobs:
   build:
