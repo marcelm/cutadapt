@@ -60,7 +60,7 @@ jobs:
       uses: codecov/codecov-action@v1
 
   wheels:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+#    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     needs: [lint, build, test]
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -71,8 +71,8 @@ jobs:
     - name: Build wheels
       uses: pypa/cibuildwheel@v2.1.2
       env:
-        CIBW_BUILD: "cp3*-manylinux_x86_64"
-        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2010
+#        CIBW_BUILD: "cp3*-manylinux_x86_64"
+#        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2010
         CIBW_ENVIRONMENT: "CFLAGS=-g0"
         CIBW_TEST_COMMAND: "cutadapt --help"
     - uses: actions/upload-artifact@v2
