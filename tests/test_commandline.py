@@ -80,9 +80,16 @@ def test_small(run):
     run('-a TTAGACATATCTCCGTCG', 'small.fastq', 'small.fastq')
 
 
-def test_empty(run, cores):
-    """empty input"""
+def test_empty_fastq(run, cores):
     run("--cores {} -a TTAGACATATCTCCGTCG".format(cores), "empty.fastq", "empty.fastq")
+
+
+def test_empty_fasta_input(run, cores):
+    run(["--cores", str(cores)], "empty.fasta", "empty.fasta")
+
+
+def test_no_read_only_comment_fasta_input(run, cores):
+    run(["--cores", str(cores)], "empty.fasta", "onlycomment.fasta")
 
 
 def test_newlines(run):
