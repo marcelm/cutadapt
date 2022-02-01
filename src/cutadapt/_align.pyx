@@ -145,32 +145,33 @@ cdef class Aligner:
 
     TODO working here
 
-    To allow skipping of a prefix of string1 at no cost, set the
+    To allow skipping of a prefix of the reference at no cost, set the
     START_IN_REFERENCE flag.
-    To allow skipping of a prefix of string2 at no cost, set the
+    To allow skipping of a prefix of the query at no cost, set the
     START_IN_QUERY flag.
-    If both are set, a prefix of string1 or of string1 is skipped,
+    If both are set, a prefix of the reference or the query is skipped,
     never both.
     Similarly, set STOP_IN_REFERENCE and STOP_IN_QUERY to
-    allow skipping of suffixes of string1 or string2. Again, when both
-    flags are set, never suffixes in both strings are skipped.
+    allow skipping of suffixes of the reference or of the query. Again, it
+    is never the case that both suffixes are skipped.
     If all flags are set, this results in standard semiglobal alignment.
 
-    The skipped parts are described with two intervals (start1, stop1),
-    (start2, stop2).
+    The aligned parts are described with two intervals
+    (ref_start, ref_stop),
+    (query_start, query_stop).
 
-    For example, an optimal semiglobal alignment of SISSI and MISSISSIPPI looks like this:
+    For example, an optimal semiglobal alignment of MISSISSIPPI and SISSI looks like this:
 
-    ---SISSI---
-    MISSISSIPPI
+    MISSISSIPPI (reference)
+    ---SISSI--- (query)
 
-    start1, stop1 = 0, 5
-    start2, stop2 = 3, 8
+    query_start, query_stop = 0, 5
+    ref_start, ref_stop = 3, 8
     (with zero errors)
 
-    The aligned parts are string1[start1:stop1] and string2[start2:stop2].
+    The aligned parts are reference[ref_start:ref_stop] and query[query_start:query_stop].
 
-    The error rate is: errors / length where length is (stop1 - start1).
+    The error rate is: errors / length where length is (reference_stop - reference_start).
 
     An optimal alignment fulfills all of these criteria:
 
@@ -183,11 +184,11 @@ cdef class Aligner:
       leftmost position within the read.
 
     The alignment itself is not returned, only the tuple
-    (start1, stop1, start2, stop2, matches, errors), where the first four fields have the
-    meaning as described, matches is the number of matches and errors is the number of
+    (ref_start, ref_stop, query_start, query_stop, matches, errors).
+    matches is the number of matches and errors is the number of
     errors in the alignment.
 
-    It is always the case that at least one of start1 and start2 is zero.
+    It is always the case that at least one of query_start and reference_start is zero.
 
     IUPAC wildcard characters can be allowed in the reference and the query
     by setting the appropriate flags.
@@ -588,15 +589,15 @@ cdef class Aligner:
             # an error rate within the allowed range.
             return None
 
-        cdef int start1, start2
+        cdef int query_start
         if best.origin >= 0:
-            start1 = 0
-            start2 = best.origin
+            ref_start = 0
+            query_start = best.origin
         else:
-            start1 = -best.origin
-            start2 = 0
+            ref_start = -best.origin
+            query_start = 0
 
-        return (start1, best.ref_stop, start2, best.query_stop, best.matches, best.cost)
+        return (ref_start, best.ref_stop, query_start, best.query_stop, best.matches, best.cost)
 
     def __dealloc__(self):
         PyMem_Free(self.column)
