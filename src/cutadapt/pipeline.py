@@ -582,11 +582,7 @@ class ReaderProcess(Process):
                 else:
                     for chunk_index, chunk in enumerate(dnaio.read_chunks(f, self.buffer_size)):
                         self.send_to_worker(chunk_index, chunk)
-
-            # Send poison pills to all workers
-            for _ in range(len(self.connections)):
-                worker_index = self.queue.get()
-                self.connections[worker_index].send(-1)
+            self.shutdown()
         except Exception as e:
             # TODO better send this to a common "something went wrong" Queue
             for connection in self.connections:
@@ -600,6 +596,12 @@ class ReaderProcess(Process):
         connection.send_bytes(chunk1)
         if chunk2 is not None:
             connection.send_bytes(chunk2)
+
+    def shutdown(self):
+        # Send poison pills to all workers
+        for _ in range(len(self.connections)):
+            worker_index = self.queue.get()
+            self.connections[worker_index].send(-1)
 
 
 class WorkerProcess(Process):
