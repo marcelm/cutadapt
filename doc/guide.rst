@@ -670,6 +670,9 @@ Allow matches anywhere                                           ``ADAPTER;anywh
 :ref:`Linked adapter optional <linked-override>`                 ``ADAPTER;optional``
 ================================================== ============= ================================
 
+The minimum overlap length cannot be set for anchored adapters as these always need to occur at full
+length.
+
 Adapter-specific parameters override the global option.
 
 .. versionadded: 1.18
@@ -785,17 +788,24 @@ the adapter would still be placed properly.
 Minimum overlap (reducing random matches)
 -----------------------------------------
 
-Since Cutadapt allows partial matches between the read and the adapter sequence,
-short matches can occur by chance, leading to erroneously trimmed bases. For
-example, roughly 25% of all reads end with a base that is identical to the
-first base of the adapter. To reduce the number of falsely trimmed bases,
+Since Cutadapt allows partial matches between the read and the adapter sequence
+for most adapter types, short matches can occur by chance, leading to erroneously
+trimmed bases. For
+example, just by chance, we expect that roughly 25% of all reads end with a base
+that is identical to the first base of the adapter. To reduce the number of
+falsely trimmed bases,
 the alignment algorithm requires that at least *three bases* of the adapter
 are aligned to the read.
 
 This minimum overlap length can be changed globally (for all adapters) with the parameter
-``--overlap`` (or its short version ``-O``). Alternatively, use the adapter-specific
+``--overlap`` (or its short version ``-O``). The option is ignored for
+anchored adapters since these do not allow partial matches.
+
+Alternatively, use the adapter-specific
 parameter ``min_overlap`` to change it for a single adapter only. Example:
 ``-a "ADAPTER;min_overlap=5"`` (the quotation marks are necessary).
+For anchored adapters, attempting to set a minimum overlap this way will
+result in an error.
 
 In :ref:`linked adapters <linked-adapters>`, the minimum overlap length is applied
 separately to the 5' and the 3' adapter.
@@ -826,7 +836,7 @@ Allowing partial matches at both ends
 -------------------------------------
 
 The regular 5' and 3' adapter types allow partial adapter occurrences only
-at the 5' and 3' end, respectively. To allow partial matches at both ends,
+at the 5' and 3' end of the read, respectively. To allow partial matches at both ends,
 you can use the ``anywhere`` adapter-specific parameter.
 
 A 3' adapter specified via ``-a ADAPTER`` will be found even
