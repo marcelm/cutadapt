@@ -276,12 +276,17 @@ Full adapter sequence at 5’ end    ADAPTERacgtacgtacgt                      ye
 Regular 3' adapters
 -------------------
 
-A 3' adapter is a piece of DNA ligated to the 3' end of the DNA fragment you
-are interested in. The sequencer starts the sequencing process at the 5' end of
-the fragment and sequences into the adapter if the read is long enough.
-The read that it outputs will then have a part of the adapter in the
-end. Or, if the adapter was short and the read length quite long, then the
-adapter will be somewhere within the read, followed by some other bases.
+A 3' adapter is a piece of DNA ligated to the 3' end of the DNA fragment of
+interest. The sequencer starts the sequencing process at the 5' end of the
+fragment. If the fragment is shorter than the read length, the sequencer
+will sequence into the adapter and the reads will thus contain some part
+of the adapter. Depending on how much longer the read is than the fragment
+of interest, the adapter occurs 1) not at all, 2) partially or fully at the
+end of the read (not followed by any other bases), or 3) in full somewhere
+within the read, followed by some other bases.
+
+Use Cutadapt’s ``-a`` option to find and trim such an adapter, allowing
+both partial and full occurrences.
 
 For example, assume your fragment of interest is *mysequence* and the adapter is
 *ADAPTER*. Depending on the read length, you will get reads that look like this::
@@ -291,7 +296,7 @@ For example, assume your fragment of interest is *mysequence* and the adapter is
     mysequenceADAPTER
     mysequenceADAPTERsomethingelse
 
-Use Cutadapt's ``-a ADAPTER`` option to remove this type of adapter. This will
+Using ``-a ADAPTER`` to remove this type of adapter, this will
 be the result::
 
     mysequen
@@ -349,33 +354,38 @@ will be empty after trimming.
 Anchored 5' adapters
 --------------------
 
-In many cases, the above behavior is not really what you want for trimming 5'
-adapters. You may know, for example, that degradation does not occur and that
-the adapter is also not expected to be within the read. Thus, you always expect
-the read to look like the first example from above::
+An anchored 5' adapter is an adapter that is expected to occur in full
+length at the beginning of the read. Example::
 
     ADAPTERsomething
 
-If you want to trim only this type of adapter, use ``-g ^ADAPTER``. The ``^`` is
-supposed to indicate the the adapter is "anchored" at the beginning of the read.
-In other words: The adapter is expected to be a prefix of the read. Note that
-cases like these are also recognized::
+This is usually how forward PCR primers are found in the read in amplicon
+sequencing, for instance. In Cutadapt’s terminology, this type of adapter
+is called "anchored" to distinguish it from :ref:`"regular" 5'
+adapters <anchored-3adapters>`, which are 5' adapters with a less strict
+placement requirement.
 
-    ADAPTER
-    ADAPT
-    ADA
+If the adapter sequence is ``ADAPTER``, use ``-g ^ADAPTER`` to remove an
+anchored 5' adapter. The ``^`` is meant to indicate the "anchoring" to the
+beginning of the read. With this, the example read ``ADAPTERsomething`` is
+trimmed to just ``something``.
 
-The read will simply be empty after trimming.
+An anchored 5' adapter must occur in full at the beginning of the read.
+If the read happens to be shorter than the adapter, partial occurrences
+such as ``ADAPT`` are not found.
 
-Be aware that Cutadapt still searches for adapters error-tolerantly and, in
-particular, allows insertions. So if your maximum error rate is sufficiently
-high, even this read will be trimmed::
+The requirement for a full match at the beginning of the read is relaxed
+when Cutadapt searches error-tolerantly, as it does by default. In
+particular, insertions and deletions may allow reads such as these to be
+trimmed, assuming the maximum error rate is sufficiently high::
 
     BADAPTERsomething
+    ADAPTE
 
-The ``B`` in the beginning is seen as an insertion. If you also want to prevent
-this from happening, use the option ``--no-indels`` to disallow insertions and
-deletions entirely.
+The ``B`` in the beginning is seen as an insertion, and the missing ``R``
+as a deletion. If you also want to prevent this from happening, use the
+option ``--no-indels``, which disallows insertions and deletions entirely.
+
 
 
 .. _anchored-3adapters:
@@ -384,11 +394,15 @@ Anchored 3' adapters
 --------------------
 
 It is also possible to anchor 3' adapters to the end of the read. This is
-rarely necessary, but if you have merged, for example, overlapping paired-end
-reads, then it is useful. Add the ``$`` character to the end of an
+useful, for example, if you work with merged overlapping paired-end
+reads. Add the ``$`` character to the end of an
 adapter sequence specified via ``-a`` in order to anchor the adapter to the
 end of the read, such as ``-a ADAPTER$``. The adapter will only be found if it
-is a *suffix* of the read, but errors are still allowed as for 5' adapters.
+occurs in full at the end of the read (that is, it must be a *suffix* of the
+read.
+
+The requirement for a full match exactly at the end of the read is relaxed when
+Cutadapt searches error-tolerantly, as it does by default.
 You can disable insertions and deletions with ``--no-indels``.
 
 Anchored 3' adapters work as if you had reversed the sequence and used an
