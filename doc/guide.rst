@@ -837,11 +837,6 @@ at both ends, use ``-g "ADAPTER;anywhere"``.
 Searching reverse complements
 -----------------------------
 
-.. note::
-    Option ``--revcomp`` is added on a tentative basis. Its behaviour may change in the next
-    releases.
-
-
 By default, Cutadapt expects adapters to be given in the same orientation (5' to 3') as the reads.
 That is, neither reads nor adapters are reverse-complemented.
 
