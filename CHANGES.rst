@@ -3,6 +3,13 @@
 Changelog
 =========
 
+v3.6 (in development)
+---------------------
+
+* :issue:`592`: Clarified in documentation and error messages that anchored
+  adapters need to match in full and that therefore setting an explict
+  minimum overlap (``min_overlap=``, ``o=``) for them is not possible.
+
 v3.5 (2021-09-29)
 -----------------
 

@@ -230,7 +230,10 @@ class AdapterSpecification:
                 "Placement restrictions (with X, ^, $) not supported for 'anywhere' (-b) adapters")
 
         if "min_overlap" in parameters and restriction == "anchored":
-            raise ValueError("Setting min_overlap/o for anchored adapters is not possible")
+            raise ValueError(
+                "Setting 'min_overlap=' (or 'o=') for anchored adapters is not possible because "
+                "anchored adapters always need to match in full."
+            )
 
         if parameters.get("min_overlap", 0) > len(spec):
             raise ValueError(
