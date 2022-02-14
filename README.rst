@@ -1,5 +1,4 @@
 .. image:: https://github.com/marcelm/cutadapt/workflows/CI/badge.svg
-    :target: https://travis-ci.org/marcelm/cutadapt
     :alt:
 
 .. image:: https://img.shields.io/pypi/v/cutadapt.svg?branch=master

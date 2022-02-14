@@ -11,3 +11,4 @@
    /algorithms
    /develop
    /changes
+   Source code <https://github.com/marcelm/cutadapt/>
