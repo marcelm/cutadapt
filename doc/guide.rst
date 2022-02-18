@@ -1171,6 +1171,10 @@ Will result in this modified read::
     AAAA
 
 
+.. versionadded:: 3.2
+
+    The ``{{rn}}`` placeholder.
+
 .. versionadded:: 3.3
     The ``{rc}`` template variable.
 
