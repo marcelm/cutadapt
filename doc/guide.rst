@@ -1147,7 +1147,7 @@ The following placeholders are currently available for single-end reads:
 * ``{id}`` -- the read ID, that is, the part of the header before the first whitespace
 * ``{comment}`` -- the part of the header after the whitespace following the ID
 * ``{adapter_name}`` -- the name of adapter that was found in this read or
-  ``no_adapter`` if there was none adapter match. If you use ``--times`` to do
+  ``no_adapter`` if there was no adapter match. If you use ``--times`` to do
   multiple rounds of adapter matching, this is the name of the *last* found adapter.
 * ``{cut_prefix}`` -- the prefix removed by the ``--cut`` (or ``-u``) option (that is, when
   used with a positive length argument)
@@ -1195,7 +1195,7 @@ As another example, using ``--rename='{id} please note: {comment}'``, the paired
     >myread also quite important
     ...
 
-is renamed to ::
+are renamed to ::
 
     >myread please note: important comment
     ...
@@ -1203,8 +1203,8 @@ is renamed to ::
     >myread please note: also quite important
     ...
 
-For paired-end data, also the placeholder ``{rn}`` is available and is replaced with ``1`` in
-R1 and with ``2`` in R2.
+For paired-end data, the placeholder ``{rn}`` is available (“read number”),
+and it is replaced with ``1`` in R1 and with ``2`` in R2.
 
 In addition, it is possible to write a placeholder as ``{r1.placeholdername}`` or
 ``{r2.placeholdername}``, which always takes the replacement value from R1 or R2,
