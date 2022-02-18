@@ -2131,7 +2131,7 @@ w/adapters      Number of reads containing at least one adapter
 qualtrim_bp     Number of bases removed from R1 reads by quality trimming
 out_bp          Number of bases written to R1 reads
 w/adapters2     Number of R2 reads containing at least one adapter
-qualtrim2_bp    Number of bases removed from R3 reads by quality trimming
+qualtrim2_bp    Number of bases removed from R2 reads by quality trimming
 out2_bp         Number of bases written
 =============== ==========================================================
 
