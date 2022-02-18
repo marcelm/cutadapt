@@ -1149,6 +1149,13 @@ The following placeholders are currently available for single-end reads:
 * ``{adapter_name}`` -- the name of adapter that was found in this read or
   ``no_adapter`` if there was no adapter match. If you use ``--times`` to do
   multiple rounds of adapter matching, this is the name of the *last* found adapter.
+* ````{match_sequence}}`` -- the sequence of the read that matched the adapter (including
+  errors). If there was no adapter match, this is set to an empty string. If you use a
+  linked adapter, this is to the two matching strings, separated by a comma.
+
+-- the sequence of the read that matched the adapter (this includes
+          possible errors) or an empty string if there was no match
+
 * ``{cut_prefix}`` -- the prefix removed by the ``--cut`` (or ``-u``) option (that is, when
   used with a positive length argument)
 * ``{cut_suffix}`` -- the suffix removed by the ``--cut`` (or ``-u``) option (that is, when
@@ -1176,7 +1183,10 @@ Will result in this modified read::
     The ``{{rn}}`` placeholder.
 
 .. versionadded:: 3.3
-    The ``{rc}`` template variable.
+    The ``{rc}`` placeholder.
+
+.. versionadded:: 3.6
+    The ``{match_sequence}}`` placeholder.
 
 
 ``--rename`` also renames paired-end reads

@@ -283,6 +283,10 @@ class Match(ABC):
     def trimmed(self, read):
         pass
 
+    @abstractmethod
+    def match_sequence(self):
+        pass
+
 
 class SingleMatch(Match, ABC):
     """
@@ -369,6 +373,9 @@ class SingleMatch(Match, ABC):
             info += ["", "", ""]
 
         return [info]
+
+    def match_sequence(self):
+        return self.sequence[self.rstart:self.rstop]
 
     @abstractmethod
     def removed_sequence_length(self) -> int:
@@ -909,6 +916,13 @@ class LinkedMatch(Match):
             records.append(record)
             read = match.trimmed(read)
         return records
+
+    def match_sequence(self):
+        return (
+            self.front_match.match_sequence() if self.front_match else ""
+        ) + "," + (
+            self.back_match.match_sequence() if self.back_match else ""
+        )
 
 
 class LinkedAdapter(Adapter):

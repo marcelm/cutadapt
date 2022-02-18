@@ -494,6 +494,8 @@ class Renamer(SingleEndModifier):
     - {cut_prefix} -- prefix removed by UnconditionalCutter (with positive length argument)
     - {cut_suffix} -- suffix removed by UnconditionalCutter (with negative length argument)
     - {adapter_name} -- name of the *last* adapter match or no_adapter if there was none
+    - {match_sequence} -- the sequence that matched the adapter (this includes possible errors)
+          or an empty string if there was no match
     - {rc} -- the string 'rc' if the read was reverse complemented (with --revcomp) or '' otherwise
     """
     variables = {
@@ -504,6 +506,7 @@ class Renamer(SingleEndModifier):
         "cut_suffix",
         "adapter_name",
         "rc",
+        "match_sequence",
     }
 
     def __init__(self, template: str):
@@ -547,6 +550,7 @@ class Renamer(SingleEndModifier):
             cut_suffix=info.cut_suffix if info.cut_suffix else "",
             adapter_name=info.matches[-1].adapter.name if info.matches else "no_adapter",
             rc="rc" if info.is_rc else "",
+            match_sequence=info.matches[-1].match_sequence() if info.matches else "",
         )
         return read
 

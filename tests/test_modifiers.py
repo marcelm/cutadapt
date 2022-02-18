@@ -1,10 +1,18 @@
 from typing import List
 
 import pytest
-
 from dnaio import Sequence
-from cutadapt.adapters import BackAdapter, PrefixAdapter, IndexedPrefixAdapters, LinkedAdapter, \
-    FrontAdapter, Adapter
+from cutadapt.adapters import (
+    BackAdapter,
+    PrefixAdapter,
+    IndexedPrefixAdapters,
+    LinkedAdapter,
+    FrontAdapter,
+    Adapter,
+    RemoveBeforeMatch,
+    RemoveAfterMatch,
+    LinkedMatch,
+)
 from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
     Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo, ZeroCapper,
     Renamer, ReverseComplementer, InvalidTemplate, PairedEndRenamer)
@@ -224,7 +232,7 @@ class TestRenamer:
         info.cut_suffix = "TTAAGG"
         assert renamer(read, info).name == "theid_TTAAGG thecomment"
 
-    def test_rc_template_varialbe(self):
+    def test_rc_template_variable(self):
         renamer = Renamer("{id} rc={rc} {comment}")
         read = Sequence("theid thecomment", "ACGT")
         info = ModificationInfo(read)
@@ -233,6 +241,63 @@ class TestRenamer:
         read = Sequence("theid thecomment", "ACGT")
         info.is_rc = True
         assert renamer(read, info).name == "theid rc=rc thecomment"
+
+    def test_match_sequence(self):
+        sequence = "TTTTCCCCACGTGGGG"
+        read = Sequence("theid thecomment", sequence)
+        adapter = BackAdapter("AGGT")
+        info = ModificationInfo(read)
+        info.matches.append(RemoveBeforeMatch(
+            astart=0,
+            astop=4,
+            rstart=8,
+            rstop=12,
+            matches=3,
+            errors=1,
+            adapter=adapter,
+            sequence=sequence,
+        ))
+        renamer = Renamer("{header} match={match_sequence}")
+
+        renamer(read, info)
+
+        assert read.name == "theid thecomment match=ACGT"
+
+    def test_match_sequence_linked_match(self):
+        sequence = "TATTCCCCACGTGGGG"
+        read = Sequence("theid thecomment", sequence)
+        adapter1 = PrefixAdapter("TTTT")
+        adapter2 = BackAdapter("AGGT")
+        linked_adapter = LinkedAdapter(
+            adapter1, adapter2, front_required=True, back_required=False, name="name",
+        )
+        info = ModificationInfo(read)
+        before_match = RemoveBeforeMatch(
+            astart=0,
+            astop=4,
+            rstart=0,
+            rstop=4,
+            matches=3,
+            errors=1,
+            adapter=adapter1,
+            sequence=sequence,
+        )
+        after_match = RemoveAfterMatch(
+            astart=0,
+            astop=4,
+            rstart=4,
+            rstop=8,
+            matches=3,
+            errors=1,
+            adapter=adapter2,
+            sequence=sequence[4:],
+        )
+        info.matches.append(LinkedMatch(before_match, after_match, linked_adapter))
+        renamer = Renamer("{header} match={match_sequence}")
+
+        renamer(read, info)
+
+        assert read.name == "theid thecomment match=TATT,ACGT"
 
 
 class TestPairedEndRenamer:

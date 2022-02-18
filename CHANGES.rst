@@ -6,7 +6,10 @@ Changelog
 v3.6 (in development)
 ---------------------
 
-* :issue:`592`: Clarified in documentation and error messages that anchored
+* :issue:`437`: Add ``{match_sequence}}`` to the placeholders that ``--rename``
+  accepts. This allows to add the sequence matching an adapter (including
+  errors) to the read header. An empty string is inserted if there is no match.
+* :issue:`592`: Clarify in documentation and error messages that anchored
   adapters need to match in full and that therefore setting an explict
   minimum overlap (``min_overlap=``, ``o=``) for them is not possible.
 
