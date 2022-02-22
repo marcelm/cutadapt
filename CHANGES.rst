@@ -6,7 +6,7 @@ Changelog
 v3.6 (2022-02-18)
 ---------------------
 
-* :issue:`437`: Add ``{match_sequence}}`` to the placeholders that ``--rename``
+* :issue:`437`: Add ``{match_sequence}`` to the placeholders that ``--rename``
   accepts. This allows to add the sequence matching an adapter (including
   errors) to the read header. An empty string is inserted if there is no match.
 * :issue:`589`: Windows wheels are now available on PyPI. That is,
