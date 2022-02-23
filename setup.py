@@ -1,5 +1,4 @@
 from setuptools import setup, Extension
-from Cython.Build import cythonize
 import setuptools_scm  # noqa  Ensure it’s installed
 
 extensions = [
@@ -7,4 +6,4 @@ extensions = [
     Extension('cutadapt.qualtrim', sources=['src/cutadapt/qualtrim.pyx']),
 ]
 
-setup(ext_modules=cythonize(extensions))
+setup(ext_modules=extensions)
