@@ -14,9 +14,10 @@ using a virtualenv. This sequence of commands should work::
 
     git clone https://github.com/marcelm/cutadapt.git  # or clone your own fork
     cd cutadapt
-    virtualenv venv
-    source venv/bin/activate
-    pip install Cython pytest tox
+    virtualenv .venv
+    source .venv/bin/activate
+    pip install Cython pytest tox pre-commit
+    pre-commit install
     pip install -e .
 
 Then you should be able to run Cutadapt::
@@ -74,7 +75,7 @@ release.
    if you just wait a little while.
 
    Ensure that the list of dependencies (the ``requirements:``
-   section in the recipe) is in sync with the ``setup.py`` file.
+   section in the recipe) is in sync with the ``setup.cfg`` file.
 
 If something went wrong *after* a version has already been tagged and published to
 PyPI, fix the problem and tag a new version. Do not change a version that has already
