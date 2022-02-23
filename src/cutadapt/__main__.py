@@ -119,6 +119,7 @@ class CommandLineError(Exception):
     pass
 
 
+# fmt: off
 def get_argument_parser() -> ArgumentParser:
     # noqa: E131
     parser = CutadaptArgumentParser(usage=__doc__, add_help=False)
@@ -355,6 +356,7 @@ def get_argument_parser() -> ArgumentParser:
     parser.add_argument("inputs", nargs='*', help=SUPPRESS)
 
     return parser
+# fmt: on
 
 
 def parse_cutoffs(s: str) -> Tuple[int, int]:
