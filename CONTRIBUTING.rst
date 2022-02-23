@@ -24,14 +24,12 @@ doubt, send in a PR and we will sort it out.
 Code style
 ~~~~~~~~~~
 
-* Cutadapt tries to follow PEP8, except that the allowed line length is 100
-  characters, not 80. But try to wrap comments after 80 characters.
+* The source code needs to be formatted with
+  `black <https://black.readthedocs.io/>`_.
+  If you install `pre-commit <https://pre-commit.com>`_,
+  the formatting will be done for you.
 * There are inconsistencies in the current code base since it’s a few years old
   already. New code should follow the current rules, however.
-* At the moment, no automatic code formatting is done, but one idea might be to
-  switch to the `black <https://black.readthedocs.io/>`_ code formatter at some
-  point. If you’re familiar with its style, you can use that already now for
-  new code to make the diff smaller.
 * Prefer double quotation marks in new code. This will also make the diff smaller
   if we eventually switch to black.
 * Using an IDE is beneficial (PyCharm, for example). It helps to catch lots of
@@ -41,4 +39,3 @@ Code style
 * When writing a help text for a new command-line option, look at the output of
   ``cutadapt --help`` and try to make it look nice and short.
 * In comments and documentation, capitalize FASTQ, BWA, CPU etc.
-
