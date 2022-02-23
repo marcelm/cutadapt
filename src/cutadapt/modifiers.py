@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from typing import Sequence, List, Tuple, Optional, Set
 from abc import ABC, abstractmethod
 
-from dnaio import record_names_match, Sequence as DnaSequence
+from dnaio import record_names_match, Sequence as SequenceRecord
 
 from .qualtrim import quality_trim_index, nextseq_trim_index
 from .adapters import (
@@ -68,7 +68,7 @@ class PairedEndModifier(ABC):
     @abstractmethod
     def __call__(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
-    ) -> Tuple[DnaSequence, DnaSequence]:
+    ) -> Tuple[SequenceRecord, SequenceRecord]:
         pass
 
 
@@ -574,7 +574,7 @@ class Renamer(SingleEndModifier):
         else:
             return (read_name, "")
 
-    def __call__(self, read: DnaSequence, info: ModificationInfo) -> DnaSequence:
+    def __call__(self, read: SequenceRecord, info: ModificationInfo) -> SequenceRecord:
         id_, comment = self.parse_name(read.name)
         read.name = self._template.format(
             header=read.name,
@@ -623,11 +623,11 @@ class PairedEndRenamer(PairedEndModifier):
 
     def __call__(
         self,
-        read1: DnaSequence,
-        read2: DnaSequence,
+        read1: SequenceRecord,
+        read2: SequenceRecord,
         info1: ModificationInfo,
         info2: ModificationInfo,
-    ) -> Tuple[DnaSequence, DnaSequence]:
+    ) -> Tuple[SequenceRecord, SequenceRecord]:
 
         id1, comment1 = Renamer.parse_name(read1.name)
         id2, comment2 = Renamer.parse_name(read2.name)
