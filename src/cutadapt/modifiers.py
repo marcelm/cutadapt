@@ -670,15 +670,20 @@ class PairedEndRenamer(PairedEndModifier):
             (id1, comment1, header1, info1),
             (id2, comment2, header2, info2),
         ):
+            if info.matches:
+                adapter_name = info.matches[-1].adapter.name
+                match_sequence = info.matches[-1].match_sequence()
+            else:
+                adapter_name = "no_adapter"
+                match_sequence = ""
             d.append(
                 dict(
                     comment=comment,
                     header=header,
                     cut_prefix=info.cut_prefix if info.cut_prefix else "",
                     cut_suffix=info.cut_suffix if info.cut_suffix else "",
-                    adapter_name=info.matches[-1].adapter.name
-                    if info.matches
-                    else "no_adapter",
+                    adapter_name=adapter_name,
+                    match_sequence=match_sequence,
                 )
             )
         name1 = self._template.format(

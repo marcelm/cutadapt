@@ -3,6 +3,12 @@
 Changelog
 =========
 
+v3.7 (2022-02-23)
+-----------------
+
+* :issue:`600`: Fixed ``{match_sequence}`` placeholder not working when
+  renaming paired-end reads.
+
 v3.6 (2022-02-18)
 ---------------------
 

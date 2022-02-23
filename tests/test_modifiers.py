@@ -382,3 +382,48 @@ class TestPairedEndRenamer:
         renamed1, renamed2 = renamer(r1, r2, info1, info2)
         assert renamed1.name == "theid read no. is: 1"
         assert renamed2.name == "theid read no. is: 2"
+
+    def test_match_sequence(self):
+        r1 = Sequence("theid first", "AACC")
+        info1 = ModificationInfo(r1)
+        info1.matches.append(
+            RemoveBeforeMatch(
+                astart=2,
+                astop=4,
+                rstart=1,
+                rstop=3,
+                matches=1,
+                errors=1,
+                adapter=FrontAdapter("AT"),
+                sequence="AACC",
+            )
+        )
+        r2 = Sequence("theid second", "GGTT")
+        info2 = ModificationInfo(r2)
+        info2.matches.append(
+            RemoveBeforeMatch(
+                astart=2,
+                astop=4,
+                rstart=1,
+                rstop=3,
+                matches=1,
+                errors=1,
+                adapter=FrontAdapter("GA"),
+                sequence="GGTT",
+            )
+        )
+        renamer = PairedEndRenamer("{header} s={match_sequence}")
+
+        renamed1, renamed2 = renamer(r1[:], r2[:], info1, info2)
+        assert renamed1.name == "theid first s=AC"
+        assert renamed2.name == "theid second s=GT"
+
+        renamer = PairedEndRenamer("{header} s={r1.match_sequence}")
+        renamed1, renamed2 = renamer(r1[:], r2[:], info1, info2)
+        assert renamed1.name == "theid first s=AC"
+        assert renamed2.name == "theid second s=AC"
+
+        renamer = PairedEndRenamer("{header} s={r2.match_sequence}")
+        renamed1, renamed2 = renamer(r1[:], r2[:], info1, info2)
+        assert renamed1.name == "theid first s=GT"
+        assert renamed2.name == "theid second s=GT"
