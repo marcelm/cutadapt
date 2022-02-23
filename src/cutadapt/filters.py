@@ -21,7 +21,9 @@ class Predicate(ABC):
         "too_many_expected_errors".
         This is used as identifier in the JSON report.
         """
-        return "".join(("_" + ch.lower() if ch.isupper() else ch) for ch in cls.__name__)[1:]
+        return "".join(
+            ("_" + ch.lower() if ch.isupper() else ch) for ch in cls.__name__
+        )[1:]
 
 
 class TooShort(Predicate):
@@ -58,6 +60,7 @@ class TooManyExpectedErrors(Predicate):
     The idea comes from usearch's -fastq_maxee parameter
     (http://drive5.com/usearch/).
     """
+
     def __init__(self, max_errors: float):
         self.max_errors = max_errors
 
@@ -74,6 +77,7 @@ class TooManyN(Predicate):
 
     Both a raw count or a proportion (relative to the sequence length) can be used.
     """
+
     def __init__(self, count: float):
         """
         count -- if it is below 1.0, it will be considered a proportion, and above and equal to
@@ -87,7 +91,7 @@ class TooManyN(Predicate):
         return f"TooManyN(cutoff={self.cutoff}, is_proportion={self.is_proportion})"
 
     def test(self, read, info: ModificationInfo):
-        n_count = read.sequence.lower().count('n')
+        n_count = read.sequence.lower().count("n")
         if self.is_proportion:
             if len(read) == 0:
                 return False
@@ -104,18 +108,20 @@ class CasavaFiltered(Predicate):
 
     Reads with unrecognized headers are not selected.
     """
+
     def __repr__(self):
         return "CasavaFiltered()"
 
     def test(self, read, info: ModificationInfo):
-        _, _, right = read.name.partition(' ')
-        return right[1:4] == ':Y:'  # discard if :Y: found
+        _, _, right = read.name.partition(" ")
+        return right[1:4] == ":Y:"  # discard if :Y: found
 
 
 class DiscardUntrimmed(Predicate):
     """
     Select reads for which no adapter match was found
     """
+
     def __repr__(self):
         return "DiscardUntrimmed()"
 
@@ -127,6 +133,7 @@ class DiscardTrimmed(Predicate):
     """
     Select reads for which at least one adapter match was found
     """
+
     def __repr__(self):
         return "DiscardTrimmed()"
 

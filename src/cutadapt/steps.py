@@ -42,7 +42,9 @@ class SingleEndStep(ABC):
 
 class PairedEndStep(ABC):
     @abstractmethod
-    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
+    def __call__(
+        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+    ) -> bool:
         """
         Process read pair (read1, read2). Return True if the read pair
         has been consumed (and should thus not be passed on to subsequent steps).
@@ -65,6 +67,7 @@ class SingleEndFilter(SingleEndStep):
     A pipeline step that can filter reads, can redirect filtered ones to a writer, and
     counts how many were filtered.
     """
+
     def __init__(self, writer, predicate: Predicate):
         super().__init__()
         self.filtered = 0
@@ -94,7 +97,14 @@ class PairedEndFilter(PairedEndStep):
     Different filtering styles are supported, differing by which of the
     two reads in a pair have to fulfill the filtering criterion.
     """
-    def __init__(self, writer, predicate1: Predicate, predicate2: Predicate, pair_filter_mode="any"):
+
+    def __init__(
+        self,
+        writer,
+        predicate1: Predicate,
+        predicate2: Predicate,
+        pair_filter_mode="any",
+    ):
         """
         pair_filter_mode -- these values are allowed:
             'any': The pair is discarded if any read matches.
@@ -102,7 +112,7 @@ class PairedEndFilter(PairedEndStep):
             'first': The pair is discarded if the first read matches.
         """
         super().__init__()
-        if pair_filter_mode not in ('any', 'both', 'first'):
+        if pair_filter_mode not in ("any", "both", "first"):
             raise ValueError("pair_filter_mode must be 'any', 'both' or 'first'")
         self._pair_filter_mode = pair_filter_mode
         self.filtered = 0
@@ -114,16 +124,18 @@ class PairedEndFilter(PairedEndStep):
             self._is_filtered = self._is_filtered_first
         elif predicate1 is None:
             self._is_filtered = self._is_filtered_second
-        elif pair_filter_mode == 'any':
+        elif pair_filter_mode == "any":
             self._is_filtered = self._is_filtered_any
-        elif pair_filter_mode == 'both':
+        elif pair_filter_mode == "both":
             self._is_filtered = self._is_filtered_both
         else:
             self._is_filtered = self._is_filtered_first
 
     def __repr__(self):
-        return f"PairedEndFilter(writer={self.writer}, predicate1={self.predicate1}, " \
-               f"predicate2={self.predicate2}, pair_filter_mode='{self._pair_filter_mode}')"
+        return (
+            f"PairedEndFilter(writer={self.writer}, predicate1={self.predicate1}, "
+            f"predicate2={self.predicate2}, pair_filter_mode='{self._pair_filter_mode}')"
+        )
 
     def descriptive_identifier(self) -> str:
         if self.predicate1 is not None:
@@ -131,19 +143,29 @@ class PairedEndFilter(PairedEndStep):
         else:
             return self.predicate2.descriptive_identifier()
 
-    def _is_filtered_any(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
+    def _is_filtered_any(
+        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+    ) -> bool:
         return self.predicate1.test(read1, info1) or self.predicate2.test(read2, info2)
 
-    def _is_filtered_both(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
+    def _is_filtered_both(
+        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+    ) -> bool:
         return self.predicate1.test(read1, info1) and self.predicate2.test(read2, info2)
 
-    def _is_filtered_first(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
+    def _is_filtered_first(
+        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+    ) -> bool:
         return self.predicate1.test(read1, info1)
 
-    def _is_filtered_second(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
+    def _is_filtered_second(
+        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+    ) -> bool:
         return self.predicate2.test(read2, info2)
 
-    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
+    def __call__(
+        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+    ) -> bool:
         if self._is_filtered(read1, read2, info1, info2):
             self.filtered += 1
             if self.writer is not None:
@@ -199,12 +221,17 @@ class InfoFileWriter(SingleEndStep):
             for match in info.matches:
                 for info_record in match.get_info_records(current_read):
                     # info_record[0] is the read name suffix
-                    print(read.name + info_record[0], *info_record[1:], self.RC_MAP[info.is_rc],
-                        sep="\t", file=self._file)
+                    print(
+                        read.name + info_record[0],
+                        *info_record[1:],
+                        self.RC_MAP[info.is_rc],
+                        sep="\t",
+                        file=self._file,
+                    )
                 current_read = match.trimmed(current_read)
         else:
             seq = read.sequence
-            qualities = read.qualities if read.qualities is not None else ''
+            qualities = read.qualities if read.qualities is not None else ""
             print(read.name, -1, seq, qualities, sep="\t", file=self._file)
 
         return KEEP
@@ -239,6 +266,7 @@ class SingleEndSink(SingleEndStep, HasStatistics):
     Send each read to a writer and keep read length statistics.
     This is used as the last step in a pipeline.
     """
+
     def __init__(self, writer):
         super().__init__()
         self.writer = writer
@@ -261,6 +289,7 @@ class PairedEndSink(PairedEndStep, HasStatistics):
     Send each read pair to a writer and keep read length statistics.
     This is used as the last step in a pipeline.
     """
+
     def __init__(self, writer):
         super().__init__()
         self.writer = writer
@@ -269,7 +298,9 @@ class PairedEndSink(PairedEndStep, HasStatistics):
     def __repr__(self):
         return f"PairedNoFilter({self.writer})"
 
-    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
+    def __call__(
+        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+    ) -> bool:
         self.writer.write(read1, read2)
         self._statistics.update2(read1, read2)
         return DISCARD
@@ -285,6 +316,7 @@ class Demultiplexer(SingleEndStep, HasStatistics):
 
     Untrimmed reads are sent to writers[None] if that key exists.
     """
+
     def __init__(self, writers: Dict[Optional[str], Any]):
         """
         writers maps an adapter name to a writer
@@ -319,13 +351,16 @@ class PairedDemultiplexer(PairedEndStep, HasStatistics):
     Demultiplex trimmed paired-end reads. Reads are written to different output files
     depending on which adapter (in read 1) matches.
     """
+
     def __init__(self, writers: Dict[Optional[str], Any]):
         super().__init__()
         self._writers = writers
         self._untrimmed_writer = self._writers.get(None, None)
         self._statistics = ReadLengthStatistics()
 
-    def __call__(self, read1, read2, info1: ModificationInfo, info2: ModificationInfo) -> bool:
+    def __call__(
+        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+    ) -> bool:
         assert read2 is not None
         if info1.matches:
             name = info1.matches[-1].adapter.name  # type: ignore
@@ -345,6 +380,7 @@ class CombinatorialDemultiplexer(PairedEndStep, HasStatistics):
     Demultiplex paired-end reads depending on which adapter matches, taking into account
     matches on R1 and R2.
     """
+
     def __init__(self, writers: Dict[Tuple[Optional[str], Optional[str]], Any]):
         """
         Adapter names of the matches on R1 and R2 will be used to look up the writer in the

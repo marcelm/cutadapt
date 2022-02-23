@@ -61,7 +61,10 @@ def dumps(obj, indent: int = 2, _level: int = 0) -> str:
         return (
             "{"
             + start
-            + sep.join(json.dumps(k) + ": " + dumps(v, indent, _level + 1) for k, v in obj.items())
+            + sep.join(
+                json.dumps(k) + ": " + dumps(v, indent, _level + 1)
+                for k, v in obj.items()
+            )
             + end
             + "}"
         )

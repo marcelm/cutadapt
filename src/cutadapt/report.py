@@ -8,14 +8,27 @@ import textwrap
 from collections import defaultdict
 from typing import Any, Optional, List, Dict, Iterator, Tuple
 from .adapters import (
-    EndStatistics, AdapterStatistics, FrontAdapter,
-    BackAdapter, AnywhereAdapter, LinkedAdapter,
-    SingleAdapter, LinkedAdapterStatistics, FrontAdapterStatistics,
-    BackAdapterStatistics, AnywhereAdapterStatistics,
+    EndStatistics,
+    AdapterStatistics,
+    FrontAdapter,
+    BackAdapter,
+    AnywhereAdapter,
+    LinkedAdapter,
+    SingleAdapter,
+    LinkedAdapterStatistics,
+    FrontAdapterStatistics,
+    BackAdapterStatistics,
+    AnywhereAdapterStatistics,
 )
 from .json import OneLine
-from .modifiers import (QualityTrimmer, NextseqQualityTrimmer,
-    AdapterCutter, PairedAdapterCutter, ReverseComplementer, PairedEndModifierWrapper)
+from .modifiers import (
+    QualityTrimmer,
+    NextseqQualityTrimmer,
+    AdapterCutter,
+    PairedAdapterCutter,
+    ReverseComplementer,
+    PairedEndModifierWrapper,
+)
 from .statistics import ReadLengthStatistics
 from .steps import SingleEndFilter, PairedEndFilter, HasStatistics
 
@@ -47,8 +60,7 @@ def add_if_not_none(a: Optional[int], b: Optional[int]) -> Optional[int]:
 
 class Statistics:
     def __init__(self) -> None:
-        """
-        """
+        """ """
         self.paired: Optional[bool] = None
         # Map a filter name to the number of filtered reads/read pairs
         self.filtered: Dict[str, int] = defaultdict(int)
@@ -70,22 +82,28 @@ class Statistics:
         if self.paired is None:
             self.paired = other.paired
         elif self.paired != other.paired:
-            raise ValueError('Incompatible Statistics: paired is not equal')
+            raise ValueError("Incompatible Statistics: paired is not equal")
 
         self.reverse_complemented = add_if_not_none(
-            self.reverse_complemented, other.reverse_complemented)
+            self.reverse_complemented, other.reverse_complemented
+        )
 
         for filter_name, count in other.filtered.items():
             self.filtered[filter_name] += count
 
         for i in (0, 1):
             self.total_bp[i] += other.total_bp[i]
-            self.with_adapters[i] = add_if_not_none(self.with_adapters[i], other.with_adapters[i])
+            self.with_adapters[i] = add_if_not_none(
+                self.with_adapters[i], other.with_adapters[i]
+            )
             self.quality_trimmed_bp[i] = add_if_not_none(
-                self.quality_trimmed_bp[i], other.quality_trimmed_bp[i])
+                self.quality_trimmed_bp[i], other.quality_trimmed_bp[i]
+            )
             if self.adapter_stats[i] and other.adapter_stats[i]:
                 if len(self.adapter_stats[i]) != len(other.adapter_stats[i]):
-                    raise ValueError('Incompatible Statistics objects (adapter_stats length)')
+                    raise ValueError(
+                        "Incompatible Statistics objects (adapter_stats length)"
+                    )
                 for j in range(len(self.adapter_stats[i])):
                     self.adapter_stats[i][j] += other.adapter_stats[i][j]
             elif other.adapter_stats[i]:
@@ -93,7 +111,9 @@ class Statistics:
                 self.adapter_stats[i] = other.adapter_stats[i]
         return self
 
-    def collect(self, n: int, total_bp1: int, total_bp2: Optional[int], modifiers, steps):
+    def collect(
+        self, n: int, total_bp1: int, total_bp2: Optional[int], modifiers, steps
+    ):
         """
         n -- total number of reads
         total_bp1 -- number of bases in first reads
@@ -145,14 +165,14 @@ class Statistics:
             elif isinstance(modifier, ReverseComplementer):
                 assert self.with_adapters[i] is None
                 self.with_adapters[i] = modifier.adapter_cutter.with_adapters
-                self.adapter_stats[i] = list(modifier.adapter_cutter.adapter_statistics.values())
+                self.adapter_stats[i] = list(
+                    modifier.adapter_cutter.adapter_statistics.values()
+                )
                 self.reverse_complemented = modifier.reverse_complemented
 
     def as_json(self, gc_content: float) -> Dict:
         """Return a dict representation suitable for dumping in JSON format"""
-        filtered = {
-            name: self.filtered.get(name) for name in FILTERS.keys()
-        }
+        filtered = {name: self.filtered.get(name) for name in FILTERS.keys()}
         filtered_total = sum(self.filtered.values())
         written_reads = self.read_length_statistics.written_reads()
         written_bp = self.read_length_statistics.written_bp()
@@ -184,7 +204,9 @@ class Statistics:
             "adapters_read2": [
                 self._adapter_statistics_as_json(astats, self.n, gc_content)
                 for astats in self.adapter_stats[1]
-            ] if self.paired else None,
+            ]
+            if self.paired
+            else None,
         }
 
     def _adapter_statistics_as_json(
@@ -200,29 +222,42 @@ class Statistics:
             total = sum(end_statistics.lengths.values())
             if end_statistics.allows_partial_matches:
                 eranges = ErrorRanges(
-                    length=end_statistics.effective_length, error_rate=end_statistics.max_error_rate
+                    length=end_statistics.effective_length,
+                    error_rate=end_statistics.max_error_rate,
                 ).lengths()
             else:
                 eranges = None
             base_stats = AdjacentBaseStatistics(end_statistics.adjacent_bases)
             trimmed_lengths = [
-                OneLine({"len": row.length, "expect": round(row.expect, 1), "counts": row.error_counts})
+                OneLine(
+                    {
+                        "len": row.length,
+                        "expect": round(row.expect, 1),
+                        "counts": row.error_counts,
+                    }
+                )
                 for row in histogram_rows(end_statistics, n, gc_content)
             ]
-            ends.append({
-                "type": end_statistics.adapter_type,
-                "sequence": end_statistics.sequence,
-                "error_rate": end_statistics.max_error_rate,
-                "indels": end_statistics.indels,
-                "error_lengths": OneLine(eranges),
-                "matches": total,
-                "adjacent_bases": base_stats.as_json(),
-                "dominant_adjacent_base": base_stats.warnbase,
-                "trimmed_lengths": trimmed_lengths,
-            })
+            ends.append(
+                {
+                    "type": end_statistics.adapter_type,
+                    "sequence": end_statistics.sequence,
+                    "error_rate": end_statistics.max_error_rate,
+                    "indels": end_statistics.indels,
+                    "error_lengths": OneLine(eranges),
+                    "matches": total,
+                    "adjacent_bases": base_stats.as_json(),
+                    "dominant_adjacent_base": base_stats.warnbase,
+                    "trimmed_lengths": trimmed_lengths,
+                }
+            )
             total_trimmed_reads += total
 
-        on_reverse_complement = adapter_statistics.reverse_complemented if self.reverse_complemented else None
+        on_reverse_complement = (
+            adapter_statistics.reverse_complemented
+            if self.reverse_complemented
+            else None
+        )
         return {
             "name": adapter_statistics.name,
             "total_matches": total_trimmed_reads,
@@ -390,7 +425,9 @@ class HistogramRow:
 
 
 def histogram_rows(
-    end_statistics: EndStatistics, n: int, gc_content: float,
+    end_statistics: EndStatistics,
+    n: int,
+    gc_content: float,
 ) -> Iterator[HistogramRow]:
     """
     Yield histogram rows
@@ -403,7 +440,9 @@ def histogram_rows(
     d = end_statistics.lengths
     errors = end_statistics.errors
 
-    match_probabilities = end_statistics.random_match_probabilities(gc_content=gc_content)
+    match_probabilities = end_statistics.random_match_probabilities(
+        gc_content=gc_content
+    )
     for length in sorted(d):
         # when length surpasses adapter_length, the
         # probability does not increase anymore
@@ -415,7 +454,10 @@ def histogram_rows(
             length=length,
             count=count,
             expect=expect,
-            max_err=int(end_statistics.max_error_rate * min(length, end_statistics.effective_length)),
+            max_err=int(
+                end_statistics.max_error_rate
+                * min(length, end_statistics.effective_length)
+            ),
             error_counts=error_counts,
         )
         yield row
@@ -423,8 +465,7 @@ def histogram_rows(
 
 class AdjacentBaseStatistics:
     def __init__(self, bases: Dict[str, int]):
-        """
-        """
+        """ """
         self.bases: Dict[str, int] = bases
         self._warnbase: Optional[str] = None
         total = sum(self.bases.values())
@@ -432,11 +473,11 @@ class AdjacentBaseStatistics:
             self._fractions = None
         else:
             self._fractions = []
-            for base in ['A', 'C', 'G', 'T', '']:
-                text = base if base != '' else 'none/other'
+            for base in ["A", "C", "G", "T", ""]:
+                text = base if base != "" else "none/other"
                 fraction = 1.0 * self.bases[base] / total
                 self._fractions.append((text, 1.0 * self.bases[base] / total))
-                if fraction > 0.8 and base != '':
+                if fraction > 0.8 and base != "":
                     self._warnbase = text
             if total < 20:
                 self._warnbase = None
@@ -456,13 +497,19 @@ class AdjacentBaseStatistics:
         if not self._fractions:
             return ""
         sio = StringIO()
-        print('Bases preceding removed adapters:', file=sio)
+        print("Bases preceding removed adapters:", file=sio)
         for text, fraction in self._fractions:
             print(f"  {text}: {fraction:.1%}", file=sio)
         if self.should_warn:
-            print('WARNING:', file=sio)
-            print(f"    The adapter is preceded by '{self._warnbase}' extremely often.", file=sio)
-            print("    The provided adapter sequence could be incomplete at its 5' end.", file=sio)
+            print("WARNING:", file=sio)
+            print(
+                f"    The adapter is preceded by '{self._warnbase}' extremely often.",
+                file=sio,
+            )
+            print(
+                "    The provided adapter sequence could be incomplete at its 5' end.",
+                file=sio,
+            )
             print("    Ignore this warning when trimming primers.", file=sio)
         return sio.getvalue()
 
@@ -478,61 +525,76 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     if stats.n == 0:
         return "No reads processed!"
     if time == 0:
-        time = 1E-6
+        time = 1e-6
     sio = StringIO()
 
     def print_s(*args, **kwargs):
-        kwargs['file'] = sio
+        kwargs["file"] = sio
         print(*args, **kwargs)
 
     if sys.version_info[:2] <= (3, 6):
         micro = "u"
     else:
         micro = "µ"
-    print_s("Finished in {:.2F} s ({:.0F} {}s/read; {:.2F} M reads/minute).".format(
-        time, 1E6 * time / stats.n, micro, stats.n / time * 60 / 1E6))
+    print_s(
+        "Finished in {:.2F} s ({:.0F} {}s/read; {:.2F} M reads/minute).".format(
+            time, 1e6 * time / stats.n, micro, stats.n / time * 60 / 1e6
+        )
+    )
 
     report = "\n=== Summary ===\n\n"
     if stats.paired:
         report += f"Total read pairs processed:      {stats.n:13,d}\n"
         for i in (0, 1):
             if stats.with_adapters[i] is not None:
-                report += f"  Read {i+1} with adapter:           " \
+                report += (
+                    f"  Read {i+1} with adapter:           "
                     f"{stats.with_adapters[i]:13,d} ({stats.with_adapters_fraction[i]:.1%})\n"
+                )
     else:
         report += f"Total reads processed:           {stats.n:13,d}\n"
         if stats.with_adapters[0] is not None:
-            report += f"Reads with adapters:             " \
+            report += (
+                f"Reads with adapters:             "
                 f"{stats.with_adapters[0]:13,d} ({stats.with_adapters_fraction[0]:.1%})\n"
+            )
 
     if stats.reverse_complemented is not None:
-        report += "Reverse-complemented:            " \
-                  "{o.reverse_complemented:13,d} ({o.reverse_complemented_fraction:.1%})\n"
+        report += (
+            "Reverse-complemented:            "
+            "{o.reverse_complemented:13,d} ({o.reverse_complemented_fraction:.1%})\n"
+        )
 
     filter_report = format_filter_report(stats)
     if filter_report:
         report += "\n== Read fate breakdown ==\n"
         report += filter_report
 
-    report += textwrap.dedent("""\
+    report += textwrap.dedent(
+        """\
     {pairs_or_reads} written (passing filters): {o.written:13,d} ({o.written_fraction:.1%})
 
     Total basepairs processed: {o.total:13,d} bp
-    """)
+    """
+    )
     if stats.paired:
         report += "  Read 1: {o.total_bp[0]:13,d} bp\n"
         report += "  Read 2: {o.total_bp[1]:13,d} bp\n"
 
     if stats.quality_trimmed is not None:
-        report += "Quality-trimmed:           " \
+        report += (
+            "Quality-trimmed:           "
             f"{stats.quality_trimmed:13,d} bp ({stats.quality_trimmed_fraction:.1%})\n"
+        )
         if stats.paired:
             for i in (0, 1):
                 if stats.quality_trimmed_bp[i] is not None:
                     report += f"  Read {i + 1}: {stats.quality_trimmed_bp[i]:13,d} bp\n"
 
-    report += "Total written (filtered):  " \
+    report += (
+        "Total written (filtered):  "
         "{o.total_written_bp:13,d} bp ({o.total_written_bp_fraction:.1%})\n"
+    )
     if stats.paired:
         report += "  Read 1: {o.written_bp[0]:13,d} bp\n"
         report += "  Read 2: {o.written_bp[1]:13,d} bp\n"
@@ -561,26 +623,37 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 assert total_back == 0
 
             if stats.paired:
-                extra = 'First read: ' if which_in_pair == 0 else 'Second read: '
+                extra = "First read: " if which_in_pair == 0 else "Second read: "
             else:
-                extra = ''
+                extra = ""
 
             print_s("=" * 3, extra + "Adapter", adapter_statistics.name, "=" * 3)
             print_s()
 
             if isinstance(adapter_statistics, LinkedAdapterStatistics):
-                print_s("Sequence: {}...{}; Type: linked; Length: {}+{}; "
+                print_s(
+                    "Sequence: {}...{}; Type: linked; Length: {}+{}; "
                     "5' trimmed: {} times; 3' trimmed: {} times".format(
                         adapter_statistics.front.sequence,
                         adapter_statistics.back.sequence,
                         len(adapter_statistics.front.sequence),
                         len(adapter_statistics.back.sequence),
-                        total_front, total_back), end="")
+                        total_front,
+                        total_back,
+                    ),
+                    end="",
+                )
             else:
                 assert isinstance(adapter, (SingleAdapter, AnywhereAdapter))
-                print_s("Sequence: {}; Type: {}; Length: {}; Trimmed: {} times".
-                    format(adapter.sequence, adapter.description,
-                        len(adapter.sequence), total), end="")
+                print_s(
+                    "Sequence: {}; Type: {}; Length: {}; Trimmed: {} times".format(
+                        adapter.sequence,
+                        adapter.description,
+                        len(adapter.sequence),
+                        total,
+                    ),
+                    end="",
+                )
             if stats.reverse_complemented is not None:
                 print_s(f"; Reverse-complemented: {reverse_complemented} times")
             else:
@@ -591,7 +664,9 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
             if isinstance(adapter_statistics, AnywhereAdapterStatistics):
                 assert isinstance(adapter, AnywhereAdapter)
                 print_s(total_front, "times, it overlapped the 5' end of a read")
-                print_s(total_back, "times, it overlapped the 3' end or was within the read")
+                print_s(
+                    total_back, "times, it overlapped the 3' end or was within the read"
+                )
                 print_s()
                 print_s("Minimum overlap:", adapter.min_overlap)
                 print_s(error_ranges(adapter_statistics.front))
@@ -603,8 +678,10 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
             elif isinstance(adapter_statistics, LinkedAdapterStatistics):
                 assert isinstance(adapter, LinkedAdapter)
                 print_s()
-                print_s(f"Minimum overlap: "
-                        f"{adapter.front_adapter.min_overlap}+{adapter.back_adapter.min_overlap}")
+                print_s(
+                    f"Minimum overlap: "
+                    f"{adapter.front_adapter.min_overlap}+{adapter.back_adapter.min_overlap}"
+                )
                 print_s(error_ranges(adapter_statistics.front))
                 print_s(error_ranges(adapter_statistics.back))
                 print_s("Overview of removed sequences at 5' end")
@@ -627,16 +704,18 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 if adapter.allows_partial_matches:
                     print_s("Minimum overlap:", adapter.min_overlap)
                 print_s(error_ranges(adapter_statistics.end))
-                base_stats = AdjacentBaseStatistics(adapter_statistics.end.adjacent_bases)
+                base_stats = AdjacentBaseStatistics(
+                    adapter_statistics.end.adjacent_bases
+                )
                 warning = warning or base_stats.should_warn
                 print_s(base_stats)
                 print_s("Overview of removed sequences")
                 print_s(histogram(adapter_statistics.end, stats.n, gc_content))
 
     if warning:
-        print_s('WARNING:')
-        print_s('    One or more of your adapter sequences may be incomplete.')
-        print_s('    Please see the detailed output above.')
+        print_s("WARNING:")
+        print_s("    One or more of your adapter sequences may be incomplete.")
+        print_s("    Please see the detailed output above.")
 
     return sio.getvalue().rstrip()
 
@@ -648,8 +727,11 @@ def format_filter_report(stats):
             continue
         value = stats.filtered[name]
         fraction = stats.filtered_fraction(name)
-        line = ("{pairs_or_reads} " + (description + ":").ljust(27)
-            + f"{value:13,d} ({fraction:.1%})\n")
+        line = (
+            "{pairs_or_reads} "
+            + (description + ":").ljust(27)
+            + f"{value:13,d} ({fraction:.1%})\n"
+        )
         report += line
     return report
 
@@ -668,13 +750,19 @@ def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
         stats.filtered.get("too_many_n", 0),  # reads/pairs
         stats.read_length_statistics.written_reads(),  # reads/pairs out
         stats.with_adapters[0] if stats.with_adapters[0] is not None else 0,  # reads
-        stats.quality_trimmed_bp[0] if stats.quality_trimmed_bp[0] is not None else 0,  # bases
+        stats.quality_trimmed_bp[0]
+        if stats.quality_trimmed_bp[0] is not None
+        else 0,  # bases
         stats.read_length_statistics.written_bp()[0],  # bases out
     ]
     if stats.paired:
         fields += [
-            stats.with_adapters[1] if stats.with_adapters[1] is not None else 0,  # reads/pairs
-            stats.quality_trimmed_bp[1] if stats.quality_trimmed_bp[1] is not None else 0,  # bases
+            stats.with_adapters[1]
+            if stats.with_adapters[1] is not None
+            else 0,  # reads/pairs
+            stats.quality_trimmed_bp[1]
+            if stats.quality_trimmed_bp[1] is not None
+            else 0,  # bases
             stats.read_length_statistics.written_bp()[1],  # bases
         ]
 
@@ -682,14 +770,25 @@ def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
     for which_in_pair in (0, 1):
         for adapter_statistics in stats.adapter_stats[which_in_pair]:
             if isinstance(adapter_statistics, BackAdapterStatistics):
-                if AdjacentBaseStatistics(adapter_statistics.end.adjacent_bases).should_warn:
+                if AdjacentBaseStatistics(
+                    adapter_statistics.end.adjacent_bases
+                ).should_warn:
                     warning = True
                     break
     if warning:
         fields[0] = "WARN"
     header = [
-        'status', 'in_reads', 'in_bp', 'too_short', 'too_long', 'too_many_n', 'out_reads',
-        'w/adapters', 'qualtrim_bp', 'out_bp']
+        "status",
+        "in_reads",
+        "in_bp",
+        "too_short",
+        "too_long",
+        "too_many_n",
+        "out_reads",
+        "w/adapters",
+        "qualtrim_bp",
+        "out_bp",
+    ]
     if stats.paired:
-        header += ['w/adapters2', 'qualtrim2_bp', 'out2_bp']
+        header += ["w/adapters2", "qualtrim2_bp", "out2_bp"]
     return "\t".join(header) + "\n" + "\t".join(str(x) for x in fields)

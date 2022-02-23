@@ -1,6 +1,12 @@
 import pytest
 
-from cutadapt.__main__ import main, parse_cutoffs, parse_lengths, CommandLineError, setup_logging
+from cutadapt.__main__ import (
+    main,
+    parse_cutoffs,
+    parse_lengths,
+    CommandLineError,
+    setup_logging,
+)
 
 
 def test_help():
@@ -23,7 +29,7 @@ def test_parse_cutoffs():
 
 
 def test_parse_lengths():
-    assert parse_lengths("25") == (25, )
+    assert parse_lengths("25") == (25,)
     assert parse_lengths("17:25") == (17, 25)
     assert parse_lengths("25:") == (25, None)
     assert parse_lengths(":25") == (None, 25)
@@ -41,6 +47,7 @@ def test_parse_lengths():
 
 def test_setup_logging():
     import logging
+
     logger = logging.getLogger(__name__)
     setup_logging(logger, log_to_stderr=False, quiet=False, minimal=False, debug=False)
     logger.info("Log message")

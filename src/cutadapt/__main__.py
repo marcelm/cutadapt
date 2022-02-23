@@ -70,14 +70,36 @@ from cutadapt import __version__
 from cutadapt.adapters import warn_duplicate_adapters, Adapter, InvalidCharacter
 from cutadapt.json import OneLine, dumps as json_dumps
 from cutadapt.parser import AdapterParser
-from cutadapt.modifiers import (SingleEndModifier, LengthTagModifier, SuffixRemover,
+from cutadapt.modifiers import (
+    SingleEndModifier,
+    LengthTagModifier,
+    SuffixRemover,
     PrefixSuffixAdder,
-    ZeroCapper, QualityTrimmer, UnconditionalCutter, NEndTrimmer, AdapterCutter,
-    PairedAdapterCutterError, PairedAdapterCutter, NextseqQualityTrimmer, Shortener,
-    ReverseComplementer, PairedEndRenamer, Renamer, InvalidTemplate)
+    ZeroCapper,
+    QualityTrimmer,
+    UnconditionalCutter,
+    NEndTrimmer,
+    AdapterCutter,
+    PairedAdapterCutterError,
+    PairedAdapterCutter,
+    NextseqQualityTrimmer,
+    Shortener,
+    ReverseComplementer,
+    PairedEndRenamer,
+    Renamer,
+    InvalidTemplate,
+)
 from cutadapt.report import full_report, minimal_report, Statistics
-from cutadapt.pipeline import (Pipeline, SingleEndPipeline, PairedEndPipeline, InputPaths,
-    OutputFiles, PipelineRunner, SerialPipelineRunner, ParallelPipelineRunner)
+from cutadapt.pipeline import (
+    Pipeline,
+    SingleEndPipeline,
+    PairedEndPipeline,
+    InputPaths,
+    OutputFiles,
+    PipelineRunner,
+    SerialPipelineRunner,
+    ParallelPipelineRunner,
+)
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress, FileOpener
 from cutadapt.log import setup_logging, REPORT
 
@@ -90,19 +112,20 @@ class CutadaptArgumentParser(ArgumentParser):
     - The usage message is not prefixed with 'usage:'
     - A brief message is shown on errors, not full usage
     """
+
     class CustomUsageHelpFormatter(HelpFormatter):
         def __init__(self, *args, **kwargs):
-            kwargs['width'] = min(24 + 80, shutil.get_terminal_size().columns)
+            kwargs["width"] = min(24 + 80, shutil.get_terminal_size().columns)
             super().__init__(*args, **kwargs)
 
         def add_usage(self, usage, actions, groups, prefix=None):
             if usage is not SUPPRESS:  # pragma: no cover
-                args = usage, actions, groups, ''
+                args = usage, actions, groups, ""
                 self._add_item(self._format_usage, args)
 
     def __init__(self, *args, **kwargs):
-        kwargs['formatter_class'] = self.CustomUsageHelpFormatter
-        kwargs['usage'] = kwargs['usage'].replace("{version}", __version__)
+        kwargs["formatter_class"] = self.CustomUsageHelpFormatter
+        kwargs["usage"] = kwargs["usage"].replace("{version}", __version__)
         super().__init__(*args, **kwargs)
 
     def error(self, message):
@@ -111,7 +134,10 @@ class CutadaptArgumentParser(ArgumentParser):
         should either exit or raise an exception.
         """
         print('Run "cutadapt --help" to see command-line options.', file=sys.stderr)
-        print('See https://cutadapt.readthedocs.io/ for full documentation.', file=sys.stderr)
+        print(
+            "See https://cutadapt.readthedocs.io/ for full documentation.",
+            file=sys.stderr,
+        )
         self.exit(2, f"\n{self.prog}: error: {message}\n")
 
 
@@ -375,8 +401,10 @@ def parse_cutoffs(s: str) -> Tuple[int, int]:
     if len(cutoffs) == 1:
         cutoffs = [0, cutoffs[0]]
     elif len(cutoffs) != 2:
-        raise CommandLineError("Expected one value or two values separated by comma for "
-            "the quality cutoff")
+        raise CommandLineError(
+            "Expected one value or two values separated by comma for "
+            "the quality cutoff"
+        )
 
     return (cutoffs[0], cutoffs[1])
 
@@ -393,20 +421,26 @@ def parse_lengths(s: str) -> Tuple[Optional[int], ...]:
     >>> parse_lengths(':25')
     (None, 25)
     """
-    fields = s.split(':')
+    fields = s.split(":")
     if len(fields) not in (1, 2):
         raise CommandLineError("Only at most one colon is allowed")
     try:
-        values = tuple(int(f) if f != '' else None for f in fields)
+        values = tuple(int(f) if f != "" else None for f in fields)
     except ValueError as e:
         raise CommandLineError(f"Value not recognized: {e}")
     if len(values) == 2 and values[0] is None and values[1] is None:
-        raise CommandLineError(f"Cannot parse '{s}': At least one length needs to be given")
+        raise CommandLineError(
+            f"Cannot parse '{s}': At least one length needs to be given"
+        )
     return tuple(values)
 
 
 def open_output_files(
-    args, default_outfile, file_opener: FileOpener, adapter_names: Sequence[str], adapter_names2: Sequence[str],
+    args,
+    default_outfile,
+    file_opener: FileOpener,
+    adapter_names: Sequence[str],
+    adapter_names2: Sequence[str],
 ) -> OutputFiles:
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
@@ -420,17 +454,25 @@ def open_output_files(
     too_short = too_short2 = None
     if args.minimum_length is not None:
         too_short, too_short2 = file_opener.xopen_pair(
-            args.too_short_output, args.too_short_paired_output, "wb")
+            args.too_short_output, args.too_short_paired_output, "wb"
+        )
 
     too_long = too_long2 = None
     if args.maximum_length is not None:
         too_long, too_long2 = file_opener.xopen_pair(
-            args.too_long_output, args.too_long_paired_output, "wb")
+            args.too_long_output, args.too_long_paired_output, "wb"
+        )
 
-    if int(args.discard_trimmed) + int(args.discard_untrimmed) + int(
-            args.untrimmed_output is not None) > 1:
-        raise CommandLineError("Only one of the --discard-trimmed, --discard-untrimmed "
-            "and --untrimmed-output options can be used at the same time.")
+    if (
+        int(args.discard_trimmed)
+        + int(args.discard_untrimmed)
+        + int(args.untrimmed_output is not None)
+        > 1
+    ):
+        raise CommandLineError(
+            "Only one of the --discard-trimmed, --discard-untrimmed "
+            "and --untrimmed-output options can be used at the same time."
+        )
 
     demultiplex_mode = determine_demultiplex_mode(args)
     if demultiplex_mode and args.discard_trimmed:
@@ -444,19 +486,25 @@ def open_output_files(
         out = out2 = None
         combinatorial_out = combinatorial_out2 = None
         demultiplex_out, demultiplex_out2, untrimmed, untrimmed2 = open_demultiplex_out(
-            adapter_names, args, file_opener)
+            adapter_names, args, file_opener
+        )
     elif demultiplex_mode == "combinatorial":
-        assert '{name1}' in args.output and '{name2}' in args.output
-        assert '{name1}' in args.paired_output and '{name2}' in args.paired_output
+        assert "{name1}" in args.output and "{name2}" in args.output
+        assert "{name1}" in args.paired_output and "{name2}" in args.paired_output
         out = out2 = None
         demultiplex_out = demultiplex_out2 = None
-        combinatorial_out, combinatorial_out2, untrimmed, untrimmed2 = open_combinatorial_out(
-            adapter_names, adapter_names2, args, file_opener)
+        (
+            combinatorial_out,
+            combinatorial_out2,
+            untrimmed,
+            untrimmed2,
+        ) = open_combinatorial_out(adapter_names, adapter_names2, args, file_opener)
     else:
         combinatorial_out = combinatorial_out2 = None
         demultiplex_out = demultiplex_out2 = None
         untrimmed, untrimmed2 = file_opener.xopen_pair(
-            args.untrimmed_output, args.untrimmed_paired_output, "wb")
+            args.untrimmed_output, args.untrimmed_paired_output, "wb"
+        )
         out, out2 = file_opener.xopen_pair(args.output, args.paired_output, "wb")
         if out is None:
             out = default_outfile
@@ -500,7 +548,8 @@ def open_combinatorial_out(adapter_names, adapter_names2, args, file_opener):
     if args.untrimmed_output or args.untrimmed_paired_output:
         raise CommandLineError(
             "Combinatorial demultiplexing (with {name1} and {name2})"
-            " cannot be combined with --untrimmed-output or --untrimmed-paired-output")
+            " cannot be combined with --untrimmed-output or --untrimmed-paired-output"
+        )
     untrimmed = untrimmed2 = None
     return combinatorial_out, combinatorial_out2, untrimmed, untrimmed2
 
@@ -537,19 +586,23 @@ def open_demultiplex_out(adapter_names, args, file_opener):
 def determine_demultiplex_mode(args) -> Union[str, bool]:
     """Return one of "normal", "combinatorial" or False"""
 
-    demultiplex = args.output is not None and '{name}' in args.output
+    demultiplex = args.output is not None and "{name}" in args.output
 
-    if args.paired_output is not None and (demultiplex != ('{name}' in args.paired_output)):
-        raise CommandLineError('When demultiplexing paired-end data, "{name}" must appear in '
-                               'both output file names (-o and -p)')
+    if args.paired_output is not None and (
+        demultiplex != ("{name}" in args.paired_output)
+    ):
+        raise CommandLineError(
+            'When demultiplexing paired-end data, "{name}" must appear in '
+            "both output file names (-o and -p)"
+        )
 
     demultiplex_combinatorial = (
         args.output is not None
         and args.paired_output is not None
-        and '{name1}' in args.output
-        and '{name2}' in args.output
-        and '{name1}' in args.paired_output
-        and '{name2}' in args.paired_output
+        and "{name1}" in args.output
+        and "{name2}" in args.output
+        and "{name1}" in args.paired_output
+        and "{name2}" in args.paired_output
     )
     if demultiplex and demultiplex_combinatorial:
         raise CommandLineError("You cannot combine {name} with {name1} and {name2}")
@@ -588,14 +641,17 @@ def setup_input_files(
     """
     if len(inputs) == 0:
         raise CommandLineError(
-            "You did not provide any input file names. Please give me something to do!")
+            "You did not provide any input file names. Please give me something to do!"
+        )
     elif len(inputs) > 2:
         raise CommandLineError(
             "You provided {} input file names, but either one or two are expected. ".format(
-                len(inputs))
+                len(inputs)
+            )
             + "The file names were:\n - "
             + "\n - ".join(f"'{p}'" for p in inputs)
-            + "\nHint: If your path contains spaces, you need to enclose it in quotes")
+            + "\nHint: If your path contains spaces, you need to enclose it in quotes"
+        )
     input_filename = inputs[0]
     if paired and not interleaved:
         # Two file names required
@@ -603,7 +659,8 @@ def setup_input_files(
             raise CommandLineError(
                 "You used an option that enabled paired-end mode (such as -p, -A, -G, -B, -U), "
                 "but then you also need to provide two input files (you provided one) or "
-                "use --interleaved.")
+                "use --interleaved."
+            )
         else:
             input_paired_filename = inputs[1]  # type: Optional[str]
     else:
@@ -611,7 +668,8 @@ def setup_input_files(
             raise CommandLineError(
                 "It appears you want to trim paired-end data because you provided two input files, "
                 "but then you also need to provide two output files (with -o and -p) or use the "
-                "--interleaved option.")
+                "--interleaved option."
+            )
         input_paired_filename = None
 
     return input_filename, input_paired_filename
@@ -620,20 +678,28 @@ def setup_input_files(
 def check_arguments(args, paired: bool) -> None:
     if not paired:
         if args.untrimmed_paired_output:
-            raise CommandLineError("Option --untrimmed-paired-output can only be used when "
-                "trimming paired-end reads.")
+            raise CommandLineError(
+                "Option --untrimmed-paired-output can only be used when "
+                "trimming paired-end reads."
+            )
 
         if args.pair_adapters:
-            raise CommandLineError("Option --pair-adapters can only be used when trimming "
-                "paired-end reads")
+            raise CommandLineError(
+                "Option --pair-adapters can only be used when trimming "
+                "paired-end reads"
+            )
 
     if paired and not args.interleaved:
         if not args.paired_output:
-            raise CommandLineError("When a paired-end trimming option such as -A/-G/-B/-U, "
-                "is used, a second output file needs to be specified via -p (--paired-output).")
+            raise CommandLineError(
+                "When a paired-end trimming option such as -A/-G/-B/-U, "
+                "is used, a second output file needs to be specified via -p (--paired-output)."
+            )
         if not args.output:
-            raise CommandLineError("When you use -p or --paired-output, you must also "
-                "use the -o option.")
+            raise CommandLineError(
+                "When you use -p or --paired-output, you must also "
+                "use the -o option."
+            )
         for out, paired_out, argname in [
             (args.untrimmed_output, args.untrimmed_paired_output, "untrimmed"),
             (args.too_short_output, args.too_short_paired_output, "too-short"),
@@ -642,19 +708,25 @@ def check_arguments(args, paired: bool) -> None:
             if bool(out) != bool(paired_out):
                 raise CommandLineError(
                     "When trimming paired-end data, you must use either none or both of the"
-                    " --{name}-output/--{name}-paired-output options.".format(name=argname)
+                    " --{name}-output/--{name}-paired-output options.".format(
+                        name=argname
+                    )
                 )
 
     if args.overlap < 1:
         raise CommandLineError("The overlap must be at least 1.")
     if not (0 <= args.gc_content <= 100):
-        raise CommandLineError("GC content must be given as percentage between 0 and 100")
+        raise CommandLineError(
+            "GC content must be given as percentage between 0 and 100"
+        )
 
     if args.pair_adapters and args.times != 1:
         raise CommandLineError("--pair-adapters cannot be used with --times")
 
 
-def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) -> Pipeline:
+def pipeline_from_parsed_args(
+    args, paired, file_opener, adapters, adapters2
+) -> Pipeline:
     """
     Setup a processing pipeline from parsed command-line arguments.
 
@@ -662,22 +734,27 @@ def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) ->
 
     Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
     """
-    if args.action == 'none':
+    if args.action == "none":
         args.action = None
 
     # Create the processing pipeline
     if paired:
-        pair_filter_mode = 'any' if args.pair_filter is None else args.pair_filter
-        pipeline = PairedEndPipeline(
-            file_opener, pair_filter_mode
-        )  # type: Any
+        pair_filter_mode = "any" if args.pair_filter is None else args.pair_filter
+        pipeline = PairedEndPipeline(file_opener, pair_filter_mode)  # type: Any
     else:
         pipeline = SingleEndPipeline(file_opener)
 
     # When adapters are being trimmed only in R1 or R2, override the pair filter mode
     # as using the default of 'any' would regard all read pairs as untrimmed.
-    if isinstance(pipeline, PairedEndPipeline) and (not adapters2 or not adapters) and (
-            args.discard_untrimmed or args.untrimmed_output or args.untrimmed_paired_output):
+    if (
+        isinstance(pipeline, PairedEndPipeline)
+        and (not adapters2 or not adapters)
+        and (
+            args.discard_untrimmed
+            or args.untrimmed_output
+            or args.untrimmed_paired_output
+        )
+    ):
         pipeline.override_untrimmed_pair_filter = True
 
     add_unconditional_cutters(pipeline, args.cut, args.cut2)
@@ -687,7 +764,9 @@ def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) ->
     if args.nextseq_trim is not None:
         pipeline_add(NextseqQualityTrimmer(args.nextseq_trim, args.quality_base))
 
-    add_quality_trimmers(pipeline, args.quality_cutoff, args.quality_cutoff2, args.quality_base)
+    add_quality_trimmers(
+        pipeline, args.quality_cutoff, args.quality_cutoff2, args.quality_base
+    )
 
     add_adapter_cutter(
         pipeline,
@@ -719,12 +798,14 @@ def pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2) ->
             raise CommandLineError(e)
     # Set filtering parameters
     # Minimum/maximum length
-    for attr in 'minimum_length', 'maximum_length':
+    for attr in "minimum_length", "maximum_length":
         param = getattr(args, attr)
         if param is not None:
             lengths = parse_lengths(param)
             if not paired and len(lengths) == 2:
-                raise CommandLineError('Two minimum or maximum lengths given for single-end data')
+                raise CommandLineError(
+                    "Two minimum or maximum lengths given for single-end data"
+                )
             if paired and len(lengths) == 1:
                 lengths = (lengths[0], lengths[0])
             setattr(pipeline, attr, lengths)
@@ -790,7 +871,8 @@ def add_quality_trimmers(
 ):
     qtrimmers = [
         QualityTrimmer(*parse_cutoffs(cutoff), quality_base)
-        if cutoff is not None and cutoff != "0" else None
+        if cutoff is not None and cutoff != "0"
+        else None
         for cutoff in (cutoff1, cutoff2)
     ]
     if isinstance(pipeline, PairedEndPipeline):
@@ -867,9 +949,13 @@ def log_header(cmdlineargs):
     """Print the "This is cutadapt ..." header"""
 
     implementation = platform.python_implementation()
-    opt = ' (' + implementation + ')' if implementation != 'CPython' else ''
-    logger.info("This is cutadapt %s with Python %s%s", __version__,
-        platform.python_version(), opt)
+    opt = " (" + implementation + ")" if implementation != "CPython" else ""
+    logger.info(
+        "This is cutadapt %s with Python %s%s",
+        __version__,
+        platform.python_version(),
+        opt,
+    )
     logger.info("Command line parameters: %s", " ".join(cmdlineargs))
 
 
@@ -894,8 +980,13 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     # Setup logging only if there are not already any handlers (can happen when
     # this function is being called externally such as from unit tests)
     if not logging.root.handlers:
-        setup_logging(logger, log_to_stderr=is_any_output_stdout(args),
-            quiet=args.quiet, minimal=args.report == 'minimal', debug=args.debug)
+        setup_logging(
+            logger,
+            log_to_stderr=is_any_output_stdout(args),
+            quiet=args.quiet,
+            minimal=args.report == "minimal",
+            debug=args.debug,
+        )
     log_header(cmdlineargs)
     profiler = setup_profiler_if_requested(args.profile)
 
@@ -908,11 +999,13 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         parser.error("unrecognized arguments: " + " ".join(leftover_args))
 
     if args.cores < 0:
-        parser.error('Value for --cores cannot be negative')
+        parser.error("Value for --cores cannot be negative")
 
     cores = available_cpu_count() if args.cores == 0 else args.cores
     file_opener = FileOpener(
-        compression_level=args.compression_level, threads=estimate_compression_threads(cores))
+        compression_level=args.compression_level,
+        threads=estimate_compression_threads(cores),
+    )
     if sys.stderr.isatty() and not args.quiet and not args.debug:
         progress = Progress()
     else:
@@ -921,24 +1014,38 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
 
     try:
         is_interleaved_input = args.interleaved and len(args.inputs) == 1
-        input_filename, input_paired_filename = setup_input_files(args.inputs,
-            paired, is_interleaved_input)
+        input_filename, input_paired_filename = setup_input_files(
+            args.inputs, paired, is_interleaved_input
+        )
         check_arguments(args, paired)
         adapters, adapters2 = adapters_from_args(args)
-        pipeline = pipeline_from_parsed_args(args, paired, file_opener, adapters, adapters2)
+        pipeline = pipeline_from_parsed_args(
+            args, paired, file_opener, adapters, adapters2
+        )
         adapter_names = [a.name for a in adapters]  # type: List[str]
         adapter_names2 = [a.name for a in adapters2]  # type: List[str]
-        outfiles = open_output_files(args, default_outfile, file_opener, adapter_names, adapter_names2)
-        inpaths = InputPaths(input_filename, path2=input_paired_filename, interleaved=is_interleaved_input)
-        runner = setup_runner(pipeline, inpaths, outfiles, progress, cores, args.buffer_size, file_opener)
+        outfiles = open_output_files(
+            args, default_outfile, file_opener, adapter_names, adapter_names2
+        )
+        inpaths = InputPaths(
+            input_filename,
+            path2=input_paired_filename,
+            interleaved=is_interleaved_input,
+        )
+        runner = setup_runner(
+            pipeline, inpaths, outfiles, progress, cores, args.buffer_size, file_opener
+        )
     except CommandLineError as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
         parser.error(str(e))
         return
 
-    logger.info("Processing reads on %d core%s in %s mode ...",
-        cores, 's' if cores > 1 else '',
-        {False: 'single-end', True: 'paired-end'}[pipeline.paired])
+    logger.info(
+        "Processing reads on %d core%s in %s mode ...",
+        cores,
+        "s" if cores > 1 else "",
+        {False: "single-end", True: "paired-end"}[pipeline.paired],
+    )
     try:
         with runner as r:
             stats = r.run()
@@ -952,11 +1059,11 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         sys.exit(f"cutadapt: error: {e}")
 
     elapsed = time.time() - start_time
-    if args.report == 'minimal':
+    if args.report == "minimal":
         report = minimal_report
     else:
         report = full_report
-    logger.log(REPORT, '%s', report(stats, elapsed, args.gc_content / 100.0))
+    logger.log(REPORT, "%s", report(stats, elapsed, args.gc_content / 100.0))
     if args.json is not None:
         with open(args.json, "w") as f:
             json_dict = json_report(
@@ -971,8 +1078,9 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
             f.write("\n")
     if profiler is not None:
         import pstats
+
         profiler.disable()
-        pstats.Stats(profiler).sort_stats('time').print_stats(20)
+        pstats.Stats(profiler).sort_stats("time").print_stats(20)
     return stats
 
 
@@ -994,7 +1102,14 @@ def setup_runner(
     try:
         if cores > 1:
             return ParallelPipelineRunner(
-                pipeline, inpaths, outfiles, file_opener, progress, n_workers=cores, buffer_size=buffer_size)
+                pipeline,
+                inpaths,
+                outfiles,
+                file_opener,
+                progress,
+                n_workers=cores,
+                buffer_size=buffer_size,
+            )
         else:
             infiles = inpaths.open(file_opener)
             return SerialPipelineRunner(pipeline, infiles, outfiles, progress)
@@ -1005,6 +1120,7 @@ def setup_runner(
 def setup_profiler_if_requested(requested):
     if requested:
         import cProfile
+
         profiler = cProfile.Profile()
         profiler.enable()
     else:
@@ -1018,7 +1134,8 @@ def warn_if_en_dashes(args):
             logger.warning(
                 "The first character in argument '%s' is '–' (an en-dash, Unicode U+2013)"
                 " and will therefore be interpreted as a file name. If you wanted to"
-                " provide an option, use a regular hyphen '-'.", arg
+                " provide an option, use a regular hyphen '-'.",
+                arg,
             )
 
 
@@ -1027,20 +1144,22 @@ def estimate_compression_threads(cores: int) -> Optional[int]:
 
 
 def is_any_output_stdout(args):
-    return any([
-        args.output is None,
-        args.output == "-",
-        args.paired_output == "-",
-        args.untrimmed_output == "-",
-        args.untrimmed_paired_output == "-",
-        args.too_short_output == "-",
-        args.too_short_paired_output == "-",
-        args.too_long_output == "-",
-        args.too_long_paired_output == "-",
-        args.rest_file == "-",
-        args.info_file == "-",
-        args.wildcard_file == "-",
-    ])
+    return any(
+        [
+            args.output is None,
+            args.output == "-",
+            args.paired_output == "-",
+            args.untrimmed_output == "-",
+            args.untrimmed_paired_output == "-",
+            args.too_short_output == "-",
+            args.too_short_paired_output == "-",
+            args.too_long_output == "-",
+            args.too_long_paired_output == "-",
+            args.rest_file == "-",
+            args.info_file == "-",
+            args.wildcard_file == "-",
+        ]
+    )
 
 
 def json_report(
@@ -1068,5 +1187,5 @@ def json_report(
     return d
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main_cli())

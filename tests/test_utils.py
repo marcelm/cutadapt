@@ -19,7 +19,7 @@ def test_raise_open_files_limit():
 
 
 def test_progress():
-    p = Progress(every=1E-6)
+    p = Progress(every=1e-6)
     p.update(100)
     time.sleep(0.001)
     p.update(100)
@@ -56,7 +56,9 @@ def test_reverse_complement():
 
 def test_reverse_complemented_sequence():
     s = dnaio.Sequence("the_name", "ACGTTTGA", "B>%%BB5#")
-    assert reverse_complemented_sequence(s) == dnaio.Sequence("the_name", "TCAAACGT", "#5BB%%>B")
+    assert reverse_complemented_sequence(s) == dnaio.Sequence(
+        "the_name", "TCAAACGT", "#5BB%%>B"
+    )
 
     s = dnaio.Sequence("the_name", "ACGTTTGA")
     assert reverse_complemented_sequence(s) == dnaio.Sequence("the_name", "TCAAACGT")

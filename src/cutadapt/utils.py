@@ -89,7 +89,10 @@ class Progress:
     @staticmethod
     def scissors(width=10):
         while True:
-            for is_reverse, rang in [(False, range(width + 1)), (True, range(width + 1))]:
+            for is_reverse, rang in [
+                (False, range(width + 1)),
+                (True, range(width + 1)),
+            ]:
                 for position in rang:
                     for is_open in (True, False):
                         left = " " * position
@@ -132,10 +135,16 @@ class Progress:
             "{animation} {hours:02d}:{minutes:02d}:{seconds:02d} "
             "{total:13,d} reads @ {per_item:5.1F} µs/read; {per_minute:6.2F} M reads/minute"
             "".format(
-                hours=hours, minutes=minutes, seconds=seconds,
-                total=total, per_item=per_item * 1E6, per_minute=per_second * 60 / 1E6,
-                animation=animation),
-            end="", file=sys.stderr
+                hours=hours,
+                minutes=minutes,
+                seconds=seconds,
+                total=total,
+                per_item=per_item * 1e6,
+                per_minute=per_second * 60 / 1e6,
+                animation=animation,
+            ),
+            end="",
+            file=sys.stderr,
         )
         self._n = total
         self._time = current_time
@@ -152,6 +161,7 @@ class DummyProgress(Progress):
     """
     Does not print anything
     """
+
     def update(self, total, _final=False):
         pass
 
@@ -174,7 +184,9 @@ def reverse_complemented_sequence(sequence: dnaio.Sequence):
         qualities = None
     else:
         qualities = sequence.qualities[::-1]
-    return dnaio.Sequence(sequence.name, reverse_complement(sequence.sequence), qualities)
+    return dnaio.Sequence(
+        sequence.name, reverse_complement(sequence.sequence), qualities
+    )
 
 
 class FileOpener:
@@ -203,8 +215,10 @@ class FileOpener:
 
     def xopen_pair(self, path1: str, path2: Optional[str], mode):
         if path1 is None and path2 is not None:
-            raise ValueError("When giving paths for paired-end files, only providing the second"
-                " file is not supported")
+            raise ValueError(
+                "When giving paths for paired-end files, only providing the second"
+                " file is not supported"
+            )
         file1 = self.xopen_or_none(path1, mode)
         file2 = self.xopen_or_none(path2, mode)
         return file1, file2
@@ -212,8 +226,12 @@ class FileOpener:
     def dnaio_open(self, *args, **kwargs):
         kwargs["opener"] = self.xopen
         f = dnaio.open(*args, **kwargs)
-        logger.debug("Opening %r, mode '%s' with dnaio resulted in %s",
-            args[0], kwargs['mode'], f)
+        logger.debug(
+            "Opening %r, mode '%s' with dnaio resulted in %s",
+            args[0],
+            kwargs["mode"],
+            f,
+        )
         return f
 
     def dnaio_open_raise_limit(self, *args, **kwargs):

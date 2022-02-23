@@ -36,15 +36,24 @@ def test_back_adapter_partial_occurrence_in_front():
 
 def test_issue_52():
     adapter = BackAdapter(
-        sequence='GAACTCCAGTCACNNNNN',
+        sequence="GAACTCCAGTCACNNNNN",
         max_errors=0.12,
         min_overlap=5,
         read_wildcards=False,
-        adapter_wildcards=True)
+        adapter_wildcards=True,
+    )
     sequence = "CCCCAGAACTACAGTCCCGGC"
-    am = RemoveAfterMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2,
-        adapter=adapter, sequence=sequence)
-    assert am.wildcards() == 'GGC'
+    am = RemoveAfterMatch(
+        astart=0,
+        astop=17,
+        rstart=5,
+        rstop=21,
+        matches=15,
+        errors=2,
+        adapter=adapter,
+        sequence=sequence,
+    )
+    assert am.wildcards() == "GGC"
     """
     The result above should actually be 'CGGC' since the correct
     alignment is this one:
@@ -75,7 +84,8 @@ def test_issue_80():
         max_errors=0.2,
         min_overlap=3,
         read_wildcards=False,
-        adapter_wildcards=False)
+        adapter_wildcards=False,
+    )
     result = adapter.match_to("TCGTATGCCCTCC")
     assert result.errors == 3, result
     assert result.astart == 0, result
@@ -121,7 +131,7 @@ def test_back_adapter_indel_and_mismatch_occurrence():
 
 
 def test_str():
-    a = BackAdapter('ACGT', max_errors=0.1)
+    a = BackAdapter("ACGT", max_errors=0.1)
     str(a)
     str(a.match_to("TTACGT"))
 
@@ -163,69 +173,109 @@ def test_prefix_with_indels_two_mismatches():
 
 
 def test_linked_adapter():
-    front_adapter = PrefixAdapter('AAAA', min_overlap=4)
-    back_adapter = BackAdapter('TTTT', min_overlap=3)
+    front_adapter = PrefixAdapter("AAAA", min_overlap=4)
+    back_adapter = BackAdapter("TTTT", min_overlap=3)
 
     linked_adapter = LinkedAdapter(
-        front_adapter, back_adapter, front_required=True, back_required=False, name='name')
+        front_adapter,
+        back_adapter,
+        front_required=True,
+        back_required=False,
+        name="name",
+    )
     assert linked_adapter.front_adapter.min_overlap == 4
     assert linked_adapter.back_adapter.min_overlap == 3
 
-    read = Sequence(name='seq', sequence='AAAACCCCCTTTT')
+    read = Sequence(name="seq", sequence="AAAACCCCCTTTT")
     trimmed = linked_adapter.match_to(read.sequence).trimmed(read)
-    assert trimmed.name == 'seq'
-    assert trimmed.sequence == 'CCCCC'
+    assert trimmed.name == "seq"
+    assert trimmed.sequence == "CCCCC"
 
 
 def test_info_record():
     adapter = BackAdapter(
-        sequence='GAACTCCAGTCACNNNNN',
+        sequence="GAACTCCAGTCACNNNNN",
         max_errors=0.12,
         min_overlap=5,
         read_wildcards=False,
         adapter_wildcards=True,
-        name="Foo")
-    read = Sequence(name="abc", sequence='CCCCAGAACTACAGTCCCGGC')
-    am = RemoveAfterMatch(astart=0, astop=17, rstart=5, rstop=21, matches=15, errors=2,
-        adapter=adapter, sequence=read.sequence)
-    assert am.get_info_records(read) == [[
-        "",
-        2,
-        5,
-        21,
-        'CCCCA',
-        'GAACTACAGTCCCGGC',
-        '',
-        'Foo',
-        '',
-        '',
-        '',
-    ]]
+        name="Foo",
+    )
+    read = Sequence(name="abc", sequence="CCCCAGAACTACAGTCCCGGC")
+    am = RemoveAfterMatch(
+        astart=0,
+        astop=17,
+        rstart=5,
+        rstop=21,
+        matches=15,
+        errors=2,
+        adapter=adapter,
+        sequence=read.sequence,
+    )
+    assert am.get_info_records(read) == [
+        [
+            "",
+            2,
+            5,
+            21,
+            "CCCCA",
+            "GAACTACAGTCCCGGC",
+            "",
+            "Foo",
+            "",
+            "",
+            "",
+        ]
+    ]
 
 
 def test_random_match_probabilities():
-    a = BackAdapter('A', max_errors=0.1).create_statistics()
+    a = BackAdapter("A", max_errors=0.1).create_statistics()
     assert a.end.random_match_probabilities(0.5) == [1, 0.25]
     assert a.end.random_match_probabilities(0.2) == [1, 0.4]
 
-    for s in ('ACTG', 'XMWH'):
+    for s in ("ACTG", "XMWH"):
         a = BackAdapter(s, max_errors=0.1).create_statistics()
-        assert a.end.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
-        assert a.end.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
+        assert a.end.random_match_probabilities(0.5) == [
+            1,
+            0.25,
+            0.25**2,
+            0.25**3,
+            0.25**4,
+        ]
+        assert a.end.random_match_probabilities(0.2) == [
+            1,
+            0.4,
+            0.4 * 0.1,
+            0.4 * 0.1 * 0.4,
+            0.4 * 0.1 * 0.4 * 0.1,
+        ]
 
-    a = FrontAdapter('GTCA', max_errors=0.1).create_statistics()
-    assert a.end.random_match_probabilities(0.5) == [1, 0.25, 0.25**2, 0.25**3, 0.25**4]
-    assert a.end.random_match_probabilities(0.2) == [1, 0.4, 0.4*0.1, 0.4*0.1*0.4, 0.4*0.1*0.4*0.1]
+    a = FrontAdapter("GTCA", max_errors=0.1).create_statistics()
+    assert a.end.random_match_probabilities(0.5) == [
+        1,
+        0.25,
+        0.25**2,
+        0.25**3,
+        0.25**4,
+    ]
+    assert a.end.random_match_probabilities(0.2) == [
+        1,
+        0.4,
+        0.4 * 0.1,
+        0.4 * 0.1 * 0.4,
+        0.4 * 0.1 * 0.4 * 0.1,
+    ]
 
 
 def test_add_adapter_statistics():
-    stats = BackAdapter('A', name='name', max_errors=0.1).create_statistics()
+    stats = BackAdapter("A", name="name", max_errors=0.1).create_statistics()
     end_stats = stats.end
-    end_stats.adjacent_bases['A'] = 7
-    end_stats.adjacent_bases['C'] = 19
-    end_stats.adjacent_bases['G'] = 23
-    end_stats.adjacent_bases['T'] = 42
-    end_stats.adjacent_bases[''] = 45
+    end_stats.adjacent_bases["A"] = 7
+    end_stats.adjacent_bases["C"] = 19
+    end_stats.adjacent_bases["G"] = 23
+    end_stats.adjacent_bases["T"] = 42
+    end_stats.adjacent_bases[""] = 45
 
     end_stats.errors[10][0] = 100
     end_stats.errors[10][1] = 11
@@ -234,13 +284,13 @@ def test_add_adapter_statistics():
     end_stats.errors[20][1] = 66
     end_stats.errors[20][2] = 6
 
-    stats2 = BackAdapter('A', name='name', max_errors=0.1).create_statistics()
+    stats2 = BackAdapter("A", name="name", max_errors=0.1).create_statistics()
     end_stats2 = stats2.end
-    end_stats2.adjacent_bases['A'] = 43
-    end_stats2.adjacent_bases['C'] = 31
-    end_stats2.adjacent_bases['G'] = 27
-    end_stats2.adjacent_bases['T'] = 8
-    end_stats2.adjacent_bases[''] = 5
+    end_stats2.adjacent_bases["A"] = 43
+    end_stats2.adjacent_bases["C"] = 31
+    end_stats2.adjacent_bases["G"] = 27
+    end_stats2.adjacent_bases["T"] = 8
+    end_stats2.adjacent_bases[""] = 5
     end_stats2.errors[10][0] = 234
     end_stats2.errors[10][1] = 14
     end_stats2.errors[10][3] = 5
@@ -251,7 +301,7 @@ def test_add_adapter_statistics():
     stats += stats2
     r = stats.end
 
-    assert r.adjacent_bases == {'A': 50, 'C': 50, 'G': 50, 'T': 50, '': 50}
+    assert r.adjacent_bases == {"A": 50, "C": 50, "G": 50, "T": 50, "": 50}
     assert r.errors == {
         10: {0: 334, 1: 25, 2: 3, 3: 5},
         15: {0: 90, 1: 17, 2: 2},
@@ -264,7 +314,13 @@ def test_linked_matches_property():
     # Issue #265
     front_adapter = FrontAdapter("GGG")
     back_adapter = BackAdapter("TTT")
-    la = LinkedAdapter(front_adapter, back_adapter, front_required=False, back_required=False, name='name')
+    la = LinkedAdapter(
+        front_adapter,
+        back_adapter,
+        front_required=False,
+        back_required=False,
+        name="name",
+    )
     assert la.match_to("AAAATTTT").matches == 3
 
 
@@ -314,26 +370,32 @@ def test_indexed_prefix_adapters():
 
 def test_indexed_prefix_adapters_incorrect_type():
     with pytest.raises(ValueError):
-        IndexedPrefixAdapters([
-            PrefixAdapter("GAAC", indels=False),
-            SuffixAdapter("TGCT", indels=False),
-        ])
+        IndexedPrefixAdapters(
+            [
+                PrefixAdapter("GAAC", indels=False),
+                SuffixAdapter("TGCT", indels=False),
+            ]
+        )
 
 
 def test_indexed_very_similar(caplog):
-    IndexedPrefixAdapters([
-        PrefixAdapter("GAAC", max_errors=1, indels=False),
-        PrefixAdapter("GAAG", max_errors=1, indels=False),
-    ])
+    IndexedPrefixAdapters(
+        [
+            PrefixAdapter("GAAC", max_errors=1, indels=False),
+            PrefixAdapter("GAAG", max_errors=1, indels=False),
+        ]
+    )
     assert "cannot be assigned uniquely" in caplog.text
 
 
 def test_indexed_too_high_k():
     with pytest.raises(ValueError) as e:
-        IndexedPrefixAdapters([
-            PrefixAdapter("ACGTACGT", max_errors=3, indels=False),
-            PrefixAdapter("AAGGTTCC", max_errors=2, indels=False),
-        ])
+        IndexedPrefixAdapters(
+            [
+                PrefixAdapter("ACGTACGT", max_errors=3, indels=False),
+                PrefixAdapter("AAGGTTCC", max_errors=2, indels=False),
+            ]
+        )
     assert "Error rate too high" in e.value.args[0]
 
 
@@ -351,10 +413,12 @@ def test_indexed_suffix_adapters():
 
 def test_indexed_suffix_adapters_incorrect_type():
     with pytest.raises(ValueError):
-        IndexedSuffixAdapters([
-            SuffixAdapter("GAAC", indels=False),
-            PrefixAdapter("TGCT", indels=False),
-        ])
+        IndexedSuffixAdapters(
+            [
+                SuffixAdapter("GAAC", indels=False),
+                PrefixAdapter("TGCT", indels=False),
+            ]
+        )
 
 
 def test_multi_prefix_adapter_with_indels():
@@ -373,7 +437,7 @@ def test_indexed_prefix_adapters_with_n_wildcard():
     sequence = "GGTCCAGA"
     ma = IndexedPrefixAdapters([PrefixAdapter(sequence, max_errors=1, indels=False)])
     for i in range(len(sequence)):
-        t = sequence[:i] + "N" + sequence[i+1:] + "TGCT"
+        t = sequence[:i] + "N" + sequence[i + 1 :] + "TGCT"
         result = ma.match_to(t)
         assert isinstance(result, RemoveBeforeMatch)
         assert (result.rstart, result.rstop) == (0, 8)

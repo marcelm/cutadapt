@@ -1,12 +1,12 @@
 __all__ = [
-    'EndSkip',
-    'Aligner',
-    'PrefixComparer',
-    'SuffixComparer',
-    'hamming_sphere',
-    'hamming_environment',
-    'edit_environment',
-    'edit_distance',
+    "EndSkip",
+    "Aligner",
+    "PrefixComparer",
+    "SuffixComparer",
+    "hamming_sphere",
+    "hamming_environment",
+    "edit_environment",
+    "edit_distance",
 ]
 
 from enum import IntFlag
@@ -27,6 +27,7 @@ class EndSkip(IntFlag):
     Flags for the Aligner that indicate which ends of reference or query may be skipped at
     no cost. Setting all four flags at the same time results in semiglobal alignment.
     """
+
     REFERENCE_START = 1  # a prefix of the reference may be skipped at no cost
     QUERY_START = 2  # a prefix of the query may be skipped at no cost
     REFERENCE_END = 4  # a suffix of the reference may be skipeed at no cost
@@ -75,8 +76,8 @@ def hamming_sphere(s: str, k: int) -> Iterator[str]:
     for i in range(n - k + 1):
         prefix = s[:i]
         c = s[i]
-        suffix = s[i+1:]
-        for ch in 'ACGT':
+        suffix = s[i + 1 :]
+        for ch in "ACGT":
             if ch == c:
                 continue
             for t in hamming_sphere(suffix, k - 1):
@@ -113,11 +114,11 @@ def naive_edit_environment(s: str, k: int) -> Iterator[str]:
             for i in range(n):
                 prefix = s[:i] + ch
                 yield prefix + s[i:]  # insertion
-                yield prefix + s[i + 1:]  # substitution
+                yield prefix + s[i + 1 :]  # substitution
             yield s + ch  # insertion into final position
         # all deletions
         for i in range(n):
-            yield s[:i] + s[i+1:]
+            yield s[:i] + s[i + 1 :]
 
 
 def edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
@@ -150,11 +151,13 @@ def slow_edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
     """
     n = len(s)
     alphabet = "TGCA"
-    work_stack = [(
-        "",
-        list(range(n + 1)),
-        [0] * (n + 1),
-    )]
+    work_stack = [
+        (
+            "",
+            list(range(n + 1)),
+            [0] * (n + 1),
+        )
+    ]
     while work_stack:
         # t is the current prefix
         # costs is a row at index len(t) in the DP matrix
@@ -188,13 +191,13 @@ def slow_edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
                 match = 0 if s[j - 1] == ch else 1
                 assert j > 0
 
-                diag = costs[j-1] + match
-                left = next_costs[j-1] + 1
+                diag = costs[j - 1] + match
+                left = next_costs[j - 1] + 1
                 up = costs[j] + 1
                 if diag <= left and diag <= up:
-                    c, m = diag, matches[j-1] + (1 - match)
+                    c, m = diag, matches[j - 1] + (1 - match)
                 elif left <= up:
-                    c, m = left, next_matches[j-1]
+                    c, m = left, next_matches[j - 1]
                 else:
                     c, m = up, matches[j]
                 next_costs[j] = c

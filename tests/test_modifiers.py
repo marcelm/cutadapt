@@ -13,27 +13,38 @@ from cutadapt.adapters import (
     RemoveAfterMatch,
     LinkedMatch,
 )
-from cutadapt.modifiers import (UnconditionalCutter, NEndTrimmer, QualityTrimmer,
-    Shortener, AdapterCutter, PairedAdapterCutter, ModificationInfo, ZeroCapper,
-    Renamer, ReverseComplementer, InvalidTemplate, PairedEndRenamer)
+from cutadapt.modifiers import (
+    UnconditionalCutter,
+    NEndTrimmer,
+    QualityTrimmer,
+    Shortener,
+    AdapterCutter,
+    PairedAdapterCutter,
+    ModificationInfo,
+    ZeroCapper,
+    Renamer,
+    ReverseComplementer,
+    InvalidTemplate,
+    PairedEndRenamer,
+)
 
 
 def test_unconditional_cutter():
     UnconditionalCutter(length=5)
-    read = Sequence('r1', 'abcdefg')
+    read = Sequence("r1", "abcdefg")
 
     info = ModificationInfo(read)
-    assert UnconditionalCutter(length=2)(read, info).sequence == 'cdefg'
-    assert info.cut_prefix == 'ab'
+    assert UnconditionalCutter(length=2)(read, info).sequence == "cdefg"
+    assert info.cut_prefix == "ab"
     assert info.cut_suffix is None
 
     info = ModificationInfo(read)
-    assert UnconditionalCutter(length=-2)(read, info).sequence == 'abcde'
-    assert info.cut_suffix == 'fg'
+    assert UnconditionalCutter(length=-2)(read, info).sequence == "abcde"
+    assert info.cut_suffix == "fg"
     assert info.cut_prefix is None
 
-    assert UnconditionalCutter(length=100)(read, info).sequence == ''
-    assert UnconditionalCutter(length=-100)(read, info).sequence == ''
+    assert UnconditionalCutter(length=100)(read, info).sequence == ""
+    assert UnconditionalCutter(length=-100)(read, info).sequence == ""
 
 
 def test_reverse_complementer():
@@ -67,38 +78,42 @@ def test_zero_capper():
 
 def test_nend_trimmer():
     trimmer = NEndTrimmer()
-    seqs = ['NNNNAAACCTTGGNNN', 'NNNNAAACNNNCTTGGNNN', 'NNNNNN']
-    trims = ['AAACCTTGG', 'AAACNNNCTTGG', '']
+    seqs = ["NNNNAAACCTTGGNNN", "NNNNAAACNNNCTTGGNNN", "NNNNNN"]
+    trims = ["AAACCTTGG", "AAACNNNCTTGG", ""]
     for seq, trimmed in zip(seqs, trims):
-        _seq = Sequence('read1', seq, qualities='#'*len(seq))
-        _trimmed = Sequence('read1', trimmed, qualities='#'*len(trimmed))
+        _seq = Sequence("read1", seq, qualities="#" * len(seq))
+        _trimmed = Sequence("read1", trimmed, qualities="#" * len(trimmed))
         assert trimmer(_seq, ModificationInfo(_seq)) == _trimmed
 
 
 def test_quality_trimmer():
-    read = Sequence('read1', 'ACGTTTACGTA', '##456789###')
+    read = Sequence("read1", "ACGTTTACGTA", "##456789###")
 
     qt = QualityTrimmer(10, 10, 33)
-    assert qt(read, ModificationInfo(read)) == Sequence('read1', 'GTTTAC', '456789')
+    assert qt(read, ModificationInfo(read)) == Sequence("read1", "GTTTAC", "456789")
 
     qt = QualityTrimmer(0, 10, 33)
-    assert qt(read, ModificationInfo(read)) == Sequence('read1', 'ACGTTTAC', '##456789')
+    assert qt(read, ModificationInfo(read)) == Sequence("read1", "ACGTTTAC", "##456789")
 
     qt = QualityTrimmer(10, 0, 33)
-    assert qt(read, ModificationInfo(read)) == Sequence('read1', 'GTTTACGTA', '456789###')
+    assert qt(read, ModificationInfo(read)) == Sequence(
+        "read1", "GTTTACGTA", "456789###"
+    )
 
 
 def test_shortener():
-    read = Sequence('read1', 'ACGTTTACGTA', '##456789###')
+    read = Sequence("read1", "ACGTTTACGTA", "##456789###")
 
     shortener = Shortener(0)
-    assert shortener(read, ModificationInfo(read)) == Sequence('read1', '', '')
+    assert shortener(read, ModificationInfo(read)) == Sequence("read1", "", "")
 
     shortener = Shortener(1)
-    assert shortener(read, ModificationInfo(read)) == Sequence('read1', 'A', '#')
+    assert shortener(read, ModificationInfo(read)) == Sequence("read1", "A", "#")
 
     shortener = Shortener(5)
-    assert shortener(read, ModificationInfo(read)) == Sequence('read1', 'ACGTT', '##456')
+    assert shortener(read, ModificationInfo(read)) == Sequence(
+        "read1", "ACGTT", "##456"
+    )
 
     shortener = Shortener(100)
     assert shortener(read, ModificationInfo(read)) == read
@@ -118,14 +133,16 @@ def test_adapter_cutter_indexing():
 
 
 class TestPairedAdapterCutter:
-
-    @pytest.mark.parametrize("action,expected_trimmed1,expected_trimmed2", [
-        (None, "CCCCGGTTAACCCC", "TTTTAACCGGTTTT"),
-        ("trim", "CCCC", "TTTT"),
-        ("lowercase", "CCCCggttaacccc", "TTTTaaccggtttt"),
-        ("mask", "CCCCNNNNNNNNNN", "TTTTNNNNNNNNNN"),
-        ("retain", "CCCCGGTTAA", "TTTTAACCGG"),
-    ])
+    @pytest.mark.parametrize(
+        "action,expected_trimmed1,expected_trimmed2",
+        [
+            (None, "CCCCGGTTAACCCC", "TTTTAACCGGTTTT"),
+            ("trim", "CCCC", "TTTT"),
+            ("lowercase", "CCCCggttaacccc", "TTTTaaccggtttt"),
+            ("mask", "CCCCNNNNNNNNNN", "TTTTNNNNNNNNNN"),
+            ("retain", "CCCCGGTTAA", "TTTTAACCGG"),
+        ],
+    )
     def test_actions(self, action, expected_trimmed1, expected_trimmed2):
         a1 = BackAdapter("GGTTAA")
         a2 = BackAdapter("AACCGG")
@@ -170,17 +187,22 @@ def test_action_retain():
     assert "ATTGCCAACCGG" == trimmed.sequence
 
 
-@pytest.mark.parametrize("s,expected", [
-    ("ATTATTggttaaccAAAAAaaccggTATT", "ggttaaccAAAAAaaccgg"),
-    ("AAAAAaaccggTATT", "AAAAAaaccgg"),
-    ("ATTATTggttaaccAAAAA", "ggttaaccAAAAA"),
-    ("ATTATT", "ATTATT"),
-])
+@pytest.mark.parametrize(
+    "s,expected",
+    [
+        ("ATTATTggttaaccAAAAAaaccggTATT", "ggttaaccAAAAAaaccgg"),
+        ("AAAAAaaccggTATT", "AAAAAaaccgg"),
+        ("ATTATTggttaaccAAAAA", "ggttaaccAAAAA"),
+        ("ATTATT", "ATTATT"),
+    ],
+)
 def test_linked_action_retain(s, expected):
     front = FrontAdapter("GGTTAACC")
     back = BackAdapter("AACCGG")
     adapters: List[Adapter] = [
-        LinkedAdapter(front, back, front_required=False, back_required=False, name="linked")
+        LinkedAdapter(
+            front, back, front_required=False, back_required=False, name="linked"
+        )
     ]
     ac = AdapterCutter(adapters, action="retain")
     seq = Sequence("r1", s)
@@ -247,16 +269,18 @@ class TestRenamer:
         read = Sequence("theid thecomment", sequence)
         adapter = BackAdapter("AGGT")
         info = ModificationInfo(read)
-        info.matches.append(RemoveBeforeMatch(
-            astart=0,
-            astop=4,
-            rstart=8,
-            rstop=12,
-            matches=3,
-            errors=1,
-            adapter=adapter,
-            sequence=sequence,
-        ))
+        info.matches.append(
+            RemoveBeforeMatch(
+                astart=0,
+                astop=4,
+                rstart=8,
+                rstop=12,
+                matches=3,
+                errors=1,
+                adapter=adapter,
+                sequence=sequence,
+            )
+        )
         renamer = Renamer("{header} match={match_sequence}")
 
         renamer(read, info)
@@ -269,7 +293,11 @@ class TestRenamer:
         adapter1 = PrefixAdapter("TTTT")
         adapter2 = BackAdapter("AGGT")
         linked_adapter = LinkedAdapter(
-            adapter1, adapter2, front_required=True, back_required=False, name="name",
+            adapter1,
+            adapter2,
+            front_required=True,
+            back_required=False,
+            name="name",
         )
         info = ModificationInfo(read)
         before_match = RemoveBeforeMatch(

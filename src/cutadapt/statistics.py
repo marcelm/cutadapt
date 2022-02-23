@@ -6,6 +6,7 @@ class ReadLengthStatistics:
     """
     Keep track of the lengths of written reads or read pairs
     """
+
     def __init__(self) -> None:
         # It would be more natural to use a Counter, but a
         # defaultdict is much faster

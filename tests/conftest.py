@@ -18,7 +18,7 @@ def run(tmp_path):
             params = params.split()
         params += ["--json", os.fspath(tmp_path / "stats.cutadapt.json")]
         tmp_fastaq = tmp_path / expected
-        params += ['-o', tmp_fastaq]
+        params += ["-o", tmp_fastaq]
         params += [datapath(inpath)]
         stats = main([str(p) for p in params])
         # TODO redirect standard output

@@ -5,12 +5,12 @@ from cutadapt.qualtrim import nextseq_trim_index, expected_errors
 
 
 def test_nextseq_trim():
-    s = Sequence('n', '', '')
+    s = Sequence("n", "", "")
     assert nextseq_trim_index(s, cutoff=22) == 0
     s = Sequence(
-        'n',
-        'TCTCGTATGCCGTCTTATGCTTGAAAAAAAAAAGGGGGGGGGGGGGGGGGNNNNNNNNNNNGGNGG',
-        'AA//EAEE//A6///E//A//EA/EEEEEEAEA//EEEEEEEEEEEEEEE###########EE#EA'
+        "n",
+        "TCTCGTATGCCGTCTTATGCTTGAAAAAAAAAAGGGGGGGGGGGGGGGGGNNNNNNNNNNNGGNGG",
+        "AA//EAEE//A6///E//A//EA/EEEEEEAEA//EEEEEEEEEEEEEEE###########EE#EA",
     )
     assert nextseq_trim_index(s, cutoff=22) == 33
 
@@ -31,4 +31,6 @@ def test_expected_errors():
 
     assert pytest.approx(0.3) == expected_errors(encode_qualities([10, 10, 10]))
     assert pytest.approx(0.111) == expected_errors(encode_qualities([10, 20, 30]))
-    assert pytest.approx(0.2111) == expected_errors(encode_qualities([10, 10, 20, 30, 40]))
+    assert pytest.approx(0.2111) == expected_errors(
+        encode_qualities([10, 10, 20, 30, 40])
+    )

@@ -8,7 +8,9 @@ def test_tokenize_braces():
     assert list(tokenize("")) == []
     assert list(tokenize("text")) == [StringToken("text")]
     assert list(tokenize("before {variable} after")) == [
-        StringToken("before "), BraceToken("variable"), StringToken(" after")
+        StringToken("before "),
+        BraceToken("variable"),
+        StringToken(" after"),
     ]
 
 

@@ -4,11 +4,11 @@ import subprocess
 
 
 def datapath(path):
-    return os.path.join(os.path.dirname(__file__), 'data', path)
+    return os.path.join(os.path.dirname(__file__), "data", path)
 
 
 def cutpath(path):
-    return os.path.join(os.path.dirname(__file__), 'cut', path)
+    return os.path.join(os.path.dirname(__file__), "cut", path)
 
 
 class FilesDifferent(Exception):
@@ -28,7 +28,7 @@ def assert_files_equal(path1, path2, ignore_trailing_space: bool = False):
     try:
         subprocess.check_output(cmd + [path1, path2], stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise FilesDifferent('\n' + e.output.decode()) from None
+        raise FilesDifferent("\n" + e.output.decode()) from None
 
 
 def binomial(n, k):

@@ -10,7 +10,14 @@ from collections import defaultdict
 from typing import Optional, Tuple, Sequence, Dict, Any, List, Union
 from abc import ABC, abstractmethod
 
-from .align import EndSkip, Aligner, PrefixComparer, SuffixComparer, edit_environment, hamming_environment
+from .align import (
+    EndSkip,
+    Aligner,
+    PrefixComparer,
+    SuffixComparer,
+    edit_environment,
+    hamming_environment,
+)
 
 logger = logging.getLogger()
 
@@ -26,6 +33,7 @@ class Where(IntFlag):
 
     "REFERENCE" is the adapter sequence, "QUERY" is the read sequence
     """
+
     BACK = EndSkip.QUERY_START | EndSkip.QUERY_STOP | EndSkip.REFERENCE_END
     FRONT = EndSkip.QUERY_START | EndSkip.QUERY_STOP | EndSkip.REFERENCE_START
     PREFIX = EndSkip.QUERY_STOP
@@ -56,7 +64,7 @@ class EndStatistics:
         self.allows_partial_matches: bool = adapter.allows_partial_matches
         # self.errors[l][e] == n iff a sequence of length l matching at e errors was removed n times
         self.errors: Dict[int, Dict[int, int]] = defaultdict(returns_defaultdict_int)
-        self.adjacent_bases = {'A': 0, 'C': 0, 'G': 0, 'T': 0, '': 0}
+        self.adjacent_bases = {"A": 0, "C": 0, "G": 0, "T": 0, "": 0}
         # TODO avoid hard-coding the list of classes
         self._remove_prefix = isinstance(adapter, FrontAdapter)
 
@@ -77,8 +85,8 @@ class EndStatistics:
             or self.effective_length != other.effective_length
             or self.indels != other.indels
         ):
-            raise RuntimeError('Incompatible EndStatistics, cannot be added')
-        for base in ('A', 'C', 'G', 'T', ''):
+            raise RuntimeError("Incompatible EndStatistics, cannot be added")
+        for base in ("A", "C", "G", "T", ""):
             self.adjacent_bases[base] += other.adjacent_bases[base]
         for length, error_dict in other.errors.items():
             for errors in error_dict:
@@ -104,14 +112,14 @@ class EndStatistics:
         # FIXME this is broken for 'anywhere' adapters
         if self._remove_prefix:
             seq = seq[::-1]
-        allowed_bases = 'CGRYSKMBDHVN' if self.has_wildcards else 'GC'
-        p = 1.
+        allowed_bases = "CGRYSKMBDHVN" if self.has_wildcards else "GC"
+        p = 1.0
         probabilities = [p]
         for i, c in enumerate(seq):
             if c in allowed_bases:
-                p *= gc_content / 2.
+                p *= gc_content / 2.0
             else:
-                p *= (1. - gc_content) / 2.
+                p *= (1.0 - gc_content) / 2.0
             probabilities.append(p)
         return probabilities
 
@@ -158,7 +166,6 @@ class SingleAdapterStatistics(AdapterStatistics, ABC):
 
 
 class FrontAdapterStatistics(SingleAdapterStatistics):
-
     def add_match(self, match: "RemoveBeforeMatch"):
         self.end.errors[match.removed_sequence_length()][match.errors] += 1
 
@@ -167,7 +174,6 @@ class FrontAdapterStatistics(SingleAdapterStatistics):
 
 
 class BackAdapterStatistics(SingleAdapterStatistics):
-
     def add_match(self, match: "RemoveAfterMatch"):
         adjacent_base = match.adjacent_base()
         self.end.errors[match.removed_sequence_length()][match.errors] += 1
@@ -211,10 +217,14 @@ class LinkedAdapterStatistics(AdapterStatistics):
     def add_match(self, match: "LinkedMatch"):
         # TODO this is duplicated code
         if match.front_match:
-            self.front.errors[match.front_match.removed_sequence_length()][match.errors] += 1
+            self.front.errors[match.front_match.removed_sequence_length()][
+                match.errors
+            ] += 1
         if match.back_match:
             adjacent_base = match.back_match.adjacent_base()
-            self.back.errors[match.back_match.removed_sequence_length()][match.errors] += 1
+            self.back.errors[match.back_match.removed_sequence_length()][
+                match.errors
+            ] += 1
             try:
                 self.back.adjacent_bases[adjacent_base] += 1
             except KeyError:
@@ -292,8 +302,19 @@ class SingleMatch(Match, ABC):
     """
     Representation of a single adapter matched to a single string
     """
-    __slots__ = ['astart', 'astop', 'rstart', 'rstop', 'matches', 'errors',
-        'adapter', 'sequence', 'length', 'adjacent_base']
+
+    __slots__ = [
+        "astart",
+        "astop",
+        "rstart",
+        "rstop",
+        "matches",
+        "errors",
+        "adapter",
+        "sequence",
+        "length",
+        "adjacent_base",
+    ]
 
     def __init__(
         self,
@@ -320,8 +341,9 @@ class SingleMatch(Match, ABC):
         self.length: int = astop - astart
 
     def __repr__(self):
-        return 'SingleMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
-            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
+        return "SingleMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})".format(
+            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors
+        )
 
     def __eq__(self, other) -> bool:
         return (
@@ -345,10 +367,13 @@ class SingleMatch(Match, ABC):
         If there are indels, this is not reliable as the full alignment
         is not available.
         """
-        wildcards = [self.sequence[self.rstart + i] for i in range(self.length)
-            if self.adapter.sequence[self.astart + i] == wildcard_char and
-                self.rstart + i < len(self.sequence)]
-        return ''.join(wildcards)
+        wildcards = [
+            self.sequence[self.rstart + i]
+            for i in range(self.length)
+            if self.adapter.sequence[self.astart + i] == wildcard_char
+            and self.rstart + i < len(self.sequence)
+        ]
+        return "".join(wildcards)
 
     def get_info_records(self, read) -> List[List]:
         seq = read.sequence
@@ -358,16 +383,16 @@ class SingleMatch(Match, ABC):
             self.errors,
             self.rstart,
             self.rstop,
-            seq[0:self.rstart],
-            seq[self.rstart:self.rstop],
-            seq[self.rstop:],
+            seq[0 : self.rstart],
+            seq[self.rstart : self.rstop],
+            seq[self.rstop :],
             self.adapter.name,
         ]
         if qualities:
             info += [
-                qualities[0:self.rstart],
-                qualities[self.rstart:self.rstop],
-                qualities[self.rstop:],
+                qualities[0 : self.rstart],
+                qualities[self.rstart : self.rstop],
+                qualities[self.rstop :],
             ]
         else:
             info += ["", "", ""]
@@ -375,7 +400,7 @@ class SingleMatch(Match, ABC):
         return [info]
 
     def match_sequence(self):
-        return self.sequence[self.rstart:self.rstop]
+        return self.sequence[self.rstart : self.rstop]
 
     @abstractmethod
     def removed_sequence_length(self) -> int:
@@ -386,8 +411,9 @@ class RemoveBeforeMatch(SingleMatch):
     """A match that removes sequence before the match"""
 
     def __repr__(self):
-        return 'RemoveBeforeMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})'.format(
-            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
+        return "RemoveBeforeMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})".format(
+            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors
+        )
 
     def rest(self) -> str:
         """
@@ -396,7 +422,7 @@ class RemoveBeforeMatch(SingleMatch):
         return the part after the match if this is not a 'front' adapter (3').
         This can be an empty string.
         """
-        return self.sequence[:self.rstart]
+        return self.sequence[: self.rstart]
 
     def remainder_interval(self) -> Tuple[int, int]:
         """
@@ -413,7 +439,7 @@ class RemoveBeforeMatch(SingleMatch):
         return slice(self.rstop, None)
 
     def trimmed(self, read):
-        return read[self.rstop:]
+        return read[self.rstop :]
 
     def removed_sequence_length(self) -> int:
         return self.rstop
@@ -424,7 +450,8 @@ class RemoveAfterMatch(SingleMatch):
 
     def __repr__(self):
         return "RemoveAfterMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})".format(
-            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors)
+            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors
+        )
 
     def rest(self) -> str:
         """
@@ -433,7 +460,7 @@ class RemoveAfterMatch(SingleMatch):
         return the part after the match if this is not a 'front' adapter (3').
         This can be an empty string.
         """
-        return self.sequence[self.rstop:]
+        return self.sequence[self.rstop :]
 
     def remainder_interval(self) -> Tuple[int, int]:
         """
@@ -450,10 +477,10 @@ class RemoveAfterMatch(SingleMatch):
         return slice(None, self.rstart)
 
     def trimmed(self, read):
-        return read[:self.rstart]
+        return read[: self.rstart]
 
     def adjacent_base(self) -> str:
-        return self.sequence[self.rstart - 1:self.rstart]
+        return self.sequence[self.rstart - 1 : self.rstart]
 
     def removed_sequence_length(self) -> int:
         return len(self.sequence) - self.rstart
@@ -549,13 +576,15 @@ class SingleAdapter(Adapter, ABC):
             max_errors /= len(self.sequence)
         self.max_error_rate: float = max_errors
         self.min_overlap: int = min(min_overlap, len(self.sequence))
-        iupac = frozenset('ABCDGHKMNRSTUVWXY')
+        iupac = frozenset("ABCDGHKMNRSTUVWXY")
         if adapter_wildcards and not set(self.sequence) <= iupac:
             for c in self.sequence:
                 if c not in iupac:
                     if c == "I":
-                        extra = "For inosine, consider using N instead and please comment " \
-                                "on <https://github.com/marcelm/cutadapt/issues/546>."
+                        extra = (
+                            "For inosine, consider using N instead and please comment "
+                            "on <https://github.com/marcelm/cutadapt/issues/546>."
+                        )
                     else:
                         extra = "Use only characters 'ABCDGHKMNRSTUVWXY'."
                     raise InvalidCharacter(
@@ -563,7 +592,9 @@ class SingleAdapter(Adapter, ABC):
                         f"not a valid IUPAC code. {extra}"
                     )
         # Optimization: Use non-wildcard matching if only ACGT is used
-        self.adapter_wildcards: bool = adapter_wildcards and not set(self.sequence) <= set("ACGT")
+        self.adapter_wildcards: bool = adapter_wildcards and not set(
+            self.sequence
+        ) <= set("ACGT")
         self.read_wildcards: bool = read_wildcards
         self.indels: bool = indels
         self.aligner = self._aligner()
@@ -584,11 +615,13 @@ class SingleAdapter(Adapter, ABC):
         )
 
     def __repr__(self):
-        return '<{cls}(name={name!r}, sequence={sequence!r}, '\
-            'max_error_rate={max_error_rate}, min_overlap={min_overlap}, '\
-            'read_wildcards={read_wildcards}, '\
-            'adapter_wildcards={adapter_wildcards}, '\
-            'indels={indels})>'.format(cls=self.__class__.__name__, **vars(self))
+        return (
+            "<{cls}(name={name!r}, sequence={sequence!r}, "
+            "max_error_rate={max_error_rate}, min_overlap={min_overlap}, "
+            "read_wildcards={read_wildcards}, "
+            "adapter_wildcards={adapter_wildcards}, "
+            "indels={indels})>".format(cls=self.__class__.__name__, **vars(self))
+        )
 
     @property
     def effective_length(self) -> int:
@@ -633,7 +666,9 @@ class FrontAdapter(SingleAdapter):
         return "regular_five_prime"
 
     def _aligner(self) -> Aligner:
-        return self._make_aligner(Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value)
+        return self._make_aligner(
+            Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value
+        )
 
     def match_to(self, sequence: str):
         """
@@ -643,7 +678,9 @@ class FrontAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(sequence)
+        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
+            sequence
+        )
         if self._debug:
             print(self.aligner.dpmatrix)
         if alignment is None:
@@ -670,7 +707,9 @@ class BackAdapter(SingleAdapter):
         return "regular_three_prime"
 
     def _aligner(self):
-        return self._make_aligner(Where.ANYWHERE.value if self._force_anywhere else Where.BACK.value)
+        return self._make_aligner(
+            Where.ANYWHERE.value if self._force_anywhere else Where.BACK.value
+        )
 
     def match_to(self, sequence: str):
         """
@@ -680,7 +719,9 @@ class BackAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(sequence)
+        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
+            sequence
+        )
         if self._debug:
             print(self.aligner.dpmatrix)  # pragma: no cover
         if alignment is None:
@@ -809,7 +850,7 @@ class PrefixAdapter(NonInternalFrontAdapter):
                 self.max_error_rate,
                 wildcard_ref=self.adapter_wildcards,
                 wildcard_query=self.read_wildcards,
-                min_overlap=self.min_overlap
+                min_overlap=self.min_overlap,
             )
         else:
             return self._make_aligner(Where.PREFIX.value)
@@ -838,7 +879,7 @@ class SuffixAdapter(NonInternalBackAdapter):
                 self.max_error_rate,
                 wildcard_ref=self.adapter_wildcards,
                 wildcard_query=self.read_wildcards,
-                min_overlap=self.min_overlap
+                min_overlap=self.min_overlap,
             )
         else:
             return self._make_aligner(Where.SUFFIX.value)
@@ -851,15 +892,22 @@ class LinkedMatch(Match):
     """
     Represent a match of a LinkedAdapter
     """
-    def __init__(self, front_match: RemoveBeforeMatch, back_match: RemoveAfterMatch, adapter: "LinkedAdapter"):
+
+    def __init__(
+        self,
+        front_match: RemoveBeforeMatch,
+        back_match: RemoveAfterMatch,
+        adapter: "LinkedAdapter",
+    ):
         assert front_match is not None or back_match is not None
         self.front_match: RemoveBeforeMatch = front_match
         self.back_match: RemoveAfterMatch = back_match
         self.adapter: LinkedAdapter = adapter
 
     def __repr__(self):
-        return '<LinkedMatch(front_match={!r}, back_match={}, adapter={})>'.format(
-            self.front_match, self.back_match, self.adapter)
+        return "<LinkedMatch(front_match={!r}, back_match={}, adapter={})>".format(
+            self.front_match, self.back_match, self.adapter
+        )
 
     @property
     def matches(self):
@@ -888,7 +936,9 @@ class LinkedMatch(Match):
         return read
 
     def remainder_interval(self) -> Tuple[int, int]:
-        matches = [match for match in [self.front_match, self.back_match] if match is not None]
+        matches = [
+            match for match in [self.front_match, self.back_match] if match is not None
+        ]
         return remainder(matches)
 
     def retained_adapter_interval(self) -> Tuple[int, int]:
@@ -912,16 +962,18 @@ class LinkedMatch(Match):
             if match is None:
                 continue
             record = match.get_info_records(read)[0]
-            record[7] = ("none" if self.adapter.name is None else self.adapter.name) + namesuffix
+            record[7] = (
+                "none" if self.adapter.name is None else self.adapter.name
+            ) + namesuffix
             records.append(record)
             read = match.trimmed(read)
         return records
 
     def match_sequence(self):
         return (
-            self.front_match.match_sequence() if self.front_match else ""
-        ) + "," + (
-            self.back_match.match_sequence() if self.back_match else ""
+            (self.front_match.match_sequence() if self.front_match else "")
+            + ","
+            + (self.back_match.match_sequence() if self.back_match else "")
         )
 
 
@@ -971,7 +1023,9 @@ class LinkedAdapter(Adapter):
         return LinkedMatch(front_match, back_match, self)
 
     def create_statistics(self) -> LinkedAdapterStatistics:
-        return LinkedAdapterStatistics(self, front=self.front_adapter, back=self.back_adapter)
+        return LinkedAdapterStatistics(
+            self, front=self.front_adapter, back=self.back_adapter
+        )
 
     @property
     def sequence(self):
@@ -989,6 +1043,7 @@ class MultipleAdapters(Matchable):
     """
     Represent multiple adapters at once
     """
+
     def __init__(self, adapters: Sequence[Matchable]):
         super().__init__(name="multiple_adapters")
         self._adapters = adapters
@@ -1016,8 +1071,13 @@ class MultipleAdapters(Matchable):
                 continue
 
             # the no. of matches determines which adapter fits best
-            if best_match is None or match.matches > best_match.matches or (
-                match.matches == best_match.matches and match.errors < best_match.errors
+            if (
+                best_match is None
+                or match.matches > best_match.matches
+                or (
+                    match.matches == best_match.matches
+                    and match.errors < best_match.errors
+                )
             ):
                 best_match = match
         return best_match
@@ -1036,6 +1096,7 @@ class IndexedAdapters(Matchable, ABC):
 
     Use the is_acceptable() method to check individual adapters.
     """
+
     AdapterIndex = Dict[str, Tuple[SingleAdapter, int, int]]
 
     def __init__(self, adapters):
@@ -1048,7 +1109,9 @@ class IndexedAdapters(Matchable, ABC):
         self._adapters = adapters
         self._multiple_adapters = MultipleAdapters(adapters)
         self._lengths, self._index = self._make_index()
-        logger.debug("String lengths in the index: %s", sorted(self._lengths, reverse=True))
+        logger.debug(
+            "String lengths in the index: %s", sorted(self._lengths, reverse=True)
+        )
         if len(self._lengths) == 1:
             self._length = self._lengths[0]
             self.match_to = self._match_to_one_length
@@ -1096,7 +1159,7 @@ class IndexedAdapters(Matchable, ABC):
         return True
 
     def _make_index(self) -> Tuple[List[int], "AdapterIndex"]:
-        logger.info('Building index of %s adapters ...', len(self._adapters))
+        logger.info("Building index of %s adapters ...", len(self._adapters))
         index: Dict[str, Tuple[SingleAdapter, int, int]] = dict()
         lengths = set()
         has_warned = False
@@ -1114,14 +1177,19 @@ class IndexedAdapters(Matchable, ABC):
                             "Adapters %s %r and %s %r are very similar. At %s allowed errors, "
                             "the sequence %r cannot be assigned uniquely because the number of "
                             "matches is %s compared to both adapters.",
-                            other_adapter.name, other_adapter.sequence, adapter.name,
-                            adapter.sequence, k, s, matches
+                            other_adapter.name,
+                            other_adapter.sequence,
+                            adapter.name,
+                            adapter.sequence,
+                            k,
+                            s,
+                            matches,
                         )
                         has_warned = True
                 else:
                     index[s] = (adapter, errors, matches)
                 lengths.add(len(s))
-        logger.info('Built an index containing %s strings.', len(index))
+        logger.info("Built an index containing %s strings.", len(index))
 
         return sorted(lengths, reverse=True), index
 
@@ -1184,7 +1252,6 @@ class IndexedAdapters(Matchable, ABC):
 
 
 class IndexedPrefixAdapters(IndexedAdapters):
-
     @classmethod
     def _accept(cls, adapter):
         if not isinstance(adapter, PrefixAdapter):
@@ -1212,7 +1279,6 @@ class IndexedPrefixAdapters(IndexedAdapters):
 
 
 class IndexedSuffixAdapters(IndexedAdapters):
-
     @classmethod
     def _accept(cls, adapter):
         if not isinstance(adapter, SuffixAdapter):
@@ -1244,9 +1310,12 @@ def warn_duplicate_adapters(adapters):
     for adapter in adapters:
         key = (adapter.__class__, adapter.sequence)
         if key in d:
-            logger.warning("Adapter %r (%s) was specified multiple times! "
+            logger.warning(
+                "Adapter %r (%s) was specified multiple times! "
                 "Please make sure that this is what you want.",
-                adapter.sequence, adapter.description)
+                adapter.sequence,
+                adapter.description,
+            )
         d[key] = adapter.name
 
 

@@ -7,7 +7,6 @@ REPORT = 25
 
 
 class CrashingHandler(logging.StreamHandler):
-
     def emit(self, record):
         """Unlike the method it overrides, this will not catch exceptions"""
         msg = self.format(record)
@@ -24,6 +23,7 @@ class NiceFormatter(logging.Formatter):
 
     Based on http://stackoverflow.com/a/9218261/715090 .
     """
+
     def format(self, record):
         if record.levelno not in (logging.INFO, REPORT):
             record.msg = f"{record.levelname}: {record.msg}"
@@ -37,7 +37,7 @@ def setup_logging(logger, log_to_stderr=True, minimal=False, quiet=False, debug=
     # For --report=minimal, we need this custom log level because we want to
     # print nothing except the minimal report and therefore cannot use the
     # INFO level (and the ERROR level would give us an 'ERROR:' prefix).
-    logging.addLevelName(REPORT, 'REPORT')
+    logging.addLevelName(REPORT, "REPORT")
 
     stream_handler = CrashingHandler(sys.stderr if log_to_stderr else sys.stdout)
     stream_handler.setFormatter(NiceFormatter())
