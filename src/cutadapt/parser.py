@@ -448,10 +448,10 @@ class AdapterParser:
         back_required = back_parameters.pop("required", back_required)
 
         front_adapter = front_spec.adapter_class()(
-            front_spec.sequence, name=None, **front_parameters
+            front_spec.sequence, name="linked_front", **front_parameters
         )
         back_adapter = back_spec.adapter_class()(
-            back_spec.sequence, name=None, **back_parameters
+            back_spec.sequence, name="linked_back", **back_parameters
         )
 
         return LinkedAdapter(
