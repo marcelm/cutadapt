@@ -1149,13 +1149,9 @@ The following placeholders are currently available for single-end reads:
 * ``{adapter_name}`` -- the name of adapter that was found in this read or
   ``no_adapter`` if there was no adapter match. If you use ``--times`` to do
   multiple rounds of adapter matching, this is the name of the *last* found adapter.
-* ````{match_sequence}}`` -- the sequence of the read that matched the adapter (including
+* ``{match_sequence}`` -- the sequence of the read that matched the adapter (including
   errors). If there was no adapter match, this is set to an empty string. If you use a
   linked adapter, this is to the two matching strings, separated by a comma.
-
--- the sequence of the read that matched the adapter (this includes
-          possible errors) or an empty string if there was no match
-
 * ``{cut_prefix}`` -- the prefix removed by the ``--cut`` (or ``-u``) option (that is, when
   used with a positive length argument)
 * ``{cut_suffix}`` -- the suffix removed by the ``--cut`` (or ``-u``) option (that is, when
@@ -1180,13 +1176,13 @@ Will result in this modified read::
 
 .. versionadded:: 3.2
 
-    The ``{{rn}}`` placeholder.
+    The ``{rn}`` placeholder.
 
 .. versionadded:: 3.3
     The ``{rc}`` placeholder.
 
 .. versionadded:: 3.6
-    The ``{match_sequence}}`` placeholder.
+    The ``{match_sequence}`` placeholder.
 
 
 ``--rename`` also renames paired-end reads
@@ -1885,7 +1881,7 @@ For demultiplexing this type of data ("combinatorial demultiplexing"), it is nec
 read pair to an output file depending on the adapters found on R1 *and* R2.
 
 Doing this with Cutadapt is similar to doing normal demultiplexing as described above, but you need
-to use ``{name1}}`` and ``{name2}`` in both output file name templates. For example::
+to use ``{name1}`` and ``{name2}`` in both output file name templates. For example::
 
     cutadapt \
         -e 0.15 --no-indels \
@@ -1894,7 +1890,7 @@ to use ``{name1}}`` and ``{name2}`` in both output file name templates. For exam
         -o {name1}-{name2}.1.fastq.gz -p {name1}-{name2}.2.fastq.gz \
         input.1.fastq.gz input.2.fastq.gz
 
-The ``{name1}`` will be replaced with the name of the best-matching R1 adapter and ``{name2}}`` will
+The ``{name1}`` will be replaced with the name of the best-matching R1 adapter and ``{name2}`` will
 be replaced with the name of the best-matching R2 adapter.
 
 If there was no match of an R1 adapter, ``{name1}`` is set to "unknown", and if there is no match of
