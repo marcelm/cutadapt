@@ -3,6 +3,16 @@
 Quality trimming.
 """
 
+cdef extern from *:
+    unsigned char * PyUnicode_1BYTE_DATA(object o)
+    int PyUnicode_KIND(object o)
+    int PyUnicode_1BYTE_KIND
+
+
+cdef class HasNoQualities(Exception):
+    pass
+
+
 def quality_trim_index(str qualities, int cutoff_front, int cutoff_back, int base=33):
     """
     Find the positions at which to trim low-quality ends from a nucleotide sequence.
@@ -16,18 +26,26 @@ def quality_trim_index(str qualities, int cutoff_front, int cutoff_back, int bas
     - Compute partial sums from all indices to the end of the sequence.
     - Trim sequence at the index at which the sum is minimal.
     """
+    if qualities is None:
+        raise HasNoQualities()
     cdef:
         int s
         int max_qual
-        int stop = len(qualities)
+        int n = len(qualities)
+        int stop = n
         int start = 0
         int i
+        char* qual
+
+    if not PyUnicode_KIND(qualities) == PyUnicode_1BYTE_KIND:
+        raise ValueError("Quality data is not ASCII")
+    qual = <char *>PyUnicode_1BYTE_DATA(qualities)
 
     # find trim position for 5' end
     s = 0
     max_qual = 0
-    for i in range(len(qualities)):
-        s += cutoff_front - (ord(qualities[i]) - base)
+    for i in range(n):
+        s += cutoff_front - (qual[i] - base)
         if s < 0:
             break
         if s > max_qual:
@@ -37,8 +55,8 @@ def quality_trim_index(str qualities, int cutoff_front, int cutoff_back, int bas
     # same for 3' end
     max_qual = 0
     s = 0
-    for i in reversed(xrange(len(qualities))):
-        s += cutoff_back - (ord(qualities[i]) - base)
+    for i in reversed(range(n)):
+        s += cutoff_back - (qual[i] - base)
         if s < 0:
             break
         if s > max_qual:
