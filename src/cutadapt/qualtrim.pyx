@@ -80,17 +80,24 @@ def nextseq_trim_index(sequence, int cutoff, int base=33):
     """
     bases = sequence.sequence
     qualities = sequence.qualities
+    if qualities is None:
+        raise HasNoQualities()
     cdef:
         int s = 0
         int max_qual = 0
-        int max_i = len(qualities)
+        int max_i
         int i, q
+        char* qual
+
+    if not PyUnicode_KIND(qualities) == PyUnicode_1BYTE_KIND:
+        raise ValueError("Quality data is not ASCII")
+    qual = <char *>PyUnicode_1BYTE_DATA(qualities)
 
     s = 0
     max_qual = 0
     max_i = len(qualities)
-    for i in reversed(xrange(max_i)):
-        q = ord(qualities[i]) - base
+    for i in reversed(range(max_i)):
+        q = qual[i] - base
         if bases[i] == 'G':
             q = cutoff - 1
         s += cutoff - q

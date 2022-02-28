@@ -3,6 +3,11 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* Speed up quality trimming (both ``-q`` and ``--nextseq-trim``) somewhat
+
 v3.7 (2022-02-23)
 -----------------
 
