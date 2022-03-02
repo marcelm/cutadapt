@@ -1042,10 +1042,10 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         return
 
     logger.info(
-        "Processing reads on %d core%s in %s mode ...",
+        "Processing %s reads on %d core%s ...",
+        {False: "single-end", True: "paired-end"}[pipeline.paired],
         cores,
         "s" if cores > 1 else "",
-        {False: "single-end", True: "paired-end"}[pipeline.paired],
     )
     try:
         with runner as r:
@@ -1055,7 +1055,12 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         sys.exit(130)
     except BrokenPipeError:
         sys.exit(1)
-    except (dnaio.FileFormatError, dnaio.UnknownFileFormat, EOFError, HasNoQualities) as e:
+    except (
+        dnaio.FileFormatError,
+        dnaio.UnknownFileFormat,
+        EOFError,
+        HasNoQualities,
+    ) as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
         sys.exit(f"cutadapt: error: {e}")
 
