@@ -102,6 +102,7 @@ from cutadapt.pipeline import (
 )
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress, FileOpener
 from cutadapt.log import setup_logging, REPORT
+from cutadapt.qualtrim import HasNoQualities
 
 logger = logging.getLogger()
 
@@ -1054,7 +1055,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         sys.exit(130)
     except BrokenPipeError:
         sys.exit(1)
-    except (dnaio.FileFormatError, dnaio.UnknownFileFormat, EOFError) as e:
+    except (dnaio.FileFormatError, dnaio.UnknownFileFormat, EOFError, HasNoQualities) as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
         sys.exit(f"cutadapt: error: {e}")
 

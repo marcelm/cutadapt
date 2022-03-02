@@ -5,6 +5,8 @@ class _Sequence(Protocol):
     sequence: str
     qualities: str
 
+class HasNoQualities(Exception): ...
+
 def quality_trim_index(
     qualities: str, cutoff_front: int, cutoff_back: int, base: int = 33
 ) -> Tuple[int, int]: ...

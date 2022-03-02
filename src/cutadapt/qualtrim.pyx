@@ -27,7 +27,7 @@ def quality_trim_index(str qualities, int cutoff_front, int cutoff_back, int bas
     - Trim sequence at the index at which the sum is minimal.
     """
     if qualities is None:
-        raise HasNoQualities()
+        raise HasNoQualities("Cannot do quality trimming when no qualities are available")
     cdef:
         int s
         int max_qual
