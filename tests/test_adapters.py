@@ -24,6 +24,14 @@ def test_back_adapter_absolute_number_of_errors():
     assert adapter.max_error_rate == 1 / 10
 
 
+def test_back_adapter_absolute_number_of_errors_with_wildcards():
+    adapter = BackAdapter(
+        sequence="NNNNNNNNNNGATCGGAAGA",
+        max_errors=1,
+    )
+    assert adapter.max_error_rate == 1 / 10
+
+
 def test_front_adapter_partial_occurrence_in_back():
     adapter = FrontAdapter("CTGAATT", max_errors=0, min_overlap=4)
     assert adapter.match_to("GGGGGCTGAA") is None

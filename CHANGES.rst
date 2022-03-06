@@ -6,6 +6,9 @@ Changelog
 development version
 -------------------
 
+* :issue:`603`: When ``-e`` was used with an absolute number of errors
+  and there were ``N`` wildcards in the sequence, the actual number of
+  allowed errors was too low.
 * Speed up quality trimming (both ``-q`` and ``--nextseq-trim``) somewhat
 
 v3.7 (2022-02-23)

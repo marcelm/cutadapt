@@ -537,7 +537,7 @@ class SingleAdapter(Adapter, ABC):
 
     max_errors -- Maximum allowed errors (non-negative float). If the values is less than 1, this is
         interpreted as a rate directly and passed to the aligner. If it is 1 or greater, the value
-        is converted to a rate by dividing it by the length of the sequence.
+        is converted to a rate by dividing it by the number of non-N characters in the sequence.
 
         The error rate is the number of errors in the alignment divided by the length
         of the part of the alignment that matches the adapter.
@@ -572,8 +572,8 @@ class SingleAdapter(Adapter, ABC):
         self.sequence: str = sequence.upper().replace("U", "T")
         if not self.sequence:
             raise ValueError("Adapter sequence is empty")
-        if max_errors >= 1:
-            max_errors /= len(self.sequence)
+        if max_errors >= 1 and self.sequence.count("N") != len(self.sequence):
+            max_errors /= len(self.sequence) - self.sequence.count("N")
         self.max_error_rate: float = max_errors
         self.min_overlap: int = min(min_overlap, len(self.sequence))
         iupac = frozenset("ABCDGHKMNRSTUVWXY")
