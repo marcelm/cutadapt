@@ -59,6 +59,22 @@ class TestAligner:
         result = aligner.locate("")
         assert (0, 0, 0, 0, 0, 0) == result
 
+    def test_indels_penalized(self):
+        # Alignment:
+        # CCAGTCCTTTCCTGAGAGT
+        # CCAGTCCT---CT
+        aligner = Aligner("CCAGTCCTCT", 0.3, flags=Where.PREFIX)
+        result = aligner.locate("CCAGTCCTTTCCTGAGAGT")
+        assert (0, 10, 0, 13, 10, 3) == result
+        # refstart, refstop, querystart, querystop, matches, errors)
+
+        # Alignment:
+        # TCGAT-C
+        # TCGATGC
+        aligner = Aligner("TCGATC", 1.5 / 6, flags=Where.PREFIX)
+        result = aligner.locate("TCGATGC")
+        assert (0, 6, 0, 7, 6, 1) == result
+
 
 def test_polya():
     s = "AAAAAAAAAAAAAAAAA"
