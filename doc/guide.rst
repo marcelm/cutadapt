@@ -222,7 +222,7 @@ Adapter type                                              Command-line option
 
 By default, all adapters :ref:`are searched error-tolerantly <error-tolerance>`.
 Adapter sequences :ref:`may also contain any IUPAC wildcard
-character <wildcards>` (such as ``N``).
+character (degenerate bases) <wildcards>` (such as ``N``).
 
 In addition, it is possible to :ref:`remove a fixed number of
 bases <cut-bases>` from the beginning or end of each read, to :ref:`remove
@@ -899,7 +899,8 @@ Wildcards
 ---------
 
 All `IUPAC nucleotide codes <http://www.bioinformatics.org/sms/iupac.html>`_
-(wildcard characters) are supported. For example, use an ``N`` in the adapter
+(wildcard characters, degenerate bases) are supported.
+For example, use an ``N`` in the adapter
 sequence to match any nucleotide in the read, or use ``-a YACGT`` for an adapter
 that matches both ``CACGT`` and ``TACGT``. The wildcard character ``N`` is
 useful for trimming adapters with an embedded variable barcode::
@@ -908,6 +909,7 @@ useful for trimming adapters with an embedded variable barcode::
 
 Even the ``X`` wildcard that does not match any nucleotide is supported. If
 used as in ``-a ADAPTERX`` or ``-g XADAPTER``, it acquires a special meaning for
+the matching algorithm
 :ref:`and disallows internal adapter matches <non-internal>`.
 
 Wildcard characters are by default only allowed in adapter sequences and
