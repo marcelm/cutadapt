@@ -157,7 +157,7 @@ def get_argument_parser() -> ArgumentParser:
     group.add_argument("--debug", action="count", default=0,
         help="Print debug log. Use twice to also print DP matrices")
     group.add_argument("--profile", action="store_true", default=False, help=SUPPRESS)
-    group.add_argument('-j', '--cores', type=int, default=1,
+    group.add_argument("-j", "--cores", type=int, default=1,
         help='Number of CPU cores to use. Use 0 to auto-detect. Default: %(default)s')
 
     # Hidden options
@@ -217,7 +217,7 @@ def get_argument_parser() -> ArgumentParser:
     group.add_argument("--match-read-wildcards", action="store_true", default=False,
         help="Interpret IUPAC wildcards in reads. Default: %(default)s")
     group.add_argument("-N", "--no-match-adapter-wildcards", action="store_false",
-        default=True, dest='match_adapter_wildcards',
+        default=True, dest="match_adapter_wildcards",
         help="Do not interpret IUPAC wildcards in adapters.")
     group.add_argument("--action", choices=("trim", "retain", "mask", "lowercase", "none"),
         default="trim",
@@ -729,7 +729,7 @@ def pipeline_from_parsed_args(
     args, paired, file_opener, adapters, adapters2
 ) -> Pipeline:
     """
-    Setup a processing pipeline from parsed command-line arguments.
+    Set up a processing pipeline from parsed command-line arguments.
 
     If there are any problems parsing the arguments, a CommandLineError is raised.
 
