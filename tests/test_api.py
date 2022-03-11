@@ -61,7 +61,7 @@ def test_pipeline_single(tmp_path):
     runner = SerialPipelineRunner(pipeline, infiles, outfiles, DummyProgress())
     stats = runner.run()
     assert stats is not None
-    _ = stats.as_json(gc_content=0.5)
+    _ = stats.as_json()
     file1.close()
     info_file.close()
     out.close()
@@ -113,7 +113,7 @@ def test_pipeline_paired(tmp_path):
     )
     runner = SerialPipelineRunner(pipeline, infiles, outfiles, DummyProgress())
     stats = runner.run()
-    _ = stats.as_json(gc_content=0.5)
+    _ = stats.as_json()
     assert stats is not None
     file1.close()
     file2.close()

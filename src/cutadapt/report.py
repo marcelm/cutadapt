@@ -170,7 +170,7 @@ class Statistics:
                 )
                 self.reverse_complemented = modifier.reverse_complemented
 
-    def as_json(self, gc_content: float) -> Dict:
+    def as_json(self, gc_content: float = 0.5) -> Dict:
         """Return a dict representation suitable for dumping in JSON format"""
         filtered = {name: self.filtered.get(name) for name in FILTERS.keys()}
         filtered_total = sum(self.filtered.values())
