@@ -1189,7 +1189,7 @@ def json_report(
             "paired": paired,
         },
     }
-    d.update(stats.as_json(gc_content))
+    d.update(stats.as_json(gc_content, one_line=True))
     return d
 
 

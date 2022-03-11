@@ -12,7 +12,7 @@ def dumps(obj, indent: int = 2, _level: int = 0) -> str:
     """
     Encode an object hierarchy as JSON string. In addition to
     what json.dumps in the standard library provides, this function
-    allows to disable indentation for selected parts of the hierarchy
+    allows disabling indentation for selected parts of the hierarchy
     by marking lists or dicts with the "OneLine" class.
 
     Arguments:

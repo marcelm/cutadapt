@@ -170,8 +170,14 @@ class Statistics:
                 )
                 self.reverse_complemented = modifier.reverse_complemented
 
-    def as_json(self, gc_content: float = 0.5) -> Dict:
-        """Return a dict representation suitable for dumping in JSON format"""
+    def as_json(self, gc_content: float = 0.5, one_line: bool = False) -> Dict:
+        """
+        Return a dict representation suitable for dumping in JSON format
+
+        To achieve a more compact representation, set one_line to True, which
+        will wrap some items in a `cutadapt.json.OneLine` object, and use
+        `cutadapt.json.dumps` instead of `json.dumps` to dump the dict.
+        """
         filtered = {name: self.filtered.get(name) for name in FILTERS.keys()}
         filtered_total = sum(self.filtered.values())
         written_reads = self.read_length_statistics.written_reads()
@@ -198,11 +204,15 @@ class Statistics:
                 "output_read2": written_bp[1] if self.paired else None,
             },
             "adapters_read1": [
-                self._adapter_statistics_as_json(astats, self.n, gc_content)
+                self._adapter_statistics_as_json(
+                    astats, self.n, gc_content, one_line=one_line
+                )
                 for astats in self.adapter_stats[0]
             ],
             "adapters_read2": [
-                self._adapter_statistics_as_json(astats, self.n, gc_content)
+                self._adapter_statistics_as_json(
+                    astats, self.n, gc_content, one_line=one_line
+                )
                 for astats in self.adapter_stats[1]
             ]
             if self.paired
@@ -210,11 +220,16 @@ class Statistics:
         }
 
     def _adapter_statistics_as_json(
-        self, adapter_statistics: AdapterStatistics, n: int, gc_content: float
+        self,
+        adapter_statistics: AdapterStatistics,
+        n: int,
+        gc_content: float,
+        one_line: bool = False,
     ):
         adapter = adapter_statistics.adapter
         ends: List[Optional[Dict[str, Any]]] = []
         total_trimmed_reads = 0
+        make_line = OneLine if one_line else list
         for end_statistics in adapter_statistics.end_statistics():
             if end_statistics is None:
                 ends.append(None)
@@ -229,7 +244,7 @@ class Statistics:
                 eranges = None
             base_stats = AdjacentBaseStatistics(end_statistics.adjacent_bases)
             trimmed_lengths = [
-                OneLine(
+                make_line(
                     {
                         "len": row.length,
                         "expect": round(row.expect, 1),
@@ -244,7 +259,7 @@ class Statistics:
                     "sequence": end_statistics.sequence,
                     "error_rate": end_statistics.max_error_rate,
                     "indels": end_statistics.indels,
-                    "error_lengths": OneLine(eranges),
+                    "error_lengths": make_line(eranges),
                     "matches": total,
                     "adjacent_bases": base_stats.as_json(),
                     "dominant_adjacent_base": base_stats.warnbase,

@@ -6,6 +6,7 @@ mostly in order to figure out where improvements need to be made.
 The tests in this module do not check results, they are just here to
 ensure that the code as shown can be executed.
 """
+import json
 import os
 
 from utils import datapath
@@ -20,6 +21,7 @@ def test_command_line():
 
     stats = main(["-q", "10", "-o", os.devnull, datapath("small.fastq")])
     assert stats is not None
+    json.dumps(stats.as_json())
 
     # TODO
     # - Should not set up logging
@@ -31,6 +33,7 @@ def test_pipeline_single(tmp_path):
     # The following is roughly equivalent to:
     # cutadapt -u 5 -a GATCGGAAGA -q 0,15 -m 10
     #   --discard-untrimmed --info-file=info.txt -o ... small.fastq
+    import json
     from cutadapt.pipeline import SingleEndPipeline, SerialPipelineRunner
     from cutadapt.utils import FileOpener
     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
@@ -61,7 +64,7 @@ def test_pipeline_single(tmp_path):
     runner = SerialPipelineRunner(pipeline, infiles, outfiles, DummyProgress())
     stats = runner.run()
     assert stats is not None
-    _ = stats.as_json()
+    json.dumps(stats.as_json())
     file1.close()
     info_file.close()
     out.close()
@@ -127,5 +130,4 @@ def test_pipeline_paired(tmp_path):
     # - filters as attributes on Pipeline is awkward
     # - too many submodules (flatter namespace)
     # - more default arguments
-    # - as_json() contains cutadapt.json.OneLine objects
     # - info file isn’t written, what is missing?
