@@ -797,6 +797,7 @@ def pipeline_from_parsed_args(
                 pipeline_add(Renamer(args.rename))
         except InvalidTemplate as e:
             raise CommandLineError(e)
+
     # Set filtering parameters
     # Minimum/maximum length
     for attr in "minimum_length", "maximum_length":

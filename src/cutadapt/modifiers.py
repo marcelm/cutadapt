@@ -723,7 +723,7 @@ class ZeroCapper(SingleEndModifier):
 
 
 class NextseqQualityTrimmer(SingleEndModifier):
-    def __init__(self, cutoff, base):
+    def __init__(self, cutoff: int, base: int = 33):
         self.cutoff = cutoff
         self.base = base
         self.trimmed_bases = 0
@@ -738,7 +738,7 @@ class NextseqQualityTrimmer(SingleEndModifier):
 
 
 class QualityTrimmer(SingleEndModifier):
-    def __init__(self, cutoff_front, cutoff_back, base):
+    def __init__(self, cutoff_front: int, cutoff_back: int, base: int = 33):
         self.cutoff_front = cutoff_front
         self.cutoff_back = cutoff_back
         self.base = base

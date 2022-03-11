@@ -44,7 +44,7 @@ def test_pipeline_single(tmp_path):
     file_opener = FileOpener()
     pipeline = SingleEndPipeline(file_opener)
     pipeline.add(UnconditionalCutter(5))
-    pipeline.add(QualityTrimmer(cutoff_front=0, cutoff_back=15, base=33))
+    pipeline.add(QualityTrimmer(cutoff_front=0, cutoff_back=15))
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
         max_errors=1,
@@ -82,7 +82,7 @@ def test_pipeline_paired(tmp_path):
     file_opener = FileOpener()
     pipeline = PairedEndPipeline(file_opener, "any")
     pipeline.add(UnconditionalCutter(5), UnconditionalCutter(7))
-    pipeline.add_both(QualityTrimmer(cutoff_front=0, cutoff_back=15, base=33))
+    pipeline.add_both(QualityTrimmer(cutoff_front=0, cutoff_back=15))
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
         max_errors=1,
