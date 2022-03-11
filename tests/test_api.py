@@ -45,15 +45,12 @@ def test_pipeline_single(tmp_path):
     pipeline = SingleEndPipeline(file_opener)
     pipeline.add(UnconditionalCutter(5))
     pipeline.add(QualityTrimmer(cutoff_front=0, cutoff_back=15, base=33))
-    adapters = [
-        BackAdapter(
-            sequence="GATCGGAAGA",
-            max_errors=1,
-            min_overlap=3,
-        )
-    ]
-    cutter = AdapterCutter(adapters, times=1, action="trim", index=True)
-    pipeline.add(cutter)
+    adapter = BackAdapter(
+        sequence="GATCGGAAGA",
+        max_errors=1,
+        min_overlap=3,
+    )
+    pipeline.add(AdapterCutter([adapter]))
     pipeline.minimum_length = (10,)
     pipeline.discard_untrimmed = True
     file1 = file_opener.xopen(datapath("small.fastq"), "rb")
@@ -65,9 +62,8 @@ def test_pipeline_single(tmp_path):
     stats = runner.run()
     assert stats is not None
     json.dumps(stats.as_json())
-    file1.close()
-    info_file.close()
-    out.close()
+    infiles.close()
+    outfiles.close()
     # TODO info file isn’t written, what is missing?
 
 
@@ -87,23 +83,19 @@ def test_pipeline_paired(tmp_path):
     pipeline = PairedEndPipeline(file_opener, "any")
     pipeline.add(UnconditionalCutter(5), UnconditionalCutter(7))
     pipeline.add_both(QualityTrimmer(cutoff_front=0, cutoff_back=15, base=33))
-    adapters = [
-        BackAdapter(
-            sequence="GATCGGAAGA",
-            max_errors=1,
-            min_overlap=3,
-        )
-    ]
-    cutter = AdapterCutter(adapters, times=1, action="trim", index=True)
-    pipeline.add(cutter, None)
+    adapter = BackAdapter(
+        sequence="GATCGGAAGA",
+        max_errors=1,
+        min_overlap=3,
+    )
+    pipeline.add(AdapterCutter([adapter]), None)
     pipeline.minimum_length = (10, None)
     pipeline.discard_untrimmed = True
 
     file1, file2 = file_opener.xopen_pair(
         datapath("paired.1.fastq"), datapath("paired.2.fastq"), "rb"
     )
-    interleaved = False
-    infiles = InputFiles(file1, file2, interleaved)
+    infiles = InputFiles(file1, file2)
 
     info_file = file_opener.xopen_or_none(tmp_path / "info.txt", "wb")
     out, out2 = file_opener.xopen_pair(
@@ -118,11 +110,8 @@ def test_pipeline_paired(tmp_path):
     stats = runner.run()
     _ = stats.as_json()
     assert stats is not None
-    file1.close()
-    file2.close()
-    out.close()
-    out2.close()
-    info_file.close()
+    infiles.close()
+    outfiles.close()
 
     # TODO
     # - could use += for adding modifiers
