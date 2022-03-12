@@ -81,14 +81,14 @@ def test_pipeline_paired(tmp_path):
 
     file_opener = FileOpener()
     pipeline = PairedEndPipeline(file_opener, "any")
-    pipeline.add(UnconditionalCutter(5), UnconditionalCutter(7))
+    pipeline.add_two_single(UnconditionalCutter(5), UnconditionalCutter(7))
     pipeline.add_both(QualityTrimmer(cutoff_front=0, cutoff_back=15))
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
         max_errors=1,
         min_overlap=3,
     )
-    pipeline.add(AdapterCutter([adapter]), None)
+    pipeline.add_two_single(AdapterCutter([adapter]), None)
     pipeline.minimum_length = (10, None)
     pipeline.discard_untrimmed = True
 

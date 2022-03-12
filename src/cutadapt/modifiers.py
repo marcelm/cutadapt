@@ -74,7 +74,7 @@ class PairedEndModifier(ABC):
 
 class PairedEndModifierWrapper(PairedEndModifier):
     """
-    Wrapper for modifiers that work on both reads in a paired-end read
+    Wrap two SingleEndModifiers that work on both reads in a paired-end read
     """
 
     paired = True

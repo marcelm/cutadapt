@@ -758,7 +758,12 @@ def pipeline_from_parsed_args(
     ):
         pipeline.override_untrimmed_pair_filter = True
 
-    add_unconditional_cutters(pipeline, args.cut, args.cut2)
+    for modifier in make_unconditional_cutters(args.cut, args.cut2, paired):
+        if isinstance(modifier, tuple):
+            assert len(modifier) == 2
+            pipeline.add_two_single(*modifier)
+        else:
+            pipeline.add(modifier)
 
     pipeline_add = pipeline.add_both if paired else pipeline.add
 
@@ -794,7 +799,7 @@ def pipeline_from_parsed_args(
             if paired:
                 pipeline.add_paired_modifier(PairedEndRenamer(args.rename))
             else:
-                pipeline_add(Renamer(args.rename))
+                pipeline.add(Renamer(args.rename))
         except InvalidTemplate as e:
             raise CommandLineError(e)
 
@@ -841,7 +846,7 @@ def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
     return adapters, adapters2
 
 
-def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[int]):
+def make_unconditional_cutters(cut1: List[int], cut2: List[int], paired: bool):
     for i, cut_arg in enumerate([cut1, cut2]):
         # cut_arg is a list
         if not cut_arg:
@@ -854,15 +859,14 @@ def add_unconditional_cutters(pipeline: Pipeline, cut1: List[int], cut2: List[in
             if c == 0:
                 continue
             if i == 0:  # R1
-                if isinstance(pipeline, PairedEndPipeline):
-                    pipeline.add(UnconditionalCutter(c), None)
+                if paired:
+                    yield (UnconditionalCutter(c), None)
                 else:
-                    assert isinstance(pipeline, SingleEndPipeline)
-                    pipeline.add(UnconditionalCutter(c))
+                    yield UnconditionalCutter(c)
             else:
                 # R2
-                assert isinstance(pipeline, PairedEndPipeline)
-                pipeline.add(None, UnconditionalCutter(c))
+                assert paired
+                yield (None, UnconditionalCutter(c))
 
 
 def add_quality_trimmers(
@@ -881,7 +885,7 @@ def add_quality_trimmers(
         if cutoff1 is not None and cutoff2 is None:
             qtrimmers[1] = copy.copy(qtrimmers[0])
         if qtrimmers[0] is not None or qtrimmers[1] is not None:
-            pipeline.add(*qtrimmers)
+            pipeline.add_two_single(*qtrimmers)
     elif qtrimmers[0] is not None:
         assert isinstance(pipeline, SingleEndPipeline)
         pipeline.add(qtrimmers[0])
@@ -920,7 +924,7 @@ def add_adapter_cutter(
             if reverse_complement:
                 raise CommandLineError("--revcomp not implemented for paired-end reads")
             if adapter_cutter or adapter_cutter2:
-                pipeline.add(adapter_cutter, adapter_cutter2)
+                pipeline.add_two_single(adapter_cutter, adapter_cutter2)
         elif adapter_cutter:
             if reverse_complement:
                 modifier = ReverseComplementer(
