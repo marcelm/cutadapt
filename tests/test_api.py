@@ -43,15 +43,17 @@ def test_pipeline_single(tmp_path):
     from cutadapt.utils import DummyProgress
 
     file_opener = FileOpener()
-    pipeline = SingleEndPipeline(file_opener)
-    pipeline.add(UnconditionalCutter(5))
-    pipeline.add(QualityTrimmer(cutoff_front=0, cutoff_back=15))
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
         max_errors=1,
         min_overlap=3,
     )
-    pipeline.add(AdapterCutter([adapter]))
+    modifiers = [
+        UnconditionalCutter(5),
+        QualityTrimmer(cutoff_front=0, cutoff_back=15),
+        AdapterCutter([adapter]),
+    ]
+    pipeline = SingleEndPipeline(modifiers, file_opener)
     pipeline.minimum_length = (10,)
     pipeline.discard_untrimmed = True
     file1 = file_opener.xopen(datapath("small.fastq"), "rb")
@@ -80,17 +82,21 @@ def test_pipeline_paired(tmp_path):
     from cutadapt.pipeline import InputFiles, OutputFiles
     from cutadapt.utils import DummyProgress
 
-    file_opener = FileOpener()
-    pipeline = PairedEndPipeline(file_opener, "any")
-    pipeline.add_two_single(UnconditionalCutter(5), UnconditionalCutter(7))
     trimmer = QualityTrimmer(cutoff_front=0, cutoff_back=15)
-    pipeline.add_two_single(trimmer, copy.copy(trimmer))
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
         max_errors=1,
         min_overlap=3,
     )
-    pipeline.add_two_single(AdapterCutter([adapter]), None)
+    modifiers = [
+        (UnconditionalCutter(5), UnconditionalCutter(7)),
+        (trimmer, copy.copy(trimmer)),
+        (AdapterCutter([adapter]), None),
+    ]
+
+    file_opener = FileOpener()
+    pipeline = PairedEndPipeline(modifiers, file_opener, "any")
+
     pipeline.minimum_length = (10, None)
     pipeline.discard_untrimmed = True
 

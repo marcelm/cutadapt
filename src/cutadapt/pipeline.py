@@ -3,7 +3,7 @@ import os
 import sys
 import copy
 import logging
-from typing import List, Optional, BinaryIO, TextIO, Any, Tuple, Dict, Sequence
+from typing import List, Optional, BinaryIO, TextIO, Any, Tuple, Dict, Sequence, Union
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe, Queue
 from pathlib import Path
@@ -384,14 +384,9 @@ class SingleEndPipeline(Pipeline):
     Processing pipeline for single-end reads
     """
 
-    def __init__(self, file_opener: FileOpener):
+    def __init__(self, modifiers: List[SingleEndModifier], file_opener: FileOpener):
         super().__init__(file_opener)
-        self._modifiers = []  # type: List[SingleEndModifier]
-
-    def add(self, modifier: SingleEndModifier):
-        if modifier is None:
-            raise ValueError("Modifier must not be None")
-        self._modifiers.append(modifier)
+        self._modifiers = modifiers  # type: List[SingleEndModifier]
 
     def process_reads(
         self, progress: Progress = None
@@ -479,15 +474,33 @@ class PairedEndPipeline(Pipeline):
 
     paired = True
 
-    def __init__(self, file_opener: FileOpener, pair_filter_mode: str):
+    def __init__(
+        self,
+        modifiers: List[
+            Union[
+                PairedEndModifier,
+                Tuple[Optional[SingleEndModifier], Optional[SingleEndModifier]],
+            ]
+        ],
+        file_opener: FileOpener,
+        pair_filter_mode: str,
+    ):
         super().__init__(file_opener)
         self._modifiers = []  # type: List[PairedEndModifier]
         self._pair_filter_mode = pair_filter_mode
         self._reader = None
         # Whether to ignore pair_filter mode for discard-untrimmed filter
         self.override_untrimmed_pair_filter = False
+        self._add_modifiers(modifiers)
 
-    def add_two_single(
+    def _add_modifiers(self, modifiers):
+        for modifier in modifiers:
+            if isinstance(modifier, tuple):
+                self._add_two_single_modifiers(*modifier)
+            else:
+                self._add_modifier(modifier)
+
+    def _add_two_single_modifiers(
         self,
         modifier1: Optional[SingleEndModifier],
         modifier2: Optional[SingleEndModifier],
@@ -501,7 +514,7 @@ class PairedEndPipeline(Pipeline):
             raise ValueError("Not both modifiers can be None")
         self._modifiers.append(PairedEndModifierWrapper(modifier1, modifier2))
 
-    def add(self, modifier: PairedEndModifier) -> None:
+    def _add_modifier(self, modifier: PairedEndModifier) -> None:
         """Add a Modifier (without wrapping it in a PairedEndModifierWrapper)"""
         self._modifiers.append(modifier)
 

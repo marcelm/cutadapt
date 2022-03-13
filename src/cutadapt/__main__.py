@@ -738,26 +738,6 @@ def pipeline_from_parsed_args(
     if args.action == "none":
         args.action = None
 
-    # Create the processing pipeline
-    if paired:
-        pair_filter_mode = "any" if args.pair_filter is None else args.pair_filter
-        pipeline = PairedEndPipeline(file_opener, pair_filter_mode)  # type: Any
-    else:
-        pipeline = SingleEndPipeline(file_opener)
-
-    # When adapters are being trimmed only in R1 or R2, override the pair filter mode
-    # as using the default of 'any' would regard all read pairs as untrimmed.
-    if (
-        isinstance(pipeline, PairedEndPipeline)
-        and (not adapters2 or not adapters)
-        and (
-            args.discard_untrimmed
-            or args.untrimmed_output
-            or args.untrimmed_paired_output
-        )
-    ):
-        pipeline.override_untrimmed_pair_filter = True
-
     modifiers = []
     modifiers.extend(make_unconditional_cutters(args.cut, args.cut2, paired))
 
@@ -804,11 +784,27 @@ def pipeline_from_parsed_args(
         except InvalidTemplate as e:
             raise CommandLineError(e)
 
-    for modifier in modifiers:
-        if isinstance(modifier, tuple):
-            pipeline.add_two_single(*modifier)
-        else:
-            pipeline.add(modifier)
+    # Create the processing pipeline
+    if paired:
+        pair_filter_mode = "any" if args.pair_filter is None else args.pair_filter
+        pipeline = PairedEndPipeline(
+            modifiers, file_opener, pair_filter_mode
+        )  # type: Any
+    else:
+        pipeline = SingleEndPipeline(modifiers, file_opener)
+
+    # When adapters are being trimmed only in R1 or R2, override the pair filter mode
+    # as using the default of 'any' would regard all read pairs as untrimmed.
+    if (
+        isinstance(pipeline, PairedEndPipeline)
+        and (not adapters2 or not adapters)
+        and (
+            args.discard_untrimmed
+            or args.untrimmed_output
+            or args.untrimmed_paired_output
+        )
+    ):
+        pipeline.override_untrimmed_pair_filter = True
 
     # Set filtering parameters
     # Minimum/maximum length
