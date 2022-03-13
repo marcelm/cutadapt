@@ -760,15 +760,16 @@ def pipeline_from_parsed_args(
 
     for modifier in make_unconditional_cutters(args.cut, args.cut2, paired):
         if isinstance(modifier, tuple):
-            assert len(modifier) == 2
             pipeline.add_two_single(*modifier)
         else:
             pipeline.add(modifier)
 
-    pipeline_add = pipeline.add_both if paired else pipeline.add
-
     if args.nextseq_trim is not None:
-        pipeline_add(NextseqQualityTrimmer(args.nextseq_trim, args.quality_base))
+        trimmer = NextseqQualityTrimmer(args.nextseq_trim, args.quality_base)
+        if paired:
+            pipeline.add_two_single(trimmer, copy.copy(trimmer))
+        else:
+            pipeline.add(trimmer)
 
     add_quality_trimmers(
         pipeline, args.quality_cutoff, args.quality_cutoff2, args.quality_base
@@ -788,7 +789,10 @@ def pipeline_from_parsed_args(
     )
 
     for modifier in modifiers_applying_to_both_ends_if_paired(args):
-        pipeline_add(modifier)
+        if paired:
+            pipeline.add_two_single(modifier, copy.copy(modifier))
+        else:
+            pipeline.add(modifier)
 
     if args.rename and (args.prefix or args.suffix):
         raise CommandLineError(
@@ -796,10 +800,8 @@ def pipeline_from_parsed_args(
         )
     if args.rename and args.rename != "{header}":
         try:
-            if paired:
-                pipeline.add_paired_modifier(PairedEndRenamer(args.rename))
-            else:
-                pipeline.add(Renamer(args.rename))
+            renamer = PairedEndRenamer(args.rename) if paired else Renamer(args.rename)
+            pipeline.add(renamer)
         except InvalidTemplate as e:
             raise CommandLineError(e)
 
@@ -910,7 +912,7 @@ def add_adapter_cutter(
             cutter = PairedAdapterCutter(adapters, adapters2, action)
         except PairedAdapterCutterError as e:
             raise CommandLineError("--pair-adapters: " + str(e))
-        pipeline.add_paired_modifier(cutter)
+        pipeline.add(cutter)
     else:
         adapter_cutter, adapter_cutter2 = None, None
         try:

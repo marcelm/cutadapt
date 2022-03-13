@@ -501,14 +501,7 @@ class PairedEndPipeline(Pipeline):
             raise ValueError("Not both modifiers can be None")
         self._modifiers.append(PairedEndModifierWrapper(modifier1, modifier2))
 
-    def add_both(self, modifier: SingleEndModifier) -> None:
-        """
-        Add one modifier for both R1 and R2
-        """
-        assert modifier is not None
-        self._modifiers.append(PairedEndModifierWrapper(modifier, copy.copy(modifier)))
-
-    def add_paired_modifier(self, modifier: PairedEndModifier) -> None:
+    def add(self, modifier: PairedEndModifier) -> None:
         """Add a Modifier (without wrapping it in a PairedEndModifierWrapper)"""
         self._modifiers.append(modifier)
 

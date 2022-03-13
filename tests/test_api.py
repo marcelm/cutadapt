@@ -6,6 +6,7 @@ mostly in order to figure out where improvements need to be made.
 The tests in this module do not check results, they are just here to
 ensure that the code as shown can be executed.
 """
+import copy
 import json
 import os
 
@@ -82,7 +83,8 @@ def test_pipeline_paired(tmp_path):
     file_opener = FileOpener()
     pipeline = PairedEndPipeline(file_opener, "any")
     pipeline.add_two_single(UnconditionalCutter(5), UnconditionalCutter(7))
-    pipeline.add_both(QualityTrimmer(cutoff_front=0, cutoff_back=15))
+    trimmer = QualityTrimmer(cutoff_front=0, cutoff_back=15)
+    pipeline.add_two_single(trimmer, copy.copy(trimmer))
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
         max_errors=1,
