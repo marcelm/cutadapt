@@ -60,6 +60,7 @@ import logging
 import platform
 import itertools
 import multiprocessing
+from pathlib import Path
 from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Dict, Iterable
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
@@ -447,7 +448,21 @@ def open_output_files(
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
     attributes are not opened files, but paths (out and out2 with the '{name}' template).
     """
-
+    complain_about_duplicate_paths(
+        [
+            args.rest_file,
+            args.info_file,
+            args.wildcard_file,
+            args.too_short_output,
+            args.too_short_paired_output,
+            args.too_long_output,
+            args.too_long_paired_output,
+            args.untrimmed_output,
+            args.untrimmed_paired_output,
+            args.output,
+            args.paired_output,
+        ]
+    )
     rest_file = file_opener.xopen_or_none(args.rest_file, "wb")
     info_file = file_opener.xopen_or_none(args.info_file, "wb")
     wildcard = file_opener.xopen_or_none(args.wildcard_file, "wb")
@@ -499,12 +514,8 @@ def open_output_files(
             )
         out = out2 = None
         demultiplex_out = demultiplex_out2 = None
-        (
-            combinatorial_out,
-            combinatorial_out2,
-            untrimmed,
-            untrimmed2,
-        ) = open_combinatorial_out(
+        untrimmed = untrimmed2 = None
+        (combinatorial_out, combinatorial_out2) = open_combinatorial_out(
             adapter_names,
             adapter_names2,
             args.output,
@@ -542,6 +553,23 @@ def open_output_files(
     )
 
 
+def complain_about_duplicate_paths(paths: List[str]):
+    seen = set()
+    for path in paths:
+        if path is None:
+            continue
+        p = Path(path)
+        if p.exists() and not p.is_file():
+            # assumed to be FIFO, /dev/null etc.
+            continue
+        if path in seen:
+            raise CommandLineError(
+                f"Path {path} specified more than once as an output file. "
+                f"This is not supported at the moment."
+            )
+        seen.add(path)
+
+
 def open_combinatorial_out(
     adapter_names: Iterable[str],
     adapter_names2: Iterable[str],
@@ -567,8 +595,7 @@ def open_combinatorial_out(
         )
         combinatorial_out[(name1, name2)] = file_opener.xopen(path1, "wb")
         combinatorial_out2[(name1, name2)] = file_opener.xopen(path2, "wb")
-    untrimmed = untrimmed2 = None
-    return combinatorial_out, combinatorial_out2, untrimmed, untrimmed2
+    return combinatorial_out, combinatorial_out2
 
 
 def open_demultiplex_out(adapter_names, args, file_opener):
