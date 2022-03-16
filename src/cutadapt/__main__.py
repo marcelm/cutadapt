@@ -60,7 +60,7 @@ import logging
 import platform
 import itertools
 import multiprocessing
-from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Dict
+from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Dict, Iterable
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
@@ -492,6 +492,11 @@ def open_output_files(
     elif demultiplex_mode == "combinatorial":
         assert "{name1}" in args.output and "{name2}" in args.output
         assert "{name1}" in args.paired_output and "{name2}" in args.paired_output
+        if args.untrimmed_output or args.untrimmed_paired_output:
+            raise CommandLineError(
+                "Combinatorial demultiplexing (with {name1} and {name2})"
+                " cannot be combined with --untrimmed-output or --untrimmed-paired-output"
+            )
         out = out2 = None
         demultiplex_out = demultiplex_out2 = None
         (
@@ -499,7 +504,14 @@ def open_output_files(
             combinatorial_out2,
             untrimmed,
             untrimmed2,
-        ) = open_combinatorial_out(adapter_names, adapter_names2, args, file_opener)
+        ) = open_combinatorial_out(
+            adapter_names,
+            adapter_names2,
+            args.output,
+            args.paired_output,
+            args.discard_untrimmed,
+            file_opener,
+        )
     else:
         combinatorial_out = combinatorial_out2 = None
         demultiplex_out = demultiplex_out2 = None
@@ -530,10 +542,17 @@ def open_output_files(
     )
 
 
-def open_combinatorial_out(adapter_names, adapter_names2, args, file_opener):
+def open_combinatorial_out(
+    adapter_names: Iterable[str],
+    adapter_names2: Iterable[str],
+    output_template: str,
+    paired_output_template: str,
+    discard_untrimmed: bool,
+    file_opener,
+):
     combinatorial_out = dict()
     combinatorial_out2 = dict()
-    if args.discard_untrimmed:
+    if discard_untrimmed:
         extra = []
     else:
         extra = [(None, None)]
@@ -542,15 +561,12 @@ def open_combinatorial_out(adapter_names, adapter_names2, args, file_opener):
     for name1, name2 in list(itertools.product(adapter_names, adapter_names2)) + extra:
         fname1 = name1 if name1 is not None else "unknown"
         fname2 = name2 if name2 is not None else "unknown"
-        path1 = args.output.replace("{name1}", fname1).replace("{name2}", fname2)
-        path2 = args.paired_output.replace("{name1}", fname1).replace("{name2}", fname2)
+        path1 = output_template.replace("{name1}", fname1).replace("{name2}", fname2)
+        path2 = paired_output_template.replace("{name1}", fname1).replace(
+            "{name2}", fname2
+        )
         combinatorial_out[(name1, name2)] = file_opener.xopen(path1, "wb")
         combinatorial_out2[(name1, name2)] = file_opener.xopen(path2, "wb")
-    if args.untrimmed_output or args.untrimmed_paired_output:
-        raise CommandLineError(
-            "Combinatorial demultiplexing (with {name1} and {name2})"
-            " cannot be combined with --untrimmed-output or --untrimmed-paired-output"
-        )
     untrimmed = untrimmed2 = None
     return combinatorial_out, combinatorial_out2, untrimmed, untrimmed2
 
