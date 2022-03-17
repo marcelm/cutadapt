@@ -16,8 +16,10 @@ def run_paired(tmp_path):
             params = params.split()
         params += ["--cores", str(cores), "--buffer-size=512"]
         params += ["--json", os.fspath(tmp_path / "stats.cutadapt.json")]
-        path1 = os.fspath(tmp_path / expected1)
-        path2 = os.fspath(tmp_path / expected2)
+        (tmp_path / "r1").mkdir()
+        (tmp_path / "r2").mkdir()
+        path1 = os.fspath(tmp_path / "r1" / expected1)
+        path2 = os.fspath(tmp_path / "r2" / expected2)
         params += ["-o", path1, "-p", path2]
         params += [datapath(in1), datapath(in2)]
         stats = main(params)
@@ -333,53 +335,24 @@ def test_paired_end_qualtrim_swapped(run_paired, cores):
     )
 
 
-def test_qualtrim_r2(run_paired):
+@pytest.mark.parametrize(
+    "args,expected1,expected2",
+    [
+        ("", "lowqual.unchanged.fastq", "lowqual.unchanged.fastq"),
+        ("-q 10", "lowqual.fastq", "lowqual.fastq"),
+        ("-q 10 -Q 10", "lowqual.fastq", "lowqual.fastq"),
+        ("-Q 10", "lowqual.unchanged.fastq", "lowqual.fastq"),
+        ("-q 0 -Q 10", "lowqual.unchanged.fastq", "lowqual.fastq"),
+        ("-q 10 -Q 0", "lowqual.fastq", "lowqual.unchanged.fastq"),
+    ],
+)
+def test_qualtrim_r2(run_paired, args, expected1, expected2):
     run_paired(
-        "",
+        args,
         in1="lowqual.fastq",
         in2="lowqual.fastq",
-        expected1="lowqual.unchanged.fastq",
-        expected2="lowqual.unchanged.fastq",
-        cores=1,
-    )
-    run_paired(
-        "-q 10",
-        in1="lowqual.fastq",
-        in2="lowqual.fastq",
-        expected1="lowqual.fastq",
-        expected2="lowqual.fastq",
-        cores=1,
-    )
-    run_paired(
-        "-Q 10",
-        in1="lowqual.fastq",
-        in2="lowqual.fastq",
-        expected1="lowqual.unchanged.fastq",
-        expected2="lowqual.fastq",
-        cores=1,
-    )
-    run_paired(
-        "-q 10 -Q 10",
-        in1="lowqual.fastq",
-        in2="lowqual.fastq",
-        expected1="lowqual.fastq",
-        expected2="lowqual.fastq",
-        cores=1,
-    )
-    run_paired(
-        "-q 10 -Q 0",
-        in1="lowqual.fastq",
-        in2="lowqual.fastq",
-        expected1="lowqual.fastq",
-        expected2="lowqual.unchanged.fastq",
-        cores=1,
-    )
-    run_paired(
-        "-q 0 -Q 10",
-        in1="lowqual.fastq",
-        in2="lowqual.fastq",
-        expected1="lowqual.unchanged.fastq",
-        expected2="lowqual.fastq",
+        expected1=expected1,
+        expected2=expected2,
         cores=1,
     )
 

@@ -580,13 +580,14 @@ def open_combinatorial_out(
 ):
     combinatorial_out = dict()
     combinatorial_out2 = dict()
+    extra: List[Tuple[Optional[str], Optional[str]]]
     if discard_untrimmed:
         extra = []
     else:
         extra = [(None, None)]
         extra += [(None, name2) for name2 in adapter_names2]
         extra += [(name1, None) for name1 in adapter_names]
-    for name1, name2 in list(itertools.product(adapter_names, adapter_names2)) + extra:
+    for name1, name2 in list(itertools.product(adapter_names, adapter_names2)) + extra:  # type: ignore
         fname1 = name1 if name1 is not None else "unknown"
         fname2 = name2 if name2 is not None else "unknown"
         path1 = output_template.replace("{name1}", fname1).replace("{name2}", fname2)
