@@ -8,11 +8,12 @@ development version
 
 * :issue:`607`: Print an error when an output file was specified
   multiple times (for example, for ``--untrimmed-output`` and
-  ``--too-short-output``). This is not supported at the moment.
+  ``--too-short-output``). Sending output from different filters to
+  the same file is not supported at the moment.
 * :issue:`603`: When ``-e`` was used with an absolute number of errors
   and there were ``N`` wildcards in the sequence, the actual number of
   allowed errors was too low.
-* Speed up quality trimming (both ``-q`` and ``--nextseq-trim``) somewhat
+* Speed up quality trimming (both ``-q`` and ``--nextseq-trim``) somewhat.
 
 v3.7 (2022-02-23)
 -----------------
