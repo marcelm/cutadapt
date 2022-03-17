@@ -1,7 +1,6 @@
 import io
 import os
 import sys
-import copy
 import logging
 from typing import List, Optional, BinaryIO, TextIO, Any, Tuple, Dict, Sequence, Union
 from abc import ABC, abstractmethod

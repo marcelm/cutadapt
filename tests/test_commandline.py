@@ -2,12 +2,11 @@ import subprocess
 import sys
 import os
 from io import StringIO, BytesIO
-from pathlib import Path
 
 import dnaio
 import pytest
 
-from cutadapt.__main__ import main, CommandLineError
+from cutadapt.__main__ import main
 from utils import assert_files_equal, datapath, cutpath
 
 # pytest.mark.timeout will not fail even if pytest-timeout is not installed
@@ -1049,7 +1048,7 @@ def test_rename_cannot_be_combined_with_other_renaming_options(opt):
 
 def test_duplicate_output_paths(tmp_path):
     path = str(tmp_path / "discard.fastq")
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(SystemExit):
         main(
             [
                 "--untrimmed-output",
