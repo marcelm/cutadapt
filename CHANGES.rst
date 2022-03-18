@@ -6,6 +6,11 @@ Changelog
 development version
 -------------------
 
+* :issue:`604`, :pr:`608`: The `alignment algorithm was tweaked <algorithm-indel-scores>`_
+  to penalize indels more and to more accurately pick the leftmost adapter
+  occurrence if there are multiple. This will normally affect very few
+  reads, but should generally lead to fewer surprising results in cases
+  where it matters.
 * :issue:`607`: Print an error when an output file was specified
   multiple times (for example, for ``--untrimmed-output`` and
   ``--too-short-output``). Sending output from different filters to

@@ -1,3 +1,5 @@
+from typing import NamedTuple
+
 import pytest
 
 from cutadapt.align import (
@@ -14,6 +16,15 @@ from cutadapt.align import (
 from cutadapt.adapters import Where
 
 from utils import binomial
+
+
+class AlignmentResult(NamedTuple):
+    ref_start: int
+    ref_end: int
+    query_start: int
+    query_end: int
+    score: int
+    errors: int
 
 
 # convenience function (to avoid having to instantiate an Aligner manually)
@@ -60,27 +71,77 @@ class TestAligner:
         assert (0, 0, 0, 0, 0, 0) == result
 
     def test_indels_penalized(self):
-        # Alignment:
+        # Alignment in older versions:
         # CCAGTCCTTTCCTGAGAGT
         # CCAGTCCT---CT
+        #
+        # Should now be:
+        # CCAGTCCTTTCCTGAGAGT
+        # CCAGTCCTCT
         aligner = Aligner("CCAGTCCTCT", 0.3, flags=Where.PREFIX)
         result = aligner.locate("CCAGTCCTTTCCTGAGAGT")
-        assert (0, 10, 0, 13, 10, 3) == result
-        # refstart, refstop, querystart, querystop, matches, errors)
+        assert (0, 10, 0, 10, 9 - 1, 1) == result
+        # refstart, refstop, querystart, querystop, score, errors)
 
         # Alignment:
-        # TCGAT-C
         # TCGATGC
+        # TCGATC
         aligner = Aligner("TCGATC", 1.5 / 6, flags=Where.PREFIX)
         result = aligner.locate("TCGATGC")
-        assert (0, 6, 0, 7, 6, 1) == result
+        assert (0, 6, 0, 6, 4, 1) == result
+
+    def test_align_illumina(self):
+        aligner = Aligner("GCCGAACTTCTTAGACTGCCTTAAGGACGT", 0.1, flags=Where.BACK)
+        result = AlignmentResult(
+            *aligner.locate("CAAATCACCAGAAGGCGCCTAACTTCTTAGACTGCC")
+        )
+        #                 GCCGAACTTCTTAGACTGCCTTAAGGACGT (ref)
+        #                 |||X||||||||||||||||
+        # CAAATCACCAGAAGGCGCCTAACTTCTTAGACTGCC         (query)
+        assert result.ref_start == 0
+        assert result.ref_end == 20
+        assert result.query_start == 16
+        assert result.query_end == 36
+        assert result.score == 18
+        assert result.errors == 1
 
 
-def test_polya():
+def test_poly_t():
+    aligner = Aligner("TTTT", 0.25, flags=Where.BACK)
+    result = AlignmentResult(*aligner.locate("CCTTTT"))
+    assert result.ref_start == 0
+    assert result.ref_end == 4
+    assert result.query_start == 2
+    assert result.query_end == 6
+    assert result.score == 4
+    assert result.errors == 0
+
+
+def test_poly_t_partial_match():
+    aligner = Aligner("TTTTTT", 0.25, flags=Where.BACK)
+    result = AlignmentResult(*aligner.locate("CCTTTT"))
+    assert result.ref_start == 0
+    assert result.ref_end == 4
+    assert result.query_start == 2
+    assert result.query_end == 6
+    assert result.score == 4
+    assert result.errors == 0
+
+
+def test_poly_t_2():
+    aligner = Aligner("TTT", 1 / 3, flags=Where.BACK)
+    result = AlignmentResult(*aligner.locate("CCTTTT"))
+    assert result.ref_start == 0
+    assert result.ref_end == 3
+    assert result.query_start == 2
+    assert result.query_end == 5
+
+
+def test_poly_a():
     s = "AAAAAAAAAAAAAAAAA"
     t = "ACAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     result = locate(s, t, 0.0, Where.BACK.value)
-    # start_s, stop_s, start_t, stop_t, matches, cost = result
+    # start_s, stop_s, start_t, stop_t, score, cost = result
     assert result == (0, len(s), 4, 4 + len(s), len(s), 0)
 
 
@@ -127,7 +188,7 @@ def compare_suffixes(ref, query, wildcard_ref=False, wildcard_query=False):
 
 
 def test_compare_prefixes():
-    assert compare_prefixes("AAXAA", "AAAAATTTTTTTTT") == (0, 5, 0, 5, 4, 1)
+    assert compare_prefixes("AAXAA", "AAAAATTTTTTTTT") == (0, 5, 0, 5, 3, 1)
     assert compare_prefixes("AANAA", "AACAATTTTTTTTT", wildcard_ref=True) == (
         0,
         5,
@@ -144,7 +205,7 @@ def test_compare_prefixes():
         5,
         0,
     )
-    assert compare_prefixes("XAAAAA", "AAAAATTTTTTTTT") == (0, 6, 0, 6, 4, 2)
+    assert compare_prefixes("XAAAAA", "AAAAATTTTTTTTT") == (0, 6, 0, 6, 2, 2)
 
     a = WILDCARD_SEQUENCES[0]
     for s in WILDCARD_SEQUENCES:
@@ -173,7 +234,7 @@ def test_compare_prefixes():
             result = compare_prefixes(
                 "CCCXTTXATC", r, wildcard_ref=wildc_ref, wildcard_query=wildc_query
             )
-            assert result == (0, 10, 0, 10, 8, 2)
+            assert result == (0, 10, 0, 10, 6, 2)
 
 
 def test_n_wildcard_in_ref_matches_n_wildcard_in_query_prefix():
@@ -200,7 +261,7 @@ def test_n_wildcard_in_ref_matches_n_wildcard_in_query_back():
 
 
 def test_compare_suffixes():
-    assert compare_suffixes("AAXAA", "TTTTTTTAAAAA") == (0, 5, 7, 12, 4, 1)
+    assert compare_suffixes("AAXAA", "TTTTTTTAAAAA") == (0, 5, 7, 12, 3, 1)
     assert compare_suffixes("AANAA", "TTTTTTTAACAA", wildcard_ref=True) == (
         0,
         5,
@@ -217,7 +278,7 @@ def test_compare_suffixes():
         5,
         0,
     )
-    assert compare_suffixes("AAAAAX", "TTTTTTTAAAAA") == (0, 6, 6, 12, 4, 2)
+    assert compare_suffixes("AAAAAX", "TTTTTTTAAAAA") == (0, 6, 6, 12, 2, 2)
 
 
 @pytest.mark.parametrize("upper", (True, False))
@@ -419,13 +480,14 @@ def test_edit_environment(k, s, environment_func):
     aligner = Aligner(s, max_error_rate=error_rate, flags=0, min_overlap=len(s))
     for t, dist, m in result:
         result = aligner.locate(t)
-        start1, stop1, start2, stop2, matches, errors = result
+        start1, stop1, start2, stop2, score, errors = result
         assert errors == dist
-        assert m == matches
         assert start1 == 0
         assert stop1 == len(s)
         assert start2 == 0
         assert stop2 == len(t)
         assert edit_distance(s, t) == dist
-        assert m <= len(s), (s, t, dist)
-        assert m <= len(t), (s, t, dist)
+        if environment_func is edit_environment:
+            assert m == score
+            assert m <= len(s), (s, t, dist)
+            assert m <= len(t), (s, t, dist)

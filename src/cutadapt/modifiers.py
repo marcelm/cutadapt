@@ -302,9 +302,9 @@ class ReverseComplementer(SingleEndModifier):
             reverse_read
         )
 
-        forward_match_count = sum(m.matches for m in forward_matches)
-        reverse_match_count = sum(m.matches for m in reverse_matches)
-        use_reverse_complement = reverse_match_count > forward_match_count
+        forward_score = sum(m.score for m in forward_matches)
+        reverse_score = sum(m.score for m in reverse_matches)
+        use_reverse_complement = reverse_score > forward_score
 
         if use_reverse_complement:
             self.reverse_complemented += 1
@@ -404,7 +404,7 @@ class PairedAdapterCutter(PairedEndModifier):
         self, sequence1: str, sequence2: str
     ) -> Optional[Tuple[Match, Match]]:
         best = None
-        best_matches = None
+        best_score = None
         best_errors = None
         for adapter1, adapter2 in self._adapter_pairs:
             match1 = adapter1.match_to(sequence1)
@@ -413,15 +413,15 @@ class PairedAdapterCutter(PairedEndModifier):
             match2 = adapter2.match_to(sequence2)
             if match2 is None:
                 continue
-            total_matches = match1.matches + match2.matches
+            total_score = match1.score + match2.score
             total_errors = match1.errors + match2.errors
             if (
                 best is None
-                or total_matches > best_matches
-                or (total_matches == best_matches and total_errors < best_errors)
+                or total_score > best_score
+                or (total_score == best_score and total_errors < best_errors)
             ):
                 best = match1, match2
-                best_matches = total_matches
+                best_score = total_score
                 best_errors = total_errors
         return best
 

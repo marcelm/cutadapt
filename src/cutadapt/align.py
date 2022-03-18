@@ -102,7 +102,8 @@ def hamming_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
 
 def naive_edit_environment(s: str, k: int) -> Iterator[str]:
     """
-    Apply all possible edits up to edit distance k to string s.
+    Apply all possible edits up to edit distance k to string s
+    and yield the resulting strings.
     A string may be returned more than once.
     """
     yield s
@@ -126,8 +127,8 @@ def edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
     Find all strings t for which the edit distance between s and t is at most k,
     assuming the alphabet is A, C, G, T.
 
-    Yield tuples (t, e, m), where e is the edit distance between s and t and
-    m is the number of matches in the optimal alignment.
+    Yield tuples (t, e, score), where e is the edit distance between s and t and
+    score is the score of the optimal alignment.
     """
     rate = k / len(s) if s else 0
     aligner = Aligner(s, max_error_rate=rate, flags=0, min_overlap=len(s))
@@ -137,8 +138,8 @@ def edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
             continue
         seen.add(t)
         result = aligner.locate(t)
-        matches, errors = result[-2:]  # type: ignore
-        yield t, errors, matches
+        score, errors = result[-2:]  # type: ignore
+        yield t, errors, score
 
 
 def slow_edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
@@ -148,6 +149,8 @@ def slow_edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
 
     Yield tuples (t, e, m), where e is the edit distance between s and t and
     m is the number of matches in the optimal alignment.
+
+    This is slow and only used in testing.
     """
     n = len(s)
     alphabet = "TGCA"

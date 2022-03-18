@@ -37,7 +37,7 @@ has the disadvantage that they are not at all intuitive: What does a total score
 of *x* mean? Is that good or bad? How should a threshold be chosen in order to
 avoid finding alignments with too many errors?
 
-For Cutadapt, the adapter alignment algorithm uses *unit costs* instead.
+For Cutadapt, the adapter alignment algorithm primarily uses *unit costs* instead.
 This means that mismatches, insertions and deletions are counted as one error, which
 is easier to understand and allows to specify a single parameter for the
 algorithm (the maximum error rate) in order to describe how many errors are
@@ -60,7 +60,8 @@ Conceptually, the procedure is as follows:
 2. Keep only those alignments that do not exceed the specified maximum error
    rate.
 3. Then, keep only those alignments that have a maximal number of matches
-   (that is, there is no alignment with more matches).
+   (that is, there is no alignment with more matches). (Note: This has been
+   changed, see the section below for an update.)
 4. If there are multiple alignments with the same number of matches, then keep
    only those that have the smallest error rate.
 5. If there are still multiple candidates left, choose the alignment that starts
@@ -68,6 +69,89 @@ Conceptually, the procedure is as follows:
 
 In Step 1, the different adapter types are taken into account: Only those
 overlaps that are actually allowed by the adapter type are actually considered.
+
+
+.. _algorithm-indel-scores:
+
+Alignment algorithm changes in Cutadapt 4
+=========================================
+
+The above algorithm has been tweaked slightly in Cutadapt 4.
+The main problem was that the idea of maximizing the number of matches
+(criterion 3 in the section above) sometimes leads to unintuitive results.
+
+For example, the previous algorithm would prefer an alignment such as this one::
+
+    CCAGTCCTTTCCTGAGAGT   Read
+    ||||||||   ||
+    CCAGTCCT---CT         5' adapter
+
+This alignment was considered to be the best one because it contains 10 matches,
+which is the maximum possible.
+The three consecutive deletions are ignored when making that decision.
+To the user, the unexpected result is visible because the read would end up as
+``GAGAGT`` after trimming.
+
+With the tuned algorithm, the alignment is more sensible::
+
+    CCAGTCCTTTCCTGAGAGT   Read
+    ||||||||X|
+    CCAGTCCTCT            5' adapter
+
+The trimmed read is now ``CCTGAGAGT``, which is what one would likely expect.
+
+The alignment algorithm in Cutadapt can perhaps now be described as
+a *hybrid* algorithm that uses both edit distance and score:
+
+- Edit distance is used to fill out the dynamic programming matrix.
+  Conceptually, this can be seen as computing the edit distance for all
+  possible overlaps between the read and the adapter.
+  We need to use the edit distance as optimization criterion at this
+  stage because we want to be able to let the user provide a maximum
+  error rate (``-e``).
+  Also, using edit distance (that is, unit costs) allows using some
+  optimizations while filling in the matrix (Ukkonen’s trick).
+- A second matrix with scores is filled in simultaneously.
+  The value in a cell is the score of the edit-distance-based alignment,
+  the score is not used as optimization criterion.
+- Finally, the score is used to decide which of the overlaps between
+  read and adapter is the best one.
+  (This means looking into the last row and column of the score matrix.)
+
+The score function is currently: match: +1, mismatch: -1, indel: -2
+
+A second change in the alignment algorithm is relevant if there are
+multiple adapter occurrences in a read (such as adapter dimers).
+With the new algorithm, leftmost (earlier) adapter occurrences are now more
+reliably preferred even if a later match has fewer errors.
+
+Here are two examples from the SRR452441 dataset (R1 only),
+trimmed with the standard Illumina adapter.
+The top row shows the alignment as found by the previous algorithm,
+the middle row shows the sequencing read,
+and the last row shows the alignment as found by the updated algorithm. ::
+
+    @SRR452441.2151945
+                                             AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC  Previous alignment
+                                             ||||||||||||||||||||||||||||||||||
+    -GATCGGAAGAGCACACGTCTGAACTCCAGTCACGCACACGAGATCGGAAGAGCACACGTCTGAACTCCAGTCACGCACACGAATCTCGTATGCCGTCTTCT
+    X|||||||||||||||||||||||||||||||||
+    AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC  New alignment
+
+Previously the read was trimmed to the first 40 bases,
+now the earlier, nearly full-length occurrence is taken into account,
+and the read is empty after trimming. ::
+
+    @SRR452441.2157038
+                                    AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC  Previous alignment
+                                    ||||||||||||||||||||||||||||||||||
+    -GATCGGAAGAGCACACGTCTGAACTCCAGTCAGATCGGAAGAGCACACGTCTGAACTCCAGTCACGCACACGAATCTCGTATGCCGTCTTCTGCTTGAAAA
+    X||||||||||||||||||||||||||||||||X
+    AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC  New alignment
+
+Only very few reads should be affected by the above changes (in SRR452441, which has 2.2 million
+reads, only four reads were trimmed differently).
+In those cases where it matters, however, there should now be fewer surprises.
 
 
 .. _quality-trimming-algorithm:
@@ -104,4 +188,3 @@ The numbers in parentheses are not computed (because 8 is greater than zero),
 but shown here for completeness. The position of the minimum (-25) is used as
 the trimming position. Therefore, the read is trimmed to the first four bases,
 which have quality values 42, 40, 26, 27.
-

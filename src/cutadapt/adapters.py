@@ -308,7 +308,7 @@ class SingleMatch(Match, ABC):
         "astop",
         "rstart",
         "rstop",
-        "matches",
+        "score",
         "errors",
         "adapter",
         "sequence",
@@ -322,7 +322,7 @@ class SingleMatch(Match, ABC):
         astop: int,
         rstart: int,
         rstop: int,
-        matches: int,
+        score: int,
         errors: int,
         adapter: "SingleAdapter",
         sequence: str,
@@ -331,7 +331,7 @@ class SingleMatch(Match, ABC):
         self.astop: int = astop
         self.rstart: int = rstart
         self.rstop: int = rstop
-        self.matches: int = matches
+        self.score: int = score
         self.errors: int = errors
         self.adapter: SingleAdapter = adapter
         self.sequence = sequence
@@ -341,8 +341,10 @@ class SingleMatch(Match, ABC):
         self.length: int = astop - astart
 
     def __repr__(self):
-        return "SingleMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})".format(
-            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors
+        return (
+            f"{self.__class__.__name__}(astart={self.astart}, astop={self.astop}, "
+            f"rstart={self.rstart}, rstop={self.rstop}, "
+            f"score={self.score}, errors={self.errors})"
         )
 
     def __eq__(self, other) -> bool:
@@ -352,7 +354,7 @@ class SingleMatch(Match, ABC):
             and self.astop == other.astop
             and self.rstart == other.rstart
             and self.rstop == other.rstop
-            and self.matches == other.matches
+            and self.score == other.score
             and self.errors == other.errors
             and self.adapter is other.adapter
             and self.sequence == other.sequence
@@ -410,11 +412,6 @@ class SingleMatch(Match, ABC):
 class RemoveBeforeMatch(SingleMatch):
     """A match that removes sequence before the match"""
 
-    def __repr__(self):
-        return "RemoveBeforeMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})".format(
-            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors
-        )
-
     def rest(self) -> str:
         """
         Return the part of the read before this match if this is a
@@ -447,11 +444,6 @@ class RemoveBeforeMatch(SingleMatch):
 
 class RemoveAfterMatch(SingleMatch):
     """A match that removes sequence after the match"""
-
-    def __repr__(self):
-        return "RemoveAfterMatch(astart={}, astop={}, rstart={}, rstop={}, matches={}, errors={})".format(
-            self.astart, self.astop, self.rstart, self.rstop, self.matches, self.errors
-        )
 
     def rest(self) -> str:
         """
@@ -910,14 +902,14 @@ class LinkedMatch(Match):
         )
 
     @property
-    def matches(self):
+    def score(self):
         """Number of matching bases"""
-        m = 0
+        s = 0
         if self.front_match is not None:
-            m += self.front_match.matches
+            s += self.front_match.score
         if self.back_match is not None:
-            m += self.back_match.matches
-        return m
+            s += self.back_match.score
+        return s
 
     @property
     def errors(self):
@@ -1070,13 +1062,12 @@ class MultipleAdapters(Matchable):
             if match is None:
                 continue
 
-            # the no. of matches determines which adapter fits best
+            # the score determines which adapter fits best
             if (
                 best_match is None
-                or match.matches > best_match.matches
+                or match.score > best_match.score
                 or (
-                    match.matches == best_match.matches
-                    and match.errors < best_match.errors
+                    match.score == best_match.score and match.errors < best_match.errors
                 )
             ):
                 best_match = match
@@ -1258,13 +1249,13 @@ class IndexedPrefixAdapters(IndexedAdapters):
             raise ValueError("Only 5' anchored adapters are allowed")
         return super()._accept(adapter)
 
-    def _make_match(self, adapter, length, matches, errors, sequence):
+    def _make_match(self, adapter, length, score, errors, sequence):
         return RemoveBeforeMatch(
             astart=0,
             astop=len(adapter.sequence),
             rstart=0,
             rstop=length,
-            matches=matches,
+            score=score,
             errors=errors,
             adapter=adapter,
             sequence=sequence,
@@ -1285,13 +1276,13 @@ class IndexedSuffixAdapters(IndexedAdapters):
             raise ValueError("Only anchored 3' adapters are allowed")
         return super()._accept(adapter)
 
-    def _make_match(self, adapter, length, matches, errors, sequence):
+    def _make_match(self, adapter, length, score, errors, sequence):
         return RemoveAfterMatch(
             astart=0,
             astop=len(adapter.sequence),
             rstart=len(sequence) - length,
             rstop=len(sequence),
-            matches=matches,
+            score=score,
             errors=errors,
             adapter=adapter,
             sequence=sequence,
