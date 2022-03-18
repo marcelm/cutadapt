@@ -88,7 +88,7 @@ Dependencies
 
 Cutadapt installation requires this software to be installed:
 
-* Python 3.6 or newer
+* Python 3.7 or newer
 * Possibly a C compiler. For Linux, Cutadapt packages are provided as
   so-called “wheels” (``.whl`` files) which come pre-compiled.
 
@@ -144,7 +144,7 @@ Windows packages. To install Cutadapt, you can use ``pip``, but because
 Cutadapt contains components that need to be compiled, you also need to install
 a compiler.
 
-1. Download a recent version (at least 3.6) of Python for Windows from
+1. Download a recent version (at least 3.7) of Python for Windows from
    <https://www.python.org/> and install it.
 2. Download and install “Build Tools for Visual Studio 2019” from
    <https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019>.

@@ -14,6 +14,7 @@ development version
   and there were ``N`` wildcards in the sequence, the actual number of
   allowed errors was too low.
 * Speed up quality trimming (both ``-q`` and ``--nextseq-trim``) somewhat.
+* Python 3.6 is no longer supported as it is end-of-life.
 
 v3.7 (2022-02-23)
 -----------------
