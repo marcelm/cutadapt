@@ -424,6 +424,7 @@ cdef class Aligner:
             int length
             int ref_start
             int cur_effective_length
+            int last_filled_i = 0
             bint characters_equal
             bint is_acceptable
             # We keep only a single column of the DP matrix in memory.
@@ -491,6 +492,7 @@ cdef class Aligner:
                     column[i].cost = cost
                     column[i].origin = origin
                     column[i].score = score
+                last_filled_i = last
                 if self.debug:
                     with gil:
                         for i in range(last + 1):
@@ -546,7 +548,7 @@ cdef class Aligner:
         if max_n == n:
             first_i = 0 if self.stop_in_reference else m
             # search in last column # TODO last?
-            for i in range(first_i, m+1):
+            for i in range(first_i, last_filled_i + 1):
                 length = i + min(column[i].origin, 0)
                 cost = column[i].cost
                 score = column[i].score
