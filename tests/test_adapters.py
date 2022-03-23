@@ -56,7 +56,7 @@ def test_issue_52():
         astop=17,
         rstart=5,
         rstop=21,
-        matches=15,
+        score=15,
         errors=2,
         adapter=adapter,
         sequence=sequence,
@@ -76,16 +76,21 @@ def test_issue_52():
 
 
 def test_issue_80():
-    # This issue turned out to not be an actual issue with the alignment
-    # algorithm. The following alignment is found because it has more matches
-    # than the 'obvious' one:
+    # This issue was at the time not considered to be an actual issue with the alignment
+    # algorithm. The following alignment with three errors was found because it had more
+    # matches than the 'obvious' one:
     #
     # TCGTATGCCGTCTTC
     # =========X==XX=
     # TCGTATGCCCTC--C
     #
-    # This is correct, albeit a little surprising, since an alignment without
-    # indels would have only two errors.
+    # The alignment algorithm has since been changed so that not the number of matches
+    # is relevant, but a score that penalizes indels. Now, the resulting alignment
+    # should be this one (with only two errors):
+    #
+    # TCGTATGCCGTCTTC
+    # =========X==X
+    # TCGTATGCCCTCC
 
     adapter = BackAdapter(
         sequence="TCGTATGCCGTCTTC",
@@ -95,12 +100,11 @@ def test_issue_80():
         adapter_wildcards=False,
     )
     result = adapter.match_to("TCGTATGCCCTCC")
-    assert result.errors == 3, result
+    assert result.errors == 2, result
     assert result.astart == 0, result
-    assert result.astop == 15, result
+    assert result.astop == 13, result
 
 
-@pytest.mark.xfail(strict=True)
 def test_back_adapter_indel_and_exact_occurrence():
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
@@ -112,12 +116,12 @@ def test_back_adapter_indel_and_exact_occurrence():
     # GATCGTGAAGAGATCGGAAGA
     # GATCG-GAAGA
     #            GATCGGAAGA
-    assert match.errors == 0
-    assert match.matches == 10
     assert match.astart == 0
     assert match.astop == 10
     assert match.rstart == 0
-    assert match.rstop == 10
+    assert match.rstop == 11
+    assert match.errors == 1
+    assert match.score == 8
 
 
 def test_back_adapter_indel_and_mismatch_occurrence():
@@ -130,12 +134,12 @@ def test_back_adapter_indel_and_mismatch_occurrence():
     # CTGGATCGGA-GAGCCGTAGATCGGGAGAGGC
     #    ||||||| ||      ||||||X|||
     #    GATCGGAAGA      GATCGGAAGA
-    assert match.errors == 1
-    assert match.matches == 9
     assert match.astart == 0
     assert match.astop == 10
     assert match.rstart == 3
     assert match.rstop == 12
+    assert match.score == 7
+    assert match.errors == 1
 
 
 def test_str():
@@ -153,13 +157,16 @@ def test_prefix_with_indels_one_mismatch():
         adapter_wildcards=False,
         indels=True,
     )
+    # GCACATCGGAA
+    # |||||||X
+    # GCACATCT
     result = a.match_to("GCACATCGGAA")
-    assert result.errors == 1
-    assert result.matches == 7
     assert result.astart == 0
     assert result.astop == 8
     assert result.rstart == 0
     assert result.rstop == 8
+    assert result.score == 6  # 7 matches, 1 mismatch
+    assert result.errors == 1
 
 
 def test_prefix_with_indels_two_mismatches():
@@ -172,12 +179,15 @@ def test_prefix_with_indels_two_mismatches():
         indels=True,
     )
     result = a.match_to("GCACATCGGAA")
-    assert result.errors == 2
-    assert result.matches == 6
+    # GCACATCGGAA
+    # ||||||XX
+    # GCACATTT
     assert result.astart == 0
     assert result.astop == 8
     assert result.rstart == 0
     assert result.rstop == 8
+    assert result.score == 4
+    assert result.errors == 2
 
 
 def test_linked_adapter():
@@ -215,7 +225,7 @@ def test_info_record():
         astop=17,
         rstart=5,
         rstop=21,
-        matches=15,
+        score=15,
         errors=2,
         adapter=adapter,
         sequence=read.sequence,
@@ -329,7 +339,7 @@ def test_linked_matches_property():
         back_required=False,
         name="name",
     )
-    assert la.match_to("AAAATTTT").matches == 3
+    assert la.match_to("AAAATTTT").score == 3
 
 
 @pytest.mark.parametrize("adapter_class", [PrefixAdapter, SuffixAdapter])
@@ -445,9 +455,10 @@ def test_indexed_prefix_adapters_with_n_wildcard():
     sequence = "GGTCCAGA"
     ma = IndexedPrefixAdapters([PrefixAdapter(sequence, max_errors=1, indels=False)])
     for i in range(len(sequence)):
+        # N in the read should be counted as mismatch
         t = sequence[:i] + "N" + sequence[i + 1 :] + "TGCT"
         result = ma.match_to(t)
         assert isinstance(result, RemoveBeforeMatch)
         assert (result.rstart, result.rstop) == (0, 8)
         assert result.errors == 1
-        assert result.matches == 7
+        assert result.score == 6
