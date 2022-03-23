@@ -6,7 +6,7 @@ Changelog
 development version
 -------------------
 
-* :issue:`604`, :pr:`608`: The `alignment algorithm was tweaked <algorithm-indel-scores>`_
+* :issue:`604`, :pr:`608`: The :ref:`alignment algorithm was tweaked <algorithm-indel-scores>`
   to penalize indels more and to more accurately pick the leftmost adapter
   occurrence if there are multiple. This will normally affect very few
   reads, but should generally lead to fewer surprising results in cases
