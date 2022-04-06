@@ -2,9 +2,6 @@
 requires = ["setuptools >= 43", "wheel", "setuptools_scm >= 6.2", "Cython >= 0.29.20"]
 build-backend = "setuptools.build_meta"
 
-[black.tool]
-line-length = 100
-
 [tool.pytest.ini_options]
 filterwarnings = [
     "error",
