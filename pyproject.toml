@@ -12,3 +12,6 @@ filterwarnings = [
 
 [tool.setuptools_scm]
 write_to = "src/cutadapt/_version.py"
+
+[tool.mypy]
+warn_unused_configs = true
