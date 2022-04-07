@@ -1,5 +1,11 @@
 # cython: profile=False, emit_code_comments=False, language_level=3
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
+from cpython.unicode cimport PyUnicode_GET_LENGTH
+
+cdef extern from "Python.h":
+    void * PyUnicode_DATA(object o)
+    bint PyUnicode_IS_COMPACT_ASCII(object o)
 
 DEF MATCH_SCORE = +1
 DEF MISMATCH_SCORE = -1
@@ -81,10 +87,31 @@ def _iupac_table():
         t[ord(c.lower())] = v
     return bytes(t)
 
+def _upper_table():
+    table = bytes(range(256)).upper()
+    return table
+
 
 cdef:
     bytes ACGT_TABLE = _acgt_table()
     bytes IUPAC_TABLE = _iupac_table()
+    bytes UPPER_TABLE = _upper_table()
+
+
+cdef translate(object string, bytes table):
+    if not PyUnicode_IS_COMPACT_ASCII(string):
+        raise ValueError("String must contain only ASCII characters")
+    cdef:
+        unsigned char * string_chars = <unsigned char *>PyUnicode_DATA(string)
+        Py_ssize_t string_length = PyUnicode_GET_LENGTH(string)
+        char * char_table = PyBytes_AS_STRING(table)
+        object retval = PyBytes_FromStringAndSize(NULL, string_length)
+        char * translated_chars = PyBytes_AS_STRING(retval)
+        Py_ssize_t i
+
+    for i in range(string_length):
+        translated_chars[i] = char_table[string_chars[i]]
+    return retval
 
 
 class DPMatrix:
@@ -285,7 +312,6 @@ cdef class Aligner:
             raise MemoryError()
         self.column = mem
         self.n_counts = mem_nc
-        self._reference = reference.encode('ascii')
         self.m = len(reference)
         self.effective_length = self.m
         n_count = 0
@@ -299,9 +325,11 @@ cdef class Aligner:
             self.effective_length = self.m - self.n_counts[self.m]
             if self.effective_length == 0:
                 raise ValueError("Cannot have only N wildcards in the sequence")
-            self._reference = self._reference.translate(IUPAC_TABLE)
+            self._reference = translate(reference, IUPAC_TABLE)
         elif self.wildcard_query:
-            self._reference = self._reference.translate(ACGT_TABLE)
+            self._reference = translate(reference, ACGT_TABLE)
+        else:
+            self._reference = reference.encode('ascii')
         self.reference = reference
 
     property dpmatrix:
@@ -333,8 +361,8 @@ cdef class Aligner:
         The alignment itself is not returned.
         """
         cdef:
-            const char* s1 = self._reference
-            bytes query_bytes = query.encode('ascii')
+            const char* s1 = PyBytes_AS_STRING(self._reference)
+            bytes query_bytes
             const char* s2
             int m = self.m
             int n = len(query)
@@ -344,13 +372,11 @@ cdef class Aligner:
             bint compare_ascii = False
 
         if self.wildcard_query:
-            query_bytes = query_bytes.translate(IUPAC_TABLE)
+            query_bytes = translate(query, IUPAC_TABLE)
         elif self.wildcard_ref:
-            query_bytes = query_bytes.translate(ACGT_TABLE)
+            query_bytes = translate(query, ACGT_TABLE)
         else:
-            # TODO Adding the .upper() increases overall runtime slightly even
-            # when I remove the .upper() from Adapter.match_to().
-            query_bytes = query_bytes.upper()
+            query_bytes = translate(query, UPPER_TABLE)
             compare_ascii = True
         s2 = query_bytes
         """
@@ -644,14 +670,15 @@ cdef class PrefixComparer:
         if not (0 <= max_error_rate <= 1.):
             raise ValueError("max_error_rate must be between 0 and 1")
         self.max_k = int(max_error_rate * self.effective_length)
-        self.reference = reference.encode('ascii').upper()
         if min_overlap < 1:
             raise ValueError("min_overlap must be at least 1")
         self.min_overlap = min_overlap
         if self.wildcard_ref:
-            self.reference = self.reference.translate(IUPAC_TABLE)
+            self.reference = translate(reference, IUPAC_TABLE)
         elif self.wildcard_query:
-            self.reference = self.reference.translate(ACGT_TABLE)
+            self.reference = translate(reference, ACGT_TABLE)
+        else:
+            self.reference = translate(reference, UPPER_TABLE)
 
     def __repr__(self):
         return "{}(reference={!r}, max_k={}, wildcard_ref={}, "\
@@ -671,22 +698,22 @@ cdef class PrefixComparer:
         This function returns a tuple compatible with what Aligner.locate returns.
         """
         cdef:
-            bytes query_bytes = query.encode('ascii')
+            bytes query_bytes
             char* r_ptr = self.reference
             char* q_ptr
             int i
-            int n = len(query_bytes)
+            int n = len(query)
             int length = min(self.m, n)
             bint compare_ascii = False
             int errors = 0
             int score
 
         if self.wildcard_query:
-            query_bytes = query_bytes.translate(IUPAC_TABLE)
+            query_bytes = translate(query, IUPAC_TABLE)
         elif self.wildcard_ref:
-            query_bytes = query_bytes.translate(ACGT_TABLE)
+            query_bytes = translate(query, ACGT_TABLE)
         else:
-            query_bytes = query_bytes.upper()
+            query_bytes = translate(query, UPPER_TABLE)
             compare_ascii = True
         q_ptr = query_bytes
 
