@@ -3,14 +3,15 @@
 Changelog
 =========
 
-development version
--------------------
+v4.0 (2022-04-13)
+-----------------
 
 * :issue:`604`, :pr:`608`: The :ref:`alignment algorithm was tweaked <algorithm-indel-scores>`
   to penalize indels more and to more accurately pick the leftmost adapter
   occurrence if there are multiple. This will normally affect very few
   reads, but should generally lead to fewer surprising results in cases
-  where it matters.
+  where it matters. Because this changes trimming results, it was appropriate
+  to bump the major version to 4.
 * :issue:`607`: Print an error when an output file was specified
   multiple times (for example, for ``--untrimmed-output`` and
   ``--too-short-output``). Sending output from different filters to
