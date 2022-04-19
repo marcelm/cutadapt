@@ -462,3 +462,23 @@ def test_indexed_prefix_adapters_with_n_wildcard():
         assert (result.rstart, result.rstop) == (0, 8)
         assert result.errors == 1
         assert result.score == 6
+
+
+def test_linked_adapter_statistics():
+    # Issue #615
+    front_adapter = PrefixAdapter("GGG")
+    back_adapter = BackAdapter("ACGACGACGACG")
+    la = LinkedAdapter(
+        front_adapter,
+        back_adapter,
+        front_required=True,
+        back_required=False,
+        name="name",
+    )
+    statistics = la.create_statistics()
+    match = la.match_to("GGGTTTTTACGACTACGACG")
+    statistics.add_match(match)
+
+    front, back = statistics.end_statistics()
+    assert back.errors.get(12) == {1: 1}
+    assert front.errors.get(3) == {0: 1}

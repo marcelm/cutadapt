@@ -3,6 +3,12 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* :issue:`615`: Fix linked adapter statistics for 5' and 3' end not
+  being reported separated correctly.
+
 v4.0 (2022-04-13)
 -----------------
 

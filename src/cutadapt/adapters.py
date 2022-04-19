@@ -218,12 +218,12 @@ class LinkedAdapterStatistics(AdapterStatistics):
         # TODO this is duplicated code
         if match.front_match:
             self.front.errors[match.front_match.removed_sequence_length()][
-                match.errors
+                match.front_match.errors
             ] += 1
         if match.back_match:
             adjacent_base = match.back_match.adjacent_base()
             self.back.errors[match.back_match.removed_sequence_length()][
-                match.errors
+                match.back_match.errors
             ] += 1
             try:
                 self.back.adjacent_bases[adjacent_base] += 1
