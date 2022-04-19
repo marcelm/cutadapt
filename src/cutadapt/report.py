@@ -157,7 +157,9 @@ class Statistics:
             modifiers_list = [(0, m)]
         for i, modifier in modifiers_list:
             if isinstance(modifier, (QualityTrimmer, NextseqQualityTrimmer)):
-                self.quality_trimmed_bp[i] = modifier.trimmed_bases
+                self.quality_trimmed_bp[i] = add_if_not_none(
+                    self.quality_trimmed_bp[i], modifier.trimmed_bases
+                )
             elif isinstance(modifier, AdapterCutter):
                 assert self.with_adapters[i] is None
                 self.with_adapters[i] = modifier.with_adapters

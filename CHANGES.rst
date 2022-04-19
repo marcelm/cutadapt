@@ -8,6 +8,8 @@ development version
 
 * :issue:`615`: Fix linked adapter statistics for 5' and 3' end not
   being reported separated correctly.
+* :issue:`616`: Report correct number of quality-trimmed bases when
+  both ``-q`` and ``--nextseq-trim`` are used.
 
 v4.0 (2022-04-13)
 -----------------
