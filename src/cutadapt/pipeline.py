@@ -777,6 +777,7 @@ class WorkerProcess(Process):
             self._write_pipe.send(-1)
             self._write_pipe.send(stats)
         except Exception as e:
+            logger.error("%s", e)
             self._write_pipe.send(-2)
             self._write_pipe.send((e, traceback.format_exc()))
 
