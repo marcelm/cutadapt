@@ -1,3 +1,4 @@
+import io
 import re
 import sys
 import time
@@ -226,12 +227,13 @@ class FileOpener:
     def dnaio_open(self, *args, **kwargs):
         kwargs["opener"] = self.xopen
         f = dnaio.open(*args, **kwargs)
-        logger.debug(
-            "Opening %r, mode '%s' with dnaio resulted in %s",
-            args[0],
-            kwargs["mode"],
-            f,
-        )
+        if not isinstance(args[0], io.BytesIO):
+            logger.debug(
+                "Opening %r, mode '%s' with dnaio resulted in %s",
+                args[0],
+                kwargs["mode"],
+                f,
+            )
         return f
 
     def dnaio_open_raise_limit(self, *args, **kwargs):
