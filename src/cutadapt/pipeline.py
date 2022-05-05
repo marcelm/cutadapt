@@ -357,7 +357,9 @@ class Pipeline(ABC):
         pass
 
     @abstractmethod
-    def _make_filter(self, writer, predicate1: Predicate, predicate2: Predicate):
+    def _make_filter(
+        self, writer, predicate1: Optional[Predicate], predicate2: Optional[Predicate]
+    ):
         pass
 
     @abstractmethod
@@ -421,8 +423,11 @@ class SingleEndPipeline(Pipeline):
             fileformat="fasta" if force_fasta else None,
         )
 
-    def _make_filter(self, writer, predicate1: Predicate, predicate2: Predicate):
+    def _make_filter(
+        self, writer, predicate1: Optional[Predicate], predicate2: Optional[Predicate]
+    ):
         _ = predicate2
+        assert predicate1 is not None
         return SingleEndFilter(writer, predicate1)
 
     def _make_untrimmed_filter(self, writer):
@@ -562,8 +567,8 @@ class PairedEndPipeline(Pipeline):
     def _make_filter(
         self,
         writer,
-        predicate1: Predicate,
-        predicate2: Predicate,
+        predicate1: Optional[Predicate],
+        predicate2: Optional[Predicate],
         pair_filter_mode=None,
     ):
         if pair_filter_mode is None:

@@ -101,8 +101,8 @@ class PairedEndFilter(PairedEndStep):
     def __init__(
         self,
         writer,
-        predicate1: Predicate,
-        predicate2: Predicate,
+        predicate1: Optional[Predicate],
+        predicate2: Optional[Predicate],
         pair_filter_mode="any",
     ):
         """
@@ -141,27 +141,28 @@ class PairedEndFilter(PairedEndStep):
         if self.predicate1 is not None:
             return self.predicate1.descriptive_identifier()
         else:
+            assert self.predicate2 is not None
             return self.predicate2.descriptive_identifier()
 
     def _is_filtered_any(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
     ) -> bool:
-        return self.predicate1.test(read1, info1) or self.predicate2.test(read2, info2)
+        return self.predicate1.test(read1, info1) or self.predicate2.test(read2, info2)  # type: ignore
 
     def _is_filtered_both(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
     ) -> bool:
-        return self.predicate1.test(read1, info1) and self.predicate2.test(read2, info2)
+        return self.predicate1.test(read1, info1) and self.predicate2.test(read2, info2)  # type: ignore
 
     def _is_filtered_first(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
     ) -> bool:
-        return self.predicate1.test(read1, info1)
+        return self.predicate1.test(read1, info1)  # type: ignore
 
     def _is_filtered_second(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
     ) -> bool:
-        return self.predicate2.test(read2, info2)
+        return self.predicate2.test(read2, info2)  # type: ignore
 
     def __call__(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
