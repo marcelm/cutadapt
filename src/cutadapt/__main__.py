@@ -769,9 +769,7 @@ def check_arguments(args, paired: bool) -> None:
         raise CommandLineError("--pair-adapters cannot be used with --times")
 
 
-def pipeline_from_parsed_args(
-    args, paired, file_opener, adapters, adapters2
-) -> Pipeline:
+def pipeline_from_parsed_args(args, paired, adapters, adapters2) -> Pipeline:
     """
     Set up a processing pipeline from parsed command-line arguments.
 
@@ -831,11 +829,9 @@ def pipeline_from_parsed_args(
     # Create the processing pipeline
     if paired:
         pair_filter_mode = "any" if args.pair_filter is None else args.pair_filter
-        pipeline = PairedEndPipeline(
-            modifiers, file_opener, pair_filter_mode
-        )  # type: Any
+        pipeline = PairedEndPipeline(modifiers, pair_filter_mode)  # type: Any
     else:
-        pipeline = SingleEndPipeline(modifiers, file_opener)
+        pipeline = SingleEndPipeline(modifiers)
 
     # When adapters are being trimmed only in R1 or R2, override the pair filter mode
     # as using the default of 'any' would regard all read pairs as untrimmed.
@@ -1070,9 +1066,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         )
         check_arguments(args, paired)
         adapters, adapters2 = adapters_from_args(args)
-        pipeline = pipeline_from_parsed_args(
-            args, paired, file_opener, adapters, adapters2
-        )
+        pipeline = pipeline_from_parsed_args(args, paired, adapters, adapters2)
         adapter_names = [a.name for a in adapters]  # type: List[str]
         adapter_names2 = [a.name for a in adapters2]  # type: List[str]
         outfiles = open_output_files(

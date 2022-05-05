@@ -12,7 +12,7 @@ import traceback
 
 import dnaio
 
-from .utils import Progress, FileOpener
+from .utils import Progress, FileOpener, open_raise_limit
 from .modifiers import (
     SingleEndModifier,
     PairedEndModifier,
@@ -201,7 +201,7 @@ class Pipeline(ABC):
     n_adapters = 0
     paired = False
 
-    def __init__(self, file_opener: FileOpener):
+    def __init__(self):
         self._reader = None  # type: Any
         self._steps = []  # type: List[Any]
         self._infiles = None  # type: Optional[InputFiles]
@@ -217,7 +217,6 @@ class Pipeline(ABC):
         self.discard_casava = False
         self.discard_trimmed = False
         self.discard_untrimmed = False
-        self.file_opener = file_opener
 
     def connect_io(self, infiles: InputFiles, outfiles: OutputFiles) -> None:
         self._infiles = infiles
@@ -383,8 +382,8 @@ class SingleEndPipeline(Pipeline):
     Processing pipeline for single-end reads
     """
 
-    def __init__(self, modifiers: List[SingleEndModifier], file_opener: FileOpener):
-        super().__init__(file_opener)
+    def __init__(self, modifiers: List[SingleEndModifier]):
+        super().__init__()
         self._modifiers = modifiers  # type: List[SingleEndModifier]
 
     def process_reads(
@@ -414,7 +413,8 @@ class SingleEndPipeline(Pipeline):
     ):
         assert file2 is None
         assert not isinstance(file, (str, bytes, Path))
-        return self.file_opener.dnaio_open_raise_limit(
+        return open_raise_limit(
+            dnaio.open,
             file,
             mode="w",
             qualities=self.uses_qualities,
@@ -481,10 +481,9 @@ class PairedEndPipeline(Pipeline):
                 Tuple[Optional[SingleEndModifier], Optional[SingleEndModifier]],
             ]
         ],
-        file_opener: FileOpener,
         pair_filter_mode: str,
     ):
-        super().__init__(file_opener)
+        super().__init__()
         self._modifiers = []  # type: List[PairedEndModifier]
         self._pair_filter_mode = pair_filter_mode
         self._reader = None
@@ -550,7 +549,8 @@ class PairedEndPipeline(Pipeline):
         # take care of threads and compression levels here.
         for f in (file, file2):
             assert not isinstance(f, (str, bytes, Path))
-        return self.file_opener.dnaio_open_raise_limit(
+        return open_raise_limit(
+            dnaio.open,
             file,
             file2=file2,
             mode="w",

@@ -53,7 +53,7 @@ def test_pipeline_single(tmp_path):
         QualityTrimmer(cutoff_front=0, cutoff_back=15),
         AdapterCutter([adapter]),
     ]
-    pipeline = SingleEndPipeline(modifiers, file_opener)
+    pipeline = SingleEndPipeline(modifiers)
     pipeline.minimum_length = (10,)
     pipeline.discard_untrimmed = True
     file1 = file_opener.xopen(datapath("small.fastq"), "rb")
@@ -95,7 +95,7 @@ def test_pipeline_paired(tmp_path):
     ]
 
     file_opener = FileOpener()
-    pipeline = PairedEndPipeline(modifiers, file_opener, "any")
+    pipeline = PairedEndPipeline(modifiers, "any")
 
     pipeline.minimum_length = (10, None)
     pipeline.discard_untrimmed = True
@@ -116,8 +116,8 @@ def test_pipeline_paired(tmp_path):
     )
     runner = SerialPipelineRunner(pipeline, infiles, outfiles, DummyProgress())
     stats = runner.run()
-    _ = stats.as_json()
     assert stats is not None
+    _ = stats.as_json()
     infiles.close()
     outfiles.close()
 
