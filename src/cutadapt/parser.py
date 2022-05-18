@@ -32,7 +32,7 @@ class AdapterSpecification:
     - name (None or str)
     - restriction (None, 'anchored', or 'noninternal')
     - sequence (nucleotide sequence as string)
-    - parameters (dict with extra parameters such as 'max_errors', 'min_overlap')
+    - search parameters (dict with keys such as 'max_errors', 'min_overlap')
     - cmdline_type ('front' for -a, 'back' for -g and 'anywhere' for -b)
 
     >>> AdapterSpecification.parse('a_name=ACGT;anywhere', 'back')
@@ -149,8 +149,8 @@ class AdapterSpecification:
         "noindels": None,
     }
 
-    @classmethod
-    def _parse_parameters(cls, spec: str):
+    @staticmethod
+    def parse_search_parameters(spec: str):
         """Parse key=value;key=value;key=value into a dict"""
 
         fields = spec.split(";")
@@ -163,11 +163,11 @@ class AdapterSpecification:
             if equals == "=" and value == "":
                 raise ValueError("No value given")
             key = key.strip()
-            if key not in cls.allowed_parameters:
+            if key not in AdapterSpecification.allowed_parameters:
                 raise KeyError(f"Unknown parameter {key}")
             # unabbreviate
-            while cls.allowed_parameters[key] is not None:
-                key = cls.allowed_parameters[key]  # type: ignore
+            while AdapterSpecification.allowed_parameters[key] is not None:
+                key = AdapterSpecification.allowed_parameters[key]  # type: ignore
             value = value.strip()
             if value == "":
                 value = True
@@ -215,7 +215,7 @@ class AdapterSpecification:
         spec, middle, parameters_spec = spec.partition(";")
         name, spec = cls._extract_name(spec)
         spec = spec.strip()
-        parameters = cls._parse_parameters(parameters_spec)
+        parameters = AdapterSpecification.parse_search_parameters(parameters_spec)
         spec = cls.expand_braces(spec)
 
         # Special case for adapters consisting of only X characters:

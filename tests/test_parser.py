@@ -142,7 +142,7 @@ def test_restriction_to_class():
 
 
 def test_parse_parameters():
-    p = AdapterSpecification._parse_parameters
+    p = AdapterSpecification.parse_search_parameters
     assert p("e=0.1") == {"max_errors": 0.1}
     assert p("error_rate=0.1") == {"max_errors": 0.1}
     assert p("max_errors=2") == {"max_errors": 2}
