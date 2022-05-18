@@ -23,6 +23,66 @@ from .adapters import (
 logger = logging.getLogger(__name__)
 
 
+def parse_search_parameters(spec: str):
+    """Parse key=value;key=value;key=value into a dict"""
+
+    allowed_parameters = {
+        # abbreviations
+        "e": "max_error_rate",
+        "error_rate": "max_errors",
+        "max_error_rate": "max_errors",
+        "o": "min_overlap",
+        # allowed parameters
+        "max_errors": None,
+        "min_overlap": None,
+        "anywhere": None,
+        "required": None,
+        "optional": None,  # If this is specified, 'required' will be set to False
+        "indels": None,
+        "noindels": None,
+    }
+
+    fields = spec.split(";")
+    result = dict()  # type: Dict[str,Any]
+    for field in fields:
+        field = field.strip()
+        if not field:
+            continue
+        key, equals, value = field.partition("=")  # type: (str, str, Any)
+        if equals == "=" and value == "":
+            raise ValueError("No value given")
+        key = key.strip()
+        if key not in allowed_parameters:
+            raise KeyError(f"Unknown parameter {key}")
+        # unabbreviate
+        while allowed_parameters[key] is not None:
+            key = allowed_parameters[key]  # type: ignore
+        value = value.strip()
+        if value == "":
+            value = True
+        else:
+            try:
+                value = int(value)
+            except ValueError:
+                value = float(value)
+        if key in result:
+            raise KeyError(f"Key {key} specified twice")
+        result[key] = value
+    if "optional" in result and "required" in result:
+        raise ValueError(
+            "'optional' and 'required' cannot be specified at the same time"
+        )
+    if "indels" in result and "noindels" in result:
+        raise ValueError("'indels' and 'noindels' cannot be specified at the same time")
+    if "optional" in result:
+        result["required"] = False
+        del result["optional"]
+    if "noindels" in result:
+        result["indels"] = False
+        del result["noindels"]
+    return result
+
+
 class AdapterSpecification:
     """# noqa: E501
     Description of a single non-linked adapter.
@@ -133,68 +193,6 @@ class AdapterSpecification:
         spec = spec.strip()
         return name, spec
 
-    allowed_parameters = {
-        # abbreviations
-        "e": "max_error_rate",
-        "error_rate": "max_errors",
-        "max_error_rate": "max_errors",
-        "o": "min_overlap",
-        # allowed parameters
-        "max_errors": None,
-        "min_overlap": None,
-        "anywhere": None,
-        "required": None,
-        "optional": None,  # If this is specified, 'required' will be set to False
-        "indels": None,
-        "noindels": None,
-    }
-
-    @staticmethod
-    def parse_search_parameters(spec: str):
-        """Parse key=value;key=value;key=value into a dict"""
-
-        fields = spec.split(";")
-        result = dict()  # type: Dict[str,Any]
-        for field in fields:
-            field = field.strip()
-            if not field:
-                continue
-            key, equals, value = field.partition("=")  # type: (str, str, Any)
-            if equals == "=" and value == "":
-                raise ValueError("No value given")
-            key = key.strip()
-            if key not in AdapterSpecification.allowed_parameters:
-                raise KeyError(f"Unknown parameter {key}")
-            # unabbreviate
-            while AdapterSpecification.allowed_parameters[key] is not None:
-                key = AdapterSpecification.allowed_parameters[key]  # type: ignore
-            value = value.strip()
-            if value == "":
-                value = True
-            else:
-                try:
-                    value = int(value)
-                except ValueError:
-                    value = float(value)
-            if key in result:
-                raise KeyError(f"Key {key} specified twice")
-            result[key] = value
-        if "optional" in result and "required" in result:
-            raise ValueError(
-                "'optional' and 'required' cannot be specified at the same time"
-            )
-        if "indels" in result and "noindels" in result:
-            raise ValueError(
-                "'indels' and 'noindels' cannot be specified at the same time"
-            )
-        if "optional" in result:
-            result["required"] = False
-            del result["optional"]
-        if "noindels" in result:
-            result["indels"] = False
-            del result["noindels"]
-        return result
-
     @classmethod
     def _parse(cls, spec, cmdline_type):
         """
@@ -215,7 +213,7 @@ class AdapterSpecification:
         spec, middle, parameters_spec = spec.partition(";")
         name, spec = cls._extract_name(spec)
         spec = spec.strip()
-        parameters = AdapterSpecification.parse_search_parameters(parameters_spec)
+        parameters = parse_search_parameters(parameters_spec)
         spec = cls.expand_braces(spec)
 
         # Special case for adapters consisting of only X characters:
