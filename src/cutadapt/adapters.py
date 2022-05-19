@@ -487,7 +487,7 @@ def _generate_adapter_name(_start=[1]) -> str:
 class Matchable(ABC):
     """Something that has a match_to() method."""
 
-    def __init__(self, name: str, *args, **kwargs):
+    def __init__(self, name: Optional[str], *args, **kwargs):
         self.name = name
 
     @abstractmethod
@@ -980,7 +980,7 @@ class LinkedAdapter(Adapter):
         back_adapter: SingleAdapter,
         front_required: bool,
         back_required: bool,
-        name: str,
+        name: Optional[str],
     ):
         super().__init__(name)
         self.front_required = front_required
@@ -988,7 +988,7 @@ class LinkedAdapter(Adapter):
 
         # The following attributes are needed for the report
         self.where = "linked"
-        self.name = _generate_adapter_name() if name is None else name
+        self.name: str = _generate_adapter_name() if name is None else name
         self.front_adapter = front_adapter
         self.front_adapter.name = self.name
         self.back_adapter = back_adapter

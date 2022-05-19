@@ -202,12 +202,12 @@ class Pipeline(ABC):
     paired = False
 
     def __init__(self):
-        self._reader = None  # type: Any
-        self._steps = []  # type: List[Any]
-        self._infiles = None  # type: Optional[InputFiles]
-        self._outfiles = None  # type: Optional[OutputFiles]
+        self._reader: Any = None
+        self._steps: List[Any] = []
+        self._infiles: Optional[InputFiles] = None
+        self._outfiles: Optional[OutputFiles] = None
         self._demultiplexer = None
-        self._textiowrappers = []  # type: List[TextIO]
+        self._textiowrappers: List[TextIO] = []
 
         # Filter settings
         self._minimum_length = None
@@ -386,7 +386,7 @@ class SingleEndPipeline(Pipeline):
 
     def __init__(self, modifiers: List[SingleEndModifier]):
         super().__init__()
-        self._modifiers = modifiers  # type: List[SingleEndModifier]
+        self._modifiers: List[SingleEndModifier] = modifiers
 
     def process_reads(
         self, progress: Progress = None
@@ -438,8 +438,8 @@ class SingleEndPipeline(Pipeline):
         writer = self._open_writer(outfiles.out, force_fasta=outfiles.force_fasta)
         return SingleEndSink(writer)
 
-    def _create_demultiplexer(self, outfiles: OutputFiles):
-        writers = dict()  # type: Dict[Optional[str], Any]
+    def _create_demultiplexer(self, outfiles: OutputFiles) -> Demultiplexer:
+        writers: Dict[Optional[str], Any] = dict()
         if outfiles.untrimmed is not None:
             writers[None] = self._open_writer(
                 outfiles.untrimmed, force_fasta=outfiles.force_fasta
@@ -489,7 +489,7 @@ class PairedEndPipeline(Pipeline):
         pair_filter_mode: str,
     ):
         super().__init__()
-        self._modifiers = []  # type: List[PairedEndModifier]
+        self._modifiers: List[PairedEndModifier] = []
         self._pair_filter_mode = pair_filter_mode
         self._reader = None
         # Whether to ignore pair_filter mode for discard-untrimmed filter
@@ -787,7 +787,7 @@ class WorkerProcess(Process):
 
         if self._two_input_files:
             data = self._read_pipe.recv_bytes()
-            input2 = io.BytesIO(data)  # type: Optional[BinaryIO]
+            input2: Optional[BinaryIO] = io.BytesIO(data)
         else:
             input2 = None
         return InputFiles(input, input2, interleaved=self._interleaved_input)
@@ -886,7 +886,7 @@ class ParallelPipelineRunner(PipelineRunner):
     ):
         super().__init__(pipeline, progress)
         self._n_workers = n_workers
-        self._need_work_queue = Queue()  # type: Queue
+        self._need_work_queue: Queue = Queue()
         self._buffer_size = buffer_size
         self._outfiles = outfiles
         self._opener = opener
@@ -950,8 +950,8 @@ class ParallelPipelineRunner(PipelineRunner):
         stats = Statistics()
         n = 0  # A running total of the number of processed reads (for progress indicator)
         while connections:
-            ready_connections = multiprocessing.connection.wait(connections)
-            for connection in ready_connections:  # type: Any
+            ready_connections: List[Any] = multiprocessing.connection.wait(connections)
+            for connection in ready_connections:
                 chunk_index = self._try_receive(connection)
                 if chunk_index == -1:
                     # the worker is done

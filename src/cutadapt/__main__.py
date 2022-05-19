@@ -441,8 +441,8 @@ def open_output_files(
     args,
     default_outfile,
     file_opener: FileOpener,
-    adapter_names: Sequence[str],
-    adapter_names2: Sequence[str],
+    adapter_names: Sequence[Optional[str]],
+    adapter_names2: Sequence[Optional[str]],
 ) -> OutputFiles:
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
@@ -502,7 +502,7 @@ def open_output_files(
         out = out2 = None
         combinatorial_out = combinatorial_out2 = None
         demultiplex_out, demultiplex_out2, untrimmed, untrimmed2 = open_demultiplex_out(
-            adapter_names, args, file_opener
+            adapter_names, args, file_opener  # type: ignore
         )
     elif demultiplex_mode == "combinatorial":
         assert "{name1}" in args.output and "{name2}" in args.output
@@ -516,13 +516,13 @@ def open_output_files(
         demultiplex_out = demultiplex_out2 = None
         untrimmed = untrimmed2 = None
         (combinatorial_out, combinatorial_out2) = open_combinatorial_out(
-            adapter_names,
-            adapter_names2,
+            adapter_names,  # type: ignore
+            adapter_names2,  # type: ignore
             args.output,
             args.paired_output,
             args.discard_untrimmed,
             file_opener,
-        )
+        )  # type: ignore
     else:
         combinatorial_out = combinatorial_out2 = None
         demultiplex_out = demultiplex_out2 = None
@@ -599,13 +599,15 @@ def open_combinatorial_out(
     return combinatorial_out, combinatorial_out2
 
 
-def open_demultiplex_out(adapter_names, args, file_opener):
+def open_demultiplex_out(adapter_names: Sequence[str], args, file_opener):
     demultiplex_out = dict()
-    demultiplex_out2 = dict() if args.paired_output is not None else None
+    demultiplex_out2: Optional[Dict[str, Any]] = (
+        dict() if args.paired_output is not None else None
+    )
     for name in adapter_names:
         path1 = args.output.replace("{name}", name)
         demultiplex_out[name] = file_opener.xopen(path1, "wb")
-        if args.paired_output is not None:
+        if demultiplex_out2 is not None:
             path2 = args.paired_output.replace("{name}", name)
             demultiplex_out2[name] = file_opener.xopen(path2, "wb")
     untrimmed_path = args.output.replace("{name}", "unknown")
@@ -1067,8 +1069,8 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         check_arguments(args, paired)
         adapters, adapters2 = adapters_from_args(args)
         pipeline = pipeline_from_parsed_args(args, paired, adapters, adapters2)
-        adapter_names = [a.name for a in adapters]  # type: List[str]
-        adapter_names2 = [a.name for a in adapters2]  # type: List[str]
+        adapter_names: List[Optional[str]] = [a.name for a in adapters]
+        adapter_names2: List[Optional[str]] = [a.name for a in adapters2]
         outfiles = open_output_files(
             args, default_outfile, file_opener, adapter_names, adapter_names2
         )

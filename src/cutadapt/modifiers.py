@@ -41,7 +41,7 @@ class ModificationInfo:
     __slots__ = ["matches", "original_read", "cut_prefix", "cut_suffix", "is_rc"]
 
     def __init__(self, read):
-        self.matches = []  # type: List[Match]
+        self.matches: List[Match] = []
         self.original_read = read
         self.cut_prefix = None
         self.cut_suffix = None
@@ -181,9 +181,9 @@ class AdapterCutter(SingleEndModifier):
         - suffix is a list of all anchored 3' adapters that MultiAdapter would accept
         - other is a list of all remaining adapters.
         """
-        prefix = []  # type: List[SingleAdapter]
-        suffix = []  # type: List[SingleAdapter]
-        other = []  # type: List[SingleAdapter]
+        prefix: List[SingleAdapter] = []
+        suffix: List[SingleAdapter] = []
+        other: List[SingleAdapter] = []
         for a in adapters:
             if IndexedPrefixAdapters.is_acceptable(a):
                 prefix.append(a)

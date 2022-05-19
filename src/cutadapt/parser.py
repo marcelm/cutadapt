@@ -43,7 +43,7 @@ def parse_search_parameters(spec: str):
     }
 
     fields = spec.split(";")
-    result = dict()  # type: Dict[str,Any]
+    result: Dict[str, Any] = dict()
     for field in fields:
         field = field.strip()
         if not field:
@@ -203,7 +203,7 @@ class AdapterSpecification:
         Parse an adapter specification given as 'name=adapt' into 'name' and 'adapt'.
         """
         fields = spec.split("=", 1)
-        name = None  # type: Optional[str]
+        name: Optional[str] = None
         if len(fields) > 1:
             name, spec = fields
             name = name.strip()
@@ -257,7 +257,7 @@ class AdapterSpecification:
             )
 
         if front_restriction is not None:
-            restriction = front_restriction
+            restriction: Optional[str] = front_restriction
         else:
             restriction = back_restriction
 
@@ -368,7 +368,7 @@ def make_adapters_from_specifications(
 
     Return a list of appropriate Adapter classes.
     """
-    adapters = []
+    adapters: List[Adapter] = []
     for cmdline_type, spec in type_spec_pairs:
         adapters.extend(
             make_adapters_from_one_specification(spec, cmdline_type, search_parameters)
