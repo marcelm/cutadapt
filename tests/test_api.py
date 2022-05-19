@@ -94,12 +94,12 @@ def test_pipeline_paired(tmp_path):
         (AdapterCutter([adapter]), None),
     ]
 
-    file_opener = FileOpener()
     pipeline = PairedEndPipeline(modifiers, "any")
 
     pipeline.minimum_length = (10, None)
     pipeline.discard_untrimmed = True
 
+    file_opener = FileOpener()
     file1, file2 = file_opener.xopen_pair(
         datapath("paired.1.fastq"), datapath("paired.2.fastq"), "rb"
     )
@@ -128,3 +128,5 @@ def test_pipeline_paired(tmp_path):
     # - too many submodules (flatter namespace)
     # - more default arguments
     # - info file isn’t written, what is missing?
+    # - use xopen directly instead of file_opener;
+    #   possibly with myxopen = functools.partial(xopen, ...)

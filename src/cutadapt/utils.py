@@ -194,7 +194,7 @@ class FileOpener:
         """
         threads -- no. of external compression threads.
             0: write in-process
-            None: min(cpu_count(0, 4)
+            None: min(cpu_count(), 4)
         """
         self.compression_level = compression_level
         self.threads = threads
