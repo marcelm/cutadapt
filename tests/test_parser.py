@@ -4,12 +4,16 @@ import pytest
 
 from dnaio import Sequence
 from cutadapt.adapters import LinkedAdapter, BackAdapter, FrontAdapter, InvalidCharacter
-from cutadapt.parser import AdapterParser, AdapterSpecification, parse_search_parameters
+from cutadapt.parser import (
+    AdapterParser,
+    AdapterSpecification,
+    parse_search_parameters,
+    expand_braces,
+)
 from cutadapt.modifiers import ModificationInfo
 
 
 def test_expand_braces():
-    expand_braces = AdapterSpecification.expand_braces
     assert expand_braces("") == ""
     assert expand_braces("A") == "A"
     assert expand_braces("A{0}") == ""
@@ -42,7 +46,7 @@ def test_expand_braces_fail():
         "A}A",
     ]:
         with pytest.raises(ValueError):
-            AdapterSpecification.expand_braces(expression)
+            expand_braces(expression)
 
 
 def test_parse_file_notation(tmp_path):
