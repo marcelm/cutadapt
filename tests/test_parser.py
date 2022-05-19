@@ -75,7 +75,7 @@ def test_parse_file_notation(tmp_path):
     adapters = list(
         make_adapters_from_one_specification(
             "file:" + os.fspath(tmp),
-            cmdline_type="back",
+            adapter_type="back",
             search_parameters=search_parameters,
         )
     )
@@ -118,14 +118,14 @@ def test_parse_invalid_adapter_specific_parameter(where, reqopt):
     assert "can only be used within linked adapters" in e.value.args[0]
 
 
-def test_parse_invalid_cmdline_type():
+def test_parse_invalid_adapter_type():
     with pytest.raises(ValueError) as e:
         AdapterSpecification.parse("A", "invalid_type")
-    assert "cmdline_type must be front, back or anywhere" in e.value.args[0]
+    assert "adapter_type must be front, back or anywhere" in e.value.args[0]
 
 
 @pytest.mark.parametrize(
-    "spec,cmdline_type",
+    "spec,adapter_type",
     [
         ("^XA", "front"),
         ("^AX", "front"),
@@ -133,9 +133,9 @@ def test_parse_invalid_cmdline_type():
         ("AX$", "back"),
     ],
 )
-def test_parse_double_placement_restrictions(spec, cmdline_type):
+def test_parse_double_placement_restrictions(spec, adapter_type):
     with pytest.raises(ValueError) as e:
-        AdapterSpecification.parse(spec, cmdline_type)
+        AdapterSpecification.parse(spec, adapter_type)
     assert "cannot use multiple placement restrictions" in e.value.args[0]
 
 
@@ -222,7 +222,7 @@ def test_parse_with_parameters(tmp_path):
 
     with pytest.raises(ValueError) as e:
         make_adapter("A", "invalid-cmdline-type", parameters)
-    assert "cmdline_type must be" in e.value.args[0]
+    assert "adapter_type must be" in e.value.args[0]
 
     with pytest.raises(ValueError) as e:
         make_adapter("ACGT$;min_overlap=3", "back", parameters)
@@ -258,7 +258,7 @@ def test_parse_file_notation_with_parameters(tmp_path):
     adapters = list(
         make_adapters_from_one_specification(
             "file:" + os.fspath(tmp) + ";max_errors=0.3;min_overlap=5;indels",
-            cmdline_type="back",
+            adapter_type="back",
             search_parameters=parameters,
         )
     )
@@ -288,7 +288,7 @@ def test_parse_with_adapter_sequence_as_a_path(tmp_path):
 def test_make_adapters_from_specifications():
     with pytest.raises(ValueError) as e:
         make_adapters_from_specifications([("invalid-type", "A")], dict())
-    assert "cmdline_type must be" in e.value.args[0]
+    assert "adapter_type must be" in e.value.args[0]
 
 
 def test_normalize_ellipsis():

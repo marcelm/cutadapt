@@ -123,27 +123,27 @@ def expand_braces(sequence: str) -> str:
     return result
 
 
-def _normalize_ellipsis(spec1: str, spec2: str, cmdline_type) -> Tuple[str, str]:
-    if cmdline_type == "anywhere":
+def _normalize_ellipsis(spec1: str, spec2: str, adapter_type) -> Tuple[str, str]:
+    if adapter_type == "anywhere":
         raise ValueError('No ellipsis ("...") allowed in "anywhere" adapters')
     if not spec1:
-        if cmdline_type == "back":
+        if adapter_type == "back":
             # -a ...ADAPTER
             spec = spec2
         else:
             # -g ...ADAPTER
             raise ValueError("Invalid adapter specification")
     elif not spec2:
-        if cmdline_type == "back":
+        if adapter_type == "back":
             # -a ADAPTER...
-            cmdline_type = "front"
+            adapter_type = "front"
             spec = spec1
         else:
             # -g ADAPTER...
             spec = spec1
     else:
         raise ValueError("Expected either spec1 or spec2")
-    return spec, cmdline_type
+    return spec, adapter_type
 
 
 class AdapterSpecification:
@@ -156,10 +156,10 @@ class AdapterSpecification:
     - restriction (None, 'anchored', or 'noninternal')
     - sequence (nucleotide sequence as string)
     - search parameters (dict with keys such as 'max_errors', 'min_overlap')
-    - cmdline_type ('front' for -a, 'back' for -g and 'anywhere' for -b)
+    - adapter_type ('front' for -a, 'back' for -g and 'anywhere' for -b)
 
     >>> AdapterSpecification.parse('a_name=ACGT;anywhere', 'back')
-    AdapterSpecification(name='a_name', restriction=None, sequence='ACGT', parameters={'anywhere': True}, cmdline_type='back')
+    AdapterSpecification(name='a_name', restriction=None, sequence='ACGT', parameters={'anywhere': True}, adapter_type='back')
     """
 
     def __init__(
@@ -168,24 +168,24 @@ class AdapterSpecification:
         restriction: Optional[str],
         sequence: str,
         parameters,
-        cmdline_type: str,
+        adapter_type: str,
     ):
         assert restriction in (None, "anchored", "noninternal")
-        assert cmdline_type in ("front", "back", "anywhere")
+        assert adapter_type in ("front", "back", "anywhere")
         self.name = name
         self.restriction = restriction
         self.sequence = sequence
         self.parameters = parameters
-        self.cmdline_type = cmdline_type
+        self.adapter_type = adapter_type
 
     def __repr__(self):
-        return "{}(name={!r}, restriction={!r}, sequence={!r}, parameters={!r}, cmdline_type={!r})".format(
+        return "{}(name={!r}, restriction={!r}, sequence={!r}, parameters={!r}, adapter_type={!r})".format(
             self.__class__.__name__,
             self.name,
             self.restriction,
             self.sequence,
             self.parameters,
-            self.cmdline_type,
+            self.adapter_type,
         )
 
     def __eq__(self, other):
@@ -194,7 +194,7 @@ class AdapterSpecification:
             and self.restriction == other.restriction
             and self.sequence == other.sequence
             and self.parameters == other.parameters
-            and self.cmdline_type == other.cmdline_type
+            and self.adapter_type == other.adapter_type
         )
 
     @staticmethod
@@ -211,7 +211,7 @@ class AdapterSpecification:
         return name, spec
 
     @classmethod
-    def parse(cls, spec: str, cmdline_type: str) -> "AdapterSpecification":
+    def parse(cls, spec: str, adapter_type: str) -> "AdapterSpecification":
         """
         Parse an adapter specification for a non-linked adapter (without '...')
         and return an AdapterSpecification instance.
@@ -225,8 +225,8 @@ class AdapterSpecification:
         'front' and ^ADAPTER
         'anywhere' and ADAPTER
         """
-        if cmdline_type not in ("front", "back", "anywhere"):
-            raise ValueError("cmdline_type must be front, back or anywhere")
+        if adapter_type not in ("front", "back", "anywhere"):
+            raise ValueError("adapter_type must be front, back or anywhere")
 
         spec, middle, parameters_spec = spec.partition(";")
         name, spec = cls._extract_name(spec)
@@ -237,7 +237,7 @@ class AdapterSpecification:
         # Special case for adapters consisting of only X characters:
         # This needs to be supported for backwards-compatibilitity
         if len(spec.strip("X")) == 0:
-            return cls(name, None, spec, {}, cmdline_type)
+            return cls(name, None, spec, {}, adapter_type)
 
         try:
             front_restriction, back_restriction, spec = cls._parse_restrictions(spec)
@@ -247,11 +247,11 @@ class AdapterSpecification:
                 "Choose one of ^ADAPTER, ADAPTER$, XADAPTER or ADAPTERX"
             ) from None
 
-        if cmdline_type == "front" and back_restriction:
+        if adapter_type == "front" and back_restriction:
             raise ValueError(
                 "Allowed placement restrictions for a 5' adapter are XADAPTER and ^ADAPTER"
             )
-        if cmdline_type == "back" and front_restriction:
+        if adapter_type == "back" and front_restriction:
             raise ValueError(
                 "Allowed placement restrictions for a 3' adapter are ADAPTERX and ADAPTER$"
             )
@@ -261,7 +261,7 @@ class AdapterSpecification:
         else:
             restriction = back_restriction
 
-        if cmdline_type == "anywhere" and restriction is not None:
+        if adapter_type == "anywhere" and restriction is not None:
             raise ValueError(
                 "Placement restrictions (with X, ^, $) not supported for 'anywhere' (-b) adapters"
             )
@@ -278,7 +278,7 @@ class AdapterSpecification:
                 f" exceeds length of adapter {spec}"
             )
 
-        return cls(name, restriction, spec, parameters, cmdline_type)
+        return cls(name, restriction, spec, parameters, adapter_type)
 
     @staticmethod
     def _parse_restrictions(spec: str) -> Tuple[Optional[str], Optional[str], str]:
@@ -311,11 +311,11 @@ class AdapterSpecification:
         return front_restriction, back_restriction, spec
 
     @staticmethod
-    def _restriction_to_class(cmdline_type, restriction):
+    def _restriction_to_class(adapter_type, restriction):
         """
         restriction: None, "anchored", or "noninternal"
         """
-        if cmdline_type == "front":
+        if adapter_type == "front":
             if restriction is None:
                 return FrontAdapter
             elif restriction == "anchored":
@@ -326,7 +326,7 @@ class AdapterSpecification:
                 raise ValueError(
                     f"Value {restriction} for a front restriction not allowed"
                 )
-        elif cmdline_type == "back":
+        elif adapter_type == "back":
             if restriction is None:
                 return BackAdapter
             elif restriction == "anchored":
@@ -338,7 +338,7 @@ class AdapterSpecification:
                     f"Value {restriction} for a back restriction not allowed"
                 )
         else:
-            assert cmdline_type == "anywhere"
+            assert adapter_type == "anywhere"
             if restriction is None:
                 return AnywhereAdapter
             else:
@@ -347,7 +347,7 @@ class AdapterSpecification:
                 )
 
     def adapter_class(self):
-        return self._restriction_to_class(self.cmdline_type, self.restriction)
+        return self._restriction_to_class(self.adapter_type, self.restriction)
 
 
 def make_adapters_from_specifications(
@@ -369,16 +369,16 @@ def make_adapters_from_specifications(
     Return a list of appropriate Adapter classes.
     """
     adapters: List[Adapter] = []
-    for cmdline_type, spec in type_spec_pairs:
+    for adapter_type, spec in type_spec_pairs:
         adapters.extend(
-            make_adapters_from_one_specification(spec, cmdline_type, search_parameters)
+            make_adapters_from_one_specification(spec, adapter_type, search_parameters)
         )
     return adapters
 
 
 def make_adapters_from_one_specification(
     spec: str,
-    cmdline_type: str,
+    adapter_type: str,
     search_parameters: Dict[str, Any],
 ) -> Iterable[Adapter]:
     """
@@ -389,10 +389,10 @@ def make_adapters_from_one_specification(
         parameters = search_parameters.copy()
         parameters.update(parse_search_parameters(parameters_spec))
         for name, spec in read_adapters_fasta(path):
-            yield make_adapter(spec, cmdline_type, parameters, name=name)
+            yield make_adapter(spec, adapter_type, parameters, name=name)
     else:
         try:
-            yield make_adapter(spec, cmdline_type, search_parameters)
+            yield make_adapter(spec, adapter_type, search_parameters)
         except InvalidCharacter as e:
             if Path(spec).exists():
                 extra_message = (
@@ -407,7 +407,7 @@ def make_adapters_from_one_specification(
 
 def make_adapter(
     spec: str,
-    cmdline_type: str,
+    adapter_type: str,
     search_parameters: Dict[str, Any],
     name: Optional[str] = None,
 ) -> Adapter:
@@ -418,34 +418,34 @@ def make_adapter(
     name -- Adapter name if not included as part of the spec. (If spec is
     'name=ADAPTER', name will be 'name'.)
 
-    cmdline_type -- describes which commandline parameter was used (``-a``
+    adapter_type -- describes which commandline parameter was used (``-a``
     is 'back', ``-b`` is 'anywhere', and ``-g`` is 'front').
 
     parameters -- search parameters
     """
-    if cmdline_type not in ("front", "back", "anywhere"):
-        raise ValueError("cmdline_type must be must be front, back or anywhere")
+    if adapter_type not in ("front", "back", "anywhere"):
+        raise ValueError("adapter_type must be front, back or anywhere")
     spec1, middle, spec2 = spec.partition("...")
     if middle == "..." and spec1 and spec2:
-        return _make_linked_adapter(spec1, spec2, name, cmdline_type, search_parameters)
+        return _make_linked_adapter(spec1, spec2, name, adapter_type, search_parameters)
 
     if middle == "...":
-        spec, cmdline_type = _normalize_ellipsis(spec1, spec2, cmdline_type)
+        spec, adapter_type = _normalize_ellipsis(spec1, spec2, adapter_type)
     else:
         spec = spec1
-    return _make_not_linked_adapter(spec, name, cmdline_type, search_parameters)
+    return _make_not_linked_adapter(spec, name, adapter_type, search_parameters)
 
 
 def _make_linked_adapter(
     spec1: str,
     spec2: str,
     name: Optional[str],
-    cmdline_type: str,
+    adapter_type: str,
     search_parameters: Dict[str, Any],
 ) -> LinkedAdapter:
     """Return a linked adapter from two specification strings"""
 
-    if cmdline_type == "anywhere":
+    if adapter_type == "anywhere":
         raise ValueError("'anywhere' (-b) adapters may not be linked")
     front_spec = AdapterSpecification.parse(spec1, "front")
     back_spec = AdapterSpecification.parse(spec2, "back")
@@ -460,7 +460,7 @@ def _make_linked_adapter(
     back_parameters = search_parameters.copy()
     back_parameters.update(back_spec.parameters)
 
-    if cmdline_type == "front":
+    if adapter_type == "front":
         # -g requires both adapters to be present
         front_required = True
         back_required = True
@@ -492,10 +492,10 @@ def _make_linked_adapter(
 def _make_not_linked_adapter(
     spec: str,
     name: Optional[str],
-    cmdline_type: str,
+    adapter_type: str,
     search_parameters: Dict[str, Any],
 ) -> Adapter:
-    aspec = AdapterSpecification.parse(spec, cmdline_type)
+    aspec = AdapterSpecification.parse(spec, adapter_type)
     adapter_class: Type[Adapter] = aspec.adapter_class()
     if aspec.parameters.pop("anywhere", False) and adapter_class in (
         FrontAdapter,
