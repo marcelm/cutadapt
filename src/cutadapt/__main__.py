@@ -70,7 +70,7 @@ import xopen as xopen
 from cutadapt import __version__
 from cutadapt.adapters import warn_duplicate_adapters, Adapter, InvalidCharacter
 from cutadapt.json import OneLine, dumps as json_dumps
-from cutadapt.parser import AdapterParser
+from cutadapt.parser import make_adapters_from_specifications
 from cutadapt.modifiers import (
     SingleEndModifier,
     LengthTagModifier,
@@ -869,7 +869,7 @@ def pipeline_from_parsed_args(args, paired, adapters, adapters2) -> Pipeline:
 
 
 def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
-    adapter_parser = AdapterParser(
+    search_parameters = dict(
         max_errors=args.error_rate,
         min_overlap=args.overlap,
         read_wildcards=args.match_read_wildcards,
@@ -877,8 +877,8 @@ def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
         indels=args.indels,
     )
     try:
-        adapters = adapter_parser.parse_multi(args.adapters)
-        adapters2 = adapter_parser.parse_multi(args.adapters2)
+        adapters = make_adapters_from_specifications(args.adapters, search_parameters)
+        adapters2 = make_adapters_from_specifications(args.adapters2, search_parameters)
     except (FileNotFoundError, ValueError, InvalidCharacter) as e:
         raise CommandLineError(e)
     warn_duplicate_adapters(adapters)

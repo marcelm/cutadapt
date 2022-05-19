@@ -5,10 +5,14 @@ import pytest
 from dnaio import Sequence
 from cutadapt.adapters import LinkedAdapter, BackAdapter, FrontAdapter, InvalidCharacter
 from cutadapt.parser import (
-    AdapterParser,
     AdapterSpecification,
     parse_search_parameters,
     expand_braces,
+    make_adapters_from_specifications,
+    make_adapters_from_one_specification,
+    _make_not_linked_adapter,
+    make_adapter,
+    _normalize_ellipsis,
 )
 from cutadapt.modifiers import ModificationInfo
 
@@ -60,7 +64,7 @@ def test_parse_file_notation(tmp_path):
             """
         )
     )
-    parser = AdapterParser(
+    search_parameters = dict(
         max_errors=0.2,
         min_overlap=4,
         read_wildcards=False,
@@ -68,7 +72,13 @@ def test_parse_file_notation(tmp_path):
         indels=False,
     )
 
-    adapters = list(parser.parse("file:" + os.fspath(tmp), cmdline_type="back"))
+    adapters = list(
+        make_adapters_from_one_specification(
+            "file:" + os.fspath(tmp),
+            cmdline_type="back",
+            search_parameters=search_parameters,
+        )
+    )
     assert len(adapters) == 2
     assert adapters[0].name == "first_name"
     assert adapters[0].sequence == "ADAPTER1"
@@ -103,15 +113,14 @@ def test_parse_not_linked():
 @pytest.mark.parametrize("where", ("front", "back"))
 @pytest.mark.parametrize("reqopt", ("required", "optional"))
 def test_parse_invalid_adapter_specific_parameter(where, reqopt):
-    parser = AdapterParser()
     with pytest.raises(ValueError) as e:
-        parser._parse_not_linked("A;{}".format(reqopt), "name", where)
+        _make_not_linked_adapter("A;{}".format(reqopt), "name", where, dict())
     assert "can only be used within linked adapters" in e.value.args[0]
 
 
 def test_parse_invalid_cmdline_type():
     with pytest.raises(ValueError) as e:
-        AdapterSpecification._parse("A", "invalid_type")
+        AdapterSpecification.parse("A", "invalid_type")
     assert "cmdline_type must be front, back or anywhere" in e.value.args[0]
 
 
@@ -126,16 +135,16 @@ def test_parse_invalid_cmdline_type():
 )
 def test_parse_double_placement_restrictions(spec, cmdline_type):
     with pytest.raises(ValueError) as e:
-        AdapterSpecification._parse(spec, cmdline_type)
+        AdapterSpecification.parse(spec, cmdline_type)
     assert "cannot use multiple placement restrictions" in e.value.args[0]
 
 
 def test_parse_misplaced_placement_restrictions():
     with pytest.raises(ValueError) as e:
-        AdapterSpecification._parse("A$", "front")
+        AdapterSpecification.parse("A$", "front")
     assert "Allowed placement restrictions for a 5' adapter" in e.value.args[0]
     with pytest.raises(ValueError) as e:
-        AdapterSpecification._parse("^A", "back")
+        AdapterSpecification.parse("^A", "back")
     assert "Allowed placement restrictions for a 3' adapter" in e.value.args[0]
 
 
@@ -177,28 +186,28 @@ def test_parse_parameters():
 
 
 def test_parse_with_parameters(tmp_path):
-    parser = AdapterParser(
+    parameters = dict(
         max_errors=0.2,
         min_overlap=4,
         read_wildcards=False,
         adapter_wildcards=False,
         indels=False,
     )
-    a = parser._parse("ACGTACGT; e=0.15", "front")
+    a = make_adapter("ACGTACGT; e=0.15", "front", parameters)
     assert isinstance(a, FrontAdapter)
     assert a.max_error_rate == 0.15
     assert a.min_overlap == 4
 
-    a = parser._parse("ACGTAAAA; o=5; e=0.11", "back")
+    a = make_adapter("ACGTAAAA; o=5; e=0.11", "back", parameters)
     assert isinstance(a, BackAdapter)
     assert a.max_error_rate == 0.11
     assert a.min_overlap == 5
 
-    a = parser._parse("ACGTAAAA; noindels", "back")
+    a = make_adapter("ACGTAAAA; noindels", "back", parameters)
     assert isinstance(a, BackAdapter)
     assert a.indels is False
 
-    a = parser._parse("ACGTAAAA; indels", "back")
+    a = make_adapter("ACGTAAAA; indels", "back", parameters)
     assert isinstance(a, BackAdapter)
     assert a.indels is True
 
@@ -206,48 +215,84 @@ def test_parse_with_parameters(tmp_path):
         "thename=ACG;e=0.15 ... TGT;e=0.17",
         "thename=ACG;e=0.15...TGT;e=0.17",
     ):
-        a = parser._parse(spec, "back")
+        a = make_adapter(spec, "back", parameters)
         assert isinstance(a, LinkedAdapter)
         assert a.front_adapter.max_error_rate == 0.15
         assert a.back_adapter.max_error_rate == 0.17
 
     with pytest.raises(ValueError) as e:
-        parser._parse("A", "invalid-cmdline-type")
-    assert "cmdline_type cannot be" in e.value.args[0]
+        make_adapter("A", "invalid-cmdline-type", parameters)
+    assert "cmdline_type must be" in e.value.args[0]
 
     with pytest.raises(ValueError) as e:
-        parser._parse("ACGT$;min_overlap=3", "back")
+        make_adapter("ACGT$;min_overlap=3", "back", parameters)
     assert "not possible" in e.value.args[0]
     with pytest.raises(ValueError) as e:
-        parser._parse("^ACGT;min_overlap=3", "front")
+        make_adapter("^ACGT;min_overlap=3", "front", parameters)
     assert "not possible" in e.value.args[0]
 
     with pytest.raises(ValueError) as e:
-        parser._parse("ACGT;min_overlap=5", "back")
+        make_adapter("ACGT;min_overlap=5", "back", parameters)
     assert "exceeds" in e.value.args[0]
 
 
+def test_parse_file_notation_with_parameters(tmp_path):
+    tmp = tmp_path / "adapters.fasta"
+    tmp.write_text(
+        dedent(
+            """>first_name
+            ADAPTER1;min_overlap=2
+            >second_name
+            ADAPTER2;max_errors=0.4
+            """
+        )
+    )
+    parameters = dict(
+        max_errors=0.2,
+        min_overlap=4,
+        read_wildcards=False,
+        adapter_wildcards=False,
+        indels=False,
+    )
+
+    adapters = list(
+        make_adapters_from_one_specification(
+            "file:" + os.fspath(tmp) + ";max_errors=0.3;min_overlap=5;indels",
+            cmdline_type="back",
+            search_parameters=parameters,
+        )
+    )
+    assert len(adapters) == 2
+    assert adapters[0].name == "first_name"
+    assert adapters[0].max_error_rate == 0.3
+    assert adapters[0].min_overlap == 2
+    assert adapters[0].indels is True
+
+    assert adapters[1].name == "second_name"
+    assert adapters[1].max_error_rate == 0.4
+    assert adapters[1].min_overlap == 5
+    assert adapters[1].indels is True
+
+
 def test_parse_with_adapter_sequence_as_a_path(tmp_path):
-    parser = AdapterParser()
     with pytest.raises(InvalidCharacter):
-        parser._parse("invalid.character", "back")
+        make_adapter("invalid.character", "back", dict())
     # user forgot to write "file:"
     path = tmp_path / "afile.fasta"
     path.write_text(">abc\nACGT\n")
     with pytest.raises(InvalidCharacter) as e:
-        list(parser.parse(str(path), "back"))
+        list(make_adapters_from_one_specification(str(path), "back", dict()))
     assert "A file exists named" in e.value.args[0]
 
 
-def test_parse_multi():
-    parser = AdapterParser()
+def test_make_adapters_from_specifications():
     with pytest.raises(ValueError) as e:
-        parser.parse_multi([("invalid-type", "A")])
-    assert "adapter type must be" in e.value.args[0]
+        make_adapters_from_specifications([("invalid-type", "A")], dict())
+    assert "cmdline_type must be" in e.value.args[0]
 
 
 def test_normalize_ellipsis():
-    ne = AdapterParser._normalize_ellipsis
+    ne = _normalize_ellipsis
     assert ne("ACGT", "", "back") == ("ACGT", "front")  # -a ACGT...
     assert ne("ACGT", "", "front") == ("ACGT", "front")  # -g ACGT...
     assert ne("", "ACGT", "back") == ("ACGT", "back")  # -a ...ACGT
@@ -275,7 +320,7 @@ def test_normalize_ellipsis():
 )
 def test_anchoring_makes_front_linked_adapter_required(seq, req1, req2):
     # -a X...Y
-    a = AdapterParser()._parse(seq, "back")
+    a = make_adapter(seq, "back", dict())
     assert isinstance(a, LinkedAdapter)
     assert a.front_required is req1
     assert a.back_required is req2
@@ -295,7 +340,7 @@ def test_anchoring_makes_front_linked_adapter_required(seq, req1, req2):
 )
 def test_linked_adapter_back_required_optional(r1, r2, req1, req2):
     # -a X...Y
-    a = AdapterParser()._parse("ACG" + r1 + "...TGT" + r2, "back")
+    a = make_adapter("ACG" + r1 + "...TGT" + r2, "back", dict())
     assert isinstance(a, LinkedAdapter)
     assert a.front_required is req1
     assert a.back_required is req2
@@ -315,7 +360,7 @@ def test_linked_adapter_back_required_optional(r1, r2, req1, req2):
 )
 def test_linked_adapter_front_required_optional(r1, r2, exp1, exp2):
     # -g X...Y
-    a = AdapterParser()._parse("ACG" + r1 + "...TGT" + r2, "front")
+    a = make_adapter("ACG" + r1 + "...TGT" + r2, "front", dict())
     assert isinstance(a, LinkedAdapter)
     assert a.front_required is exp1
     assert a.back_required is exp2
@@ -323,7 +368,7 @@ def test_linked_adapter_front_required_optional(r1, r2, exp1, exp2):
 
 def test_linked_adapter_parameters():
     # issue #394
-    a = AdapterParser(max_errors=0.17, indels=False)._parse("ACG...TGT")
+    a = make_adapter("ACG...TGT", "back", dict(max_errors=0.17, indels=False))
     assert isinstance(a, LinkedAdapter)
     assert a.front_adapter.max_error_rate == 0.17
     assert a.back_adapter.max_error_rate == 0.17
@@ -333,20 +378,13 @@ def test_linked_adapter_parameters():
 
 def test_linked_adapter_name():
     # issue #414
-    a = AdapterParser()._parse("the_name=^ACG...TGT")
+    a = make_adapter("the_name=^ACG...TGT", "back", dict())
     assert isinstance(a, LinkedAdapter)
     assert a.create_statistics().name == "the_name"
 
 
 def test_anywhere_parameter_back():
-    parser = AdapterParser(
-        max_errors=0.2,
-        min_overlap=4,
-        read_wildcards=False,
-        adapter_wildcards=False,
-        indels=True,
-    )
-    adapter = list(parser.parse("CTGAAGTGAAGTACACGGTT;anywhere", "back"))[0]
+    adapter = make_adapter("CTGAAGTGAAGTACACGGTT;anywhere", "back", dict())
     assert isinstance(adapter, BackAdapter)
     assert adapter._force_anywhere
 
@@ -360,14 +398,7 @@ def test_anywhere_parameter_back():
 
 
 def test_anywhere_parameter_front():
-    parser = AdapterParser(
-        max_errors=0.2,
-        min_overlap=4,
-        read_wildcards=False,
-        adapter_wildcards=False,
-        indels=True,
-    )
-    adapter = list(parser.parse("CTGAAGTGAAGTACACGGTT;anywhere", "front"))[0]
+    adapter = make_adapter("CTGAAGTGAAGTACACGGTT;anywhere", "front", dict())
     assert isinstance(adapter, FrontAdapter)
     assert adapter._force_anywhere
 

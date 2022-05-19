@@ -519,7 +519,7 @@ missing in the read.
 
 Linked adapters do not work when used in combination with ``--info-file`` and ``--mask-adapter``.
 
-To provide :ref:`adapter-trimming parameters <trimming-parameters>`
+To provide :ref:`adapter-search parameters <search-parameters>`
 for linked adapters, they need to be set for each constituent adapter separately, as in
 ``-g "ADAPTER1;min_overlap=5...ADAPTER2;min_overlap=6"``.
 
@@ -549,7 +549,7 @@ Here, both ``ADAPTER1`` and ``ADAPTER2`` are not anchored, but they are required
 was used.
 
 The ``-g`` option does not cover all cases, so you can also mark each adapter explicitly as
-required or optional using the :ref:`trimming parameters <trimming-parameters>`
+required or optional using the :ref:`search parameters <search-parameters>`
 ``required`` and ``optional``. This is the only way to make an anchored adapter optional.
 For example, to request that an anchored 5' adapter (here ``ADAPTER1``) should not be required,
 you can specify it like this ::
@@ -632,15 +632,17 @@ When the adapter is a 5' adapter instead, the read will be trimmed to ::
 
 .. _trimming-parameters:
 
-Adapter-trimming parameters
-===========================
+.. _search-parameters:
 
-The adapter-trimming algorithm has a few parameters specific to each adapter
+Adapter-search parameters
+=========================
+
+The adapter search algorithm has a few parameters specific to each adapter
 that control how the adapter sequence is found. The command-line options ``-e``
 and ``-O`` set the maximum error rate and minimum overlap parameters (see
 details in the following sections) for all
 adapters listed via the ``-a``/``-b``/``-g`` etc. options. When trimming more
-than one adapter, it may be necessary to change parameters for each
+than one adapter, it may be necessary to change search parameters for each
 adapter individually. You can do so by adding a semicolon and ``parameter=value`` to the end
 of the adapter sequence, as in ``-a "ADAPTER;max_error_rate=0.2"``.
 Multiple parameters can also be set, as in ``-a "ADAPTER;max_error_rate=0.2;min_overlap=5"``.
@@ -673,13 +675,31 @@ Allow matches anywhere                                           ``ADAPTER;anywh
 The minimum overlap length cannot be set for anchored adapters as these always need to occur at full
 length.
 
-Adapter-specific parameters override the global option.
+When using the ``file:`` notation to read in adapters from a FASTA file,
+it is possible to specify file-specific search parameters::
+
+    cutadapt -a "file:adapters.fa;min_overlap=5;noindels"
+
+The individual adapter specifications in the FASTA file can also contain search parameters::
+
+    >adapter1
+    ^ACGT;min_overlap=3
+    >adapter2
+    AACCGGT;noindels
+
+More specific parameters override less specific ones:
+
+1. Adapter-specific parameters override the file-specific settings
+2. File-specific search parameters override the global settings
 
 .. versionadded: 1.18
-    Syntax for setting adapter-specific parameters
+    Syntax for setting adapter-specific search parameters
 
 .. versionadded: 3.5
     The ``indels`` and ``noindels`` parameters.
+
+.. versionadded: 4.1
+    Support file-specific search parameters (when using the ``file:`` notation)
 
 
 .. _error-tolerance:
