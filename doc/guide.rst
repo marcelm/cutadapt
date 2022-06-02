@@ -803,6 +803,7 @@ the adapter would still be placed properly.
     Ignore ``N`` wildcards when computing the error rate.
 
 
+.. _minimum-overlap:
 .. _random-matches:
 
 Minimum overlap (reducing random matches)
