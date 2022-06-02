@@ -1716,6 +1716,10 @@ the FASTA file::
 
 All of the sequences in the file ``adapters.fasta`` will be used as 3'
 adapters. The other adapter options ``-b`` and ``-g`` also support this.
+
+With ``-g``, you can also write ``-g ^file:adapters.fasta`` to specify that
+all adapters read from ``adapters.fasta`` should be anchored.
+
 The ``file:`` syntax can be combined with the regular way of specifying an
 adapter. But no matter how you specify multiple adapter sequences, remember
 that only the best matching adapter is trimmed from each read.
@@ -1728,8 +1732,8 @@ following way which adapter should be trimmed:
 * Adapter matches where the overlap length (see the ``-O`` parameter) is too
   small or where the error rate is too high (``-e``) are removed from further
   consideration.
-* Among the remaining matches, the one with the **greatest number of matching
-  bases** is chosen.
+* Among the remaining matches, the one with the largest alignment score
+  is chosen.
 * If there is a tie, the first adapter wins. The order of adapters is the order
   in which they are given on the command line or in which they are found in the
   FASTA file.
@@ -1741,6 +1745,10 @@ sequence, you can use a single adapter sequence instead that
 If you want to search for a combination of a 5' and a 3' adapter, you may want
 to provide them as a single so-called :ref:`"linked adapter" <linked-adapters>`
 instead.
+
+
+.. versionadded:: 4.1
+   Ability to anchor 5’ adapters from an external file with ``-g ^file:``
 
 
 .. _named-adapters:
@@ -1841,16 +1849,16 @@ will want to :ref:`provide in a FASTA file <multiple-adapters>`. Here is a
 made-up example for such a ``barcodes.fasta`` file::
 
     >barcode01
-    ^TTAAGGCC
+    TTAAGGCC
     >barcode02
-    ^TAGCTAGC
+    TAGCTAGC
     >barcode03
-    ^ATGATGAT
+    ATGATGAT
 
-Our barcodes are located at the 5’ end of the R1 read, so we made sure to use
-:ref:`anchored 5’ adapters <anchored-5adapters>` by prefixing
-each sequence with the ``^`` character. We will then use ``-g file:barcodes.fasta``,
-where the ``-g`` option specifies that our adapters are 5’ adapters.
+Since our barcodes are located at the 5’ end of the R1 read, we use the ``-g``
+option to provide Cutadapt with the adapter sequences, as in ``-g ^file:barcodes.fasta``.
+Also, we prefix the ``^file:`` with the ``^`` character to specify that we want to
+:ref:`anchor the 5’ adapters <anchored-5adapters>`.
 
 These barcode sequences have a length of 8, which means that Cutadapt
 would not allow any errors when matching them: The default is to allow 10%
@@ -1861,12 +1869,12 @@ insertions or deletions. Also, with the ``--no-indels`` option, Cutadapt can
 use a different algorithm and demultiplexing will be many times faster.
 Here is the final command::
 
-    cutadapt -e 0.15 --no-indels -g file:barcodes.fasta -o "trimmed-{name}.fastq.gz" input.fastq.gz
+    cutadapt -e 0.15 --no-indels -g ^file:barcodes.fasta -o "trimmed-{name}.fastq.gz" input.fastq.gz
 
 Demultiplexing is also supported for paired-end data if you provide the ``{name}`` template
 in both output file names (``-o`` and ``-p``). Example::
 
-    cutadapt -e 0.15 --no-indels -g file:barcodes.fasta -o trimmed-{name}.1.fastq.gz -p trimmed-{name}.2.fastq.gz input.1.fastq.gz input.2.fastq.gz
+    cutadapt -e 0.15 --no-indels -g ^file:barcodes.fasta -o trimmed-{name}.1.fastq.gz -p trimmed-{name}.2.fastq.gz input.1.fastq.gz input.2.fastq.gz
 
 Paired-end demultiplexing always uses the adapter matches of the *first* read to decide where a
 read should be written. If adapters for read 2 are given (``-A``/``-G``), they are detected and
@@ -1876,7 +1884,7 @@ to ensure that read 1 and read 2 are always synchronized.
 To demultiplex using a barcode that is located on read 2, you can swap the roles of R1 and R2 for
 both the input and output files ::
 
-    cutadapt -e 0.15 --no-indels -g file:barcodes.fasta -o trimmed-{name}.2.fastq.gz -p trimmed-{name}.1.fastq.gz input.2.fastq.gz input.1.fastq.gz
+    cutadapt -e 0.15 --no-indels -g ^file:barcodes.fasta -o trimmed-{name}.2.fastq.gz -p trimmed-{name}.1.fastq.gz input.2.fastq.gz input.1.fastq.gz
 
 If you do this in a script or pipeline, it may be a good idea to add a comment to clarify that
 this reversal of R1 and R2 is intended.
@@ -1903,13 +1911,13 @@ all combinations of indexes are possible.
 For demultiplexing this type of data ("combinatorial demultiplexing"), it is necessary to write each
 read pair to an output file depending on the adapters found on R1 *and* R2.
 
-Doing this with Cutadapt is similar to doing normal demultiplexing as described above, but you need
+Doing this is similar to doing normal demultiplexing as described above, but you need
 to use ``{name1}`` and ``{name2}`` in both output file name templates. For example::
 
     cutadapt \
         -e 0.15 --no-indels \
-        -g file:barcodes_fwd.fasta \
-        -G file:barcodes_rev.fasta \
+        -g ^file:barcodes_fwd.fasta \
+        -G ^file:barcodes_rev.fasta \
         -o {name1}-{name2}.1.fastq.gz -p {name1}-{name2}.2.fastq.gz \
         input.1.fastq.gz input.2.fastq.gz
 
@@ -1959,11 +1967,12 @@ can be sped up tremendously by using the right options since Cutadapt will then 
 index of the barcode sequences instead of checking for each barcode separately. Currently, the
 following conditions need to be met in order for index creation to be enabled:
 
-* The barcodes/adapters must be anchored 5’ adapters (``-g ^ADAPTER``) or anchored 3’ adapters
-  (``-a ADAPTER$``). If you use ``file:`` to read in the adapter sequences from a FASTA file,
-  remember to add the ``^`` or ``$`` to each sequence in the FASTA file.
-* The maximum error rate (``-e``) must be set such that at most 2 errors are allowed,
-  so use ``-e 0``, ``-e 1`` or ``-e 2``.
+* The barcodes/adapters must be anchored:
+  For 5’ adapters, use ``-g ^ADAPTER`` or ``-g ^file:adapters.fasta``.
+  For 3’ adapters, use ``-a ADAPTER$`` or ``-a file:adapters.fasta`` with ``$`` added to each
+  sequence in the FASTA file.
+* The maximum error rate (``-e``) must be set such that at most 2 errors are allowed:
+  Use ``-e 0``, ``-e 1`` or ``-e 2``.
 * No IUPAC wildcards must be used in the barcode/adapter. Also, you cannot use the option
   ``--match-read-wildcards``.
 
@@ -2006,7 +2015,7 @@ or this ::
 To demultiplex such data with Cutadapt, choose one of the orientations first and
 demultiplex the reads as if only that existed in the data, using a command like this ::
 
-    cutadapt -g file:barcodes.fasta \
+    cutadapt -g ^file:barcodes.fasta \
         -o round1-{name}.R1.fastq.gz \
         -p round1-{name}.R2.fastq.gz \
         R1.fastq.gz R2.fastq.gz
@@ -2017,7 +2026,7 @@ also include the pairs in which the barcode was not actually in R1, but in R2. T
 demultiplex these reads as well, run Cutadapt a second time with those “unknown”
 files as input, but also reverse the roles of R1 and R2 ::
 
-    cutadapt -g file:barcodes.fasta \
+    cutadapt -g ^file:barcodes.fasta \
         -o round2-{name}.R2.fastq.gz \
         -p round2-{name}.R1.fastq.gz \
         round1-unknown.R2.fastq.gz round1-unknown.R1.fastq.gz

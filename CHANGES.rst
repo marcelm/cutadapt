@@ -8,8 +8,11 @@ development version
 
 * :issue:`624`: You can now combine reading adapter sequences from an external file
   with the search parameter notation. For example,
-  ``-a "file:adapters.fa;min_overlap=5"`` sets the minimum overlap to 5 for all
+  ``-a "file:adapters.fasta;min_overlap=5"`` sets the minimum overlap to 5 for all
   adapters in ``adapters.fasta``.
+* :issue:`361`: When reading 5' adapters from an external file, they can now
+  all be anchored by using the syntax ``-g ^file:adapters.fasta``
+  (note the ``^`` before ``file:``).
 * :issue:`615`: Fix linked adapter statistics for 5' and 3' end not
   being reported separated correctly.
 * :issue:`616`: Report correct number of quality-trimmed bases when

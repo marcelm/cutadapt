@@ -3,7 +3,13 @@ from textwrap import dedent
 import pytest
 
 from dnaio import Sequence
-from cutadapt.adapters import LinkedAdapter, BackAdapter, FrontAdapter, InvalidCharacter
+from cutadapt.adapters import (
+    LinkedAdapter,
+    BackAdapter,
+    FrontAdapter,
+    InvalidCharacter,
+    PrefixAdapter,
+)
 from cutadapt.parser import (
     AdapterSpecification,
     parse_search_parameters,
@@ -263,15 +269,43 @@ def test_parse_file_notation_with_parameters(tmp_path):
         )
     )
     assert len(adapters) == 2
-    assert adapters[0].name == "first_name"
-    assert adapters[0].max_error_rate == 0.3
-    assert adapters[0].min_overlap == 2
-    assert adapters[0].indels is True
+    a = adapters[0]
+    assert isinstance(a, BackAdapter)
+    assert a.name == "first_name"
+    assert a.max_error_rate == 0.3
+    assert a.min_overlap == 2
+    assert a.indels is True
 
-    assert adapters[1].name == "second_name"
-    assert adapters[1].max_error_rate == 0.4
-    assert adapters[1].min_overlap == 5
-    assert adapters[1].indels is True
+    a = adapters[1]
+    assert isinstance(a, BackAdapter)
+    assert a.name == "second_name"
+    assert a.max_error_rate == 0.4
+    assert a.min_overlap == 5
+    assert a.indels is True
+
+
+def test_parse_file_notation_with_anchoring(tmp_path):
+    tmp = tmp_path / "adapters.fasta"
+    tmp.write_text(
+        dedent(
+            """>first
+            ACCGGGTTTT
+            >second
+            AAAACCCGGT
+            """
+        )
+    )
+    adapters = list(
+        make_adapters_from_one_specification(
+            "^file:" + os.fspath(tmp) + ";max_errors=0.3",
+            adapter_type="front",
+            search_parameters=dict(),
+        )
+    )
+    assert len(adapters) == 2
+    for a in adapters:
+        assert isinstance(a, PrefixAdapter)
+        assert a.max_error_rate == 0.3
 
 
 def test_parse_with_adapter_sequence_as_a_path(tmp_path):
