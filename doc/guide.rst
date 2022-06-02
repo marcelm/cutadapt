@@ -692,13 +692,13 @@ More specific parameters override less specific ones:
 1. Adapter-specific parameters override the file-specific settings
 2. File-specific search parameters override the global settings
 
-.. versionadded: 1.18
+.. versionadded:: 1.18
     Syntax for setting adapter-specific search parameters
 
-.. versionadded: 3.5
+.. versionadded:: 3.5
     The ``indels`` and ``noindels`` parameters.
 
-.. versionadded: 4.1
+.. versionadded:: 4.1
     Support file-specific search parameters (when using the ``file:`` notation)
 
 
@@ -775,7 +775,7 @@ matches of length 10-11 bases, one error is allowed.
 
 See also the :ref:`section on details of the alignment algorithm <adapter-alignment-algorithm>`.
 
-.. versionadded: 2.11
+.. versionadded:: 2.11
     Allow specifying the number of errors
 
 N wildcard characters
@@ -799,7 +799,7 @@ However, even in previous versions, the location with the greatest number of
 matching bases is chosen as the best location for an adapter, so in many cases
 the adapter would still be placed properly.
 
-.. versionadded: 2.0
+.. versionadded:: 2.0
     Ignore ``N`` wildcards when computing the error rate.
 
 
@@ -1075,7 +1075,7 @@ A :ref:`description of the quality-trimming algorithm is also
 available <quality-trimming-algorithm>`. The algorithm is the same as used by BWA.
 
 
-.. versionadded: 3.5
+.. versionadded:: 3.5
     The ``-Q`` option
 
 
@@ -1984,7 +1984,7 @@ Hopefully some of the above restrictions will be lifted in the future.
 .. versionadded:: 2.0
    Added ability to use an index of adapters for speeding up demultiplexing
 
-.. versionadded::
+.. versionadded:: 3.0
    An index can be built even when indels are allowed (that is, ``--no-indels``
    is no longer required).
 
@@ -2170,7 +2170,7 @@ out2_bp         Number of bases written
 
 The last three fields are omitted for single-end data.
 
-.. versionadded: 1.18
+.. versionadded:: 1.18
 
 
 How to read the report
@@ -2272,7 +2272,7 @@ easier discoverability by log-parsing tools such as `MultiQC <https://multiqc.in
 
 See the :ref:`description of the JSON report file format <json-report-format>`.
 
-.. versionadded: 3.5
+.. versionadded:: 3.5
 
 
 .. _info-file:
