@@ -1068,6 +1068,8 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         )
         check_arguments(args, paired)
         adapters, adapters2 = adapters_from_args(args)
+        log_adapters(adapters, adapters2 if paired else None)
+
         pipeline = pipeline_from_parsed_args(args, paired, adapters, adapters2)
         adapter_names: List[Optional[str]] = [a.name for a in adapters]
         adapter_names2: List[Optional[str]] = [a.name for a in adapters2]
@@ -1140,6 +1142,17 @@ def log_system_info():
     logger.debug("Python executable: %s", sys.executable)
     logger.debug("dnaio version: %s", dnaio.__version__)
     logger.debug("xopen version: %s", xopen.__version__)
+
+
+def log_adapters(adapters, adapters2):
+    paired = adapters2 is not None
+    logger.debug("R1 adapters (%d):" if paired else "Adapters (%d):", len(adapters))
+    for a in adapters:
+        logger.debug("- %s", a)
+    if paired:
+        logger.debug("R2 adapters (%d):", len(adapters2))
+        for a in adapters2:
+            logger.debug("- %s", a)
 
 
 def setup_runner(
