@@ -30,8 +30,6 @@ Code style
   the formatting will be done for you.
 * There are inconsistencies in the current code base since it’s a few years old
   already. New code should follow the current rules, however.
-* Prefer double quotation marks in new code. This will also make the diff smaller
-  if we eventually switch to black.
 * Using an IDE is beneficial (PyCharm, for example). It helps to catch lots of
   style issues early (unused imports, spacing etc.).
 * Avoid unnecessary abbreviations for variable names. Code is more often read
