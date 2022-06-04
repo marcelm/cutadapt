@@ -686,6 +686,57 @@ class FrontAdapter(SingleAdapter):
         return FrontAdapterStatistics(self)
 
 
+class RightmostFrontAdapter(FrontAdapter):
+    """A 5' adapter that prefers rightmost matches"""
+
+    description = "rightmost 5'"
+
+    # def __init__(self, *args, **kwargs):
+    #     self._force_anywhere = kwargs.pop("force_anywhere", False)
+    #     super().__init__(*args, **kwargs)
+
+    def descriptive_identifier(self) -> str:
+        return "rightmost_five_prime"
+
+    def _aligner(self) -> Aligner:
+        self.sequence = self.sequence[::-1]
+        aligner = self._make_aligner(
+            Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value
+        )
+        self.sequence = self.sequence[::-1]
+        return aligner
+
+    def match_to(self, sequence: str):
+        """
+        Attempt to match this adapter to the given read.
+
+        Return a Match instance if a match was found;
+        return None if no match was found given the matching criteria (minimum
+        overlap length, maximum error rate).
+        """
+        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
+            sequence[::-1]
+        )
+        if self._debug:
+            print(self.aligner.dpmatrix)
+        if alignment is None:
+            return None
+
+        ref_start, ref_end, query_start, query_end, score, errors = alignment
+        alignment = (
+            len(self.sequence) - ref_end,
+            len(self.sequence) - ref_start,
+            len(sequence) - query_end,
+            len(sequence) - query_start,
+            score,
+            errors,
+        )
+        return RemoveBeforeMatch(*alignment, adapter=self, sequence=sequence)
+
+    def spec(self) -> str:
+        return f"{self.sequence}...;rightmost"
+
+
 class BackAdapter(SingleAdapter):
     """A 3' adapter"""
 

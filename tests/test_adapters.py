@@ -8,6 +8,7 @@ from cutadapt.adapters import (
     BackAdapter,
     PrefixAdapter,
     SuffixAdapter,
+    RightmostFrontAdapter,
     LinkedAdapter,
     MultipleAdapters,
     IndexedPrefixAdapters,
@@ -40,6 +41,68 @@ def test_front_adapter_partial_occurrence_in_back():
 def test_back_adapter_partial_occurrence_in_front():
     adapter = BackAdapter("CTGAATT", max_errors=0, min_overlap=4)
     assert adapter.match_to("AATTGGGGGGG") is None
+
+
+def test_front_adapter_finds_leftmost_match():
+    adapter = FrontAdapter("CTGAATT", max_errors=1, min_overlap=3)
+    match = adapter.match_to("GGCTGAATTGGG")
+    assert match.astart == 0
+    assert match.astop == 7
+    assert match.rstart == 2
+    assert match.rstop == 9
+    assert match.errors == 0
+
+    match = adapter.match_to("GGCTGAATTGGGCTGAATTGGG")
+    assert match.astart == 0
+    assert match.astop == 7
+    assert match.rstart == 2
+    assert match.rstop == 9
+    assert match.errors == 0
+
+    match = adapter.match_to("GGCTGAATTGGGCTGTATTGGG")
+    assert match.astart == 0
+    assert match.astop == 7
+    assert match.rstart == 2
+    assert match.rstop == 9
+    assert match.errors == 0
+
+    match = adapter.match_to("GGCTTAATTGGGCTGAATTGGG")
+    assert match.astart == 0
+    assert match.astop == 7
+    assert match.rstart == 2
+    assert match.rstop == 9
+    assert match.errors == 1
+
+
+def test_rightmost_front_adapter():
+    adapter = RightmostFrontAdapter("CTGAATT", max_errors=1, min_overlap=3)
+    match = adapter.match_to("GGCTGAATTGGG")
+    assert match.astart == 0
+    assert match.astop == 7
+    assert match.rstart == 2
+    assert match.rstop == 9
+    assert match.errors == 0
+
+    match = adapter.match_to("GGCTGAATTGGGCTGAATTGGG")
+    assert match.astart == 0
+    assert match.astop == 7
+    assert match.rstart == 12
+    assert match.rstop == 19
+    assert match.errors == 0
+
+    match = adapter.match_to("GGCTGAATTGGGCTGTATTGGG")
+    assert match.astart == 0
+    assert match.astop == 7
+    assert match.rstart == 12
+    assert match.rstop == 19
+    assert match.errors == 1
+
+    match = adapter.match_to("GGCTTAATTGGGCTGAATTGGG")
+    assert match.astart == 0
+    assert match.astop == 7
+    assert match.rstart == 12
+    assert match.rstop == 19
+    assert match.errors == 0
 
 
 def test_wildcards():
