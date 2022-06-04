@@ -14,13 +14,6 @@ from typing import Iterator, Tuple
 
 from cutadapt._align import Aligner, PrefixComparer, SuffixComparer
 
-# Deprecated, use the EndSkip enum instead
-START_WITHIN_SEQ1 = 1
-START_WITHIN_SEQ2 = 2
-STOP_WITHIN_SEQ1 = 4
-STOP_WITHIN_SEQ2 = 8
-SEMIGLOBAL = 15
-
 
 class EndSkip(IntFlag):
     """
