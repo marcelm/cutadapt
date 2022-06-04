@@ -42,7 +42,8 @@ def test_back_adapter_partial_occurrence_in_front():
     assert adapter.match_to("AATTGGGGGGG") is None
 
 
-def test_issue_52():
+def test_wildcards():
+    # issue 52
     adapter = BackAdapter(
         sequence="GAACTCCAGTCACNNNNN",
         max_errors=0.12,
@@ -148,7 +149,7 @@ def test_str():
     str(a.match_to("TTACGT"))
 
 
-def test_prefix_with_indels_one_mismatch():
+def test_prefix_adapter_with_indels_one_mismatch():
     a = PrefixAdapter(
         sequence="GCACATCT",
         max_errors=0.15,
@@ -169,7 +170,7 @@ def test_prefix_with_indels_one_mismatch():
     assert result.errors == 1
 
 
-def test_prefix_with_indels_two_mismatches():
+def test_prefix_adapter_with_indels_two_mismatches():
     a = PrefixAdapter(
         sequence="GCACATTT",
         max_errors=0.3,
@@ -208,6 +209,41 @@ def test_linked_adapter():
     trimmed = linked_adapter.match_to(read.sequence).trimmed(read)
     assert trimmed.name == "seq"
     assert trimmed.sequence == "CCCCC"
+
+
+def test_linked_adapter_statistics():
+    # Issue #615
+    front_adapter = PrefixAdapter("GGG")
+    back_adapter = BackAdapter("ACGACGACGACG")
+    la = LinkedAdapter(
+        front_adapter,
+        back_adapter,
+        front_required=True,
+        back_required=False,
+        name="name",
+    )
+    statistics = la.create_statistics()
+    match = la.match_to("GGGTTTTTACGACTACGACG")
+    statistics.add_match(match)
+
+    front, back = statistics.end_statistics()
+    assert back.errors.get(12) == {1: 1}
+    assert front.errors.get(3) == {0: 1}
+
+
+def test_linked_matches_property():
+    """Accessing matches property of non-anchored linked adapters"""
+    # Issue #265
+    front_adapter = FrontAdapter("GGG")
+    back_adapter = BackAdapter("TTT")
+    la = LinkedAdapter(
+        front_adapter,
+        back_adapter,
+        front_required=False,
+        back_required=False,
+        name="name",
+    )
+    assert la.match_to("AAAATTTT").score == 3
 
 
 def test_info_record():
@@ -327,21 +363,6 @@ def test_add_adapter_statistics():
     }
 
 
-def test_linked_matches_property():
-    """Accessing matches property of non-anchored linked adapters"""
-    # Issue #265
-    front_adapter = FrontAdapter("GGG")
-    back_adapter = BackAdapter("TTT")
-    la = LinkedAdapter(
-        front_adapter,
-        back_adapter,
-        front_required=False,
-        back_required=False,
-        name="name",
-    )
-    assert la.match_to("AAAATTTT").score == 3
-
-
 @pytest.mark.parametrize("adapter_class", [PrefixAdapter, SuffixAdapter])
 def test_no_indels_empty_read(adapter_class):
     # Issue #376
@@ -349,7 +370,7 @@ def test_no_indels_empty_read(adapter_class):
     adapter.match_to("")
 
 
-def test_prefix_match_with_n_wildcard_in_read():
+def test_prefix_adapter_match_with_n_wildcard_in_read():
     adapter = PrefixAdapter("NNNACGT", indels=False)
     match = adapter.match_to("TTTACGTAAAA")
     assert match is not None and (0, 7) == (match.rstart, match.rstop)
@@ -357,7 +378,7 @@ def test_prefix_match_with_n_wildcard_in_read():
     assert match is not None and (0, 7) == (match.rstart, match.rstop)
 
 
-def test_suffix_match_with_n_wildcard_in_read():
+def test_suffix_adapter_match_with_n_wildcard_in_read():
     adapter = SuffixAdapter("ACGTNNN", indels=False)
     match = adapter.match_to("TTTTACGTTTT")
     assert match is not None and (4, 11) == (match.rstart, match.rstop)
@@ -439,7 +460,7 @@ def test_indexed_suffix_adapters_incorrect_type():
         )
 
 
-def test_multi_prefix_adapter_with_indels():
+def test_indexed_prefix_adapters_with_indels():
     adapters = [
         PrefixAdapter("GTAC", max_errors=1, indels=True),
         PrefixAdapter("TGCT", max_errors=1, indels=True),
@@ -462,23 +483,3 @@ def test_indexed_prefix_adapters_with_n_wildcard():
         assert (result.rstart, result.rstop) == (0, 8)
         assert result.errors == 1
         assert result.score == 6
-
-
-def test_linked_adapter_statistics():
-    # Issue #615
-    front_adapter = PrefixAdapter("GGG")
-    back_adapter = BackAdapter("ACGACGACGACG")
-    la = LinkedAdapter(
-        front_adapter,
-        back_adapter,
-        front_required=True,
-        back_required=False,
-        name="name",
-    )
-    statistics = la.create_statistics()
-    match = la.match_to("GGGTTTTTACGACTACGACG")
-    statistics.add_match(match)
-
-    front, back = statistics.end_statistics()
-    assert back.errors.get(12) == {1: 1}
-    assert front.errors.get(3) == {0: 1}
