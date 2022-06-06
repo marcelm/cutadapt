@@ -18,6 +18,7 @@ from .adapters import (
     SuffixAdapter,
     LinkedAdapter,
     InvalidCharacter,
+    RightmostFrontAdapter,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ def parse_search_parameters(spec: str):
         "optional": None,  # If this is specified, 'required' will be set to False
         "indels": None,
         "noindels": None,
+        "rightmost": None,
     }
 
     fields = spec.split(";")
@@ -169,6 +171,7 @@ class AdapterSpecification:
         sequence: str,
         parameters,
         adapter_type: str,
+        rightmost: bool,
     ):
         assert restriction in (None, "anchored", "noninternal")
         assert adapter_type in ("front", "back", "anywhere")
@@ -177,6 +180,7 @@ class AdapterSpecification:
         self.sequence = sequence
         self.parameters = parameters
         self.adapter_type = adapter_type
+        self.rightmost = rightmost
 
     def __repr__(self):
         return "{}(name={!r}, restriction={!r}, sequence={!r}, parameters={!r}, adapter_type={!r})".format(
@@ -233,11 +237,12 @@ class AdapterSpecification:
         spec = spec.strip()
         parameters = parse_search_parameters(parameters_spec)
         spec = expand_braces(spec)
+        rightmost = parameters.pop("rightmost", False)
 
         # Special case for adapters consisting of only X characters:
         # This needs to be supported for backwards-compatibilitity
         if len(spec.strip("X")) == 0:
-            return cls(name, None, spec, {}, adapter_type)
+            return cls(name, None, spec, {}, adapter_type, False)
 
         try:
             front_restriction, back_restriction, spec = cls._parse_restrictions(spec)
@@ -278,7 +283,10 @@ class AdapterSpecification:
                 f" exceeds length of adapter {spec}"
             )
 
-        return cls(name, restriction, spec, parameters, adapter_type)
+        if rightmost and (adapter_type != "front" or restriction is not None):
+            raise ValueError("'rightmost' only allowed with regular 5' adapters")
+
+        return cls(name, restriction, spec, parameters, adapter_type, rightmost)
 
     @staticmethod
     def _parse_restrictions(spec: str) -> Tuple[Optional[str], Optional[str], str]:
@@ -311,12 +319,15 @@ class AdapterSpecification:
         return front_restriction, back_restriction, spec
 
     @staticmethod
-    def _restriction_to_class(adapter_type, restriction):
+    def _restriction_to_class(adapter_type, restriction, rightmost):
         """
         restriction: None, "anchored", or "noninternal"
         """
         if adapter_type == "front":
-            if restriction is None:
+            if rightmost:
+                assert restriction is None
+                return RightmostFrontAdapter
+            elif restriction is None:
                 return FrontAdapter
             elif restriction == "anchored":
                 return PrefixAdapter
@@ -347,7 +358,9 @@ class AdapterSpecification:
                 )
 
     def adapter_class(self):
-        return self._restriction_to_class(self.adapter_type, self.restriction)
+        return self._restriction_to_class(
+            self.adapter_type, self.restriction, self.rightmost
+        )
 
 
 def make_adapters_from_specifications(
@@ -366,7 +379,7 @@ def make_adapters_from_specifications(
       adapter classes.
       Possible keys: max_error_rate, min_overlap, read_wildcards, adapter_wildcards, indels
 
-    Return a list of appropriate Adapter classes.
+    Return a list of appropriate Adapter instances.
     """
     adapters: List[Adapter] = []
     for adapter_type, spec in type_spec_pairs:
@@ -404,8 +417,8 @@ def make_adapters_from_one_specification(
             if Path(spec).exists():
                 extra_message = (
                     f"A file exists named '{spec}'. "
-                    + "To use the sequences in that file as adapter sequences, write 'file:' "
-                    + f"before the path, as in 'file:{spec}'."
+                    "To use the sequences in that file as adapter sequences, write 'file:' "
+                    f"before the path, as in 'file:{spec}'."
                 )
                 raise InvalidCharacter(e.args[0] + "\n" + extra_message)
             else:
@@ -428,7 +441,7 @@ def make_adapter(
     adapter_type -- describes which commandline parameter was used (``-a``
     is 'back', ``-b`` is 'anywhere', and ``-g`` is 'front').
 
-    parameters -- search parameters
+    search_parameters -- dict with default search parameters
     """
     if adapter_type not in ("front", "back", "anywhere"):
         raise ValueError("adapter_type must be front, back or anywhere")
@@ -504,9 +517,11 @@ def _make_not_linked_adapter(
 ) -> Adapter:
     aspec = AdapterSpecification.parse(spec, adapter_type)
     adapter_class: Type[Adapter] = aspec.adapter_class()
+
     if aspec.parameters.pop("anywhere", False) and adapter_class in (
         FrontAdapter,
         BackAdapter,
+        RightmostFrontAdapter,
     ):
         aspec.parameters["force_anywhere"] = True
     if "required" in aspec.parameters:

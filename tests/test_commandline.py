@@ -897,6 +897,22 @@ def test_adapterx(run):
     run("-a TCCGAATAGAX", "adapterx.fasta", "xadapterx.fasta")
 
 
+def test_not_rightmost(tmp_path):
+    path = tmp_path / "reads.fasta"
+    path.write_text(">r\nGGCTGAATTGGACTGAATTGGGT\n")
+    trimmed = tmp_path / "trimmed.fasta"
+    main(["-g", "CTGAATT", "-o", str(trimmed), str(path)])
+    assert trimmed.read_text() == ">r\nGGACTGAATTGGGT\n"
+
+
+def test_rightmost(tmp_path):
+    path = tmp_path / "reads.fasta"
+    path.write_text(">r\nGGCTGAATTGGACTGAATTGGGT\n")
+    trimmed = tmp_path / "trimmed.fasta"
+    main(["-g", "CTGAATT;rightmost", "-o", str(trimmed), str(path)])
+    assert trimmed.read_text() == ">r\nGGGT\n"
+
+
 def test_discard_casava(run):
     stats = run("--discard-casava", "casava.fastq", "casava.fastq")
     assert stats.filtered["casava_filtered"] == 1

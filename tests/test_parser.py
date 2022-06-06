@@ -9,6 +9,7 @@ from cutadapt.adapters import (
     FrontAdapter,
     InvalidCharacter,
     PrefixAdapter,
+    RightmostFrontAdapter,
 )
 from cutadapt.parser import (
     AdapterSpecification,
@@ -100,19 +101,25 @@ def test_parse_file_notation(tmp_path):
 
 def test_parse_not_linked():
     p = AdapterSpecification.parse
-    assert p("A", "front") == AdapterSpecification(None, None, "A", {}, "front")
-    assert p("A", "back") == AdapterSpecification(None, None, "A", {}, "back")
-    assert p("A", "anywhere") == AdapterSpecification(None, None, "A", {}, "anywhere")
-    assert p("^A", "front") == AdapterSpecification(None, "anchored", "A", {}, "front")
-    assert p("XXXA", "front") == AdapterSpecification(
-        None, "noninternal", "A", {}, "front"
+    assert p("A", "front") == AdapterSpecification(None, None, "A", {}, "front", False)
+    assert p("A", "back") == AdapterSpecification(None, None, "A", {}, "back", False)
+    assert p("A", "anywhere") == AdapterSpecification(
+        None, None, "A", {}, "anywhere", False
     )
-    assert p("A$", "back") == AdapterSpecification(None, "anchored", "A", {}, "back")
+    assert p("^A", "front") == AdapterSpecification(
+        None, "anchored", "A", {}, "front", False
+    )
+    assert p("XXXA", "front") == AdapterSpecification(
+        None, "noninternal", "A", {}, "front", False
+    )
+    assert p("A$", "back") == AdapterSpecification(
+        None, "anchored", "A", {}, "back", False
+    )
     assert p("AXXXX", "back") == AdapterSpecification(
-        None, "noninternal", "A", {}, "back"
+        None, "noninternal", "A", {}, "back", False
     )
     assert p("a_name=ADAPT", "front") == AdapterSpecification(
-        "a_name", None, "ADAPT", {}, "front"
+        "a_name", None, "ADAPT", {}, "front", False
     )
 
 
@@ -156,11 +163,11 @@ def test_parse_misplaced_placement_restrictions():
 
 def test_restriction_to_class():
     with pytest.raises(ValueError) as e:
-        AdapterSpecification._restriction_to_class("anywhere", "noninternal")
+        AdapterSpecification._restriction_to_class("anywhere", "noninternal", False)
     assert "No placement may be specified" in e.value.args[0]
 
 
-def test_parse_parameters():
+def test_parse_search_parameters():
     p = parse_search_parameters
     assert p("e=0.1") == {"max_errors": 0.1}
     assert p("error_rate=0.1") == {"max_errors": 0.1}
@@ -173,6 +180,7 @@ def test_parse_parameters():
     assert p("optional") == {"required": False}
     assert p("noindels") == {"indels": False}
     assert p("indels") == {"indels": True}
+    assert p("rightmost") == {"rightmost": True}
 
     with pytest.raises(ValueError):
         p("e=hallo")
@@ -191,7 +199,7 @@ def test_parse_parameters():
     assert "cannot be specified at the same time" in e.value.args[0]
 
 
-def test_parse_with_parameters(tmp_path):
+def test_make_adapter_front():
     parameters = dict(
         max_errors=0.2,
         min_overlap=4,
@@ -203,6 +211,33 @@ def test_parse_with_parameters(tmp_path):
     assert isinstance(a, FrontAdapter)
     assert a.max_error_rate == 0.15
     assert a.min_overlap == 4
+
+    with pytest.raises(ValueError) as e:
+        make_adapter("A", "invalid-cmdline-type", parameters)
+    assert "adapter_type must be" in e.value.args[0]
+
+    with pytest.raises(ValueError) as e:
+        make_adapter("^ACGT;min_overlap=3", "front", parameters)
+    assert "not possible" in e.value.args[0]
+
+
+def test_make_adapter_rightmost_front():
+    a = make_adapter("ACGT; rightmost", "front", dict())
+    assert isinstance(a, RightmostFrontAdapter)
+
+    with pytest.raises(ValueError) as e:
+        make_adapter("ACGT; rightmost", "back", dict())
+    assert "only allowed" in e.value.args[0]
+
+
+def test_make_adapter_back():
+    parameters = dict(
+        max_errors=0.2,
+        min_overlap=4,
+        read_wildcards=False,
+        adapter_wildcards=False,
+        indels=False,
+    )
 
     a = make_adapter("ACGTAAAA; o=5; e=0.11", "back", parameters)
     assert isinstance(a, BackAdapter)
@@ -227,14 +262,7 @@ def test_parse_with_parameters(tmp_path):
         assert a.back_adapter.max_error_rate == 0.17
 
     with pytest.raises(ValueError) as e:
-        make_adapter("A", "invalid-cmdline-type", parameters)
-    assert "adapter_type must be" in e.value.args[0]
-
-    with pytest.raises(ValueError) as e:
         make_adapter("ACGT$;min_overlap=3", "back", parameters)
-    assert "not possible" in e.value.args[0]
-    with pytest.raises(ValueError) as e:
-        make_adapter("^ACGT;min_overlap=3", "front", parameters)
     assert "not possible" in e.value.args[0]
 
     with pytest.raises(ValueError) as e:
@@ -431,6 +459,12 @@ def test_anywhere_parameter_back():
     assert trimmed_read.sequence == ""
 
 
+def test_anywhere_parameter_rightmost_front():
+    adapter = make_adapter("ACGT; rightmost; anywhere", "front", dict())
+    assert isinstance(adapter, RightmostFrontAdapter)
+    assert adapter._force_anywhere
+
+
 def test_anywhere_parameter_front():
     adapter = make_adapter("CTGAAGTGAAGTACACGGTT;anywhere", "front", dict())
     assert isinstance(adapter, FrontAdapter)
@@ -443,3 +477,9 @@ def test_anywhere_parameter_front():
     cutter = AdapterCutter([adapter])
     trimmed_read = cutter(read, ModificationInfo(read))
     assert trimmed_read.sequence == ""
+
+
+def test_linked_adapter_rightmost():
+    a = make_adapter("ACG;rightmost...TGT", "back", dict())
+    assert isinstance(a, LinkedAdapter)
+    assert isinstance(a.front_adapter, RightmostFrontAdapter)

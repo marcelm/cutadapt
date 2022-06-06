@@ -13,6 +13,8 @@ development version
 * :issue:`361`: When reading 5' adapters from an external file, they can now
   all be anchored by using the syntax ``-g ^file:adapters.fasta``
   (note the ``^`` before ``file:``).
+* :issue:`254`: Finding the *rightmost* 5' adapter occurrence is now supported by using the
+  ``rightmost`` search parameter (the default is to find the leftmost occurrence).
 * :issue:`615`: Fix linked adapter statistics for 5' and 3' end not
   being reported separated correctly.
 * :issue:`616`: Report correct number of quality-trimmed bases when

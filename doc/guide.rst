@@ -610,6 +610,7 @@ Read before trimming           Read after trimming Detected adapter type
 ``TERMYSEQUENCE``              ``MYSEQUENCE``      5' adapter
 ============================== =================== =====================
 
+.. _rightmost:
 
 Multiple adapter occurrences within a single read
 -------------------------------------------------
@@ -628,6 +629,13 @@ When the adapter is a 5' adapter instead, the read will be trimmed to ::
 
     gggggADAPTERttttt
 
+For 5' adapters, this can be changed so that the *rightmost* occurrence is found
+by using the ``rightmost`` :ref:`search parameter <search-parameters>`, as in
+``-g "ACGT;rightmost"``.
+
+
+.. versionadded:: 4.1
+   The ``rightmost`` search parameter
 
 
 .. _trimming-parameters:
@@ -644,33 +652,36 @@ details in the following sections) for all
 adapters listed via the ``-a``/``-b``/``-g`` etc. options. When trimming more
 than one adapter, it may be necessary to change search parameters for each
 adapter individually. You can do so by adding a semicolon and ``parameter=value`` to the end
-of the adapter sequence, as in ``-a "ADAPTER;max_error_rate=0.2"``.
-Multiple parameters can also be set, as in ``-a "ADAPTER;max_error_rate=0.2;min_overlap=5"``.
-If using linked adapters, they have separate settings as in
-``-g "ADAPTER1;min_overlap=5...ADAPTER2;min_overlap=6"``.
+of the adapter sequence, as in ``-a "ADAPTER;max_error_rate=0.2"``. There are also "flags"
+that enable certain behavior. These are written without the ``=value`` part.
+
+Multiple parameters can be set, as in ``-a "ADAPTER;max_error_rate=0.2;min_overlap=5"``.
+For linked adapters, search parameters need to be specified separately for each adapter
+as in ``-g "ADAPTER1;min_overlap=5...ADAPTER2;min_overlap=6"``.
 
 Remember to add the quotation marks; otherwise the shell will interpret the semicolon as a
 separator between two commands.
 
 The following parameters are supported:
 
-================================================== ============= ================================
-Parameter                                          Global option Adapter-specific parameter
-================================================== ============= ================================
-Maximum error rate (default: 0.1)                  ``-e 0.2``    | ``ADAPTER;e=0.2`` or
-                                                                 | ``ADAPTER;max_errors=0.2`` or
-                                                                 | ``ADAPTER;max_error_rate=0.2``
+======================================================= =============== ================================
+Parameter                                               Global option   Adapter-specific parameter
+======================================================= =============== ================================
+Maximum error rate (default: 0.1)                       ``-e 0.2``      | ``ADAPTER;e=0.2`` or
+                                                                        | ``ADAPTER;max_errors=0.2`` or
+                                                                        | ``ADAPTER;max_error_rate=0.2``
 
-Minimum overlap (default: 3)                       ``-O 5``      | ``ADAPTER;o=5`` or
-                                                                 | ``ADAPTER;min_overlap=5``
+Minimum overlap (default: 3)                            ``-O 5``        | ``ADAPTER;o=5`` or
+                                                                        | ``ADAPTER;min_overlap=5``
 
-Disallow indels                                                  ``ADAPTER;noindels``
-Allow indels (this is the default)                               ``ADAPTER;indels``
-Allow matches anywhere                                           ``ADAPTER;anywhere``
+Disallow indels                                         ``--no-indels`` ``ADAPTER;noindels``
+Allow indels (this is the default)                                      ``ADAPTER;indels``
+Allow matches anywhere                                                  ``ADAPTER;anywhere``
 
-:ref:`Linked adapter required <linked-override>`                 ``ADAPTER;required``
-:ref:`Linked adapter optional <linked-override>`                 ``ADAPTER;optional``
-================================================== ============= ================================
+:ref:`Linked adapter required <linked-override>`                        ``ADAPTER;required``
+:ref:`Linked adapter optional <linked-override>`                        ``ADAPTER;optional``
+:ref:`Find rightmost 5' adapter occurrence <rightmost>`                 ``ADAPTER;rightmost``
+======================================================= =============== ================================
 
 The minimum overlap length cannot be set for anchored adapters as these always need to occur at full
 length.
@@ -701,6 +712,8 @@ More specific parameters override less specific ones:
 .. versionadded:: 4.1
     Support file-specific search parameters (when using the ``file:`` notation)
 
+.. versionadded: 4.1
+    The ``rightmost`` search parameter
 
 .. _error-tolerance:
 
