@@ -3,8 +3,8 @@
 Changelog
 =========
 
-development version
--------------------
+v4.1 (2022-06-07)
+-----------------
 
 * :issue:`624`: You can now combine reading adapter sequences from an external file
   with the search parameter notation. For example,
