@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.pardir, "src")))
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx_issues",
+    "sphinx_better_subsection",
 ]
 
 source_suffix = ".rst"
