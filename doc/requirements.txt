@@ -1,4 +1,2 @@
 sphinx_issues
-cython
-setuptools_scm
 sphinx_better_subsection
