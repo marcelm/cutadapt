@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 filterwarnings = [
     "error",
 ]
+testpaths = ["tests"]
 
 [tool.setuptools_scm]
 write_to = "src/cutadapt/_version.py"
