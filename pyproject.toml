@@ -7,6 +7,7 @@ filterwarnings = [
     "error",
 ]
 testpaths = ["tests"]
+xfail_strict = true
 
 [tool.setuptools_scm]
 write_to = "src/cutadapt/_version.py"
