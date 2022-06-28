@@ -88,6 +88,10 @@ Adapter-finding options
 Additional read modifications
 -----------------------------
 
+.. seealso::
+
+   :ref:`Read modification order <read-modification-order>`
+
 ``-u LENGTH``, ``--cut LENGTH``
     :ref:`Remove a fixed number of bases from each read <cut-bases>`.
     If LENGTH is positive, remove bases from the beginning.
@@ -95,74 +99,99 @@ Additional read modifications
     Can be used twice if LENGTHs have different signs. This is
     applied *before* adapter trimming.
 
-``--nextseq-trim 3'CUTOFF``
-    :ref:`NextSeq-specific quality trimming <nextseq-trim>`.
-    Trims also dark cycles appearing as high-quality G bases.
+``-q [5'CUTOFF,]3'CUTOFF``, ``--quality-cutoff [5'CUTOFF,]3'CUTOFF``
+    :ref:`Trim low-quality bases <quality-trimming>` from 5' and/or 3' ends of each
+    read before adapter removal. This is applied to both reads if
+    data is paired (use ``-Q`` to provide a different cutoff for R2).
+    If one value is given, only the 3' end
+    is trimmed. If two comma-separated cutoffs are given,
+    the 5' end is trimmed with the first cutoff, the 3' end
+    with the second.
 
+    .. seealso:: :ref:`Description of the quality-trimming algorithm <quality-trimming-algorithm>`
+
+``--nextseq-trim 3'CUTOFF``
+    :ref:`NextSeq-specific quality trimming <nextseq-trim>` that
+    also trims dark cycles appearing as high-quality G bases.
+
+``--quality-base N`` (default: 33)
+    Assume that quality values in the FASTQ file are encoded as ascii(quality + N).
+    This needs to be set to 64 for some very old Illumina FASTQ files.
+
+``--length LENGTH``, ``-l LENGTH``
+    Shorten reads to LENGTH, where LENGTH is an integer. Positive values remove bases at
+    the end while negative ones remove bases at the beginning.
+
+``--trim-n``
+    Trim N's from 5' and 3' ends of reads. See: :ref:`Dealing with N bases <n-bases>`.
+
+``--length-tag TAG``
+    Search for TAG followed by a decimal number in the header of the FASTQ or FASTA record.
+    Replace the decimal number with the correct length of the trimmed read.
+    For example, use ``--length-tag 'length='`` to correct fields like 'length=123'.
+
+``--strip-suffix SUFFIX``
+    Remove this suffix from read names if present. Can be given multiple times.
+
+``-x PREFIX``, ``--prefix PREFIX``
+    Add this prefix to read names. Use ``{name}`` to insert the
+    name of the matching adapter. Deprecated, use ``--rename`` instead.
+
+``-y SUFFIX``, ``--suffix SUFFIX``
+    Add this suffix to read names. Use ``{name}``` to insert the
+    name of the matching adapter. Deprecated, use ``--rename`` instead.
+
+``--rename TEMPLATE``
+    :ref:`Rename reads <rename>` using the TEMPLATE, which can contain placeholders such as
+    ``{id}``, ``{adapter_name}`` etc.
+
+``--zero-cap``, ``-z``
+    Change negative quality values to zero.
+
+Filtering of processed reads
+----------------------------
+
+Filters are applied after above read modifications. Paired-end reads are
+always discarded pairwise (see also ``--pair-filter``). The default is to not apply any filters.
+
+``-m LEN[:LEN2]``, ``--minimum-length LEN[:LEN2]``
+    Discard reads shorter than LEN. If LEN2 is given for paired-end data, it is applied to R2.
+
+``-M LEN[:LEN2]``, ``--maximum-length LEN[:LEN2]``
+    Discard reads longer than LEN. If LEN2 is given for paired-end data, it is applied to R2.
+
+``--max-n COUNT``
+    Discard reads with more than COUNT 'N' bases.
+    If COUNT is a number between 0 and 1,
+    it is interpreted as a fraction of the read length. See :ref:`Dealing with N bases <n-bases>`.
+
+``--max-expected-errors ERRORS``, ``--max-ee ERRORS``
+    Discard reads whose expected number of errors (computed
+    from quality values) exceeds ERRORS.
+
+``--discard-trimmed``, ``--discard``
+    Discard reads in which an adapter match was found.
+    Use also ``-O`` to avoid discarding too many randomly matching reads.
+
+``--discard-untrimmed``, ``--trimmed-only``
+    Discard reads in which no adapter match was found.
+
+``--discard-casava``
+    Discard reads that did not pass CASAVA filtering (that is, the record header has ``:Y:``).
+
+Output
+------
+
+``--quiet``
+    Print only error messages.
+
+``--report {full,minimal}`` (default: full)
+    Which type of report to print: 'full' or 'minimal'.
+
+``--json FILE``
+    Write :ref:`a report in JSON format <json-report-format>` to FILE.
 
 ..
-      -q [5'CUTOFF,]3'CUTOFF, --quality-cutoff [5'CUTOFF,]3'CUTOFF
-                            Trim low-quality bases from 5' and/or 3' ends of each
-                            read before adapter removal. Applied to both reads if
-                            data is paired. If one value is given, only the 3' end
-                            is trimmed. If two comma-separated cutoffs are given,
-                            the 5' end is trimmed with the first cutoff, the 3' end
-                            with the second.
-      --quality-base N      Assume that quality values in FASTQ are encoded as
-                            ascii(quality + N). This needs to be set to 64 for some
-                            old Illumina FASTQ files. Default: 33
-      --length LENGTH, -l LENGTH
-                            Shorten reads to LENGTH. Positive values remove bases at
-                            the end while negative ones remove bases at the
-                            beginning. This and the following modifications are
-                            applied after adapter trimming.
-      --trim-n              Trim N's on ends of reads.
-      --length-tag TAG      Search for TAG followed by a decimal number in the
-                            description field of the read. Replace the decimal
-                            number with the correct length of the trimmed read. For
-                            example, use --length-tag 'length=' to correct fields
-                            like 'length=123'.
-      --strip-suffix STRIP_SUFFIX
-                            Remove this suffix from read names if present. Can be
-                            given multiple times.
-      -x PREFIX, --prefix PREFIX
-                            Add this prefix to read names. Use {name} to insert the
-                            name of the matching adapter.
-      -y SUFFIX, --suffix SUFFIX
-                            Add this suffix to read names; can also include {name}
-      --rename TEMPLATE     Rename reads using TEMPLATE containing variables such as
-                            {id}, {adapter_name} etc. (see documentation)
-      --zero-cap, -z        Change negative quality values to zero.
-
-
-    Filtering of processed reads:
-      Filters are applied after above read modifications. Paired-end reads are
-      always discarded pairwise (see also --pair-filter).
-
-      -m LEN[:LEN2], --minimum-length LEN[:LEN2]
-                            Discard reads shorter than LEN. Default: 0
-      -M LEN[:LEN2], --maximum-length LEN[:LEN2]
-                            Discard reads longer than LEN. Default: no limit
-      --max-n COUNT         Discard reads with more than COUNT 'N' bases. If COUNT
-                            is a number between 0 and 1, it is interpreted as a
-                            fraction of the read length.
-      --max-expected-errors ERRORS, --max-ee ERRORS
-                            Discard reads whose expected number of errors (computed
-                            from quality values) exceeds ERRORS.
-      --discard-trimmed, --discard
-                            Discard reads that contain an adapter. Use also -O to
-                            avoid discarding too many randomly matching reads.
-      --discard-untrimmed, --trimmed-only
-                            Discard reads that do not contain an adapter.
-      --discard-casava      Discard reads that did not pass CASAVA filtering (header
-                            has :Y:).
-
-    Output:
-      --quiet               Print only error messages.
-      --report {full,minimal}
-                            Which type of report to print: 'full' or 'minimal'.
-                            Default: full
-      --json FILE           Dump report in JSON format to FILE
       -o FILE, --output FILE
                             Write trimmed reads to FILE. FASTQ or FASTA format is
                             chosen depending on input. Summary report is sent to
@@ -219,7 +248,6 @@ Additional read modifications
       --too-long-paired-output FILE
                             Write second read in a pair to this file if pair is too
                             long.
-
 
 
 (To Do: needs to be finished, see ``cutadapt --help`` for now)

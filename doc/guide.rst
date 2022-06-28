@@ -1156,7 +1156,7 @@ The ``--prefix`` and ``--suffix`` options are outdated as they do not ensure tha
 read names remain consistent, and you should prefer to use ``--rename``.
 ``--prefix`` and ``--suffix`` can currently not be used together with ``--rename``.
 
-
+.. _rename:
 .. _read-renaming:
 
 ``--rename`` renames reads
@@ -1165,7 +1165,7 @@ read names remain consistent, and you should prefer to use ``--rename``.
 The ``--rename`` option can be used to rename both single-end and paired-end reads.
 This section describes how it can be used to rename single-end reads.
 
-We use the following terminology: The FASTQ or FASTA header line consists of a
+We use the following terminology: The FASTQ or FASTA record header line consists of a
 *read ID* and is optionally followed by a separator (whitespace) and a *comment*.
 
 For example, in this FASTQ header, the read ID is ``read1234`` and the comment is ``value=17``
@@ -2112,7 +2112,7 @@ library preparation actually results in an additional ``A`` before that
 sequence, which also needs to be removed. See the :ref:`previous
 section <truseq>` for the correct sequence.
 
-
+.. _n-bases:
 .. _dealing-with-ns:
 
 Dealing with ``N`` bases
