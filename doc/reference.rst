@@ -692,7 +692,7 @@ a match of the 3' adapter, the string ``;2`` is added. If there are two rows, th
 .. _properly-paired-reads:
 
 Properly paired reads
----------------------
+=====================
 
 When reading paired-end files, Cutadapt checks whether the read names match.
 Only the part of the read name before the first space is considered. If the
@@ -716,3 +716,23 @@ and::
 Since the ``1`` and ``2`` (and ``3``) are ignored only if the occur at the end of the read
 name, and since the ``;1`` is considered to be part of the read name, these
 reads will not be considered to be propely paired.
+
+
+.. _read-modification-order:
+
+Read modification order
+=======================
+
+Read modifications are applied in the following order to each read.
+Steps not requested on the command-line are skipped.
+
+1. Unconditional base removal with ``--cut``
+2. Quality trimming (``-q``)
+3. Adapter trimming (``-a``, ``-b``, ``-g`` and uppercase versions)
+4. Read shortening (``--length``)
+5. N-end trimming (``--trim-n``)
+6. Length tag modification (``--length-tag``)
+7. Read name suffix removal (``--strip-suffix``)
+8. Addition of prefix and suffix to read name (``-x``/``--prefix`` and ``-y``/``--suffix``)
+9. Read renaming according to ``--rename``
+10. Replacing of negative quality values with zero (zero capping)

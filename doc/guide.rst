@@ -981,6 +981,10 @@ Modifying reads
 This section describes in which ways reads can be modified other than adapter
 removal.
 
+.. seealso::
+
+   :ref:`Read modification order <read-modification-order>`
+
 
 .. _changing-what-is-done-when-an-adapter-is-found:
 .. _action:
@@ -1286,8 +1290,8 @@ If you use ``--rename``, Cutadapt will also enforce this when *writing* paired-e
     The ``--rename`` option
 
 
-Other read name modification
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Other read name modifications
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use ``-y`` (or its alias ``--suffix``) to append a text to read names. The given string can
 contain the placeholder ``{name}``, which will be replaced with the name of the
@@ -1319,24 +1323,6 @@ After trimming, the read would perhaps look like this::
 
     >read1 length=10
     ACGTACGTAC
-
-
-Read modification order
------------------------
-
-The read modifications described above are applied in the following order to
-each read. Steps not requested on the command-line are skipped.
-
-1. Unconditional base removal with ``--cut``
-2. Quality trimming (``-q``)
-3. Adapter trimming (``-a``, ``-b``, ``-g`` and uppercase versions)
-4. Read shortening (``--length``)
-5. N-end trimming (``--trim-n``)
-6. Length tag modification (``--length-tag``)
-7. Read name suffix removal (``--strip-suffix``)
-8. Addition of prefix and suffix to read name (``-x``/``--prefix`` and ``-y``/``--suffix``)
-9. Read renaming according to ``--rename``
-10. Replace negative quality values with zero (zero capping)
 
 
 .. _filtering:
