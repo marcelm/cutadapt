@@ -561,7 +561,7 @@ class SingleAdapter(Adapter, ABC):
         self.name: str = _generate_adapter_name() if name is None else name
         super().__init__(self.name)
         self._debug: bool = False
-        self.sequence: str = sequence.upper().replace("U", "T")
+        self.sequence: str = sequence.upper().replace("U", "T").replace("I", "N")
         if not self.sequence:
             raise ValueError("Adapter sequence is empty")
         if max_errors >= 1 and self.sequence.count("N") != len(self.sequence):
@@ -572,16 +572,9 @@ class SingleAdapter(Adapter, ABC):
         if adapter_wildcards and not set(self.sequence) <= iupac:
             for c in self.sequence:
                 if c not in iupac:
-                    if c == "I":
-                        extra = (
-                            "For inosine, consider using N instead and please comment "
-                            "on <https://github.com/marcelm/cutadapt/issues/546>."
-                        )
-                    else:
-                        extra = "Use only characters 'ABCDGHKMNRSTUVWXY'."
                     raise InvalidCharacter(
                         f"Character '{c}' in adapter sequence '{self.sequence}' is "
-                        f"not a valid IUPAC code. {extra}"
+                        f"not a valid IUPAC code. Use only characters 'ABCDGHIKMNRSTUVWXY'."
                     )
         # Optimization: Use non-wildcard matching if only ACGT is used
         self.adapter_wildcards: bool = adapter_wildcards and not set(

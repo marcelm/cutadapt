@@ -546,3 +546,13 @@ def test_indexed_prefix_adapters_with_n_wildcard():
         assert (result.rstart, result.rstop) == (0, 8)
         assert result.errors == 1
         assert result.score == 6
+
+
+def test_inosine_wildcard():
+    adapter = BackAdapter("CTGIAIT", max_errors=0, min_overlap=3)
+    match = adapter.match_to("GGCTGAATTGGG")
+    assert match.astart == 0
+    assert match.astop == 7
+    assert match.rstart == 2
+    assert match.rstop == 9
+    assert match.errors == 0

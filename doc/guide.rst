@@ -946,6 +946,9 @@ used as in ``-a ADAPTERX`` or ``-g XADAPTER``, it acquires a special meaning for
 the matching algorithm
 :ref:`and disallows internal adapter matches <non-internal>`.
 
+The character ``I``, used to encode the base inosine, is automatically
+replaced with ``N`` within the adapter sequence.
+
 Wildcard characters are by default only allowed in adapter sequences and
 are not recognized when they occur in a read. This is to avoid matches in reads
 that consist of many (often low-quality) ``N`` bases. Use
@@ -957,6 +960,9 @@ and *do not* use ``--match-read-wildcards``, then Cutadapt compares characters
 by their ASCII value. Thus, both the read and adapter can be arbitrary strings
 (such as ``SEQUENCE`` or ``ADAPTER`` as used here in the examples).
 
+
+.. versionadded:: 4.2
+   Inosine ``I``
 
 Repeated bases
 --------------
