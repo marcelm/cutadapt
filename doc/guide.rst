@@ -40,6 +40,10 @@ The output file format is also recognized from the file name extension. If the
 extensions was not recognized or when Cutadapt writes to standard output, the
 same format as the input is used for the output.
 
+When writing a FASTQ file, a second header (the text after the ``+`` on the
+third line of a record) that possibly exists in the input is removed.
+When writing a FASTA file, line breaks within the sequence are removed.
+
 See also :ref:`file format conversion <file-format-conversion>`.
 
 .. _compressed-files:
