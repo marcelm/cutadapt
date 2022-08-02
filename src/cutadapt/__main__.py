@@ -881,7 +881,12 @@ def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
     try:
         adapters = make_adapters_from_specifications(args.adapters, search_parameters)
         adapters2 = make_adapters_from_specifications(args.adapters2, search_parameters)
-    except (FileNotFoundError, ValueError, InvalidCharacter) as e:
+    except (
+        FileNotFoundError,
+        ValueError,
+        InvalidCharacter,
+        dnaio.FastaFormatError,
+    ) as e:
         raise CommandLineError(e)
     warn_duplicate_adapters(adapters)
     warn_duplicate_adapters(adapters2)
