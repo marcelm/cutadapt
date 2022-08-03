@@ -26,8 +26,10 @@ def test_command_line():
 
     # TODO
     # - Should not set up logging
+    # - Should not print anything
+    # - still raises SystemExit if parser.error is called
     # - Should be cutadapt.run(...)
-    # - Should the JSON stats be returned?
+    # - Should the JSON stats be returned instead?
 
 
 def test_pipeline_single(tmp_path):
@@ -67,7 +69,9 @@ def test_pipeline_single(tmp_path):
     json.dumps(stats.as_json())
     infiles.close()
     outfiles.close()
-    # TODO info file isn’t written, what is missing?
+    # TODO
+    # - info file isn’t written, what is missing?
+    # - see next function for more TODOs that also apply here
 
 
 def test_pipeline_paired(tmp_path):
@@ -123,6 +127,7 @@ def test_pipeline_paired(tmp_path):
 
     # TODO
     # - could use += for adding modifiers
+    # - get rid of DummyProgress mention
     # - allow using adapter specification strings?
     # - filters as attributes on Pipeline is awkward
     # - too many submodules (flatter namespace)

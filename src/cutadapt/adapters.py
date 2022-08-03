@@ -518,32 +518,31 @@ class Adapter(Matchable, ABC):
 
 class SingleAdapter(Adapter, ABC):
     """
-    This class can find a single adapter characterized by sequence, error rate,
+    This class is used to find a single adapter characterized by sequence, error rate,
     type etc. within reads.
 
-    where --  A Where enum value. This influences where the adapter is allowed to appear within the
-        read.
+    Arguments:
+        sequence (str): The adapter sequence. Will be converted to uppercase.
+            Also, Us will be converted to Ts.
 
-    sequence -- The adapter sequence as string. Will be converted to uppercase.
-        Also, Us will be converted to Ts.
-
-    max_errors -- Maximum allowed errors (non-negative float). If the values is less than 1, this is
-        interpreted as a rate directly and passed to the aligner. If it is 1 or greater, the value
-        is converted to a rate by dividing it by the number of non-N characters in the sequence.
+        max_errors: Maximum allowed errors (non-negative float). If the values is less than 1, this
+            is interpreted as a rate and passed to the aligner. If it is 1 or greater, the value
+            is converted to a rate by dividing it by the number of non-N characters in the sequence.
 
         The error rate is the number of errors in the alignment divided by the length
         of the part of the alignment that matches the adapter.
 
-    minimum_overlap -- Minimum length of the part of the alignment
-        that matches the adapter.
+        min_overlap: Report a match only if at least this number of bases of the adapter match the
+            read.
 
-    read_wildcards -- Whether IUPAC wildcards in the read are allowed.
+        read_wildcards: Whether IUPAC wildcards in the read are allowed.
 
-    adapter_wildcards -- Whether IUPAC wildcards in the adapter are
-        allowed.
+        adapter_wildcards: Whether IUPAC wildcards in the adapter are allowed.
 
-    name -- optional name of the adapter. If not provided, the name is set to a
-        unique number.
+        name: Optional name of the adapter. If not provided, the name is set to a
+            unique number.
+
+        indels: Whether indels are allowed in the alignment.
     """
 
     allows_partial_matches: bool = True
