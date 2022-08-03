@@ -22,9 +22,10 @@ def test_progress():
     p = Progress(every=1e-6)
     p.update(100)
     time.sleep(0.001)
-    p.update(100)
-    p.update(1000)
-    p.stop(100000)
+    p.update(0)
+    p.update(900)
+    p.update(10000)
+    p.close()
 
 
 def test_progress_scissors():
@@ -36,7 +37,8 @@ def test_progress_scissors():
 def test_dummy_progress():
     p = DummyProgress()
     p.update(100)
-    p.stop(1000)
+    p.update(900)
+    p.close()
 
 
 def test_reverse_complement():

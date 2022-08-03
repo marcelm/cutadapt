@@ -78,14 +78,17 @@ class Progress:
         every: minimum time to wait in seconds between progress updates
         """
         self._every = every
-        self._n = 0
-        # Time at which the progress was last updated
-        self._time = time.time()
-        self._start_time = self._time
         self._animation = self.scissors()
+        self._n = 0
+        self._start_time = time.time()
+        # Time at which the progress was last updated
+        self._last_time = self._start_time
+        self._last_n = 0
 
     def __repr__(self):
-        return f"Progress(_n={self._n}, elapsed={self._time - self._start_time:.3f})"
+        return (
+            f"Progress(_n={self._n}, elapsed={self._last_time - self._start_time:.3f})"
+        )
 
     @staticmethod
     def scissors(width=10):
@@ -105,14 +108,15 @@ class Progress:
                             sc = "8<" if is_open else "8="
                         yield "[" + left + sc + right + "]"
 
-    def update(self, total, _final=False):
+    def update(self, increment, _final=False):
+        self._n += increment
         current_time = time.time()
         if _final:
             time_delta = current_time - self._start_time
-            delta = total
+            delta = self._n
         else:
-            time_delta = current_time - self._time
-            delta = total - self._n
+            time_delta = current_time - self._last_time
+            delta = self._n - self._last_n
         if delta < 1:
             return
         if time_delta == 0:
@@ -139,7 +143,7 @@ class Progress:
                 hours=hours,
                 minutes=minutes,
                 seconds=seconds,
-                total=total,
+                total=self._n,
                 per_item=per_item * 1e6,
                 per_minute=per_second * 60 / 1e6,
                 animation=animation,
@@ -147,14 +151,14 @@ class Progress:
             end="",
             file=sys.stderr,
         )
-        self._n = total
-        self._time = current_time
+        self._last_time = current_time
+        self._last_n = self._n
 
-    def stop(self, total):
+    def close(self):
         """
         Print final progress reflecting the final total
         """
-        self.update(total, _final=True)
+        self.update(0, _final=True)
         print(file=sys.stderr)
 
 
@@ -163,10 +167,10 @@ class DummyProgress(Progress):
     Does not print anything
     """
 
-    def update(self, total, _final=False):
+    def update(self, increment, _final=False):
         pass
 
-    def stop(self, total):
+    def close(self):
         pass
 
 

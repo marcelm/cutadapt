@@ -396,8 +396,8 @@ class SingleEndPipeline(Pipeline):
         total_bp = 0
         for read in self._reader:
             n += 1
-            if n % 10000 == 0 and progress:
-                progress.update(n)
+            if n % 10000 == 0 and progress is not None:
+                progress.update(10000)
             total_bp += len(read)
             info = ModificationInfo(read)
             for modifier in self._modifiers:
@@ -405,6 +405,8 @@ class SingleEndPipeline(Pipeline):
             for filter_ in self._steps:
                 if filter_(read, info):
                     break
+        if progress is not None:
+            progress.update(n % 10000)
         return (n, total_bp, None)
 
     def _open_writer(
@@ -530,8 +532,8 @@ class PairedEndPipeline(Pipeline):
         assert self._reader is not None
         for read1, read2 in self._reader:
             n += 1
-            if n % 10000 == 0 and progress:
-                progress.update(n)
+            if n % 10000 == 0 and progress is not None:
+                progress.update(10000)
             total1_bp += len(read1)
             total2_bp += len(read2)
             info1 = ModificationInfo(read1)
@@ -542,6 +544,8 @@ class PairedEndPipeline(Pipeline):
                 # Stop writing as soon as one of the filters was successful.
                 if filter_(read1, read2, info1, info2):
                     break
+        if progress is not None:
+            progress.update(n % 10000)
         return (n, total1_bp, total2_bp)
 
     def _open_writer(
@@ -972,7 +976,7 @@ class ParallelPipelineRunner(PipelineRunner):
         for w in workers:
             w.join()
         self._reader_process.join()
-        self._progress.stop(n)
+        self._progress.close()
         return stats
 
     @staticmethod
@@ -1016,8 +1020,8 @@ class SerialPipelineRunner(PipelineRunner):
         (n, total1_bp, total2_bp) = self._pipeline.process_reads(
             progress=self._progress
         )
-        if self._progress:
-            self._progress.stop(n)
+        if self._progress is not None:
+            self._progress.close()
         # TODO
         modifiers = getattr(self._pipeline, "_modifiers", None)
         assert modifiers is not None
