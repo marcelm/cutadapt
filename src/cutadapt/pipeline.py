@@ -12,7 +12,7 @@ import traceback
 
 import dnaio
 
-from .utils import Progress, FileOpener, open_raise_limit
+from .utils import Progress, FileOpener, open_raise_limit, DummyProgress
 from .modifiers import (
     SingleEndModifier,
     PairedEndModifier,
@@ -377,6 +377,49 @@ class Pipeline(ABC):
     @abstractmethod
     def _wrap_single_end_step(self, step: SingleEndStep):
         pass
+
+    def make_runner(
+        self,
+        inpaths: InputPaths,
+        outfiles: OutputFiles,
+        cores: int,
+        file_opener: FileOpener,
+        progress: Union[bool, Progress, None] = None,
+        buffer_size: int = None,
+    ):
+        """
+        Create a PipelineRunner for running this pipeline.
+
+        Args:
+            inpaths:
+            outfiles:
+            cores: number of cores to run the pipeline on (this is actually the number of worker
+                processes, there will be one extra process for reading the input file(s))
+            file_opener:
+            progress: Set to False for no progress bar, True for Cutadapt’s default progress bar,
+                or use an object that supports .update() and .close() (e.g. a tqdm instance)
+            buffer_size: Forwarded to `ParallelPipelineRunner()`. Ignored if cores is 1.
+
+        Returns:
+            SerialPipelineRunner if cores is 1, otherwise a ParallelPipelineRunner
+        """
+        if progress is None or progress is False:
+            progress = DummyProgress()
+        elif progress is True:
+            progress = Progress()
+        if cores > 1:
+            return ParallelPipelineRunner(
+                self,
+                inpaths,
+                outfiles,
+                file_opener,
+                progress,
+                n_workers=cores,
+                buffer_size=buffer_size,
+            )
+        else:
+            infiles = inpaths.open(file_opener)
+            return SerialPipelineRunner(self, infiles, outfiles, progress)
 
 
 class SingleEndPipeline(Pipeline):
@@ -886,12 +929,12 @@ class ParallelPipelineRunner(PipelineRunner):
         opener: FileOpener,
         progress: Progress,
         n_workers: int,
-        buffer_size: int = 4 * 1024**2,
+        buffer_size: int = None,
     ):
         super().__init__(pipeline, progress)
         self._n_workers = n_workers
         self._need_work_queue: Queue = Queue()
-        self._buffer_size = buffer_size
+        self._buffer_size = 4 * 1024**2 if buffer_size is None else buffer_size
         self._outfiles = outfiles
         self._opener = opener
         self._assign_input(infiles.path1, infiles.path2, infiles.interleaved)

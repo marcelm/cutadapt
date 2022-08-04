@@ -37,12 +37,11 @@ def test_pipeline_single(tmp_path):
     # cutadapt -u 5 -a GATCGGAAGA -q 0,15 -m 10
     #   --discard-untrimmed --info-file=info.txt -o ... small.fastq
     import json
-    from cutadapt.pipeline import SingleEndPipeline, SerialPipelineRunner
+    from cutadapt.pipeline import SingleEndPipeline
     from cutadapt.utils import FileOpener
     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
     from cutadapt.adapters import BackAdapter
-    from cutadapt.pipeline import InputFiles, OutputFiles
-    from cutadapt.utils import DummyProgress
+    from cutadapt.pipeline import InputPaths, OutputFiles
 
     file_opener = FileOpener()
     adapter = BackAdapter(
@@ -58,16 +57,15 @@ def test_pipeline_single(tmp_path):
     pipeline = SingleEndPipeline(modifiers)
     pipeline.minimum_length = (10,)
     pipeline.discard_untrimmed = True
-    file1 = file_opener.xopen(datapath("small.fastq"), "rb")
-    infiles = InputFiles(file1)
+    inpaths = InputPaths(datapath("small.fastq"))
     info_file = file_opener.xopen_or_none(tmp_path / "info.txt", "wb")
     out = file_opener.xopen(tmp_path / "out.fastq", "wb")
     outfiles = OutputFiles(info=info_file, out=out)
-    runner = SerialPipelineRunner(pipeline, infiles, outfiles, DummyProgress())
+    runner = pipeline.make_runner(inpaths, outfiles, cores=1, file_opener=file_opener)
     stats = runner.run()
+    runner.close()
     assert stats is not None
     json.dumps(stats.as_json())
-    infiles.close()
     outfiles.close()
     # TODO
     # - info file isn’t written, what is missing?
@@ -79,12 +77,11 @@ def test_pipeline_paired(tmp_path):
     #   --discard-untrimmed --info-file=info.txt
     #   -o ... -p ...
     #   paired.1.fastq paired.2.fastq
-    from cutadapt.pipeline import PairedEndPipeline, SerialPipelineRunner
+    from cutadapt.pipeline import PairedEndPipeline
     from cutadapt.utils import FileOpener
     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
     from cutadapt.adapters import BackAdapter
-    from cutadapt.pipeline import InputFiles, OutputFiles
-    from cutadapt.utils import DummyProgress
+    from cutadapt.pipeline import InputPaths, OutputFiles
 
     trimmer = QualityTrimmer(cutoff_front=0, cutoff_back=15)
     adapter = BackAdapter(
@@ -104,11 +101,7 @@ def test_pipeline_paired(tmp_path):
     pipeline.discard_untrimmed = True
 
     file_opener = FileOpener()
-    file1, file2 = file_opener.xopen_pair(
-        datapath("paired.1.fastq"), datapath("paired.2.fastq"), "rb"
-    )
-    infiles = InputFiles(file1, file2)
-
+    inpaths = InputPaths(datapath("paired.1.fastq"), datapath("paired.2.fastq"))
     info_file = file_opener.xopen_or_none(tmp_path / "info.txt", "wb")
     out, out2 = file_opener.xopen_pair(
         tmp_path / "out.1.fastq", tmp_path / "out.2.fastq", "wb"
@@ -118,16 +111,17 @@ def test_pipeline_paired(tmp_path):
         out=out,
         out2=out2,
     )
-    runner = SerialPipelineRunner(pipeline, infiles, outfiles, DummyProgress())
+    runner = pipeline.make_runner(
+        inpaths, outfiles, cores=1, file_opener=file_opener, progress=True
+    )
     stats = runner.run()
+    runner.close()
     assert stats is not None
     _ = stats.as_json()
-    infiles.close()
     outfiles.close()
 
     # TODO
     # - could use += for adding modifiers
-    # - get rid of DummyProgress mention
     # - allow using adapter specification strings?
     # - filters as attributes on Pipeline is awkward
     # - too many submodules (flatter namespace)
@@ -135,3 +129,39 @@ def test_pipeline_paired(tmp_path):
     # - info file isn’t written, what is missing?
     # - use xopen directly instead of file_opener;
     #   possibly with myxopen = functools.partial(xopen, ...)
+
+
+# How this could look in the future:
+# def test_pipeline_single_new(tmp_path):
+#     import json
+#     from cutadapt.pipeline import SingleEndPipeline
+#     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
+#     from cutadapt.adapters import BackAdapter
+#     from cutadapt.steps import InfoFileWriter, SingleEndFilter, SingleEndSink
+#     from cutadapt.filters import TooShort, DiscardUntrimmed
+#     from contextlib import ExitStack
+#     from xopen import xopen
+#
+#     with ExitStack() as stack:
+#         # Input files
+#         infile = stack.enter_context(xopen(datapath("small.fastq"), "rb"))
+#
+#         # Output files
+#         info_file = stack.enter_context(xopen(tmp_path / "info.txt", "wb"))
+#         out = stack.enter_context(xopen(tmp_path / "out.fastq", "wb"))
+#         too_short = stack.enter_context(xopen(tmp_path / "tooshort.fastq", "wb"))
+#         pipeline = SingleEndPipeline(
+#             modifiers=[
+#                 UnconditionalCutter(5),
+#                 QualityTrimmer(cutoff_front=0, cutoff_back=15),
+#                 AdapterCutter([BackAdapter(sequence="GATCGGAAGA", max_errors=1, min_overlap=3)]),
+#             ],
+#             filters=[
+#                 InfoFileWriter(info_file),
+#                 SingleEndFilter(TooShort(minimum_length=10), too_short),
+#                 SingleEndFilter(DiscardUntrimmed()),
+#             ],
+#             sink=SingleEndSink(out),
+#         )
+#         stats = pipeline.run(infile, workers=1, progress=True)
+#     json.dumps(stats.as_json())
