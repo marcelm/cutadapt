@@ -39,9 +39,9 @@ def test_too_many_n(seq, count, expected):
 def test_too_many_n_paired(seq1, seq2, count, expected):
     predicate = TooManyN(count=count)
     filter_legacy = PairedEndFilter(
-        None, predicate, predicate, pair_filter_mode="first"
+        predicate, predicate, None, pair_filter_mode="first"
     )
-    filter_any = PairedEndFilter(None, predicate, predicate, pair_filter_mode="any")
+    filter_any = PairedEndFilter(predicate, predicate, None, pair_filter_mode="any")
     read1 = Sequence("read1", seq1, qualities="#" * len(seq1))
     read2 = Sequence("read1", seq2, qualities="#" * len(seq2))
     assert filter_legacy(read1, read2, [], []) == predicate.test(read1, [])

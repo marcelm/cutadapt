@@ -262,11 +262,13 @@ class Pipeline(ABC):
                 f2 = predicate_class(lengths[1])
             else:
                 f2 = None
-            self._steps.append(self._make_filter(writer, predicate1=f1, predicate2=f2))
+            self._steps.append(
+                self._make_filter(predicate1=f1, predicate2=f2, writer=writer)
+            )
 
         if self.max_n is not None:
             f1 = f2 = TooManyN(self.max_n)
-            self._steps.append(self._make_filter(None, f1, f2))
+            self._steps.append(self._make_filter(f1, f2, None))
 
         if self.max_expected_errors is not None:
             if not self._reader.delivers_qualities:
@@ -275,11 +277,11 @@ class Pipeline(ABC):
                 )
             else:
                 f1 = f2 = TooManyExpectedErrors(self.max_expected_errors)
-                self._steps.append(self._make_filter(None, f1, f2))
+                self._steps.append(self._make_filter(f1, f2, None))
 
         if self.discard_casava:
             f1 = f2 = CasavaFiltered()
-            self._steps.append(self._make_filter(None, f1, f2))
+            self._steps.append(self._make_filter(f1, f2, None))
 
         if (
             int(self.discard_trimmed)
@@ -307,7 +309,7 @@ class Pipeline(ABC):
             # are mutually exclusive in order to avoid brain damage.
             if self.discard_trimmed:
                 self._steps.append(
-                    self._make_filter(None, DiscardTrimmed(), DiscardTrimmed())
+                    self._make_filter(DiscardTrimmed(), DiscardTrimmed(), None)
                 )
             elif self.discard_untrimmed:
                 self._steps.append(self._make_untrimmed_filter(None))
@@ -358,7 +360,7 @@ class Pipeline(ABC):
 
     @abstractmethod
     def _make_filter(
-        self, writer, predicate1: Optional[Predicate], predicate2: Optional[Predicate]
+        self, predicate1: Optional[Predicate], predicate2: Optional[Predicate], writer
     ):
         pass
 
@@ -469,14 +471,14 @@ class SingleEndPipeline(Pipeline):
         )
 
     def _make_filter(
-        self, writer, predicate1: Optional[Predicate], predicate2: Optional[Predicate]
+        self, predicate1: Optional[Predicate], predicate2: Optional[Predicate], writer
     ):
         _ = predicate2
         assert predicate1 is not None
-        return SingleEndFilter(writer, predicate1)
+        return SingleEndFilter(predicate1, writer)
 
     def _make_untrimmed_filter(self, writer):
-        return SingleEndFilter(writer, DiscardUntrimmed())
+        return SingleEndFilter(DiscardUntrimmed(), writer)
 
     def _final_filter(self, outfiles: OutputFiles):
         assert outfiles.out2 is None and outfiles.out is not None
@@ -613,15 +615,15 @@ class PairedEndPipeline(Pipeline):
 
     def _make_filter(
         self,
-        writer,
         predicate1: Optional[Predicate],
         predicate2: Optional[Predicate],
+        writer,
         pair_filter_mode=None,
     ):
         if pair_filter_mode is None:
             pair_filter_mode = self._pair_filter_mode
         return PairedEndFilter(
-            writer, predicate1, predicate2, pair_filter_mode=pair_filter_mode
+            predicate1, predicate2, writer, pair_filter_mode=pair_filter_mode
         )
 
     def _make_untrimmed_filter(self, writer):
@@ -630,9 +632,9 @@ class PairedEndPipeline(Pipeline):
         or only for R2 (then override_untrimmed_pair_filter will be set)
         """
         return self._make_filter(
+            DiscardUntrimmed(),
+            DiscardUntrimmed(),
             writer,
-            DiscardUntrimmed(),
-            DiscardUntrimmed(),
             pair_filter_mode="both" if self.override_untrimmed_pair_filter else None,
         )
 

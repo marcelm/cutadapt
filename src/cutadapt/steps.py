@@ -68,14 +68,14 @@ class SingleEndFilter(SingleEndStep):
     counts how many were filtered.
     """
 
-    def __init__(self, writer, predicate: Predicate):
+    def __init__(self, predicate: Predicate, writer):
         super().__init__()
         self.filtered = 0
-        self.writer = writer
         self.predicate = predicate
+        self.writer = writer
 
     def __repr__(self):
-        return f"SingleEndFilter(writer={self.writer}, predicate={self.predicate})"
+        return f"SingleEndFilter(predicate={self.predicate}, writer={self.writer})"
 
     def descriptive_identifier(self) -> str:
         return self.predicate.descriptive_identifier()
@@ -100,9 +100,9 @@ class PairedEndFilter(PairedEndStep):
 
     def __init__(
         self,
-        writer,
         predicate1: Optional[Predicate],
         predicate2: Optional[Predicate],
+        writer,
         pair_filter_mode="any",
     ):
         """
@@ -116,9 +116,9 @@ class PairedEndFilter(PairedEndStep):
             raise ValueError("pair_filter_mode must be 'any', 'both' or 'first'")
         self._pair_filter_mode = pair_filter_mode
         self.filtered = 0
-        self.writer = writer
         self.predicate1 = predicate1
         self.predicate2 = predicate2
+        self.writer = writer
         self._is_filtered: Any
         if predicate2 is None:
             self._is_filtered = self._is_filtered_first
@@ -133,8 +133,8 @@ class PairedEndFilter(PairedEndStep):
 
     def __repr__(self):
         return (
-            f"PairedEndFilter(writer={self.writer}, predicate1={self.predicate1}, "
-            f"predicate2={self.predicate2}, pair_filter_mode='{self._pair_filter_mode}')"
+            f"PairedEndFilter(predicate1={self.predicate1}, predicate2={self.predicate2}, "
+            f"writer={self.writer}, pair_filter_mode='{self._pair_filter_mode}')"
         )
 
     def descriptive_identifier(self) -> str:
