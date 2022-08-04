@@ -12,7 +12,12 @@ import traceback
 
 import dnaio
 
-from .utils import Progress, FileOpener, open_raise_limit, DummyProgress
+from .utils import (
+    Progress,
+    DummyProgress,
+    open_raise_limit,
+    xopen_rb_raise_limit,
+)
 from .modifiers import (
     SingleEndModifier,
     PairedEndModifier,
@@ -78,8 +83,9 @@ class InputPaths:
         self.path2 = path2
         self.interleaved = interleaved
 
-    def open(self, file_opener: FileOpener) -> InputFiles:
-        file1, file2 = file_opener.xopen_pair(self.path1, self.path2, "rb")
+    def open(self) -> InputFiles:
+        file1 = xopen_rb_raise_limit(self.path1)
+        file2 = xopen_rb_raise_limit(self.path2) if self.path2 is not None else None
         return InputFiles(file1, file2, self.interleaved)
 
 
@@ -385,7 +391,6 @@ class Pipeline(ABC):
         inpaths: InputPaths,
         outfiles: OutputFiles,
         cores: int,
-        file_opener: FileOpener,
         progress: Union[bool, Progress, None] = None,
         buffer_size: int = None,
     ):
@@ -397,7 +402,6 @@ class Pipeline(ABC):
             outfiles:
             cores: number of cores to run the pipeline on (this is actually the number of worker
                 processes, there will be one extra process for reading the input file(s))
-            file_opener:
             progress: Set to False for no progress bar, True for Cutadapt’s default progress bar,
                 or use an object that supports .update() and .close() (e.g. a tqdm instance)
             buffer_size: Forwarded to `ParallelPipelineRunner()`. Ignored if cores is 1.
@@ -414,14 +418,12 @@ class Pipeline(ABC):
                 self,
                 inpaths,
                 outfiles,
-                file_opener,
                 progress,
                 n_workers=cores,
                 buffer_size=buffer_size,
             )
         else:
-            infiles = inpaths.open(file_opener)
-            return SerialPipelineRunner(self, infiles, outfiles, progress)
+            return SerialPipelineRunner(self, inpaths.open(), outfiles, progress)
 
 
 class SingleEndPipeline(Pipeline):
@@ -701,16 +703,26 @@ class ReaderProcess(Process):
         self,
         path: str,
         path2: Optional[str],
-        opener: FileOpener,
         connections: Sequence[Connection],
         queue: Queue,
         buffer_size: int,
         stdin_fd,
     ):
         """
-        queue -- a Queue of worker indices. A worker writes its own index into this
-            queue to notify the reader that it is ready to receive more data.
-        connections -- a list of Connection objects, one for each worker.
+        Args:
+            path: path to first input file
+            path2: path to second input file (for paired-end data)
+            connections: a list of Connection objects, one for each worker.
+            queue: a Queue of worker indices. A worker writes its own index into this
+                queue to notify the reader that it is ready to receive more data.
+            buffer_size:
+            stdin_fd:
+
+        Note:
+            This expects the paths to the input files as strings because these can be pickled
+            while file-like objects such as BufferedReader cannot. When using multiprocessing with
+            the "spawn" method, which is the default method on macOS, function arguments must be
+            picklable.
         """
         super().__init__()
         self.path = path
@@ -719,16 +731,15 @@ class ReaderProcess(Process):
         self.queue = queue
         self.buffer_size = buffer_size
         self.stdin_fd = stdin_fd
-        self._opener = opener
 
     def run(self):
         if self.stdin_fd != -1:
             sys.stdin.close()
             sys.stdin = os.fdopen(self.stdin_fd)
         try:
-            with self._opener.xopen(self.path, "rb") as f:
+            with xopen_rb_raise_limit(self.path) as f:
                 if self.path2:
-                    with self._opener.xopen(self.path2, "rb") as f2:
+                    with xopen_rb_raise_limit(self.path2) as f2:
                         for chunk_index, (chunk1, chunk2) in enumerate(
                             dnaio.read_paired_chunks(f, f2, self.buffer_size)
                         ):
@@ -926,9 +937,8 @@ class ParallelPipelineRunner(PipelineRunner):
     def __init__(
         self,
         pipeline: Pipeline,
-        infiles: InputPaths,
+        inpaths: InputPaths,
         outfiles: OutputFiles,
-        opener: FileOpener,
         progress: Progress,
         n_workers: int,
         buffer_size: int = None,
@@ -938,8 +948,7 @@ class ParallelPipelineRunner(PipelineRunner):
         self._need_work_queue: Queue = Queue()
         self._buffer_size = 4 * 1024**2 if buffer_size is None else buffer_size
         self._outfiles = outfiles
-        self._opener = opener
-        self._assign_input(infiles.path1, infiles.path2, infiles.interleaved)
+        self._assign_input(inpaths.path1, inpaths.path2, inpaths.interleaved)
 
     def _assign_input(
         self,
@@ -961,7 +970,6 @@ class ParallelPipelineRunner(PipelineRunner):
         self._reader_process = ReaderProcess(
             path1,
             path2,
-            self._opener,
             connw,
             self._need_work_queue,
             self._buffer_size,

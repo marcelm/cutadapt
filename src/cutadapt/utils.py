@@ -43,9 +43,20 @@ def available_cpu_count():
     return multiprocessing.cpu_count()
 
 
+def xopen_rb_raise_limit(path: str):
+    """
+    Open a (possibly compressed) file for reading in binary mode, trying to avoid the
+    "Too many open files" problem using `open_raise_limit`.
+    """
+    mode = "rb"
+    f = open_raise_limit(xopen, path, mode, threads=0)
+    logger.debug("Opening '%s', mode '%s' with xopen resulted in %s", path, mode, f)
+    return f
+
+
 def open_raise_limit(func, *args, **kwargs):
     """
-    Run 'func' (which should be some kind of open() function and return its result.
+    Run 'func' (which should be some kind of open() function) and return its result.
     If "Too many open files" occurs, increase limit and try again.
     """
     try:

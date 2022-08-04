@@ -1084,7 +1084,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
             interleaved=is_interleaved_input,
         )
         runner = pipeline.make_runner(
-            inpaths, outfiles, cores, file_opener, progress, args.buffer_size
+            inpaths, outfiles, cores, progress, args.buffer_size
         )
     except (
         CommandLineError,
