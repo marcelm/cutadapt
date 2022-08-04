@@ -20,7 +20,7 @@ from .modifiers import (
     ModificationInfo,
 )
 from .report import Statistics
-from .filters import (
+from .predicates import (
     TooShort,
     TooLong,
     TooManyN,

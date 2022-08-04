@@ -20,7 +20,7 @@ Steps are added to the pipeline in a certain order:
 from abc import ABC, abstractmethod
 from typing import Tuple, Dict, Optional, Any
 
-from .filters import Predicate
+from .predicates import Predicate
 from .modifiers import ModificationInfo
 from .statistics import ReadLengthStatistics
 from .utils import reverse_complemented_sequence

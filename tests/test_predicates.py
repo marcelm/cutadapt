@@ -4,7 +4,7 @@ Tests write output (should it return True or False or write)
 import pytest
 from dnaio import Sequence
 
-from cutadapt.filters import TooManyN
+from cutadapt.predicates import TooManyN
 from cutadapt.steps import PairedEndFilter
 
 
