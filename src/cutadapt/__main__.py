@@ -1130,7 +1130,8 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
             json_dict = json_report(
                 stats=stats,
                 cmdlineargs=cmdlineargs,
-                inpaths=inpaths,
+                path1=inpaths.path1,
+                path2=inpaths.path2,
                 cores=cores,
                 paired=paired,
                 gc_content=args.gc_content / 100.0,
@@ -1210,7 +1211,8 @@ def is_any_output_stdout(args):
 def json_report(
     stats: Statistics,
     cmdlineargs: List[str],
-    inpaths: InputPaths,
+    path1: str,
+    path2: Optional[str],
     cores: int,
     paired: bool,
     gc_content: float,
@@ -1223,8 +1225,8 @@ def json_report(
         "command_line_arguments": cmdlineargs,
         "cores": cores,
         "input": {
-            "path1": inpaths.path1,
-            "path2": inpaths.path2,
+            "path1": path1,
+            "path2": path2,
             "paired": paired,
         },
     }
