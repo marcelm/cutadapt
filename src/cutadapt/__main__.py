@@ -97,9 +97,6 @@ from cutadapt.pipeline import (
     PairedEndPipeline,
     InputPaths,
     OutputFiles,
-    PipelineRunner,
-    SerialPipelineRunner,
-    ParallelPipelineRunner,
 )
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress, FileOpener
 from cutadapt.log import setup_logging, REPORT
@@ -1086,10 +1083,15 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
             path2=input_paired_filename,
             interleaved=is_interleaved_input,
         )
-        runner = setup_runner(
-            pipeline, inpaths, outfiles, progress, cores, args.buffer_size, file_opener
+        runner = pipeline.make_runner(
+            inpaths, outfiles, cores, file_opener, progress, args.buffer_size
         )
-    except CommandLineError as e:
+    except (
+        CommandLineError,
+        dnaio.UnknownFileFormat,
+        dnaio.FileFormatError,
+        OSError,
+    ) as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
         parser.error(str(e))
         return
@@ -1158,23 +1160,6 @@ def log_adapters(adapters, adapters2):
         logger.debug("R2 adapters (%d):", len(adapters2))
         for a in adapters2:
             logger.debug("- %s", a)
-
-
-def setup_runner(
-    pipeline: Pipeline,
-    inpaths: InputPaths,
-    outfiles: OutputFiles,
-    progress: Progress,
-    cores: int,
-    buffer_size: int,
-    file_opener: FileOpener,
-) -> PipelineRunner:
-    try:
-        return pipeline.make_runner(
-            inpaths, outfiles, cores, file_opener, progress, buffer_size
-        )
-    except (dnaio.UnknownFileFormat, dnaio.FileFormatError, OSError) as e:
-        raise CommandLineError(e)
 
 
 def setup_profiler_if_requested(requested):
