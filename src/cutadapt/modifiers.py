@@ -107,8 +107,17 @@ class PairedEndModifierWrapper(PairedEndModifier):
 class AdapterCutter(SingleEndModifier):
     """
     Repeatedly find one of multiple adapters in reads.
-    The number of times the search is repeated is specified by the
-    times parameter.
+
+    Arguments:
+        adapters: Adapters to be searched
+        times: Repeat the search this number of times.
+        action: What to do with a found adapter.
+            - *None*: Do nothing, only update the ModificationInfo appropriately
+            - "trim": Remove the adapter and down- or upstream sequence depending on adapter type
+            - "mask": Replace the part of the sequence that would have been removed with "N" bases
+            - "lowercase": Convert the part of the sequence that would have been removed to lowercase
+            - "retain": Like "trim", but leave the adapter sequence itself in the read
+        index: If True, attempt to create an index to speed up the search (if possible)
     """
 
     def __init__(
@@ -118,16 +127,6 @@ class AdapterCutter(SingleEndModifier):
         action: Optional[str] = "trim",
         index: bool = True,
     ):
-        """
-        action -- What to do with a found adapter:
-          None: Do nothing, only update the ModificationInfo appropriately
-          "trim": Remove the adapter and down- or upstream sequence depending on adapter type
-          "mask": Replace the part of the sequence that would have been removed with "N" bases
-          "lowercase": Convert the part of the sequence that would have been removed to lowercase
-          "retain": Like "trim", but leave the adapter sequence itself in the read
-
-        index -- if True, an adapter index (for multiple adapters) is created if possible
-        """
         self.times = times
         assert action in ("trim", "mask", "lowercase", "retain", None)
         self.action = action
