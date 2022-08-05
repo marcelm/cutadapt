@@ -649,42 +649,38 @@ class PairedEndRenamer(PairedEndModifier):
         info2: ModificationInfo,
     ) -> Tuple[SequenceRecord, SequenceRecord]:
 
-        id1, comment1 = Renamer.parse_name(read1.name)
-        id2, comment2 = Renamer.parse_name(read2.name)
         if not record_names_match(read1.name, read2.name):
+            id1 = Renamer.parse_name(read1.name)[0]
+            id2 = Renamer.parse_name(read1.name)[1]
             raise ValueError(f"Input read IDs not identical: '{id1}' != '{id2}'")
-        name1, name2 = self.get_new_headers(
-            id1=id1,
-            id2=id2,
-            comment1=comment1,
-            comment2=comment2,
-            header1=read1.name,
-            header2=read2.name,
-            info1=info1,
-            info2=info2,
-        )
-        new_id1 = Renamer.parse_name(name1)[0]
-        new_id2 = Renamer.parse_name(name2)[0]
+
+        name1, name2 = self._rename(read1, read2, info1, info2)
+
         if not record_names_match(name1, name2):
+            new_id1 = Renamer.parse_name(name1)[0]
+            new_id2 = Renamer.parse_name(name2)[0]
+            id1 = Renamer.parse_name(read1.name)[0]
             raise InvalidTemplate(
                 "After renaming R1 and R2, their IDs are no longer identical: "
-                "'{}' != '{}'. Original read ID: '{}'. ".format(new_id1, new_id2, id1)
+                f"'{new_id1}' != '{new_id2}'. Original read ID: '{id1}'. "
             )
         read1.name = name1
         read2.name = name2
         return read1, read2
 
-    def get_new_headers(
+    def _rename(
         self,
-        id1: str,
-        id2: str,
-        comment1: str,
-        comment2: str,
-        header1: str,
-        header2: str,
+        read1: SequenceRecord,
+        read2: SequenceRecord,
         info1: ModificationInfo,
         info2: ModificationInfo,
     ) -> Tuple[str, str]:
+
+        id1, comment1 = Renamer.parse_name(read1.name)
+        id2, comment2 = Renamer.parse_name(read2.name)
+        header1 = read1.name
+        header2 = read2.name
+
         d = []
         for id_, comment, header, info in (
             (id1, comment1, header1, info1),
