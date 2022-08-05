@@ -549,9 +549,42 @@ class Renamer(SingleEndModifier):
             raise InvalidTemplate(f"Error in template '{template}': {e}")
         self.raise_if_invalid_variable(self._tokens, self.variables)
         self._template = template
+        self._rename = self.compile_rename_function()
 
     def __repr__(self):
         return f"{self.__class__.__name__}('{self._template}')"
+
+    def compile_rename_function(self):
+        """
+        Create the function that computes a new name
+
+        By creating the code dynamically, we can ensure that only those placeholder values are
+        computed that are actually used in the template.
+        """
+        code = {
+            "header": "read.name",
+            "id": "id_",
+            "comment": "comment",
+            "cut_prefix": "info.cut_prefix if info.cut_prefix else ''",
+            "cut_suffix": "info.cut_suffix if info.cut_suffix else ''",
+            "adapter_name": "info.matches[-1].adapter.name if info.matches else 'no_adapter'",
+            "rc": "'rc' if info.is_rc else ''",
+            "match_sequence": "info.matches[-1].match_sequence() if info.matches else ''",
+        }
+        placeholders = set(
+            token.value for token in self._tokens if isinstance(token, BraceToken)
+        )
+        lines = ["def rename(self, read, info):"]
+        if "id" in placeholders or "header" in placeholders:
+            lines.append("  id_, comment = self.parse_name(read.name)")
+        lines.append("  return self._template.format(")
+        for placeholder in placeholders:
+            lines.append(f"    {placeholder}={code[placeholder]},")
+        lines.append("  )")
+        logger.debug("Generated code of rename function:\n%s", "\n".join(lines))
+        namespace = dict()
+        exec("\n".join(lines), namespace)
+        return namespace["rename"]
 
     @staticmethod
     def raise_if_invalid_variable(tokens: List[Token], allowed: Set[str]) -> None:
@@ -574,19 +607,7 @@ class Renamer(SingleEndModifier):
             return (read_name, "")
 
     def __call__(self, read: SequenceRecord, info: ModificationInfo) -> SequenceRecord:
-        id_, comment = self.parse_name(read.name)
-        read.name = self._template.format(
-            header=read.name,
-            id=id_,
-            comment=comment,
-            cut_prefix=info.cut_prefix if info.cut_prefix else "",
-            cut_suffix=info.cut_suffix if info.cut_suffix else "",
-            adapter_name=info.matches[-1].adapter.name
-            if info.matches
-            else "no_adapter",
-            rc="rc" if info.is_rc else "",
-            match_sequence=info.matches[-1].match_sequence() if info.matches else "",
-        )
+        read.name = self._rename(self, read, info)
         return read
 
 
