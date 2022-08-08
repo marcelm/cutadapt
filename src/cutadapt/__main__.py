@@ -879,12 +879,11 @@ def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
         adapters = make_adapters_from_specifications(args.adapters, search_parameters)
         adapters2 = make_adapters_from_specifications(args.adapters2, search_parameters)
     except (
-        FileNotFoundError,
+        KeyError,
         ValueError,
         InvalidCharacter,
-        dnaio.FastaFormatError,
     ) as e:
-        raise CommandLineError(e)
+        raise CommandLineError(e.args[0])
     warn_duplicate_adapters(adapters)
     warn_duplicate_adapters(adapters2)
     if args.debug > 1:
@@ -1097,14 +1096,12 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     except BrokenPipeError:
         sys.exit(1)
     except (
-        dnaio.FileFormatError,
-        dnaio.UnknownFileFormat,
+        OSError,
         EOFError,
         HasNoQualities,
-        CommandLineError,
         dnaio.UnknownFileFormat,
         dnaio.FileFormatError,
-        OSError,
+        CommandLineError,
     ) as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
         logger.error("%s", f"cutadapt: error: {e}")

@@ -51,11 +51,11 @@ def parse_search_parameters(spec: str):
         if not field:
             continue
         key, equals, value = field.partition("=")  # type: (str, str, Any)
-        if equals == "=" and value == "":
-            raise ValueError("No value given")
         key = key.strip()
         if key not in allowed_parameters:
-            raise KeyError(f"Unknown parameter {key}")
+            raise KeyError(f"Unknown parameter '{key}'")
+        if equals == "=" and value == "":
+            raise ValueError(f"No value given for key '{key}'")
         # unabbreviate
         while allowed_parameters[key] is not None:
             key = allowed_parameters[key]  # type: ignore
@@ -68,7 +68,7 @@ def parse_search_parameters(spec: str):
             except ValueError:
                 value = float(value)
         if key in result:
-            raise KeyError(f"Key {key} specified twice")
+            raise KeyError(f"Key '{key}' specified twice")
         result[key] = value
     if "optional" in result and "required" in result:
         raise ValueError(
