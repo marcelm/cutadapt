@@ -61,9 +61,7 @@ def test_pipeline_single(tmp_path):
     info_file = file_opener.xopen_or_none(tmp_path / "info.txt", "wb")
     out = file_opener.xopen(tmp_path / "out.fastq", "wb")
     outfiles = OutputFiles(info=info_file, out=out)
-    runner = pipeline.make_runner(inpaths, outfiles, cores=1)
-    stats = runner.run()
-    runner.close()
+    stats = pipeline.run(inpaths, outfiles, cores=1)
     assert stats is not None
     json.dumps(stats.as_json())
     outfiles.close()
@@ -111,9 +109,7 @@ def test_pipeline_paired(tmp_path):
         out=out,
         out2=out2,
     )
-    runner = pipeline.make_runner(inpaths, outfiles, cores=1, progress=True)
-    stats = runner.run()
-    runner.close()
+    stats = pipeline.run(inpaths, outfiles, cores=1, progress=True)
     assert stats is not None
     _ = stats.as_json()
     outfiles.close()

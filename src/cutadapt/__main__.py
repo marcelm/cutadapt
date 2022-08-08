@@ -1083,28 +1083,14 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
             path2=input_paired_filename,
             interleaved=is_interleaved_input,
         )
-        runner = pipeline.make_runner(
-            inpaths, outfiles, cores, progress, args.buffer_size
+        logger.info(
+            "Processing %s reads on %d core%s ...",
+            {False: "single-end", True: "paired-end"}[pipeline.paired],
+            cores,
+            "s" if cores > 1 else "",
         )
-    except (
-        CommandLineError,
-        dnaio.UnknownFileFormat,
-        dnaio.FileFormatError,
-        OSError,
-    ) as e:
-        logger.debug("Command line error. Traceback:", exc_info=True)
-        parser.error(str(e))
-        return
+        stats = pipeline.run(inpaths, outfiles, cores, progress, args.buffer_size)
 
-    logger.info(
-        "Processing %s reads on %d core%s ...",
-        {False: "single-end", True: "paired-end"}[pipeline.paired],
-        cores,
-        "s" if cores > 1 else "",
-    )
-    try:
-        with runner as r:
-            stats = r.run()
     except KeyboardInterrupt:
         print("Interrupted", file=sys.stderr)
         sys.exit(130)
@@ -1115,9 +1101,15 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         dnaio.UnknownFileFormat,
         EOFError,
         HasNoQualities,
+        CommandLineError,
+        dnaio.UnknownFileFormat,
+        dnaio.FileFormatError,
+        OSError,
     ) as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
-        sys.exit(f"cutadapt: error: {e}")
+        logger.error("%s", f"cutadapt: error: {e}")
+        exit_code = 2 if isinstance(e, CommandLineError) else 1
+        sys.exit(exit_code)
 
     elapsed = time.time() - start_time
     if args.report == "minimal":

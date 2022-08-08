@@ -386,16 +386,18 @@ class Pipeline(ABC):
     def _wrap_single_end_step(self, step: SingleEndStep):
         pass
 
-    def make_runner(
+    def run(
         self,
         inpaths: InputPaths,
         outfiles: OutputFiles,
         cores: int,
         progress: Union[bool, Progress, None] = None,
         buffer_size: int = None,
-    ):
+    ) -> Statistics:
         """
-        Create a PipelineRunner for running this pipeline.
+        Run this pipeline.
+
+        This uses a SerialPipelineRunner if cores is 1 and a ParallelPipelineRunner otherwise.
 
         Args:
             inpaths:
@@ -407,8 +409,22 @@ class Pipeline(ABC):
             buffer_size: Forwarded to `ParallelPipelineRunner()`. Ignored if cores is 1.
 
         Returns:
-            SerialPipelineRunner if cores is 1, otherwise a ParallelPipelineRunner
+            A Statistics object
         """
+        with self.make_runner(
+            inpaths, outfiles, cores, progress, buffer_size
+        ) as runner:
+            statistics = runner.run()
+        return statistics
+
+    def make_runner(
+        self,
+        inpaths: InputPaths,
+        outfiles: OutputFiles,
+        cores: int,
+        progress: Union[bool, Progress, None] = None,
+        buffer_size: int = None,
+    ):
         if progress is None or progress is False:
             progress = DummyProgress()
         elif progress is True:
