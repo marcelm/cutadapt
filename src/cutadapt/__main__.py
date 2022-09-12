@@ -236,12 +236,12 @@ def get_argument_parser() -> ArgumentParser:
         help=SUPPRESS)  # Deprecated, use --action=mask
 
     group = parser.add_argument_group("Additional read modifications")
-    group.add_argument("-u", "--cut", action='append', default=[], type=int, metavar="LENGTH",
-        help="Remove bases from each read (first read only if paired). "
-            "If LENGTH is positive, remove bases from the beginning. "
-            "If LENGTH is negative, remove bases from the end. "
-            "Can be used twice if LENGTHs have different signs. "
-            "This is applied *before* adapter trimming.")
+    group.add_argument("-u", "--cut", action='append', default=[], type=int, metavar="LEN",
+        help="Remove LEN bases from each read (or R1 if paired; use -U option for R2). "
+            "If LEN is positive, remove bases from the beginning. "
+            "If LEN is negative, remove bases from the end. "
+            "Can be used twice if LENs have different signs. "
+            "Applied *before* adapter trimming.")
     group.add_argument("--nextseq-trim", type=int, default=None, metavar="3'CUTOFF",
         help="NextSeq-specific quality trimming (each read). Trims also dark "
             "cycles appearing as high-quality G bases.")
