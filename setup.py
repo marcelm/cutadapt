@@ -1,9 +1,11 @@
 from setuptools import setup, Extension
 import setuptools_scm  # noqa  Ensure it’s installed
+from setuptools_rust import Binding, RustExtension
 
 extensions = [
     Extension("cutadapt._align", sources=["src/cutadapt/_align.pyx"]),
-    Extension("cutadapt.qualtrim", sources=["src/cutadapt/qualtrim.pyx"]),
 ]
-
-setup(ext_modules=extensions)
+rust_extensions = [
+    RustExtension("cutadapt.qualtrim", "src/rust/Cargo.toml", binding=Binding.PyO3)
+]
+setup(ext_modules=extensions, rust_extensions=rust_extensions)

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 43", "setuptools_scm >= 6.2", "Cython >= 0.29.20"]
+requires = ["setuptools >= 43", "setuptools_scm >= 6.2", "setuptools_rust"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]

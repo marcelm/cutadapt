@@ -1,0 +1,12 @@
+[package]
+name = "cutadapt_rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "cutadapt_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.17.1", features = ["extension-module"] }
