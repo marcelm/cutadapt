@@ -6,7 +6,7 @@ Because Cutadapt development happens on Linux, this is the best supported
 platform, but it should also run on macOS and Windows.
 
 
-Installation with conda
+Installation with Conda
 -----------------------
 
 Cutadapt is available as a Conda package from the
@@ -35,35 +35,44 @@ Finally, check whether it worked::
 This should show the Cutadapt version number.
 
 
+Installation with pipx
+----------------------
+
+This works on Ubuntu 20.04 and later:
+
+    sudo apt install pipx python3-venv
+    pipx install cutadapt
+    cutadapt --version
+
+
 Installation with pip
 ---------------------
 
-If Python is already installed on your system (it very likely is), you
-can install Cutadapt using ``pip`` on the command line::
+Ensure you have virtualenv installed. On Ubuntu/Debian::
 
-    python3 -m pip install --user --upgrade cutadapt
+    sudo apt install python3-virtualenv
 
-This will download the software from `PyPI (the Python packaging
-index) <https://pypi.python.org/pypi/cutadapt/>`_, and
-install the ``cutadapt`` binary into ``$HOME/.local/bin``. If an old version of
-Cutadapt exists on your system, the ``--upgrade`` parameter is required in order
-to install a newer version.
+Create a new virtual environment and install Cutadapt into it::
 
-On many systems, you can then run the program like this::
+    virtualenv cutadapt-venv
+    cutadapt-venv/bin/pip --upgrade pip
+    cutadapt-venv/bin/pip install cutadapt
 
+Cutadapt is now available as `cutadapt-venv/bin/cutadapt`::
+
+    cutadapt-venv/bin/cutadapt --version
+
+Optionally, you can *activate* the virtual environment, which allows you to
+just type `cutadapt` without the full path::
+
+    source cutadapt-venv/bin/activate
     cutadapt --version
 
-If this does not work or this prints an unexpected version number, then
-you need to use the full path to run the program::
-
-    ~/.local/bin/cutadapt --version
-
-Alternatively, you can avoid having to type the full path by adding the
-directory ``$HOME/.local/bin`` to your ``$PATH`` environment variable.
+Activation must be re-done whenever you open a new shell/terminal window.
 
 
-Installation on a Debian-based Linux distribution
--------------------------------------------------
+Installation on Debian/Ubuntu
+-----------------------------
 
 Cutadapt is also included in Debian-based Linux distributions, such as Ubuntu.
 Simply use your favorite package manager to install Cutadapt. On the
