@@ -1912,10 +1912,9 @@ More advice on demultiplexing:
 Demultiplexing paired-end reads with combinatorial dual indexes
 ---------------------------------------------------------------
 
-Illumina’s combinatorial dual indexing strategy uses a set of indexed adapters on R1 and another one
-on R2. Unlike
-`unique dual indexes (UDI) <https://support.illumina.com/bulletins/2018/08/understanding-unique-dual-indexes--udi--and-associated-library-p.html>`_,
-all combinations of indexes are possible.
+`Illumina’s combinatorial dual indexing strategy <https://support.illumina.com/bulletins/2018/08/understanding-unique-dual-indexes--udi--and-associated-library-p.html>`_
+uses a set of indexed adapters on R1 and another one on R2. Unlike unique dual indexes (UDI)
+(described on the same page) all combinations of indexes are possible.
 
 For demultiplexing this type of data ("combinatorial demultiplexing"), it is necessary to write each
 read pair to an output file depending on the adapters found on R1 *and* R2.
@@ -2073,9 +2072,14 @@ specify a prefix of the sequence(s).
    as adapter sequence for both read 1 and read 2, but you should avoid doing so
    as that sequence occurs multiple times in the human genome.
 
+To understand the structure of Illumina libraries and what the i5, i7, P5, P7
+sequences are, see
+`this overview <https://teichlab.github.io/scg_lib_structs/methods_html/Illumina.html>`_.
+
 Some older information is also available in the document `Illumina TruSeq Adapters
 De-Mystified <http://tucf-genomics.tufts.edu/documents/protocols/TUCF_Understanding_Illumina_TruSeq_Adapters.pdf>`_,
 but keep in mind that it does not cover newer protocols.
+
 
 Under some circumstances, you may want to consider not trimming adapters at all.
 For example, a good library prepared for exome, genome or transcriptome
