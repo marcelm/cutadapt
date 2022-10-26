@@ -1583,9 +1583,10 @@ and ``--untrimmed-paired-output``, you can write ``--untrimmed-o`` and
 
 
 .. _paired-adapters:
+.. _pair-adapters:
 
-Paired adapters (dual indices)
-------------------------------
+Paired adapters
+---------------
 
 When processing paired-end data, Cutadapt has two sets of adapters to work with: The ones that
 are to be found and removed in the forward read (R1), specified with ``-a``/``-g``/``-b``,
@@ -1599,17 +1600,7 @@ paired up with its corresponding R2 adapters. The first R1 adapter will be paire
 R2 adapter, and so on. The adapters are then always removed in pairs from a read pair. It is an
 error if the number of provided adapters is not identical for the R1 and R2 sets.
 
-This option was added to aid in demultiplexing Illumina libraries that contain
-`unique dual indexes (UDI) <https://support.illumina.com/bulletins/2018/08/understanding-unique-dual-indexes--udi--and-associated-library-p.html>`_.
-This scheme, also called “non-redundant indexing”, uses 96 unique i5 indices and 96 unique i7
-indices, which are only used in pairs, that is, the first i5 index is always used with the first i7
-index and so on.
-
-.. note::
-    If the adapters do not come in pairs, but all combinations are possible, see
-    :ref:`the section about combinatorial demultiplexing <combinatorial-demultiplexing>`.
-
-An example::
+Example::
 
     cutadapt --pair-adapters -a AAAAA -a GGGG -A CCCCC -a TTTT -o out.1.fastq -p out.2.fastq in.1.fastq in.2.fastq
 
@@ -1619,12 +1610,13 @@ reads will only be trimmed if either
 * ``AAAAA`` is found in R1 *and* ``CCCCC`` is found in R2,
 * or ``GGGG`` is found in R1 *and* ``TTTT`` is found in R2.
 
-The ``--pair-adapters`` option can be used also :ref:`when demultiplexing <demultiplexing>`.
-
 There is one limitation of the algorithm at the moment: The program looks for the best-matching R1 adapter
 first and then checks whether the corresponding R2 adapter can be found. If not, the read pair
 remains unchanged. However, it is in theory possible that a different R1 adapter that does not
 fit as well would have a partner that *can* be found. Some read pairs may therefore remain untrimmed.
+
+This option was added to help with
+:ref:`demultiplexing Illumina unique dual indices (UDIs) <unique-dual-indices>`.
 
 .. versionadded:: 2.1
 
@@ -1869,31 +1861,30 @@ option to provide Cutadapt with the adapter sequences, as in ``-g ^file:barcodes
 Also, we prefix the ``^file:`` with the ``^`` character to specify that we want to
 :ref:`anchor the 5’ adapters <anchored-5adapters>`.
 
-These barcode sequences have a length of 8, which means that Cutadapt
-would not allow any errors when matching them: The default is to allow 10%
-errors, but 10% of 8 is 0.8, which is rounded down to 0. To allow one
-error, we increase the maximum error rate to 15% with ``-e 0.15``.
-Finally, we also use ``--no-indels`` because we don’t want to allow
-insertions or deletions. Also, with the ``--no-indels`` option, Cutadapt can
-use a different algorithm and demultiplexing will be many times faster.
+Since these barcode sequences have a length of 8 and the default maximum error
+rate is 10%, Cutadapt would by default not allow any errors when matching them
+(a single error would result in an error rate of 1/8=12.5%). We therefore use
+``-e 1`` to allow one error.
+
 Here is the final command::
 
-    cutadapt -e 0.15 --no-indels -g ^file:barcodes.fasta -o "trimmed-{name}.fastq.gz" input.fastq.gz
+    cutadapt -e 1 -g ^file:barcodes.fasta -o "trimmed-{name}.fastq.gz" input.fastq.gz
 
 Demultiplexing is also supported for paired-end data if you provide the ``{name}`` template
 in both output file names (``-o`` and ``-p``). Example::
 
-    cutadapt -e 0.15 --no-indels -g ^file:barcodes.fasta -o trimmed-{name}.1.fastq.gz -p trimmed-{name}.2.fastq.gz input.1.fastq.gz input.2.fastq.gz
+    cutadapt -e 1 -g ^file:barcodes.fasta -o trimmed-{name}.1.fastq.gz -p trimmed-{name}.2.fastq.gz input.1.fastq.gz input.2.fastq.gz
 
 Paired-end demultiplexing always uses the adapter matches of the *first* read to decide where a
 read should be written. If adapters for read 2 are given (``-A``/``-G``), they are detected and
 removed as normal, but these matches do not influence where the read pair is written. This is
 to ensure that read 1 and read 2 are always synchronized.
 
-To demultiplex using a barcode that is located on read 2, you can swap the roles of R1 and R2 for
+To demultiplex using a barcode that is located on read 2,
+you can "cheat" and swap the roles of R1 and R2 for
 both the input and output files ::
 
-    cutadapt -e 0.15 --no-indels -g ^file:barcodes.fasta -o trimmed-{name}.2.fastq.gz -p trimmed-{name}.1.fastq.gz input.2.fastq.gz input.1.fastq.gz
+    cutadapt -e 1 -g ^file:barcodes.fasta -o trimmed-{name}.2.fastq.gz -p trimmed-{name}.1.fastq.gz input.2.fastq.gz input.1.fastq.gz
 
 If you do this in a script or pipeline, it may be a good idea to add a comment to clarify that
 this reversal of R1 and R2 is intended.
@@ -1963,6 +1954,30 @@ are your sample names. Then rename all files at once with ::
 
 
 .. versionadded:: 2.4
+
+
+.. _paired-adapters-dual-indices:
+.. _unique-dual-indices:
+
+Demultiplexing unique dual indices
+----------------------------------
+
+`Illumina’s unique dual indexing (UDI) scheme <https://support.illumina.com/bulletins/2018/08/understanding-unique-dual-indexes--udi--and-associated-library-p.html>`_
+(“non-redundant indexing”) uses 96 unique i5 indices and 96 unique i7
+indices, which are only used in pairs. That is, the first i5 index is always
+used with the first i7 index and so on.
+
+To demultiplex this type of data, the
+:ref:```--pair-adapters`` option <pair-adapters>` needs to be used.
+
+Example::
+
+    cutadapt -j 8 -e 1 --no-indels --pair-adapters -g ^file:i5indices.fasta -G ^file:i7indices.fasta -o 'demultiplexed-{name}_R1.fastq.gz' -p 'demultiplexed-{name}_R2.fastq.gz' input.R1.fastq.gz input.R2.fastq.gz
+
+
+.. note::
+    If the adapters do not come in pairs, but all combinations are possible, use
+    :ref:`combinatorial demultiplexing <combinatorial-demultiplexing>`.
 
 
 .. _speed-up-demultiplexing:
