@@ -1968,9 +1968,7 @@ indices, which are only used in pairs. That is, the first i5 index is always
 used with the first i7 index and so on.
 
 To demultiplex this type of data, the
-:ref:```--pair-adapters`` option <pair-adapters>` needs to be used.
-
-Example::
+:ref:`--pair-adapters option <pair-adapters>` needs to be used. Example::
 
     cutadapt -j 8 -e 1 --no-indels --pair-adapters -g ^file:i5indices.fasta -G ^file:i7indices.fasta -o 'demultiplexed-{name}_R1.fastq.gz' -p 'demultiplexed-{name}_R2.fastq.gz' input.R1.fastq.gz input.R2.fastq.gz
 
