@@ -4,8 +4,6 @@ on: [push, pull_request]
 
 jobs:
   lint:
-    # Run for PRs only if they come from a forked repo (avoids duplicate runs)
-    if:  github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
     timeout-minutes: 10
     runs-on: ubuntu-latest
     strategy:
@@ -24,7 +22,6 @@ jobs:
       run: tox -e ${{ matrix.toxenv }}
 
   build:
-    if:  github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -38,7 +35,6 @@ jobs:
         path: dist/*.tar.gz
 
   test:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
     timeout-minutes: 10
     runs-on: ${{ matrix.os }}
     strategy:
