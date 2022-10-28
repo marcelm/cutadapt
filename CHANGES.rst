@@ -6,6 +6,7 @@ Changelog
 development version
 -------------------
 
+* Documentation updates
 * :issue:`546`: Automatically replace ``I`` in adapter sequences with ``N``.
   ``I`` is used to encode inosine, which matches any base. Contributed by @peterjc.
 
