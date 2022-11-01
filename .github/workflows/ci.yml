@@ -79,8 +79,6 @@ jobs:
       uses: pypa/cibuildwheel@v2.11.2
       env:
         CIBW_BUILD: "cp*-manylinux_x86_64 cp3*-win_amd64"
-        CIBW_ENVIRONMENT: "CFLAGS=-g0"
-        CIBW_TEST_COMMAND: "cutadapt --help"
     - uses: actions/upload-artifact@v2
       with:
         name: wheels
