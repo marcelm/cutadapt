@@ -195,16 +195,6 @@ def reverse_complement(s: str):
     return s.translate(_REVCOMP_TRANS)[::-1]
 
 
-def reverse_complemented_sequence(sequence: dnaio.Sequence):
-    if sequence.qualities is None:
-        qualities = None
-    else:
-        qualities = sequence.qualities[::-1]
-    return dnaio.Sequence(
-        sequence.name, reverse_complement(sequence.sequence), qualities
-    )
-
-
 class FileOpener:
     def __init__(self, compression_level: int = 6, threads: int = None):
         """

@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from typing import Sequence, List, Tuple, Optional, Set
 from abc import ABC, abstractmethod
 
-from dnaio import record_names_match, Sequence as SequenceRecord
+from dnaio import record_names_match, SequenceRecord
 
 from .qualtrim import quality_trim_index, nextseq_trim_index
 from .adapters import (
@@ -22,7 +22,6 @@ from .adapters import (
     Adapter,
 )
 from .tokenizer import tokenize_braces, TokenizeError, Token, BraceToken
-from .utils import reverse_complemented_sequence
 
 logger = logging.getLogger()
 
@@ -293,8 +292,8 @@ class ReverseComplementer(SingleEndModifier):
     def __repr__(self):
         return f"ReverseComplementer(adapter_cutter={self.adapter_cutter})"
 
-    def __call__(self, read, info: ModificationInfo):
-        reverse_read = reverse_complemented_sequence(read)
+    def __call__(self, read: SequenceRecord, info: ModificationInfo):
+        reverse_read = read.reverse_complement()
 
         forward_trimmed_read, forward_matches = self.adapter_cutter.match_and_trim(read)
         reverse_trimmed_read, reverse_matches = self.adapter_cutter.match_and_trim(

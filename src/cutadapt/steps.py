@@ -23,7 +23,6 @@ from typing import Tuple, Dict, Optional, Any
 from .predicates import Predicate
 from .modifiers import ModificationInfo
 from .statistics import ReadLengthStatistics
-from .utils import reverse_complemented_sequence
 
 # Constants used when returning from a step’s __call__ method to improve
 # readability (it is unintuitive that "return True" means "discard the read").
@@ -217,7 +216,7 @@ class InfoFileWriter(SingleEndStep):
     def __call__(self, read, info: ModificationInfo):
         current_read = info.original_read
         if info.is_rc:
-            current_read = reverse_complemented_sequence(current_read)
+            current_read = current_read.reverse_complement()
         if info.matches:
             for match in info.matches:
                 for info_record in match.get_info_records(current_read):
