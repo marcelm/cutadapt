@@ -185,16 +185,6 @@ class DummyProgress(Progress):
         pass
 
 
-_REVCOMP_TRANS = str.maketrans(
-    "ACGTUMRWSYKVHDBNacgtumrwsykvhdbn",
-    "TGCAAKYWSRMBDHVNtgcaakywsrmbdhvn",
-)
-
-
-def reverse_complement(s: str):
-    return s.translate(_REVCOMP_TRANS)[::-1]
-
-
 class FileOpener:
     def __init__(self, compression_level: int = 6, threads: int = None):
         """
