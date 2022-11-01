@@ -17,4 +17,5 @@ warn_unused_configs = true
 
 [tool.cibuildwheel]
 environment = "CFLAGS=-g0"
-test-command = ["cutadapt --help"]
+test-extras = ["dev"]
+test-command = ["cd {project}", "pytest"]
