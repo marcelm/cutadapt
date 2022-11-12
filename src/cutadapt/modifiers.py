@@ -22,39 +22,13 @@ from .adapters import (
     Adapter,
 )
 from .tokenizer import tokenize_braces, TokenizeError, Token, BraceToken
+from .info import ModificationInfo
 
 logger = logging.getLogger()
 
 
 # If the number of prefix or suffix adapters is higher than this, switch to using an index
 INDEXING_THRESHOLD = 5
-
-
-class ModificationInfo:
-    """
-    An object of this class is created for each read that passes through the pipeline.
-    Any information (except the read itself) that needs to be passed from one modifier
-    to one later in the pipeline or from one modifier to the filters is recorded here.
-    """
-
-    __slots__ = ["matches", "original_read", "cut_prefix", "cut_suffix", "is_rc"]
-
-    def __init__(self, read):
-        self.matches: List[Match] = []
-        self.original_read = read
-        self.cut_prefix = None
-        self.cut_suffix = None
-        self.is_rc = None
-
-    def __repr__(self):
-        return (
-            "ModificationInfo("
-            f"matches={self.matches!r}, "
-            f"original_read={self.original_read}, "
-            f"cut_prefix={self.cut_prefix}, "
-            f"cut_suffix={self.cut_suffix}, "
-            f"is_rc={self.is_rc})"
-        )
 
 
 class SingleEndModifier(ABC):

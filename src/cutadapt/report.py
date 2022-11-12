@@ -554,7 +554,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     else:
         micro = "µ"
     print_s(
-        "Finished in {:.2F} s ({:.0F} {}s/read; {:.2F} M reads/minute).".format(
+        "Finished in {:.3F} s ({:.3F} {}s/read; {:.2F} M reads/minute).".format(
             time, 1e6 * time / stats.n, micro, stats.n / time * 60 / 1e6
         )
     )
