@@ -1021,7 +1021,6 @@ class ParallelPipelineRunner(PipelineRunner):
         for f in self._outfiles:
             writers.append(OrderedChunkWriter(f))
         stats = Statistics()
-        n = 0  # A running total of the number of processed reads (for progress indicator)
         while connections:
             ready_connections: List[Any] = multiprocessing.connection.wait(connections)
             for connection in ready_connections:
@@ -1033,10 +1032,8 @@ class ParallelPipelineRunner(PipelineRunner):
                     connections.remove(connection)
                     continue
 
-                # No. of reads processed in this chunk
-                chunk_n = self._try_receive(connection)
-                n += chunk_n
-                self._progress.update(n)
+                number_of_reads = self._try_receive(connection)
+                self._progress.update(number_of_reads)
                 for writer in writers:
                     data = connection.recv_bytes()
                     writer.write(data, chunk_index)
