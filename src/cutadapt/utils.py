@@ -186,7 +186,7 @@ class DummyProgress(Progress):
 
 
 class FileOpener:
-    def __init__(self, compression_level: int = 6, threads: int = None):
+    def __init__(self, compression_level: int = 6, threads: Optional[int] = None):
         """
         threads -- no. of external compression threads.
             0: write in-process

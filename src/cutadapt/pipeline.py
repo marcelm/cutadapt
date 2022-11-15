@@ -360,7 +360,7 @@ class Pipeline(ABC):
 
     @abstractmethod
     def process_reads(
-        self, progress: Progress = None
+        self, progress: Optional[Progress] = None
     ) -> Tuple[int, int, Optional[int]]:
         pass
 
@@ -392,7 +392,7 @@ class Pipeline(ABC):
         outfiles: OutputFiles,
         cores: int,
         progress: Union[bool, Progress, None] = None,
-        buffer_size: int = None,
+        buffer_size: Optional[int] = None,
     ) -> Statistics:
         """
         Run this pipeline.
@@ -423,7 +423,7 @@ class Pipeline(ABC):
         outfiles: OutputFiles,
         cores: int,
         progress: Union[bool, Progress, None] = None,
-        buffer_size: int = None,
+        buffer_size: Optional[int] = None,
     ):
         if progress is None or progress is False:
             progress = DummyProgress()
@@ -452,7 +452,7 @@ class SingleEndPipeline(Pipeline):
         self._modifiers: List[SingleEndModifier] = modifiers
 
     def process_reads(
-        self, progress: Progress = None
+        self, progress: Optional[Progress] = None
     ) -> Tuple[int, int, Optional[int]]:
         """Run the pipeline. Return statistics"""
         n = 0  # no. of processed reads
@@ -587,7 +587,7 @@ class PairedEndPipeline(Pipeline):
         self._modifiers.append(modifier)
 
     def process_reads(
-        self, progress: Progress = None
+        self, progress: Optional[Progress] = None
     ) -> Tuple[int, int, Optional[int]]:
         n = 0  # no. of processed reads
         total1_bp = 0
@@ -957,7 +957,7 @@ class ParallelPipelineRunner(PipelineRunner):
         outfiles: OutputFiles,
         progress: Progress,
         n_workers: int,
-        buffer_size: int = None,
+        buffer_size: Optional[int] = None,
     ):
         super().__init__(pipeline, progress)
         self._n_workers = n_workers
