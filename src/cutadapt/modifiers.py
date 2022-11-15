@@ -40,7 +40,11 @@ class SingleEndModifier(ABC):
 class PairedEndModifier(ABC):
     @abstractmethod
     def __call__(
-        self, read1: SequenceRecord, read2: SequenceRecord, info1: ModificationInfo, info2: ModificationInfo
+        self,
+        read1: SequenceRecord,
+        read2: SequenceRecord,
+        info1: ModificationInfo,
+        info2: ModificationInfo,
     ) -> Tuple[SequenceRecord, SequenceRecord]:
         pass
 
