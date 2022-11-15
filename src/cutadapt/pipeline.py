@@ -207,7 +207,7 @@ class Pipeline(ABC):
     n_adapters = 0
     paired = False
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._reader: Any = None
         self._steps: List[Any] = []
         self._infiles: Optional[InputFiles] = None

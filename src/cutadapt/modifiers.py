@@ -59,14 +59,14 @@ class ModificationInfo:
 
 class SingleEndModifier(ABC):
     @abstractmethod
-    def __call__(self, read, info: ModificationInfo):
+    def __call__(self, read: SequenceRecord, info: ModificationInfo):
         pass
 
 
 class PairedEndModifier(ABC):
     @abstractmethod
     def __call__(
-        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+        self, read1: SequenceRecord, read2: SequenceRecord, info1: ModificationInfo, info2: ModificationInfo
     ) -> Tuple[SequenceRecord, SequenceRecord]:
         pass
 
