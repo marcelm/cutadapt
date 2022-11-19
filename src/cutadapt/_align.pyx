@@ -543,8 +543,8 @@ cdef class Aligner:
                     if self.wildcard_ref:
                         if length < m:
                             # Recompute effective length so that it only takes into
-                            # account the matching suffix of the reference
-                            cur_effective_length = length - self.n_counts[length]
+                            # account the matching part of the reference
+                            cur_effective_length = length - (self.n_counts[m] - self.n_counts[m - length])
                         else:
                             cur_effective_length = self.effective_length
                     is_acceptable = (

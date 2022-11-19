@@ -6,6 +6,9 @@ Changelog
 development version
 -------------------
 
+* :issue:`654`: When determining the error rate for a partial match of an
+  adapter with ``N`` wildcards, the number of non-N bases was not computed
+  correctly, which could lead to matches not being found.
 * :issue:`546`: Automatically replace ``I`` in adapter sequences with ``N``.
   ``I`` is used to encode inosine, which matches any base. Contributed by @peterjc.
 

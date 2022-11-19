@@ -13,6 +13,8 @@ from cutadapt.adapters import (
     MultipleAdapters,
     IndexedPrefixAdapters,
     IndexedSuffixAdapters,
+    NonInternalFrontAdapter,
+    NonInternalBackAdapter,
 )
 
 
@@ -556,3 +558,66 @@ def test_inosine_wildcard():
     assert match.rstart == 2
     assert match.rstop == 9
     assert match.errors == 0
+
+
+def test_noninternal_front_adapter():
+    adapter = NonInternalFrontAdapter("CTGTAAT")
+    match = adapter.match_to("CTGTAATAAAAA")
+    assert match.rstart == 0
+    assert match.rstop == 7
+    assert match.astart == 0
+    assert match.astop == 7
+
+    assert adapter.match_to("ACTGTAATAAA") is None
+
+    match = adapter.match_to("AATCCCC")
+    assert match.rstart == 0
+    assert match.rstop == 3
+    assert match.astart == 4
+    assert match.astop == 7
+
+
+@pytest.mark.parametrize("errors", (0, 1))
+def test_noninternal_front_adapter_with_n_wildcards(errors):
+    sequence = "NNNCTG" if errors == 0 else "NNNCAG"
+    adapter = NonInternalFrontAdapter("NNNCTG", max_errors=errors)
+    match = adapter.match_to("CTGAAAA")
+    assert match.rstart == 0
+    assert match.rstop == 3
+    assert match.astart == 3
+    assert match.astop == 6
+
+    match = adapter.match_to("ACTGAAAA")
+    assert match.rstart == 0
+    assert match.rstop == 4
+    assert match.astart == 2
+    assert match.astop == 6
+
+    match = adapter.match_to("AACTGAAAA")
+    assert match.rstart == 0
+    assert match.rstop == 5
+    assert match.astart == 1
+    assert match.astop == 6
+
+    match = adapter.match_to("AAACTGAAAA")
+    assert match.astart == 0, match
+    assert match.astop == 6
+    assert match.rstart == 0
+    assert match.rstop == 6
+
+    match = adapter.match_to("AAAACTGAAAA")
+    if errors == 0:
+        assert match is None
+    else:
+        assert match is not None
+
+
+def test_noninternal_front_adapter_with_n_wildcards_issue_654():
+    adapter = NonInternalFrontAdapter("NNNCGC", max_errors=1)
+    match = adapter.match_to("CCCTTT")
+    assert match is not None
+    assert match.rstart == 0
+    assert match.rstop == 3
+    assert match.astart == 3
+    assert match.astop == 6
+    assert match.errors == 1
