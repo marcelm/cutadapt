@@ -14,7 +14,6 @@ from cutadapt.adapters import (
     IndexedPrefixAdapters,
     IndexedSuffixAdapters,
     NonInternalFrontAdapter,
-    NonInternalBackAdapter,
 )
 
 
@@ -580,7 +579,7 @@ def test_noninternal_front_adapter():
 @pytest.mark.parametrize("errors", (0, 1))
 def test_noninternal_front_adapter_with_n_wildcards(errors):
     sequence = "NNNCTG" if errors == 0 else "NNNCAG"
-    adapter = NonInternalFrontAdapter("NNNCTG", max_errors=errors)
+    adapter = NonInternalFrontAdapter(sequence, max_errors=errors)
     match = adapter.match_to("CTGAAAA")
     assert match.rstart == 0
     assert match.rstop == 3
@@ -606,10 +605,7 @@ def test_noninternal_front_adapter_with_n_wildcards(errors):
     assert match.rstop == 6
 
     match = adapter.match_to("AAAACTGAAAA")
-    if errors == 0:
-        assert match is None
-    else:
-        assert match is not None
+    assert match is None
 
 
 def test_noninternal_front_adapter_with_n_wildcards_issue_654():
