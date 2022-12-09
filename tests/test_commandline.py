@@ -1094,7 +1094,6 @@ def test_rename(run):
     )
 
 
-@pytest.mark.skip("This has not been fixed")
 def test_terminates_correctly_on_error_in_subprocess(tmp_path):
     params = [
         "-j",

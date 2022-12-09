@@ -11,6 +11,9 @@ development version
   correctly, which could lead to matches not being found.
 * :issue:`546`: Automatically replace ``I`` in adapter sequences with ``N``.
   ``I`` is used to encode inosine, which matches any base. Contributed by @peterjc.
+* :issue:`528`: Cutadapt should now no long hang in multicore mode when an error
+  was raised in a worker process (for exampl, when an incorrectly formatted
+  FASTQ file was encountered).
 
 v4.1 (2022-06-07)
 -----------------

@@ -1104,7 +1104,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         CommandLineError,
     ) as e:
         logger.debug("Command line error. Traceback:", exc_info=True)
-        logger.error("%s", f"cutadapt: error: {e}")
+        logger.error("%s", e)
         exit_code = 2 if isinstance(e, CommandLineError) else 1
         sys.exit(exit_code)
 

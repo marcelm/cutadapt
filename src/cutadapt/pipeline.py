@@ -853,7 +853,6 @@ class WorkerProcess(Process):
             self._write_pipe.send(-1)
             self._write_pipe.send(stats)
         except Exception as e:
-            logger.error("%s", e)
             self._write_pipe.send(-2)
             self._write_pipe.send((e, traceback.format_exc()))
 
@@ -1055,11 +1054,11 @@ class ParallelPipelineRunner(PipelineRunner):
         if result == -2:
             # An exception has occurred on the other end
             e, tb_str = connection.recv()
-            # Under some conditions, the Make sure the error is printed
-            logger.error("%s", e)
             # The other end does not send an actual traceback object because these are
             # not picklable, but a string representation.
             logger.debug("%s", tb_str)
+            for child in multiprocessing.active_children():
+                child.terminate()
             raise e
         return result
 
