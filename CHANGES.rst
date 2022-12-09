@@ -3,8 +3,8 @@
 Changelog
 =========
 
-development version
--------------------
+v4.2 (2022-12-09)
+-----------------
 
 * :issue:`654`: When determining the error rate for a partial match of an
   adapter with ``N`` wildcards, the number of non-N bases was not computed
