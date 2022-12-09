@@ -25,6 +25,8 @@ def assert_files_equal(path1, path2, ignore_trailing_space: bool = False):
             cmd.append("-b")
         else:
             cmd.append("--ignore-trailing-space")
+    if sys.platform == "win32":
+        path1, path2 = os.fspath(path1), os.fspath(path2)
     try:
         subprocess.check_output(cmd + [path1, path2], stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
