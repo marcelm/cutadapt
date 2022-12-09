@@ -1062,6 +1062,7 @@ def test_rename_cannot_be_combined_with_other_renaming_options(opt):
         )
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Disabled on Windows")
 def test_duplicate_output_paths(tmp_path):
     path = str(tmp_path / "discard.fastq")
     with pytest.raises(SystemExit):

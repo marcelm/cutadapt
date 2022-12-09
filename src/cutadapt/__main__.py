@@ -551,6 +551,9 @@ def open_output_files(
 
 
 def complain_about_duplicate_paths(paths: List[str]):
+    if sys.platform == "win32" and sys.version_info < (3, 8):
+        # Bug in handling of NUL
+        return
     seen = set()
     for path in paths:
         if path is None:
