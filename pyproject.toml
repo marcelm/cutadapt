@@ -60,4 +60,4 @@ warn_unused_configs = true
 [tool.cibuildwheel]
 environment = "CFLAGS=-g0"
 test-extras = ["dev"]
-test-command = ["cd {project}", "pytest"]
+test-command = ["pytest {project}"]
