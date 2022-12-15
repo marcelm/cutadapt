@@ -32,6 +32,27 @@ as in this example::
     cutadapt -g ^TTAAGGCC -g ^AAGCTTA input.fastq | cutadapt -a TACGGACT - > output.fastq
 
 
+Separating trimmed and untrimmed reads
+--------------------------------------
+
+To send trimmed and untrimmed reads to separate output files, use the the
+``--untrimmed-output`` option::
+
+    cutadapt -a TTAAGGCC --untrimmed-output=untrimmed.fastq.gz -o trimmed.fastq.gz input.fastq.gz
+
+For paired-end data, use also the ``--untrimmed-paired-output`` option::
+
+    cutadapt \
+      -g ^AAGGCC \
+      -G ^TTGGAA \
+      --untrimmed-output=untrimmed.1.fastq.gz \
+      --untrimmed-paired-output=untrimmed.2.fastq.gz
+      -o trimmed.2.fastq.gz \
+      -p trimmed.2.fastq.gz \
+      input.1.fastq.gz \
+      input.2.fastq.gz
+
+
 Trim poly-A tails
 -----------------
 
