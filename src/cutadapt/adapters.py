@@ -10,6 +10,7 @@ from collections import defaultdict
 from typing import Optional, Tuple, Sequence, Dict, Any, List, Union
 from abc import ABC, abstractmethod
 
+from ._kmer_finder import KmerFinder
 from .align import (
     EndSkip,
     Aligner,
@@ -18,6 +19,7 @@ from .align import (
     edit_environment,
     hamming_environment,
 )
+from .kmer_heuristic import create_kmers_and_offsets
 
 logger = logging.getLogger()
 
@@ -737,6 +739,16 @@ class BackAdapter(SingleAdapter):
     def __init__(self, *args, **kwargs):
         self._force_anywhere = kwargs.pop("force_anywhere", False)
         super().__init__(*args, **kwargs)
+        self.adapter_heuristic = None
+        self.kmer_finder = None
+        if not self.adapter_wildcards and not self.read_wildcards:
+            # We can do some optimization by identifying kmers that if not
+            # present in the sequence prove that no adapter is present.
+            kmers_and_offsets = create_kmers_and_offsets(
+                self.sequence, self.min_overlap, self.max_error_rate
+            )
+            self.kmer_finder = KmerFinder(kmers_and_offsets)
+            self.adapter_heuristic = self.kmer_finder.kmers_present
 
     def descriptive_identifier(self) -> str:
         return "regular_three_prime"
@@ -754,6 +766,9 @@ class BackAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
+        # Heuristically check if an adapter may be present. If not, skip.
+        if self.adapter_heuristic and not self.adapter_heuristic(sequence):
+            return None
         alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
             sequence
         )
