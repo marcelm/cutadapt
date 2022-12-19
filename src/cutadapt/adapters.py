@@ -745,7 +745,7 @@ class BackAdapter(SingleAdapter):
             # We can do some optimization by identifying kmers that if not
             # present in the sequence prove that no adapter is present.
             kmers_and_offsets = create_kmers_and_offsets(
-                self.sequence, self.min_overlap, self.max_error_rate
+                self.sequence.upper(), self.min_overlap, self.max_error_rate
             )
             self.kmer_finder = KmerFinder(kmers_and_offsets)
             self.adapter_heuristic = self.kmer_finder.kmers_present
@@ -767,7 +767,7 @@ class BackAdapter(SingleAdapter):
         overlap length, maximum error rate).
         """
         # Heuristically check if an adapter may be present. If not, skip.
-        if self.adapter_heuristic and not self.adapter_heuristic(sequence):
+        if self.adapter_heuristic and not self.adapter_heuristic(sequence.upper()):
             return None
         alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
             sequence
