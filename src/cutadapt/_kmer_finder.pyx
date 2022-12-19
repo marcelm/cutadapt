@@ -35,6 +35,7 @@ cdef class KmerFinder:
         char *kmers
         KmerEntry *kmer_entries
         size_t number_of_kmers
+        object kmers_and_offsets
 
     def __cinit__(self, kmers_and_offsets):
         self.kmers = NULL
@@ -65,6 +66,10 @@ cdef class KmerFinder:
             # on NULL terminated strings.
             self.kmers[kmer_offset] = 0
             kmer_offset += 1
+        self.kmers_and_offsets = kmers_and_offsets
+
+    def __reduce__(self):
+        return KmerFinder, (self.kmers_and_offsets,)
 
     def kmers_present(self, str sequence):
         cdef:
