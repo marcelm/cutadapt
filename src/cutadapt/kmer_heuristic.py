@@ -3,6 +3,7 @@ import sys
 from typing import List, Set, Tuple
 from collections import defaultdict
 
+
 def kmer_possibilities(sequence: str, chunks: int) -> List[Set[str]]:
     """
     Partition a sequence in almost equal sized chunks. Return all possibilities.
@@ -103,7 +104,9 @@ def create_kmers_and_offsets(
     # Build up the array with chunks which should occur at the tail end
     # if the adapter overlaps with the end.
     min_overlap_kmer = adapter[:min_overlap]
-    min_overlap_kmer_offset = -(error_lengths[0] - 1)
+    min_overlap_kmer_offset = (
+        -(error_lengths[0] - 1) if error_lengths else -(adapter_length - 1)
+    )
     search_sets.append(
         (
             min_overlap_kmer_offset,
