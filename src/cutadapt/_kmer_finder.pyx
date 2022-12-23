@@ -1,7 +1,7 @@
 # cython: language_level=3
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
-from libc.string cimport memset
+from libc.string cimport memset, strlen
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
 from libc.stdint cimport uint8_t
 
@@ -112,13 +112,30 @@ cdef class KmerFinder:
         PyMem_Free(self.kmer_entries)
 
 
+cdef void set_masks(size_t *needle_mask, size_t pos, char *chars):
+    cdef char c
+    cdef size_t i
+    for i in range(strlen(chars)):
+        needle_mask[<uint8_t>chars[i]] &= ~(1UL << pos)
+
 cdef populate_needle_mask(size_t *needle_mask, char *needle, size_t needle_length):
     cdef size_t i
+    cdef char c
     if needle_length > (sizeof(size_t) * 8 - 1):
         raise ValueError("The pattern is too long!")
     memset(needle_mask, 0xff, sizeof(size_t) * ASCII_CHAR_COUNT)
     for i in range(needle_length):
-        needle_mask[<uint8_t>needle[i]] &= ~(1UL << i)
+        c = needle[i]
+        if c == b"A" or c == b"a":
+            set_masks(needle_mask, i, "Aa")
+        elif c == b"C" or c == b"c":
+            set_masks(needle_mask, i, "Cc")
+        elif c == b"G" or c == b"g":
+            set_masks(needle_mask, i, "Gg")
+        elif c == b"T" or c == b"t":
+            set_masks(needle_mask, i, "Tt")
+        else:
+            needle_mask[<uint8_t>c] &= ~(1UL << i)
 
 
 cdef char *shift_and_search(char *haystack, size_t haystack_length,

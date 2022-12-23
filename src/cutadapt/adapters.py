@@ -767,7 +767,7 @@ class BackAdapter(SingleAdapter):
         overlap length, maximum error rate).
         """
         # Heuristically check if an adapter may be present. If not, skip.
-        if self.adapter_heuristic and not self.adapter_heuristic(sequence.upper()):
+        if self.adapter_heuristic and not self.adapter_heuristic(sequence):
             return None
         alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
             sequence
