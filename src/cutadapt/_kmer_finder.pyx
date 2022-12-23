@@ -148,6 +148,18 @@ cdef populate_needle_mask(size_t *needle_mask, char *needle, size_t needle_lengt
             set_masks(needle_mask, i, "Tt")
             if query_wildcards:
                 set_masks(needle_mask, i, "YWKBDHNywkbdhn")
+        elif (c == b"U" or c == b"u") and ref_wildcards:
+            set_masks(needle_mask, i, "TtUu")
+            if query_wildcards:
+                set_masks(needle_mask, i, "YWKBDHNywkbdhn")
+        elif (c == b"R" or c == b"r") and ref_wildcards:
+            set_masks(needle_mask, i, "AaGg")
+            if query_wildcards:
+                set_masks(needle_mask, i, "RDVNrdvn")
+        elif (c == b"Y" or c == b"y") and ref_wildcards:
+            set_masks(needle_mask, i, "CcTt")
+            if query_wildcards:
+                set_masks(needle_mask, i, "YBHNybhn")
         else:
             needle_mask[<uint8_t>c] &= ~(1UL << i)
 
