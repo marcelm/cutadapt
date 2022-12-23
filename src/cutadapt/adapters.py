@@ -741,13 +741,17 @@ class BackAdapter(SingleAdapter):
         super().__init__(*args, **kwargs)
         self.adapter_heuristic = None
         self.kmer_finder = None
-        if not self.adapter_wildcards and not self.read_wildcards:
+        if not self.adapter_wildcards:
             # We can do some optimization by identifying kmers that if not
             # present in the sequence prove that no adapter is present.
             kmers_and_offsets = create_kmers_and_offsets(
-                self.sequence.upper(), self.min_overlap, self.max_error_rate
+                self.sequence.upper(),
+                self.min_overlap,
+                self.max_error_rate,
             )
-            self.kmer_finder = KmerFinder(kmers_and_offsets)
+            self.kmer_finder = KmerFinder(
+                kmers_and_offsets, self.adapter_wildcards, self.read_wildcards
+            )
             self.adapter_heuristic = self.kmer_finder.kmers_present
 
     def descriptive_identifier(self) -> str:
