@@ -160,6 +160,42 @@ cdef populate_needle_mask(size_t *needle_mask, char *needle, size_t needle_lengt
             set_masks(needle_mask, i, "CcTt")
             if query_wildcards:
                 set_masks(needle_mask, i, "YBHNybhn")
+        elif (c == b"S" or c == b"s") and ref_wildcards:
+            set_masks(needle_mask, i, "GgCc")
+            if query_wildcards:
+                set_masks(needle_mask, i, "SBVNsbvn")
+        elif (c == b"W" or c == b"w") and ref_wildcards:
+            set_masks(needle_mask, i, "AaTt")
+            if query_wildcards:
+                set_masks(needle_mask, i, "WDHNwdhn")
+        elif (c == b"K" or c == b"k") and ref_wildcards:
+            set_masks(needle_mask, i, "GgTt")
+            if query_wildcards:
+                set_masks(needle_mask, i, "KBDNkbdn")
+        elif (c == b"M" or c == b"m") and ref_wildcards:
+            set_masks(needle_mask, i, "AaCc")
+            if query_wildcards:
+                set_masks(needle_mask, i, "MHVNmhvn")
+        elif (c == b"B" or  c == b"b") and ref_wildcards:
+            set_masks(needle_mask, i, "CcGgTt")
+            if query_wildcards:
+                set_masks(needle_mask, i, "BNbn")
+        elif (c == b"D" or c == b"d") and ref_wildcards:
+            set_masks(needle_mask, i, "AaGgTt")
+            if query_wildcards:
+                set_masks(needle_mask, i, "DNdn")
+        elif (c == b"H" or c == b"h") and ref_wildcards:
+            set_masks(needle_mask, i, "AaCcTt")
+            if query_wildcards:
+                set_masks(needle_mask, i, "HNhn")
+        elif (c == b"V" or c == b"v") and ref_wildcards:
+            set_masks(needle_mask, i, "AaCcGg")
+            if query_wildcards:
+                set_masks(needle_mask, i, "VNvn")
+        elif (c == b"N" or c == b"n") and ref_wildcards:
+            set_masks(needle_mask, i, "AaCcGgTt")
+            if query_wildcards:
+                set_masks(needle_mask, i, "URYSWKMBDHVNuryswkmbdhvn")
         else:
             needle_mask[<uint8_t>c] &= ~(1UL << i)
 
