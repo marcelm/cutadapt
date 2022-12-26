@@ -106,7 +106,7 @@ cdef class KmerFinder:
             mask_ptr = self.kmer_masks + entry.mask_offset
             search_ptr = seq + search_offset
             search_length = seq_length - (search_ptr - seq)
-            search_result = shift_and_search(search_ptr, search_length,
+            search_result = shift_or_search(search_ptr, search_length,
                                              mask_ptr, kmer_length)
             if search_result:
                 return True
@@ -200,7 +200,7 @@ cdef populate_needle_mask(size_t *needle_mask, char *needle, size_t needle_lengt
             needle_mask[<uint8_t>c] &= ~(1UL << i)
 
 
-cdef char *shift_and_search(char *haystack, size_t haystack_length,
+cdef char *shift_or_search(char *haystack, size_t haystack_length,
                             size_t *needle_mask, size_t needle_length):
     cdef:
         size_t R = ~1
