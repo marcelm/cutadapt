@@ -71,11 +71,10 @@ def find_optimal_kmers(search_sets: List[SearchSet]) -> List[Tuple[str, int]]:
     return kmers_and_offsets
 
 
-def create_kmers_and_offsets(
+def create_back_overlap_searchsets(
     adapter: str, min_overlap: int, error_rate: float
-) -> List[Tuple[str, int]]:
+) -> List[SearchSet]:
     adapter_length = len(adapter)
-    max_errors = int(adapter_length * error_rate)
     error_lengths = []
     max_error = 1
     search_sets: List[SearchSet] = []
@@ -126,9 +125,14 @@ def create_kmers_and_offsets(
         number_of_errors = i + 1
         kmer_sets = kmer_possibilities(adapter[:error_length], number_of_errors + 1)
         search_sets.append((offset, kmer_sets))
+    return search_sets
 
-    # Create kmers at least one of which should be in the read when there is a
-    # an adapter
+
+def create_kmers_and_offsets(
+    adapter: str, min_overlap: int, error_rate: float
+) -> List[Tuple[str, int]]:
+    max_errors = int(len(adapter) * error_rate)
+    search_sets = create_back_overlap_searchsets(adapter, min_overlap, error_rate)
     kmer_sets = kmer_possibilities(adapter, max_errors + 1)
     search_sets.append((0, kmer_sets))
     return find_optimal_kmers(search_sets)
