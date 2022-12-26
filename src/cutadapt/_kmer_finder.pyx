@@ -51,8 +51,6 @@ cdef class KmerFinder:
         self.number_of_kmers = 0
         self.ref_wildcards = ref_wildcards
         self.query_wildcards = query_wildcards
-        kmers = [kmer for kmer, _ in kmers_and_positions]
-        kmer_total_length = sum(len(kmer) for kmer in kmers)
         number_of_entries = len(kmers_and_positions)
         self.kmer_entries = <KmerEntry *>PyMem_Malloc(number_of_entries * sizeof(KmerEntry))
         # for the kmers the NULL bytes also need space.
@@ -69,7 +67,7 @@ cdef class KmerFinder:
             self.kmer_entries[i].search_start  = start
             if stop is None:
                 stop = 0
-            self.kmer_intries[i].search_stop = stop
+            self.kmer_entries[i].search_stop = stop
             self.kmer_entries[i].mask_offset = mask_offset
             kmer_length = PyUnicode_GET_LENGTH(kmer)
             self.kmer_entries[i].kmer_length = kmer_length

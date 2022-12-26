@@ -1,6 +1,6 @@
 import itertools
 import sys
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 from collections import defaultdict
 
 
@@ -32,16 +32,18 @@ def kmer_possibilities(sequence: str, chunks: int) -> List[Set[str]]:
     return kmer_sets
 
 
-# A SearchSet is an offset combined with a list of possible kmer sets which
-# should appear after this offset
-SearchSet = Tuple[int, List[Set[str]]]
+# A SearchSet is a start and stop combined with a list of possible kmer sets
+# which should appear between this start and stop. Start and stop follow python
+# indexing rules. (Negative start is a position relative to the end. None end
+# is to the end of the sequence)
+SearchSet = Tuple[int, Optional[int], List[Set[str]]]
 
 
 def find_optimal_kmers(search_sets: List[SearchSet]) -> List[Tuple[str, int]]:
     minimal_score = sys.maxsize
     best_combination = None
-    offsets = [offset for offset, kmer_set_list in search_sets]
-    kmer_set_lists = [kmer_set_list for offset, kmer_set_list in search_sets]
+    positions = [(start, stop) for start, stop, kmer_set_list in search_sets]
+    kmer_set_lists = [kmer_set_list for start, stop, kmer_set_list in search_sets]
     for kmer_sets in itertools.product(*kmer_set_lists):
         check_set = set()
         for s in kmer_sets:
@@ -50,25 +52,33 @@ def find_optimal_kmers(search_sets: List[SearchSet]) -> List[Tuple[str, int]]:
             best_combination = kmer_sets
             minimal_score = len(check_set)
     kmer_and_offsets_dict = defaultdict(list)
-    for offset, kmer_set in zip(offsets, best_combination):  # type: ignore
+    for position, kmer_set in zip(positions, best_combination):  # type: ignore
         for kmer in kmer_set:
-            kmer_and_offsets_dict[kmer].append(offset)
-    kmers_and_offsets: List[Tuple[str, int]] = []
-    for kmer, offsets in kmer_and_offsets_dict.items():
-        if len(offsets) == 1:
-            offset = offsets[0]
-        elif 0 in offsets:
-            offset = 0
+            kmer_and_offsets_dict[kmer].append(position)
+    kmers_and_positions: List[Tuple[str, int, int]] = []
+    for kmer, postions in kmer_and_offsets_dict.items():
+        if len(positions) == 1:
+            kmers_and_positions.append((kmer, *positions[0]))
+            continue
+
+        starts = [start for start, stop in postions]
+        stops = [stop for start, stop in postions]
+        if 0 in starts:
+            start = 0
         # If all offsets have the same sign then choose the offset closest to
         # the start.
-        elif all(offset < 0 for offset in offsets) or all(
-            offset > 0 for offset in offsets
-        ):
-            offset = min(offsets)
+        elif all(start < 0 for start in starts) or all(start > 0 for start in starts):
+            start = min(starts)
         else:  # Mixed positive and negative: search the entire sequence
-            offset = 0
-        kmers_and_offsets.append((kmer, offset))
-    return kmers_and_offsets
+            start = 0
+        if None in stops:
+            stop = None
+        elif all(stop < 0 for stop in stops) or all(stop > 0 for stop in stops):
+            stop = max(stops)
+        else:
+            stop = None
+        kmers_and_positions.append((kmer, start, stop))
+    return kmers_and_positions
 
 
 def create_back_overlap_searchsets(
@@ -92,6 +102,7 @@ def create_back_overlap_searchsets(
             search_sets.append(
                 (
                     -i,
+                    None,
                     [
                         {
                             adapter[:i],
@@ -103,12 +114,13 @@ def create_back_overlap_searchsets(
     # Build up the array with chunks which should occur at the tail end
     # if the adapter overlaps with the end.
     min_overlap_kmer = adapter[:min_overlap]
-    min_overlap_kmer_offset = (
+    min_overlap_kmer_start = (
         -(error_lengths[0] - 1) if error_lengths else -(adapter_length - 1)
     )
     search_sets.append(
         (
-            min_overlap_kmer_offset,
+            min_overlap_kmer_start,
+            None,
             [
                 {
                     min_overlap_kmer,
@@ -121,10 +133,10 @@ def create_back_overlap_searchsets(
             next_length = error_lengths[i + 1]
         else:
             next_length = adapter_length
-        offset = -(next_length - 1)
+        start = -(next_length - 1)
         number_of_errors = i + 1
         kmer_sets = kmer_possibilities(adapter[:error_length], number_of_errors + 1)
-        search_sets.append((offset, kmer_sets))
+        search_sets.append((start, None, kmer_sets))
     return search_sets
 
 
@@ -134,24 +146,28 @@ def create_kmers_and_offsets(
     max_errors = int(len(adapter) * error_rate)
     search_sets = create_back_overlap_searchsets(adapter, min_overlap, error_rate)
     kmer_sets = kmer_possibilities(adapter, max_errors + 1)
-    search_sets.append((0, kmer_sets))
+    search_sets.append((0, None, kmer_sets))
     return find_optimal_kmers(search_sets)
 
 
 def kmer_probability_analysis(
-    kmers_and_offsets: List[Tuple[str, int]], default_length: int = 150
+    kmers_and_offsets: List[Tuple[str, int, Optional[int]]], default_length: int = 150
 ):
-    print("kmer\toffset\tconsidered sites\thit chance by random sequence (%)")
+    print("kmer\tstart\tstop\tconsidered sites\thit chance by random sequence (%)")
     accumulated_not_hit_chance = 1.0
-    for kmer, offset in kmers_and_offsets:
+    for kmer, start, stop in kmers_and_offsets:
         kmer_length = len(kmer)
-        check_length = -offset if offset < 0 else default_length - offset
+        if stop is None:
+            check_length = -start if start < 0 else default_length - start
+        else:
+            start = default_length - start if start < 0 else start
+            check_length = max(stop - start, 0)
         considered_sites = check_length - kmer_length + 1
         single_kmer_hit_chance = 1 / 4**kmer_length
         not_hit_chance = (1 - single_kmer_hit_chance) ** considered_sites
         accumulated_not_hit_chance *= not_hit_chance
         print(
-            f"{kmer:10}\t{offset}\t{considered_sites}\t{(1 - not_hit_chance) * 100:.2f}"
+            f"{kmer:10}\t{start}\t{stop}\t{considered_sites}\t{(1 - not_hit_chance) * 100:.2f}"
         )
     print(
         f"Chance for profile hit by random sequence: {(1 - accumulated_not_hit_chance) * 100:.2f}%"
