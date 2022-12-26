@@ -39,7 +39,9 @@ def kmer_possibilities(sequence: str, chunks: int) -> List[Set[str]]:
 SearchSet = Tuple[int, Optional[int], List[Set[str]]]
 
 
-def find_optimal_kmers(search_sets: List[SearchSet]) -> List[Tuple[str, int]]:
+def find_optimal_kmers(
+    search_sets: List[SearchSet],
+) -> List[Tuple[str, int, Optional[int]]]:
     minimal_score = sys.maxsize
     best_combination = None
     positions = [(start, stop) for start, stop, kmer_set_list in search_sets]
@@ -55,10 +57,11 @@ def find_optimal_kmers(search_sets: List[SearchSet]) -> List[Tuple[str, int]]:
     for position, kmer_set in zip(positions, best_combination):  # type: ignore
         for kmer in kmer_set:
             kmer_and_offsets_dict[kmer].append(position)
-    kmers_and_positions: List[Tuple[str, int, int]] = []
+    kmers_and_positions: List[Tuple[str, int, Optional[int]]] = []
     for kmer, postions in kmer_and_offsets_dict.items():
         if len(positions) == 1:
-            kmers_and_positions.append((kmer, *positions[0]))
+            start, stop = positions[0]
+            kmers_and_positions.append((kmer, start, stop))
             continue
 
         starts = [start for start, stop in postions]
@@ -73,8 +76,9 @@ def find_optimal_kmers(search_sets: List[SearchSet]) -> List[Tuple[str, int]]:
             start = 0
         if None in stops:
             stop = None
-        elif all(stop < 0 for stop in stops) or all(stop > 0 for stop in stops):
-            stop = max(stops)
+        # stop is never None due to check above, therefore type checks can be ignored.
+        elif all(stop < 0 for stop in stops) or all(stop > 0 for stop in stops):  # type: ignore
+            stop = max(stops)  # type: ignore
         else:
             stop = None
         kmers_and_positions.append((kmer, start, stop))
@@ -142,7 +146,7 @@ def create_back_overlap_searchsets(
 
 def create_kmers_and_offsets(
     adapter: str, min_overlap: int, error_rate: float
-) -> List[Tuple[str, int]]:
+) -> List[Tuple[str, int, Optional[int]]]:
     max_errors = int(len(adapter) * error_rate)
     search_sets = create_back_overlap_searchsets(adapter, min_overlap, error_rate)
     kmer_sets = kmer_possibilities(adapter, max_errors + 1)
