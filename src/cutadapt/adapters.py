@@ -751,7 +751,6 @@ class BackAdapter(SingleAdapter):
         self.kmer_finder = KmerFinder(
             kmers_and_offsets, self.adapter_wildcards, self.read_wildcards
         )
-        self.adapter_heuristic = self.kmer_finder.kmers_present
 
     def descriptive_identifier(self) -> str:
         return "regular_three_prime"
@@ -770,7 +769,7 @@ class BackAdapter(SingleAdapter):
         overlap length, maximum error rate).
         """
         # Heuristically check if an adapter may be present. If not, skip.
-        if self.adapter_heuristic and not self.adapter_heuristic(sequence):
+        if not self.kmer_finder.kmers_present(sequence):
             return None
         alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
             sequence
