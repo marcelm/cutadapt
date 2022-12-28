@@ -131,7 +131,7 @@ def create_back_overlap_searchsets(
     # if the adapter overlaps with the end.
     min_overlap_kmer = adapter[:min_overlap]
     min_overlap_kmer_start = (
-        -(error_lengths[0] - 1) if error_lengths else -(adapter_length - 1)
+        -(error_lengths[0] - 1) if error_lengths else -adapter_length
     )
     search_sets.append(
         (
