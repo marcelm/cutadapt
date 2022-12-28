@@ -195,7 +195,9 @@ def kmer_probability_analysis(
     kmers_and_offsets: List[Tuple[str, int, Optional[int]]], default_length: int = 150
 ) -> str:
     out = io.StringIO()
-    out.write("kmer\tstart\tstop\tconsidered sites\thit chance by random sequence (%)\n")
+    out.write(
+        "kmer\tstart\tstop\tconsidered sites\thit chance by random sequence (%)\n"
+    )
     accumulated_not_hit_chance = 1.0
     for kmer, start, stop in kmers_and_offsets:
         kmer_length = len(kmer)
