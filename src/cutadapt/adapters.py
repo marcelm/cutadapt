@@ -744,7 +744,11 @@ class BackAdapter(SingleAdapter):
         # We can do some optimization by identifying kmers that if not
         # present in the sequence prove that no adapter is present.
         kmers_and_offsets = create_kmers_and_offsets(
-            self.sequence.upper(), self.max_error_rate, back_overlap=self.min_overlap
+            self.sequence.upper(),
+            self.min_overlap,
+            self.max_error_rate,
+            back_adapter=True,
+            front_adapter=self._force_anywhere,
         )
         self.kmer_finder = KmerFinder(
             kmers_and_offsets, self.adapter_wildcards, self.read_wildcards

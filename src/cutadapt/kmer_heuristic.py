@@ -144,78 +144,34 @@ def create_back_overlap_searchsets(
     return search_sets
 
 
-def create_front_overlap_searchsets(
-    adapter: str, min_overlap: int, error_rate: float
-) -> List[SearchSet]:
-    adapter_length = len(adapter)
-    error_lengths = []
-    max_error = 1
-    search_sets: List[SearchSet] = []
-    for i in range(adapter_length + 1):
-        if i * error_rate >= max_error:
-            error_lengths.append(i)
-            max_error += 1
-
-    # Add a couple of directly matching 1, 2, 3 and 4-mer searches.
-    # The probability of a false positive is just too high when for example
-    # a 3-mer is evaluated in more than one position.
-    min_overlap_kmer_length = 5
-    if min_overlap < min_overlap_kmer_length:
-        for i in range(min_overlap, min_overlap_kmer_length):
-            search_sets.append(
-                (
-                    0,
-                    i,
-                    [
-                        {
-                            adapter[-i:],
-                        }
-                    ],
-                )
-            )
-        min_overlap = min_overlap_kmer_length
-    # Build up the array with chunks which should occur at the start of the
-    # adapter overlaps with the start
-    min_overlap_kmer = adapter[-min_overlap:]
-    min_overlap_kmer_stop = (
-        error_lengths[0] - 1 if error_lengths else adapter_length - 1
-    )
-    search_sets.append(
-        (
-            0,
-            min_overlap_kmer_stop,
-            [
-                {
-                    min_overlap_kmer,
-                }
-            ],
-        )
-    )
-    for i, error_length in enumerate(error_lengths):
-        if (i + 1) < len(error_lengths):
-            next_length = error_lengths[i + 1]
-        else:
-            next_length = adapter_length
-        stop = next_length - 1
-        number_of_errors = i + 1
-        kmer_sets = kmer_possibilities(adapter[-error_length:], number_of_errors + 1)
-        search_sets.append((0, stop, kmer_sets))
-    return search_sets
-
-
 def create_kmers_and_offsets(
-    adapter: str, error_rate: float, back_overlap: int = 0, front_overlap: int = 0
+    adapter: str,
+    min_overlap: int,
+    error_rate: float,
+    back_adapter: bool,
+    front_adapter: bool,
 ) -> List[Tuple[str, int, Optional[int]]]:
     max_errors = int(len(adapter) * error_rate)
     search_sets = []
-    if back_overlap:
+    if back_adapter:
         search_sets.extend(
-            create_back_overlap_searchsets(adapter, back_overlap, error_rate)
+            create_back_overlap_searchsets(adapter, min_overlap, error_rate)
         )
-    if front_overlap:
-        search_sets.extend(
-            create_front_overlap_searchsets(adapter, front_overlap, error_rate)
+    if front_adapter:
+        # To create a front adapter the code is practically the same except
+        # with some parameters set differently. Reversing the adapter, running
+        # the back adapter code and reversing all the kmers and positions has
+        # the same effect without needing to duplicate the code.
+        reversed_back_search_sets = create_back_overlap_searchsets(
+            adapter[::-1], min_overlap, error_rate
         )
+        front_search_sets = []
+        for start, stop, kmer_sets in reversed_back_search_sets:
+            new_kmer_sets = [
+                {kmer[::-1] for kmer in kmer_set} for kmer_set in kmer_sets
+            ]
+            front_search_sets.append((0, -start, new_kmer_sets))
+        search_sets.extend(front_search_sets)
     kmer_sets = kmer_possibilities(adapter, max_errors + 1)
     search_sets.append((0, None, kmer_sets))
     return find_optimal_kmers(search_sets)
