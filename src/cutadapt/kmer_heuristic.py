@@ -39,50 +39,61 @@ def kmer_possibilities(sequence: str, chunks: int) -> List[Set[str]]:
 SearchSet = Tuple[int, Optional[int], List[Set[str]]]
 
 
-def find_optimal_kmers(
-    search_sets: List[SearchSet],
+def minimize_kmer_search_list(
+    kmer_search_list: List[Tuple[str, int, Optional[int]]]
 ) -> List[Tuple[str, int, Optional[int]]]:
-    minimal_score = sys.maxsize
-    best_combination = None
-    positions = [(start, stop) for start, stop, kmer_set_list in search_sets]
-    kmer_set_lists = [kmer_set_list for start, stop, kmer_set_list in search_sets]
-    for kmer_sets in itertools.product(*kmer_set_lists):
-        check_set = set()
-        for s in kmer_sets:
-            check_set |= s
-        if len(check_set) < minimal_score:
-            best_combination = kmer_sets
-            minimal_score = len(check_set)
     kmer_and_offsets_dict = defaultdict(list)
-    for position, kmer_set in zip(positions, best_combination):  # type: ignore
-        for kmer in kmer_set:
-            kmer_and_offsets_dict[kmer].append(position)
+    for kmer, start, stop in kmer_search_list:  # type: ignore
+        kmer_and_offsets_dict[kmer].append((start, stop))
     kmers_and_positions: List[Tuple[str, int, Optional[int]]] = []
-    for kmer, postions in kmer_and_offsets_dict.items():
+    for kmer, positions in kmer_and_offsets_dict.items():
         if len(positions) == 1:
             start, stop = positions[0]
             kmers_and_positions.append((kmer, start, stop))
             continue
-
-        starts = [start for start, stop in postions]
-        stops = [stop for start, stop in postions]
-        if 0 in starts:
-            start = 0
-        # If all offsets have the same sign then choose the offset closest to
-        # the start.
-        elif all(start < 0 for start in starts) or all(start > 0 for start in starts):
-            start = min(starts)
-        else:  # Mixed positive and negative: search the entire sequence
-            start = 0
-        if None in stops:
-            stop = None
-        # stop is never None due to check above, therefore type checks can be ignored.
-        elif all(stop < 0 for stop in stops) or all(stop > 0 for stop in stops):  # type: ignore
-            stop = max(stops)  # type: ignore
-        else:
-            stop = None
-        kmers_and_positions.append((kmer, start, stop))
+        if (0, None) in positions:
+            kmers_and_positions.append((kmer, 0, None))
+            continue
+        front_searches = [(start, stop) for start, stop in positions if start == 0]
+        back_searches = [(start, stop) for start, stop in positions if stop is None]
+        middle_searches = [
+            (start, stop)
+            for start, stop in positions
+            if start != 0 and stop is not None
+        ]
+        if middle_searches:
+            raise NotImplementedError(
+                "Situations with searches starting in the middle have not been considered."
+            )
+        if front_searches:
+            # (0, None) condition is already catched, so stop is never None.
+            kmers_and_positions.append(
+                (kmer, 0, max(stop for start, stop in front_searches))  # type: ignore
+            )
+        if back_searches:
+            kmers_and_positions.append(
+                (kmer, min(start for start, stop in back_searches), None)
+            )
     return kmers_and_positions
+
+
+def find_optimal_kmers(
+    search_sets: List[SearchSet],
+) -> List[Tuple[str, int, Optional[int]]]:
+    minimal_score = sys.maxsize
+    best_combination = []
+    positions = [(start, stop) for start, stop, kmer_set_list in search_sets]
+    kmer_set_lists = [kmer_set_list for start, stop, kmer_set_list in search_sets]
+    for kmer_sets in itertools.product(*kmer_set_lists):
+        kmer_search_list = []
+        for kmer_set, (start, stop) in zip(kmer_sets, positions):
+            for kmer in kmer_set:
+                kmer_search_list.append((kmer, start, stop))
+        minimized_search_list = minimize_kmer_search_list(kmer_search_list)
+        if len(minimized_search_list) < minimal_score:
+            best_combination = minimized_search_list
+            minimal_score = len(minimized_search_list)
+    return best_combination
 
 
 def create_back_overlap_searchsets(
