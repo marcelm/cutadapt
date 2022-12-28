@@ -90,7 +90,7 @@ cdef class KmerFinder:
             size_t *mask_ptr
             char *search_ptr
             char *search_result
-            size_t search_length
+            ssize_t search_length
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
             raise ValueError("Only ASCII strings are supported")
         cdef char *seq = <char *>PyUnicode_DATA(sequence)
