@@ -204,9 +204,10 @@ cdef populate_needle_mask(size_t *needle_mask, char *needle, size_t needle_lengt
             if query_wildcards:
                 set_masks(needle_mask, i, "VNvn")
         elif (c == b"N" or c == b"n") and ref_wildcards:
-            set_masks(needle_mask, i, "AaCcGgTt")
-            if query_wildcards:
+            if query_wildcards:  # Proper IUPAC matching
                 set_masks(needle_mask, i, "URYSWKMBDHVNuryswkmbdhvn")
+            else:  # N matches literally everything except \00
+                set_masks(needle_mask, i, bytes(range(1, 128)))
         else:
             needle_mask[<uint8_t>c] &= ~(1UL << i)
 
