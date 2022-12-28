@@ -19,7 +19,7 @@ from .align import (
     edit_environment,
     hamming_environment,
 )
-from .kmer_heuristic import create_kmers_and_offsets
+from .kmer_heuristic import create_kmers_and_positions
 
 logger = logging.getLogger()
 
@@ -584,6 +584,7 @@ class SingleAdapter(Adapter, ABC):
         self.read_wildcards: bool = read_wildcards
         self.indels: bool = indels
         self.aligner = self._aligner()
+        self.kmer_finder = self._kmer_finder()
 
     def _make_aligner(self, flags: int) -> Aligner:
         # TODO
@@ -598,6 +599,21 @@ class SingleAdapter(Adapter, ABC):
             wildcard_query=self.read_wildcards,
             indel_cost=indel_cost,
             min_overlap=self.min_overlap,
+        )
+
+    def _make_kmer_finder(
+        self, back_adapter: bool, front_adapter: bool, internal: bool = True
+    ) -> KmerFinder:
+        kmers_and_positions = create_kmers_and_positions(
+            self.sequence,
+            self.min_overlap,
+            self.max_error_rate,
+            back_adapter,
+            front_adapter,
+            internal,
+        )
+        return KmerFinder(
+            kmers_and_positions, self.adapter_wildcards, self.read_wildcards
         )
 
     def __repr__(self):
@@ -623,6 +639,10 @@ class SingleAdapter(Adapter, ABC):
 
     @abstractmethod
     def _aligner(self):
+        pass
+
+    @abstractmethod
+    def _kmer_finder(self):
         pass
 
     @abstractmethod
@@ -656,6 +676,11 @@ class FrontAdapter(SingleAdapter):
             Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value
         )
 
+    def _kmer_finder(self):
+        return self._make_kmer_finder(
+            back_adapter=self._force_anywhere, front_adapter=True
+        )
+
     def match_to(self, sequence: str):
         """
         Attempt to match this adapter to the given read.
@@ -664,6 +689,8 @@ class FrontAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
+        if not self.kmer_finder.kmers_present(sequence):
+            return None
         alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
             sequence
         )
@@ -700,6 +727,14 @@ class RightmostFrontAdapter(FrontAdapter):
         self.sequence = self.sequence[::-1]
         return aligner
 
+    def _kmer_finder(self):
+        self.sequence = self.sequence[::-1]
+        kmer_finder = self._make_kmer_finder(
+            front_adapter=True, back_adapter=self._force_anywhere
+        )
+        self.sequence = self.sequence[::-1]
+        return kmer_finder
+
     def match_to(self, sequence: str):
         """
         Attempt to match this adapter to the given read.
@@ -708,6 +743,8 @@ class RightmostFrontAdapter(FrontAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
+        if not self.kmer_finder.kmers_present(sequence):
+            return None
         alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
             sequence[::-1]
         )
@@ -739,20 +776,8 @@ class BackAdapter(SingleAdapter):
     def __init__(self, *args, **kwargs):
         self._force_anywhere = kwargs.pop("force_anywhere", False)
         super().__init__(*args, **kwargs)
-        self.adapter_heuristic = None
-        self.kmer_finder = None
         # We can do some optimization by identifying kmers that if not
         # present in the sequence prove that no adapter is present.
-        kmers_and_offsets = create_kmers_and_offsets(
-            self.sequence.upper(),
-            self.min_overlap,
-            self.max_error_rate,
-            back_adapter=True,
-            front_adapter=self._force_anywhere,
-        )
-        self.kmer_finder = KmerFinder(
-            kmers_and_offsets, self.adapter_wildcards, self.read_wildcards
-        )
 
     def descriptive_identifier(self) -> str:
         return "regular_three_prime"
@@ -760,6 +785,11 @@ class BackAdapter(SingleAdapter):
     def _aligner(self):
         return self._make_aligner(
             Where.ANYWHERE.value if self._force_anywhere else Where.BACK.value
+        )
+
+    def _kmer_finder(self):
+        return self._make_kmer_finder(
+            back_adapter=True, front_adapter=self._force_anywhere
         )
 
     def match_to(self, sequence: str):
@@ -803,6 +833,9 @@ class AnywhereAdapter(SingleAdapter):
     def _aligner(self):
         return self._make_aligner(Where.ANYWHERE.value)
 
+    def _kmer_finder(self):
+        return self._make_kmer_finder(back_adapter=True, front_adapter=True)
+
     def match_to(self, sequence: str):
         """
         Attempt to match this adapter to the given string.
@@ -811,6 +844,8 @@ class AnywhereAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
+        if not self.kmer_finder.kmers_present(sequence):
+            return None
         alignment = self.aligner.locate(sequence.upper())
         if self._debug:
             print(self.aligner.dpmatrix)
@@ -841,7 +876,14 @@ class NonInternalFrontAdapter(FrontAdapter):
     def _aligner(self):
         return self._make_aligner(Where.FRONT_NOT_INTERNAL.value)
 
+    def _kmer_finder(self):
+        return self._make_kmer_finder(
+            front_adapter=True, back_adapter=self._force_anywhere, internal=False
+        )
+
     def match_to(self, sequence: str):
+        if not self.kmer_finder.kmers_present(sequence):
+            return None
         # The locate function takes care of uppercasing the sequence
         alignment = self.aligner.locate(sequence)
         if self._debug:
@@ -868,7 +910,14 @@ class NonInternalBackAdapter(BackAdapter):
     def _aligner(self):
         return self._make_aligner(Where.BACK_NOT_INTERNAL.value)
 
+    def _kmer_finder(self):
+        return self._make_kmer_finder(
+            back_adapter=True, front_adapter=self._force_anywhere, internal=False
+        )
+
     def match_to(self, sequence: str):
+        if not self.kmer_finder.kmers_present(sequence):
+            return None
         # The locate function takes care of uppercasing the sequence
         alignment = self.aligner.locate(sequence)
         if self._debug:

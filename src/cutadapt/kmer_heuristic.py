@@ -155,12 +155,13 @@ def create_back_overlap_searchsets(
     return search_sets
 
 
-def create_kmers_and_offsets(
+def create_kmers_and_positions(
     adapter: str,
     min_overlap: int,
     error_rate: float,
     back_adapter: bool,
     front_adapter: bool,
+    internal: bool = True,
 ) -> List[Tuple[str, int, Optional[int]]]:
     max_errors = int(len(adapter) * error_rate)
     search_sets = []
@@ -183,8 +184,9 @@ def create_kmers_and_offsets(
             ]
             front_search_sets.append((0, -start, new_kmer_sets))
         search_sets.extend(front_search_sets)
-    kmer_sets = kmer_possibilities(adapter, max_errors + 1)
-    search_sets.append((0, None, kmer_sets))
+    if internal:
+        kmer_sets = kmer_possibilities(adapter, max_errors + 1)
+        search_sets.append((0, None, kmer_sets))
     return find_optimal_kmers(search_sets)
 
 
