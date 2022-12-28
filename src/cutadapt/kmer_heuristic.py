@@ -146,10 +146,10 @@ def create_back_overlap_searchsets(
     )
     for i, error_length in enumerate(error_lengths):
         if (i + 1) < len(error_lengths):
-            next_length = error_lengths[i + 1]
+            check_length = error_lengths[i + 1] - 1
         else:
-            next_length = adapter_length
-        start = -(next_length - 1)
+            check_length = adapter_length
+        start = -check_length
         number_of_errors = i + 1
         kmer_sets = kmer_possibilities(adapter[:error_length], number_of_errors + 1)
         search_sets.append((start, None, kmer_sets))
