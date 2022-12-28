@@ -1,4 +1,4 @@
-# cython: language_level=3
+# cython: profile=False, emit_code_comments=False, language_level=3
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from libc.string cimport memset, strlen
