@@ -41,7 +41,7 @@ cdef class KmerFinder:
         KmerEntry *kmer_entries
         size_t *kmer_masks
         size_t number_of_kmers
-        object kmers_and_positions
+        readonly object kmers_and_positions
         readonly bint ref_wildcards
         readonly bint query_wildcards
 
