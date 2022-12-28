@@ -24,6 +24,11 @@ from .kmer_heuristic import create_kmers_and_positions, kmer_probability_analysi
 logger = logging.getLogger()
 
 
+class MockKmerFinder:
+    def kmers_present(self, sequence: str):
+        return True
+
+
 class InvalidCharacter(Exception):
     pass
 
@@ -960,6 +965,14 @@ class PrefixAdapter(NonInternalFrontAdapter):
         else:
             return self._make_aligner(Where.PREFIX.value)
 
+    def _kmer_finder(self):
+        if isinstance(self.aligner, PrefixComparer):
+            # Prefix comparer does not create a dynamic programming matrix
+            # so the heuristic will be slow and unnecessary.
+            return MockKmerFinder()
+        else:
+            return super()._kmer_finder()
+
     def spec(self) -> str:
         return f"^{self.sequence}..."
 
@@ -988,6 +1001,14 @@ class SuffixAdapter(NonInternalBackAdapter):
             )
         else:
             return self._make_aligner(Where.SUFFIX.value)
+
+    def _kmer_finder(self):
+        if isinstance(self.aligner, SuffixComparer):
+            # Suffix comparer does not create a dynamic programming matrix
+            # so the heuristic will be slow and unnecessary.
+            return MockKmerFinder()
+        else:
+            return super()._kmer_finder()
 
     def spec(self) -> str:
         return f"{self.sequence}$"
