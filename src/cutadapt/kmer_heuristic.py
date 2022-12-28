@@ -1,3 +1,4 @@
+import io
 import itertools
 import sys
 from typing import List, Optional, Set, Tuple
@@ -192,8 +193,9 @@ def create_kmers_and_positions(
 
 def kmer_probability_analysis(
     kmers_and_offsets: List[Tuple[str, int, Optional[int]]], default_length: int = 150
-):
-    print("kmer\tstart\tstop\tconsidered sites\thit chance by random sequence (%)")
+) -> str:
+    out = io.StringIO()
+    out.write("kmer\tstart\tstop\tconsidered sites\thit chance by random sequence (%)\n")
     accumulated_not_hit_chance = 1.0
     for kmer, start, stop in kmers_and_offsets:
         kmer_length = len(kmer)
@@ -206,9 +208,10 @@ def kmer_probability_analysis(
         single_kmer_hit_chance = 1 / 4**kmer_length
         not_hit_chance = (1 - single_kmer_hit_chance) ** considered_sites
         accumulated_not_hit_chance *= not_hit_chance
-        print(
-            f"{kmer:10}\t{start}\t{stop}\t{considered_sites}\t{(1 - not_hit_chance) * 100:.2f}"
+        out.write(
+            f"{kmer:10}\t{start}\t{stop}\t{considered_sites}\t{(1 - not_hit_chance) * 100:.2f}\n"
         )
-    print(
-        f"Chance for profile hit by random sequence: {(1 - accumulated_not_hit_chance) * 100:.2f}%"
+    out.write(
+        f"Chance for profile hit by random sequence: {(1 - accumulated_not_hit_chance) * 100:.2f}%\n"
     )
+    return out.getvalue()
