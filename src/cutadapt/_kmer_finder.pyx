@@ -230,7 +230,7 @@ cdef char *shift_or_search(char *haystack, size_t haystack_length,
         # Update the bit array
         R |= needle_mask[<uint8_t>haystack[i]]
         R <<= 1
-        if (0 == (R & (1UL << needle_length))):
+        if (0 == (R & (1ULL << needle_length))):
             return (haystack + i - needle_length) + 1
 
     return NULL
