@@ -78,7 +78,7 @@ cdef class KmerFinder:
         self.kmers_and_positions = kmers_and_positions
 
     def __reduce__(self):
-        return KmerFinder, (self.kmers_and_positions,)
+        return KmerFinder, (self.kmers_and_positions, self.ref_wildcards, self.query_wildcards)
 
     def kmers_present(self, str sequence):
         cdef:
