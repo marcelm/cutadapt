@@ -84,7 +84,7 @@ cdef class KmerFinder:
         self.kmers_and_positions = kmers_and_positions
 
     def __reduce__(self):
-        return KmerFinder, (self.kmers_and_positions,)
+        return KmerFinder, (self.kmers_and_positions, self.ref_wildcards, self.query_wildcards)
 
     def kmers_present(self, str sequence):
         cdef:
@@ -144,6 +144,7 @@ cdef populate_needle_mask(size_t *needle_mask, char *needle, size_t needle_lengt
                           bint ref_wildcards, bint query_wildcards):
     cdef size_t i
     cdef char c
+    cdef uint8_t j
     if needle_length > (sizeof(size_t) * 8 - 1):
         raise ValueError("The pattern is too long!")
     memset(needle_mask, 0xff, sizeof(size_t) * ASCII_CHAR_COUNT)
@@ -213,12 +214,8 @@ cdef populate_needle_mask(size_t *needle_mask, char *needle, size_t needle_lengt
             if query_wildcards:  # Proper IUPAC matching
                 set_masks(needle_mask, i, "ACGTURYSWKMBDHVNacgturyswkmbdhvn")
             else:  # N matches literally everything except \00
-                set_masks(needle_mask, i,
-                          "\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e"
-                          "\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a"
-                          "\x1b\x1c\x1d\x1e\x1f !\"#$%&'()*+,-./0123456789:;<="
-                          ">?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmno"
-                          "pqrstuvwxyz{|}~\x7f")
+                for j in range(1,128):
+                    needle_mask[j] &= ~(1UL << i)
         else:
             needle_mask[<uint8_t>c] &= ~(1UL << i)
 
@@ -236,7 +233,7 @@ cdef char *shift_or_search(char *haystack, size_t haystack_length,
         # Update the bit array
         R |= needle_mask[<uint8_t>haystack[i]]
         R <<= 1
-        if (0 == (R & (1UL << needle_length))):
+        if (0 == (R & (1ULL << needle_length))):
             return (haystack + i - needle_length) + 1
 
     return NULL
