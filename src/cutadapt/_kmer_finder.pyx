@@ -172,46 +172,46 @@ cdef populate_needle_mask(size_t *needle_mask, char *needle, size_t needle_lengt
         elif (c == b"R" or c == b"r") and ref_wildcards:
             set_masks(needle_mask, i, "AaGg")
             if query_wildcards:
-                set_masks(needle_mask, i, "RDVNrdvn")
+                set_masks(needle_mask, i, "RSWKMBDHVNrswkmvdhvn")
         elif (c == b"Y" or c == b"y") and ref_wildcards:
-            set_masks(needle_mask, i, "CcTt")
+            set_masks(needle_mask, i, "CcTtUu")
             if query_wildcards:
-                set_masks(needle_mask, i, "YBHNybhn")
+                set_masks(needle_mask, i, "YSWKMBDHVNyswkmbdhvn")
         elif (c == b"S" or c == b"s") and ref_wildcards:
             set_masks(needle_mask, i, "GgCc")
             if query_wildcards:
-                set_masks(needle_mask, i, "SBVNsbvn")
+                set_masks(needle_mask, i, "YRSKMBDHVNyrskmbdhvn")
         elif (c == b"W" or c == b"w") and ref_wildcards:
-            set_masks(needle_mask, i, "AaTt")
+            set_masks(needle_mask, i, "AaTtUu")
             if query_wildcards:
-                set_masks(needle_mask, i, "WDHNwdhn")
+                set_masks(needle_mask, i, "YRWKMBDHVNyrskmbdhvn")
         elif (c == b"K" or c == b"k") and ref_wildcards:
-            set_masks(needle_mask, i, "GgTt")
+            set_masks(needle_mask, i, "GgTtUu")
             if query_wildcards:
-                set_masks(needle_mask, i, "KBDNkbdn")
+                set_masks(needle_mask, i, "YRWSKBDHVNyrskmbdhvn")
         elif (c == b"M" or c == b"m") and ref_wildcards:
             set_masks(needle_mask, i, "AaCc")
             if query_wildcards:
-                set_masks(needle_mask, i, "MHVNmhvn")
+                set_masks(needle_mask, i, "YRWSMBDHVNyrskmbdhvn")
         elif (c == b"B" or  c == b"b") and ref_wildcards:
-            set_masks(needle_mask, i, "CcGgTt")
+            set_masks(needle_mask, i, "CcGgTtUu")
             if query_wildcards:
-                set_masks(needle_mask, i, "BNbn")
+                set_masks(needle_mask, i, "RYSWKMBDHVNryswkmbdhvn")
         elif (c == b"D" or c == b"d") and ref_wildcards:
-            set_masks(needle_mask, i, "AaGgTt")
+            set_masks(needle_mask, i, "AaGgTtUu")
             if query_wildcards:
-                set_masks(needle_mask, i, "DNdn")
+                set_masks(needle_mask, i, "RYSWKMBDHVNryswkmbdhvn")
         elif (c == b"H" or c == b"h") and ref_wildcards:
-            set_masks(needle_mask, i, "AaCcTt")
+            set_masks(needle_mask, i, "AaCcTtUu")
             if query_wildcards:
-                set_masks(needle_mask, i, "HNhn")
+                set_masks(needle_mask, i, "RYSWKMBDHVNryswkmbdhvn")
         elif (c == b"V" or c == b"v") and ref_wildcards:
             set_masks(needle_mask, i, "AaCcGg")
             if query_wildcards:
-                set_masks(needle_mask, i, "VNvn")
+                set_masks(needle_mask, i, "RYSWKMBDHVNryswkmbdhvn")
         elif (c == b"N" or c == b"n") and ref_wildcards:
             if query_wildcards:  # Proper IUPAC matching
-                set_masks(needle_mask, i, "URYSWKMBDHVNuryswkmbdhvn")
+                set_masks(needle_mask, i, "ACGTURYSWKMBDHVNacgturyswkmbdhvn")
             else:  # N matches literally everything except \00
                 set_masks(needle_mask, i,
                           "\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e"
