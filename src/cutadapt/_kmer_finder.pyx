@@ -24,14 +24,20 @@ cdef class KmerFinder:
     Find kmers in strings. To replace the following code:
 
         kmers_and_positions = [("AGA", -10, None), ("AGCATGA", 0, None)]
-        for kmer, start, stop in kmers_and_positions:
-            sequence.find(kmer, start, stop)
+        for sequence in sequences:
+            for kmer, start, stop in kmers_and_positions:
+                if sequence.find(kmer, start, stop) != -1:
+                    # do something
+                    pass
 
     This has a lot of python overhead. The following code is equivalent:
 
         kmers_and_positions = [("AGA", -10, None), ("AGCATGA", 0, None)]
         kmer_finder = KmerFinder(kmers_and_positions)
-        kmer_finder.kmers_present(sequence)
+        for sequence in sequences:
+            if kmer_finder.kmers_present(sequence):
+                # do something
+                pass
 
     This is more efficient as the kmers_present method can be applied to a lot
     of sequences and all the necessary unpacking for each kmer into C variables
