@@ -8,6 +8,10 @@ from libc.stdint cimport uint8_t
 # Dnaio conveniently ensures that all sequences are ASCII only.
 DEF ASCII_CHAR_COUNT = 128
 
+# Make bitmask type definable. size_t is the largest unsigned integer available
+# to the machine.
+ctypedef size_t bitmask_t
+
 cdef extern from "Python.h":
     void *PyUnicode_DATA(object o)
     bint PyUnicode_IS_COMPACT_ASCII(object o)
@@ -45,7 +49,7 @@ cdef class KmerFinder:
     """
     cdef:
         KmerEntry *kmer_entries
-        size_t *kmer_masks
+        bitmask_t *kmer_masks
         size_t number_of_kmers
         readonly object kmers_and_positions
         readonly bint ref_wildcards
@@ -60,7 +64,7 @@ cdef class KmerFinder:
         number_of_entries = len(kmers_and_positions)
         self.kmer_entries = <KmerEntry *>PyMem_Malloc(number_of_entries * sizeof(KmerEntry))
         # for the kmers the NULL bytes also need space.
-        self.kmer_masks = <size_t *>PyMem_Malloc(number_of_entries * sizeof(size_t) * ASCII_CHAR_COUNT)
+        self.kmer_masks = <bitmask_t *>PyMem_Malloc(number_of_entries * sizeof(bitmask_t) * ASCII_CHAR_COUNT)
         self.number_of_kmers = number_of_entries
         cdef size_t mask_offset = 0
         cdef char *kmer_ptr
@@ -93,13 +97,13 @@ cdef class KmerFinder:
             size_t kmer_offset
             size_t kmer_length
             ssize_t start, stop
-            size_t *mask_ptr
-            char *search_ptr
-            char *search_result
+            const bitmask_t *mask_ptr
+            const char *search_ptr
+            const char *search_result
             ssize_t search_length
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
             raise ValueError("Only ASCII strings are supported")
-        cdef char *seq = <char *>PyUnicode_DATA(sequence)
+        cdef const char *seq = <char *>PyUnicode_DATA(sequence)
         cdef Py_ssize_t seq_length = PyUnicode_GET_LENGTH(sequence)
         for i in range(self.number_of_kmers):
             entry = self.kmer_entries[i]
@@ -134,20 +138,20 @@ cdef class KmerFinder:
         PyMem_Free(self.kmer_entries)
 
 
-cdef void set_masks(size_t *needle_mask, size_t pos, char *chars):
+cdef void set_masks(bitmask_t *needle_mask, size_t pos, const char *chars):
     cdef char c
     cdef size_t i
     for i in range(strlen(chars)):
-        needle_mask[<uint8_t>chars[i]] &= ~(1UL << pos)
+        needle_mask[<uint8_t>chars[i]] &= ~(<bitmask_t>1ULL << pos)
 
-cdef populate_needle_mask(size_t *needle_mask, char *needle, size_t needle_length,
+cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t needle_length,
                           bint ref_wildcards, bint query_wildcards):
     cdef size_t i
     cdef char c
     cdef uint8_t j
-    if needle_length > (sizeof(size_t) * 8 - 1):
+    if needle_length > (sizeof(bitmask_t) * 8 - 1):
         raise ValueError("The pattern is too long!")
-    memset(needle_mask, 0xff, sizeof(size_t) * ASCII_CHAR_COUNT)
+    memset(needle_mask, 0xff, sizeof(bitmask_t) * ASCII_CHAR_COUNT)
     for i in range(needle_length):
         c = needle[i]
         if c == b"A" or c == b"a":
@@ -215,15 +219,15 @@ cdef populate_needle_mask(size_t *needle_mask, char *needle, size_t needle_lengt
                 set_masks(needle_mask, i, "ACGTURYSWKMBDHVNacgturyswkmbdhvn")
             else:  # N matches literally everything except \00
                 for j in range(1,128):
-                    needle_mask[j] &= ~(1UL << i)
+                    needle_mask[j] &= ~(<bitmask_t>1ULL << i)
         else:
-            needle_mask[<uint8_t>c] &= ~(1UL << i)
+            needle_mask[<uint8_t>c] &= ~(<bitmask_t>1ULL << i)
 
 
-cdef char *shift_or_search(char *haystack, size_t haystack_length,
-                            size_t *needle_mask, size_t needle_length):
+cdef const char *shift_or_search(const char *haystack, size_t haystack_length,
+                           const bitmask_t *needle_mask, size_t needle_length):
     cdef:
-        size_t R = ~1
+        bitmask_t R = ~1
         size_t i
 
     if needle_length == 0:
@@ -233,7 +237,7 @@ cdef char *shift_or_search(char *haystack, size_t haystack_length,
         # Update the bit array
         R |= needle_mask[<uint8_t>haystack[i]]
         R <<= 1
-        if (0 == (R & (1ULL << needle_length))):
+        if (0 == (R & (<bitmask_t>1ULL << needle_length))):
             return (haystack + i - needle_length) + 1
 
     return NULL
