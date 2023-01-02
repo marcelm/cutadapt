@@ -229,7 +229,7 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
             else:  # N matches literally everything except \00
                 for j in range(1,128):
                     needle_mask[j] &= ~(<bitmask_t>1ULL << i)
-        elif query_wildcards:
+        elif query_wildcards and not ref_wildcards:
             # All non-AGCT characters match to N
             set_masks(needle_mask, i, "Nn")
         elif ref_wildcards:

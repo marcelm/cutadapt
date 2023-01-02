@@ -1,4 +1,5 @@
 import operator
+import string
 
 import pytest
 
@@ -63,18 +64,17 @@ def test_kmer_finder(
 def test_kmer_finder_per_char_matching(
     ref_table, query_table, comp_op, ref_wildcards, query_wildcards
 ):
-    iupac_letters = "ACGTURYSWKMBDHVN"
-    iupac_letters = iupac_letters + iupac_letters.lower()
-
-    for char in iupac_letters:
+    for char in string.ascii_letters:
         kmer_finder = KmerFinder(
             [(char, 0, None)],
             ref_wildcards=ref_wildcards,
             query_wildcards=query_wildcards,
         )
         ref_char = ref_table[ord(char)]
-        for comp_char in iupac_letters:
+        for comp_char in string.ascii_letters:
             query_char = query_table[ord(comp_char)]
             should_match = bool(comp_op(ref_char, query_char))
             if kmer_finder.kmers_present(comp_char) is not should_match:
-                raise ValueError(f"{char} should{' ' if should_match else ' not '}match {comp_char}")
+                raise ValueError(
+                    f"{char} should{' ' if should_match else ' not '}match {comp_char}"
+                )
