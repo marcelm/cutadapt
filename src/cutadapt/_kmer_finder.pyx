@@ -25,7 +25,12 @@ ctypedef struct KmerEntry:
 
 cdef class KmerFinder:
     """
-    Find kmers in strings. To replace the following code:
+    Find kmers in strings. Allows case-independent and IUPAC matching.
+    ``ref_wildcards=True`` allows IUPAC characters in the kmer sequences.
+    ``query_wildcards=True`` allows IUPAC characters in the sequences fed to
+    the ``kmers_present`` method.
+
+    Replaces the following code:
 
         kmers_and_positions = [("AGA", -10, None), ("AGCATGA", 0, None)]
         for sequence in sequences:
@@ -34,7 +39,8 @@ cdef class KmerFinder:
                     # do something
                     pass
 
-    This has a lot of python overhead. The following code is equivalent:
+    This has a lot of python overhead. The following code accomplishes the
+    same task and allows for case-independent matching:
 
         kmers_and_positions = [("AGA", -10, None), ("AGCATGA", 0, None)]
         kmer_finder = KmerFinder(kmers_and_positions)
