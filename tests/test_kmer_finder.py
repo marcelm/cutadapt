@@ -55,9 +55,9 @@ def test_kmer_finder(
     ["ref_table", "query_table", "comp_op", "ref_wildcards", "query_wildcards"],
     [
         (UPPER_TABLE, UPPER_TABLE, operator.eq, False, False),
-        (IUPAC_TABLE, ACGT_TABLE, operator.or_, True, False),
-        (ACGT_TABLE, IUPAC_TABLE, operator.or_, False, True),
-        (IUPAC_TABLE, IUPAC_TABLE, operator.or_, True, True),
+        (IUPAC_TABLE, ACGT_TABLE, operator.and_, True, False),
+        (ACGT_TABLE, IUPAC_TABLE, operator.and_, False, True),
+        (IUPAC_TABLE, IUPAC_TABLE, operator.and_, True, True),
     ],
 )
 def test_kmer_finder_per_char_matching(
@@ -72,7 +72,9 @@ def test_kmer_finder_per_char_matching(
             ref_wildcards=ref_wildcards,
             query_wildcards=query_wildcards,
         )
+        ref_char = ref_table[ord(char)]
         for comp_char in iupac_letters:
-            should_match = comp_op(ref_table[ord(char)], query_table[ord(comp_char)])
+            query_char = query_table[ord(comp_char)]
+            should_match = bool(comp_op(ref_char, query_char))
             if kmer_finder.kmers_present(comp_char) is not should_match:
-                raise ValueError(f"{char} should match {comp_char}")
+                raise ValueError(f"{char} should{' ' if should_match else ' not '}match {comp_char}")

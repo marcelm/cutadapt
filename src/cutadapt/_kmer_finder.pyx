@@ -2,6 +2,7 @@
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from libc.string cimport memset, strlen
+
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
 from libc.stdint cimport uint8_t
 
@@ -174,9 +175,11 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
                 set_masks(needle_mask, i, "RSKBDVNrskbdvn")
         elif c == b"T" or c == b"t":
             set_masks(needle_mask, i, "Tt")
+            if ref_wildcards:
+                set_masks(needle_mask, i, "Uu")
             if query_wildcards:
-                set_masks(needle_mask, i, "YWKBDHNywkbdhn")
-        elif (c == b"U" or c == b"u") and ref_wildcards:
+                set_masks(needle_mask, i, "UYWKBDHNuywkbdhn")
+        elif (c == b"U" or c == b"u") and (ref_wildcards or query_wildcards):
             set_masks(needle_mask, i, "TtUu")
             if query_wildcards:
                 set_masks(needle_mask, i, "YWKBDHNywkbdhn")
@@ -227,7 +230,11 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
                 for j in range(1,128):
                     needle_mask[j] &= ~(<bitmask_t>1ULL << i)
         else:
-            needle_mask[<uint8_t>c] &= ~(<bitmask_t>1ULL << i)
+            if (not ref_wildcards) and chr(c).isalpha():
+                bothcase = chr(c).lower() + chr(c).upper()
+                set_masks(needle_mask, i, bothcase.encode("ascii"))
+            else:
+                needle_mask[<uint8_t>c] &= ~(<bitmask_t>1ULL << i)
 
 
 cdef const char *shift_or_search(const char *haystack, size_t haystack_length,
