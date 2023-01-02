@@ -6,7 +6,7 @@ from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
 from libc.stdint cimport uint8_t
 
 # Dnaio conveniently ensures that all sequences are ASCII only.
-DEF ASCII_CHAR_COUNT = 128
+DEF BITMASK_INDEX_SIZE = 128
 
 # Make bitmask type definable. size_t is the largest unsigned integer available
 # to the machine.
@@ -64,7 +64,7 @@ cdef class KmerFinder:
         number_of_entries = len(kmers_and_positions)
         self.kmer_entries = <KmerEntry *>PyMem_Malloc(number_of_entries * sizeof(KmerEntry))
         # for the kmers the NULL bytes also need space.
-        self.kmer_masks = <bitmask_t *>PyMem_Malloc(number_of_entries * sizeof(bitmask_t) * ASCII_CHAR_COUNT)
+        self.kmer_masks = <bitmask_t *>PyMem_Malloc(number_of_entries * sizeof(bitmask_t) * BITMASK_INDEX_SIZE)
         self.number_of_kmers = number_of_entries
         cdef size_t mask_offset = 0
         cdef char *kmer_ptr
@@ -84,7 +84,7 @@ cdef class KmerFinder:
             kmer_ptr = <char *>PyUnicode_DATA(kmer)
             populate_needle_mask(self.kmer_masks + mask_offset, kmer_ptr, kmer_length,
                                  self.ref_wildcards, self.query_wildcards)
-            mask_offset += ASCII_CHAR_COUNT
+            mask_offset += BITMASK_INDEX_SIZE
         self.kmers_and_positions = kmers_and_positions
 
     def __reduce__(self):
@@ -151,7 +151,7 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
     cdef uint8_t j
     if needle_length > (sizeof(bitmask_t) * 8 - 1):
         raise ValueError("The pattern is too long!")
-    memset(needle_mask, 0xff, sizeof(bitmask_t) * ASCII_CHAR_COUNT)
+    memset(needle_mask, 0xff, sizeof(bitmask_t) * BITMASK_INDEX_SIZE)
     for i in range(needle_length):
         c = needle[i]
         if c == b"A" or c == b"a":
