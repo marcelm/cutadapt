@@ -186,7 +186,7 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
         elif (c == b"R" or c == b"r") and ref_wildcards:
             set_masks(needle_mask, i, "AaGg")
             if query_wildcards:
-                set_masks(needle_mask, i, "RSWKMBDHVNrswkmvdhvn")
+                set_masks(needle_mask, i, "RSWKMBDHVNrswkmbdhvn")
         elif (c == b"Y" or c == b"y") and ref_wildcards:
             set_masks(needle_mask, i, "CcTtUu")
             if query_wildcards:
@@ -198,15 +198,15 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
         elif (c == b"W" or c == b"w") and ref_wildcards:
             set_masks(needle_mask, i, "AaTtUu")
             if query_wildcards:
-                set_masks(needle_mask, i, "YRWKMBDHVNyrskmbdhvn")
+                set_masks(needle_mask, i, "YRWKMBDHVNyrwkmbdhvn")
         elif (c == b"K" or c == b"k") and ref_wildcards:
             set_masks(needle_mask, i, "GgTtUu")
             if query_wildcards:
-                set_masks(needle_mask, i, "YRWSKBDHVNyrskmbdhvn")
+                set_masks(needle_mask, i, "YRWSKBDHVNyrwskbdhvn")
         elif (c == b"M" or c == b"m") and ref_wildcards:
             set_masks(needle_mask, i, "AaCc")
             if query_wildcards:
-                set_masks(needle_mask, i, "YRWSMBDHVNyrskmbdhvn")
+                set_masks(needle_mask, i, "YRWSMBDHVNyrwsmbdhvn")
         elif (c == b"B" or  c == b"b") and ref_wildcards:
             set_masks(needle_mask, i, "CcGgTtUu")
             if query_wildcards:
@@ -230,11 +230,12 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
                 for j in range(1,128):
                     needle_mask[j] &= ~(<bitmask_t>1ULL << i)
         else:
-            if (not ref_wildcards) and chr(c).isalpha():
-                bothcase = chr(c).lower() + chr(c).upper()
-                set_masks(needle_mask, i, bothcase.encode("ascii"))
-            else:
-                needle_mask[<uint8_t>c] &= ~(<bitmask_t>1ULL << i)
+            if (not ref_wildcards and not query_wildcards):
+                if chr(c).isalpha():
+                    bothcase = chr(c).lower() + chr(c).upper()
+                    set_masks(needle_mask, i, bothcase.encode("ascii"))
+                else:
+                    needle_mask[<uint8_t>c] &= ~(<bitmask_t>1ULL << i)
 
 
 cdef const char *shift_or_search(const char *haystack, size_t haystack_length,
