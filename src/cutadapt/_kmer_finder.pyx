@@ -229,13 +229,19 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
             else:  # N matches literally everything except \00
                 for j in range(1,128):
                     needle_mask[j] &= ~(<bitmask_t>1ULL << i)
+        elif query_wildcards:
+            # All non-AGCT characters match to N
+            set_masks(needle_mask, i, "Nn")
+        elif ref_wildcards:
+            # ref and query wildcards are True. Perform proper IUPAC matching.
+            # All unknown characters do not match.
+            pass
         else:
-            if (not ref_wildcards and not query_wildcards):
-                if chr(c).isalpha():
-                    bothcase = chr(c).lower() + chr(c).upper()
-                    set_masks(needle_mask, i, bothcase.encode("ascii"))
-                else:
-                    needle_mask[<uint8_t>c] &= ~(<bitmask_t>1ULL << i)
+            if chr(c).isalpha():
+                bothcase = chr(c).lower() + chr(c).upper()
+                set_masks(needle_mask, i, bothcase.encode("ascii"))
+            else:
+                needle_mask[<uint8_t>c] &= ~(<bitmask_t>1ULL << i)
 
 
 cdef const char *shift_or_search(const char *haystack, size_t haystack_length,
