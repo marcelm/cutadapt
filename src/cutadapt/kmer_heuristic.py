@@ -193,7 +193,7 @@ def create_kmers_and_positions(
 
 def kmer_probability_analysis(
     kmers_and_offsets: List[Tuple[str, int, Optional[int]]], default_length: int = 150
-) -> str:
+) -> str:  # pragma: no cover  # only for debugging use
     out = io.StringIO()
     out.write(
         "kmer\tstart\tstop\tconsidered sites\thit chance by random sequence (%)\n"
