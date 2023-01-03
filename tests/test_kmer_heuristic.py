@@ -4,6 +4,7 @@ from cutadapt.kmer_heuristic import (
     kmer_possibilities,
     minimize_kmer_search_list,
     create_back_overlap_searchsets,
+    create_kmers_and_positions,
 )
 
 
@@ -49,3 +50,63 @@ def test_create_back_overlap_searchsets():
     assert (-9, None, [{"ABCDE"}]) in searchsets
     assert (-19, None, kmer_possibilities(adapter[:10], 2)) in searchsets
     assert (-20, None, kmer_possibilities(adapter, 3)) in searchsets
+
+
+@pytest.mark.parametrize(
+    ["kwargs", "expected"],
+    [
+        (
+            dict(back_adapter=True, front_adapter=False, internal=True),
+            [
+                ("ABC", -3, None),
+                ("ABCD", -4, None),
+                ("ABCDE", -19, None),
+                ("FGHIJ", -19, None),
+                ("ABCDEFG", 0, None),
+                ("HIJ0123", 0, None),
+                ("456789", 0, None),
+            ],
+        ),
+        (
+            dict(back_adapter=True, front_adapter=False, internal=False),
+            [
+                ("ABC", -3, None),
+                ("ABCD", -4, None),
+                ("ABCDE", -19, None),
+                ("FGHIJ", -19, None),
+                ("ABCDEFG", -20, None),
+                ("HIJ0123", -20, None),
+                ("456789", -20, None),
+            ],
+        ),
+        (
+            dict(back_adapter=False, front_adapter=True, internal=False),
+            [
+                ("789", 0, 3),
+                ("6789", 0, 4),
+                ("56789", 0, 19),
+                ("01234", 0, 19),
+                ("ABCDEF", 0, 20),
+                ("GHIJ012", 0, 20),
+                ("3456789", 0, 20),
+            ],
+        ),
+        (
+            dict(back_adapter=False, front_adapter=False, internal=True),
+            [
+                ("ABCDEFG", 0, None),
+                ("HIJ0123", 0, None),
+                ("456789", 0, None),
+            ],
+        ),
+    ],
+)
+def test_create_kmers_and_positions(kwargs, expected):
+    adapter = "ABCDEFGHIJ0123456789"
+    result = create_kmers_and_positions(
+        adapter,
+        error_rate=0.1,
+        min_overlap=3,
+        **kwargs,
+    )
+    assert set(result) == set(expected)
