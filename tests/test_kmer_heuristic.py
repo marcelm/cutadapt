@@ -56,7 +56,7 @@ def test_create_back_overlap_searchsets():
     ["kwargs", "expected"],
     [
         (
-            dict(back_adapter=True, front_adapter=False, internal=True),
+            dict(back_adapter=True, front_adapter=False, internal=True, min_overlap=3),
             [
                 ("ABC", -3, None),
                 ("ABCD", -4, None),
@@ -68,7 +68,7 @@ def test_create_back_overlap_searchsets():
             ],
         ),
         (
-            dict(back_adapter=True, front_adapter=False, internal=False),
+            dict(back_adapter=True, front_adapter=False, internal=False, min_overlap=3),
             [
                 ("ABC", -3, None),
                 ("ABCD", -4, None),
@@ -80,7 +80,7 @@ def test_create_back_overlap_searchsets():
             ],
         ),
         (
-            dict(back_adapter=False, front_adapter=True, internal=False),
+            dict(back_adapter=False, front_adapter=True, internal=False, min_overlap=3),
             [
                 ("789", 0, 3),
                 ("6789", 0, 4),
@@ -92,7 +92,15 @@ def test_create_back_overlap_searchsets():
             ],
         ),
         (
-            dict(back_adapter=False, front_adapter=False, internal=True),
+            dict(back_adapter=True, front_adapter=False, internal=True, min_overlap=20),
+            [
+                ("ABCDEFG", 0, None),
+                ("HIJ0123", 0, None),
+                ("456789", 0, None),
+            ],
+        ),
+        (
+            dict(back_adapter=False, front_adapter=False, internal=True, min_overlap=3),
             [
                 ("ABCDEFG", 0, None),
                 ("HIJ0123", 0, None),
@@ -106,7 +114,6 @@ def test_create_kmers_and_positions(kwargs, expected):
     result = create_kmers_and_positions(
         adapter,
         error_rate=0.1,
-        min_overlap=3,
         **kwargs,
     )
     assert set(result) == set(expected)
