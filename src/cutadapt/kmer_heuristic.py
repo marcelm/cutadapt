@@ -110,31 +110,23 @@ def create_back_overlap_searchsets(
             max_error += 1
     error_lengths.append((max_error, adapter_length))
 
-    previous_length = min_overlap
+    minimum_length = min_overlap
     for max_errors, length in error_lengths:
-        if min_overlap > length:
+        if minimum_length > length:
             continue
         if max_errors == 0:
-            # 0 Is a special case as we only have to match min_overlap
-            # characters in the largest overlap without errors
             # Add a couple of directly matching 1, 2, 3 and 4-mer searches.
             # The probability of a false positive is just to high when for
             # example a 3-mer is evaluated in more than one position.
             min_overlap_kmer_length = 5
-            if min_overlap < min_overlap_kmer_length:
-                for i in range(min_overlap, min_overlap_kmer_length):
+            if minimum_length < min_overlap_kmer_length:
+                for i in range(minimum_length, min_overlap_kmer_length):
                     search_set = (-i, None, [{adapter[:i]}])
                     search_sets.append(search_set)
-                min_overlap = min_overlap_kmer_length
-            min_overlap_kmer = adapter[:min_overlap]
-            search_set = (-length, None, [{min_overlap_kmer}])
-            search_sets.append(search_set)
-        else:
-            start = -length
-            minimum_length = previous_length + 1
-            kmer_sets = kmer_possibilities(adapter[:minimum_length], max_errors + 1)
-            search_sets.append((start, None, kmer_sets))
-        previous_length = length
+                minimum_length = min_overlap_kmer_length
+        kmer_sets = kmer_possibilities(adapter[:minimum_length], max_errors + 1)
+        search_sets.append((-length, None, kmer_sets))
+        minimum_length = length + 1
     return search_sets
 
 
