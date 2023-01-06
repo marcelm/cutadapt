@@ -127,10 +127,10 @@ def create_back_overlap_searchsets(
                     search_sets.append(search_set)
                 min_overlap = min_overlap_kmer_length
             min_overlap_kmer = adapter[:min_overlap]
-            search_set = (-(length - 1), None, [{min_overlap_kmer}])
+            search_set = (-length, None, [{min_overlap_kmer}])
             search_sets.append(search_set)
         else:
-            start = -(length)
+            start = -length
             minimum_length = previous_length + 1
             kmer_sets = kmer_possibilities(adapter[:minimum_length], max_errors + 1)
             search_sets.append((start, None, kmer_sets))
