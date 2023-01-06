@@ -4,7 +4,7 @@ from cutadapt.kmer_heuristic import (
     kmer_possibilities,
     minimize_kmer_search_list,
     create_back_overlap_searchsets,
-    create_kmers_and_positions,
+    create_positions_and_kmers,
 )
 
 
@@ -58,62 +58,51 @@ def test_create_back_overlap_searchsets():
         (
             dict(back_adapter=True, front_adapter=False, internal=True, min_overlap=3),
             [
-                ("ABC", -3, None),
-                ("ABCD", -4, None),
-                ("ABCDE", -19, None),
-                ("FGHIJ", -19, None),
-                ("ABCDEFG", 0, None),
-                ("HIJ0123", 0, None),
-                ("456789", 0, None),
+                (-3, None, ["ABC"]),
+                (-4, None, ["ABCD"]),
+                (-19, None, ["ABCDE", "FGHIJ"]),
+                (0, None, ["ABCDEFG", "HIJ0123", "456789"]),
             ],
         ),
         (
             dict(back_adapter=True, front_adapter=False, internal=False, min_overlap=3),
             [
-                ("ABC", -3, None),
-                ("ABCD", -4, None),
-                ("ABCDE", -19, None),
-                ("FGHIJ", -19, None),
-                ("ABCDEFG", -20, None),
-                ("HIJ0123", -20, None),
-                ("456789", -20, None),
+                (-3, None, ["ABC"]),
+                (-4, None, ["ABCD"]),
+                (-19, None, ["ABCDE", "FGHIJ"]),
+                (-20, None, ["ABCDEFG", "HIJ0123", "456789"]),
             ],
         ),
         (
             dict(back_adapter=False, front_adapter=True, internal=False, min_overlap=3),
             [
-                ("789", 0, 3),
-                ("6789", 0, 4),
-                ("56789", 0, 19),
-                ("01234", 0, 19),
-                ("ABCDEF", 0, 20),
-                ("GHIJ012", 0, 20),
-                ("3456789", 0, 20),
+                (0, 3, ["789"]),
+                (0, 4, ["6789"]),
+                (0, 19, ["01234", "56789"]),
+                (0, 20, ["ABCDEF", "GHIJ012", "3456789"]),
             ],
         ),
         (
             dict(back_adapter=True, front_adapter=False, internal=True, min_overlap=20),
             [
-                ("ABCDEFG", 0, None),
-                ("HIJ0123", 0, None),
-                ("456789", 0, None),
+                (0, None, ["ABCDEFG", "HIJ0123", "456789"]),
             ],
         ),
         (
             dict(back_adapter=False, front_adapter=False, internal=True, min_overlap=3),
             [
-                ("ABCDEFG", 0, None),
-                ("HIJ0123", 0, None),
-                ("456789", 0, None),
+                (0, None, ["ABCDEFG", "HIJ0123", "456789"]),
             ],
         ),
     ],
 )
 def test_create_kmers_and_positions(kwargs, expected):
     adapter = "ABCDEFGHIJ0123456789"
-    result = create_kmers_and_positions(
+    result = create_positions_and_kmers(
         adapter,
         error_rate=0.1,
         **kwargs,
     )
-    assert set(result) == set(expected)
+    assert {(start, stop): frozenset(kmers) for start, stop, kmers in result} == {
+        (start, stop): frozenset(kmers) for start, stop, kmers in expected
+    }

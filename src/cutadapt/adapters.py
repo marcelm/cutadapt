@@ -19,7 +19,7 @@ from .align import (
     edit_environment,
     hamming_environment,
 )
-from .kmer_heuristic import create_kmers_and_positions, kmer_probability_analysis
+from .kmer_heuristic import create_positions_and_kmers, kmer_probability_analysis
 
 logger = logging.getLogger()
 
@@ -609,7 +609,7 @@ class SingleAdapter(Adapter, ABC):
     def _make_kmer_finder(
         self, back_adapter: bool, front_adapter: bool, internal: bool = True
     ) -> KmerFinder:
-        kmers_and_positions = create_kmers_and_positions(
+        positions_and_kmers = create_positions_and_kmers(
             self.sequence,
             self.min_overlap,
             self.max_error_rate,
@@ -618,9 +618,9 @@ class SingleAdapter(Adapter, ABC):
             internal,
         )
         if self._debug:
-            print(kmer_probability_analysis(kmers_and_positions))
+            print(kmer_probability_analysis(positions_and_kmers))
         return KmerFinder(
-            kmers_and_positions, self.adapter_wildcards, self.read_wildcards
+            positions_and_kmers, self.adapter_wildcards, self.read_wildcards
         )
 
     def __repr__(self):

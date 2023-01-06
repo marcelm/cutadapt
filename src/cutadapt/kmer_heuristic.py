@@ -80,7 +80,7 @@ def minimize_kmer_search_list(
 
 def find_optimal_kmers(
     search_sets: List[SearchSet],
-) -> List[Tuple[str, int, Optional[int]]]:
+) -> List[Tuple[int, Optional[int], List[str]]]:
     minimal_score = sys.maxsize
     best_combination = []
     positions = [(start, stop) for start, stop, kmer_set_list in search_sets]
@@ -94,7 +94,10 @@ def find_optimal_kmers(
         if len(minimized_search_list) < minimal_score:
             best_combination = minimized_search_list
             minimal_score = len(minimized_search_list)
-    return best_combination
+    result_dict = defaultdict(list)
+    for kmer, start, stop in best_combination:
+        result_dict[(start, stop)].append(kmer)
+    return [(start, stop, kmers) for (start, stop), kmers in result_dict.items()]
 
 
 def create_back_overlap_searchsets(
@@ -130,14 +133,14 @@ def create_back_overlap_searchsets(
     return search_sets
 
 
-def create_kmers_and_positions(
+def create_positions_and_kmers(
     adapter: str,
     min_overlap: int,
     error_rate: float,
     back_adapter: bool,
     front_adapter: bool,
     internal: bool = True,
-) -> List[Tuple[str, int, Optional[int]]]:
+) -> List[Tuple[int, Optional[int], List[str]]]:
     max_errors = int(len(adapter) * error_rate)
     search_sets = []
     if back_adapter:
@@ -166,27 +169,29 @@ def create_kmers_and_positions(
 
 
 def kmer_probability_analysis(
-    kmers_and_offsets: List[Tuple[str, int, Optional[int]]], default_length: int = 150
+    kmers_and_offsets: List[Tuple[int, Optional[int], List[str]]],
+    default_length: int = 150,
 ) -> str:  # pragma: no cover  # only for debugging use
     out = io.StringIO()
     out.write(
         "kmer\tstart\tstop\tconsidered sites\thit chance by random sequence (%)\n"
     )
     accumulated_not_hit_chance = 1.0
-    for kmer, start, stop in kmers_and_offsets:
-        kmer_length = len(kmer)
+    for start, stop, kmers in kmers_and_offsets:
         if stop is None:
             check_length = -start if start < 0 else default_length - start
         else:
             start = default_length - start if start < 0 else start
             check_length = max(stop - start, 0)
-        considered_sites = check_length - kmer_length + 1
-        single_kmer_hit_chance = 1 / 4**kmer_length
-        not_hit_chance = (1 - single_kmer_hit_chance) ** considered_sites
-        accumulated_not_hit_chance *= not_hit_chance
-        out.write(
-            f"{kmer:10}\t{start}\t{stop}\t{considered_sites}\t{(1 - not_hit_chance) * 100:.2f}\n"
-        )
+        for kmer in kmers:
+            kmer_length = len(kmer)
+            considered_sites = check_length - kmer_length + 1
+            single_kmer_hit_chance = 1 / 4**kmer_length
+            not_hit_chance = (1 - single_kmer_hit_chance) ** considered_sites
+            accumulated_not_hit_chance *= not_hit_chance
+            out.write(
+                f"{kmer:10}\t{start}\t{stop}\t{considered_sites}\t{(1 - not_hit_chance) * 100:.2f}\n"
+            )
     out.write(
         f"Chance for profile hit by random sequence: {(1 - accumulated_not_hit_chance) * 100:.2f}%\n"
     )

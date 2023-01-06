@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 class KmerFinder:
     def __init__(
         self,
-        kmers_and_positions: List[Tuple[str, int, Optional[int]]],
+        kmers_and_positions: List[Tuple[int, Optional[int], List[str]]],
         ref_wildcards: bool = False,
         query_wildcards: bool = False,
     ): ...
