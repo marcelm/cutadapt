@@ -9,8 +9,8 @@ def kmer_possibilities(sequence: str, chunks: int) -> List[Set[str]]:
     """
     Partition a sequence in almost equal sized chunks. Return all possibilities.
 
-    Example sequence ABCDEFGH with 3 chunks. Possibilities:
-    ["ABC", "DEF", "GH"]; ["ABC", "DE", "FGH"]; ["AB", "CDE", "FGH"]
+    >>> kmer_possibilities("ABCDEFGH", 3)
+    [{"ABC", "DEF", "GH"}, {"ABC", "DE", "FGH"}, {"AB", "CDE", "FGH"}]
     """
     chunk_size = len(sequence) // (chunks)
     remainder = len(sequence) % (chunks)
