@@ -137,6 +137,20 @@ def create_positions_and_kmers(
     front_adapter: bool,
     internal: bool = True,
 ) -> List[Tuple[int, Optional[int], List[str]]]:
+    """
+    Create a set of position and words combinations where at least one of the
+    words needs to occur at its specified position. If not an alignment
+    algorithm will not be able to find a solution. This can be checked very
+    quickly and allows for skipping alignment in cases where the adapter would
+    not align anyway.
+
+    Example: looking for AAAAATTTTT with at most one error. This means either
+    AAAAA or TTTTT (or both) must be present, otherwise alignment will not
+    succeed.
+
+    This function returns the positions and the accompanying words while also
+    taking into account partial overlap for back and front adapters.
+    """
     max_errors = int(len(adapter) * error_rate)
     search_sets = []
     if back_adapter:

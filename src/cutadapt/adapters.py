@@ -808,7 +808,6 @@ class BackAdapter(SingleAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        # Heuristically check if an adapter may be present. If not, skip.
         if not self.kmer_finder.kmers_present(sequence):
             return None
         alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
