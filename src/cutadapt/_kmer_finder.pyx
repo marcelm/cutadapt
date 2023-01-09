@@ -297,7 +297,7 @@ cdef bint shift_or_multiple_is_present(
         R |= needle_mask[<uint8_t>haystack[i]]
         R <<= 1
         R &= zero_mask
-        if ((R & found_mask) != found_mask):
+        if (R & found_mask) != found_mask:
             return True
 
     return False
