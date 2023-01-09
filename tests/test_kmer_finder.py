@@ -107,7 +107,7 @@ def test_kmer_finder_finds_all():
         "previously thought."
     )
     assert not kmer_finder.kmers_present(
-        "A turtle maybe slow, but it also lives for a long time."
+        "A turtle may be slow, but it also lives for a long time."
     )
 
 
@@ -117,5 +117,5 @@ def test_kmer_finder_finds_in_region():
     assert kmer_finder.kmers_present("Each one has to find his peace from within")
     # Peace not found here because outside of the search range.
     assert not kmer_finder.kmers_present(
-        "And peace to be real must be unaffected " "by outside circumstances."
+        "And peace to be real must be unaffected by outside circumstances."
     )

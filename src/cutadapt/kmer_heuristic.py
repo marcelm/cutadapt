@@ -67,7 +67,7 @@ def minimize_kmer_search_list(
                 "Situations with searches starting in the middle have not been considered."
             )
         if front_searches:
-            # (0, None) condition is already catched, so stop is never None.
+            # (0, None) condition is already caught, so stop is never None.
             kmers_and_positions.append(
                 (kmer, 0, max(stop for start, stop in front_searches))  # type: ignore
             )
