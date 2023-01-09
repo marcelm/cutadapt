@@ -182,6 +182,15 @@ def kmer_probability_analysis(
     kmers_and_offsets: List[Tuple[int, Optional[int], List[str]]],
     default_length: int = 150,
 ) -> str:  # pragma: no cover  # only for debugging use
+    """
+    Returns a tab separated table with for each kmer a start, stop, the number
+    of considered sites and the hit chance on a randomly generated sequence
+    containing only A, C, G and T. Assumes kmers only consist of A, C, G and T
+    too.
+
+    Useful for investigating whether the create_positions_and_kmers function
+    creates a useful runtime heuristic.
+    """
     out = io.StringIO()
     out.write(
         "kmer\tstart\tstop\tconsidered sites\thit chance by random sequence (%)\n"
