@@ -9,8 +9,6 @@ from libc.stdint cimport uint8_t
 # Dnaio conveniently ensures that all sequences are ASCII only.
 DEF BITMASK_INDEX_SIZE = 128
 
-# Make bitmask type definable. size_t is the largest unsigned integer available
-# to the machine.
 ctypedef size_t bitmask_t
 
 cdef extern from "Python.h":
