@@ -32,6 +32,8 @@ Code style
   already. New code should follow the current rules, however.
 * Using an IDE is beneficial (PyCharm, for example). It helps to catch lots of
   style issues early (unused imports, spacing etc.).
+* Use `Google-style docstrings <https://www.sphinx-doc.org/en/master/usage/extensions/example_google.html>`_
+  (this is not PyCharm’s default setting).
 * Avoid unnecessary abbreviations for variable names. Code is more often read
   than written.
 * When writing a help text for a new command-line option, look at the output of
