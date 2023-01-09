@@ -11,10 +11,6 @@ def kmer_possibilities(sequence: str, chunks: int) -> List[Set[str]]:
 
     Example sequence ABCDEFGH with 3 chunks. Possibilities:
     ["ABC", "DEF", "GH"]; ["ABC", "DE", "FGH"]; ["AB", "CDE", "FGH"]
-
-    :param sequence: The sequence to b
-    :param chunks:
-    :return: A list of lists with all kmers
     """
     chunk_size = len(sequence) // (chunks)
     remainder = len(sequence) % (chunks)
