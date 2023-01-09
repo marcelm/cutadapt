@@ -693,7 +693,7 @@ class RightmostFrontAdapter(FrontAdapter):
     def _aligner(self) -> Aligner:
         self.sequence = self.sequence[::-1]
         aligner = self._make_aligner(
-            Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value
+            Where.ANYWHERE.value if self._force_anywhere else Where.BACK.value
         )
         self.sequence = self.sequence[::-1]
         return aligner

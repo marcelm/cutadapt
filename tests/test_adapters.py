@@ -106,6 +106,16 @@ def test_rightmost_front_adapter():
     assert match.errors == 0
 
 
+def test_rightmost_front_adapter_partial_occurrence():
+    adapter = RightmostFrontAdapter("TTTTACGT")
+    match = adapter.match_to("ACGTAAAAAAAA")
+    assert match is not None
+    assert match.astart == 4
+    assert match.astop == 8
+    assert match.rstart == 0
+    assert match.rstop == 4
+
+
 def test_wildcards():
     # issue 52
     adapter = BackAdapter(

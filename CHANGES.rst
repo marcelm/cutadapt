@@ -3,6 +3,12 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* :issue:`665`: 5' adapters did not allow partial matches in the beginning
+  when the :ref:`rightmost <rightmost>` adapter-search parameter was used.
+
 v4.2 (2022-12-09)
 -----------------
 
