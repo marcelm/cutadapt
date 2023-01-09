@@ -784,8 +784,6 @@ class BackAdapter(SingleAdapter):
     def __init__(self, *args, **kwargs):
         self._force_anywhere = kwargs.pop("force_anywhere", False)
         super().__init__(*args, **kwargs)
-        # We can do some optimization by identifying kmers that if not
-        # present in the sequence prove that no adapter is present.
 
     def descriptive_identifier(self) -> str:
         return "regular_three_prime"
