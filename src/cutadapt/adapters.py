@@ -750,10 +750,11 @@ class RightmostFrontAdapter(FrontAdapter):
         return None if no match was found given the matching criteria (minimum
         overlap length, maximum error rate).
         """
-        if not self.kmer_finder.kmers_present(sequence[::-1]):
+        reversed_sequence = sequence[::-1]
+        if not self.kmer_finder.kmers_present(reversed_sequence):
             return None
         alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
-            sequence[::-1]
+            reversed_sequence
         )
         if self._debug:
             print(self.aligner.dpmatrix)
