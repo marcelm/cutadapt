@@ -16,18 +16,21 @@ if not PyType_CheckExact(SequenceRecord):
 
 cdef PyTypeObject *sequence_record_class = <PyTypeObject *>SequenceRecord
 
+ctypedef size_t counter_t
 DEF PHRED_MAX=93
+DEF PHRED_TABLE_SIZE=PHRED_MAX + 1
 # Nice trick from fastp: A,C, G, T, N all have different last three
 # bits. So this requires only 8 entries per count array.
-DEF NUC_MAX=8
-ctypedef size_t counter_t
+DEF NUC_TABLE_SIZE=8
+DEF PHRED_NUC_MATRIX_SIZE=PHRED_TABLE_SIZE * NUC_TABLE_SIZE * 8
+
 
 cdef class QCMetrics:
     cdef:
         object seq_name
         object qual_name
         uint8_t phred_offset
-        counter_t[PHRED_MAX][NUC_MAX] *count_tables
+        counter_t[PHRED_TABLE_SIZE][NUC_TABLE_SIZE] *count_tables
         Py_ssize_t max_length
 
     def __cinit__(self):
@@ -59,7 +62,7 @@ cdef class QCMetrics:
             uint8_t c, q
             uint8_t c_index
         if sequence_length > self.max_length:
-            self.count_tables =<counter_t (*)[PHRED_MAX][NUC_MAX]>PyMem_Realloc(self.count_tables, sequence_length * sizeof(counter_t) * NUC_MAX * PHRED_MAX)
+            self.count_tables =<counter_t (*)[PHRED_TABLE_SIZE][NUC_TABLE_SIZE]>PyMem_Realloc(self.count_tables, sequence_length * PHRED_NUC_MATRIX_SIZE)
             self.max_length = sequence_length
 
         for i in range(<size_t>sequence_length):
@@ -68,10 +71,10 @@ cdef class QCMetrics:
             if q > PHRED_MAX:
                 raise ValueError(f"Not a valid phred character: {<char>qualities[i]}")
             c_index = c & 0b111
-            self.count_tables[i][c_index][q] += 1
+            self.count_tables[i][q][c_index] += 1
 
     def count_table_view(self):
             return PyMemoryView_FromMemory(
                 <char *>self.count_tables,
-                self.max_length * sizeof(counter_t) * NUC_MAX * PHRED_MAX,
+                self.max_length * PHRED_NUC_MATRIX_SIZE,
                 PyBUF_READ)
