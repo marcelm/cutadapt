@@ -17,7 +17,7 @@ def analyse_metrics(v: memoryview):
         table = matrix[table_offset:table_offset+table_size]
         for phred, row_offset in enumerate(range(0, table_size, NUMBER_OF_NUCS)):
             nucs = table[row_offset:row_offset+NUMBER_OF_NUCS]
-        length_table[sequence_pos] = sum(table)
+    #    length_table[sequence_pos] = sum(table)
 
 
 if __name__ == "__main__":  # pragma: no cover

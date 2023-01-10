@@ -38,7 +38,7 @@ cdef class QCMetrics:
         # in the table that are accessed often leading to better cache locality.
         counttable_t *count_tables
         Py_ssize_t max_length
-
+        cdef readonly size_t number_of_reads
     def __cinit__(self):
         self.seq_name = "sequence"
         self.qual_name = "qualities"
@@ -58,6 +58,7 @@ cdef class QCMetrics:
         self.count_tables = tmp
         memset(self.count_tables + self.max_length, 0, (new_size - self.max_length) * sizeof(counttable_t))
         self.max_length = new_size
+        self.number_of_reads = 0
         
     def add_read(self, read):
         if Py_TYPE(read) != sequence_record_class:
@@ -80,6 +81,7 @@ cdef class QCMetrics:
         if sequence_length > self.max_length:
             self._resize(sequence_length)
 
+        self.number_of_reads += 1
         for i in range(<size_t>sequence_length):
             c=sequence[i]
             q=qualities[i] - self.phred_offset
