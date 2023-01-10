@@ -17,6 +17,7 @@ if not PyType_CheckExact(SequenceRecord):
 cdef PyTypeObject *sequence_record_class = <PyTypeObject *>SequenceRecord
 
 DEF PHRED_MAX=93
+DEF NUC_MAX=5
 ctypedef size_t counter_t
 
 cdef inline uint8_t nucleotide_index_from_char(uint8_t c):
@@ -42,7 +43,7 @@ cdef class QCMetrics:
         object seq_name
         object qual_name
         uint8_t phred_offset
-        counter_t[PHRED_MAX][5] *count_tables
+        counter_t[PHRED_MAX][NUC_MAX] *count_tables
         Py_ssize_t max_length
 
     def __cinit__(self):
@@ -73,22 +74,20 @@ cdef class QCMetrics:
             size_t i
             uint8_t c, q
             uint8_t c_index
-            counter_t[PHRED_MAX][5] count_table
         if sequence_length > self.max_length:
-            self.count_tables =<counter_t (*)[PHRED_MAX][5]>PyMem_Realloc(self.count_tables, sequence_length * sizeof(counter_t) * 5 * PHRED_MAX)
+            self.count_tables =<counter_t (*)[PHRED_MAX][NUC_MAX]>PyMem_Realloc(self.count_tables, sequence_length * sizeof(counter_t) * NUC_MAX * PHRED_MAX)
             self.max_length = sequence_length
 
         for i in range(<size_t>sequence_length):
             c=sequence[i]
             q=qualities[i] - self.phred_offset
-            count_table = self.count_tables[i]
             if q > PHRED_MAX:
                 raise ValueError(f"Not a valid phred character: {<char>qualities[i]}")
             c_index = nucleotide_index_from_char(c)
-            count_table[c_index][q] += 1
+            self.count_tables[i][c_index][q] += 1
 
-    def count_table_view(self):
+def count_table_view(self):
         return PyMemoryView_FromMemory(
             <char *>self.count_tables,
-            self.max_length * sizeof(counter_t) * 5 * PHRED_MAX,
+            self.max_length * sizeof(counter_t) * NUC_MAX * PHRED_MAX,
             PyBUF_READ)
