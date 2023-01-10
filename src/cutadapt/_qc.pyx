@@ -1,3 +1,5 @@
+from cpython.memoryview cimport PyMemoryView_FromMemory
+from cpython.buffer cimport PyBUF_READ
 from cpython.mem cimport PyMem_Realloc, PyMem_Free
 from cpython.unicode cimport PyUnicode_GET_LENGTH
 from cpython.object cimport PyObject_GetAttr, PyTypeObject, Py_TYPE
@@ -84,3 +86,9 @@ cdef class QCMetrics:
                 raise ValueError(f"Not a valid phred character: {<char>qualities[i]}")
             c_index = nucleotide_index_from_char(c)
             count_table[c_index][q] += 1
+
+    def count_table_view(self):
+        return PyMemoryView_FromMemory(
+            <char *>self.count_tables,
+            self.max_length * sizeof(counter_t) * 5 * PHRED_MAX,
+            PyBUF_READ)
