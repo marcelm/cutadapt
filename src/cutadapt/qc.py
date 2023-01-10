@@ -12,10 +12,12 @@ def analyse_metrics(v: memoryview):
     matrix = v.cast("Q")
     table_size = NUMBER_OF_NUCS * NUMBER_OF_PHREDS
     sequence_length = len(matrix) // table_size
-    for i in range(0, len(matrix), table_size):
-        table = matrix[i:i+table_size]
-        for phred, offset in enumerate(range(0, table_size, NUMBER_OF_NUCS)):
-            nucs = table[offset:offset+NUMBER_OF_NUCS]
+    length_table = [0 for _ in range(sequence_length)]
+    for sequence_pos, table_offset in enumerate(range(0, len(matrix), table_size)):
+        table = matrix[table_offset:table_offset+table_size]
+        for phred, row_offset in enumerate(range(0, table_size, NUMBER_OF_NUCS)):
+            nucs = table[row_offset:row_offset+NUMBER_OF_NUCS]
+        length_table[sequence_pos] = sum(table)
 
 
 if __name__ == "__main__":  # pragma: no cover
