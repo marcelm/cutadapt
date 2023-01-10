@@ -24,5 +24,5 @@ if __name__ == "__main__":  # pragma: no cover
     with dnaio.open(sys.argv[1]) as reader:
         for read in reader:
             metrics.add_read(read)
-    analyse_metrics(metrics.count_table_view())
+    # analyse_metrics(metrics.count_table_view())
 
