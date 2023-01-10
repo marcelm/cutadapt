@@ -1,5 +1,9 @@
 from dnaio import SequenceRecord
 
+TABLE_SIZE: int
+NUMBER_OF_PHREDS: int
+NUMBER_OF_NUCS: int
+
 class QCMetrics:
     def __init__(self): ...
     def add_read(self, __read: SequenceRecord): ...
