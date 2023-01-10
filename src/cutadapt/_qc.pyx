@@ -30,6 +30,9 @@ cdef class QCMetrics:
         object seq_name
         object qual_name
         uint8_t phred_offset
+        # Illumina reads often use a limited range of qualities across the
+        # sprectrum. Putting phreds first therefore gives nice dense spots
+        # in the table that are accessed often leading to better cache locality.
         counter_t[PHRED_TABLE_SIZE][NUC_TABLE_SIZE] *count_tables
         Py_ssize_t max_length
 
