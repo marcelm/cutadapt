@@ -14,14 +14,18 @@ if not PyType_CheckExact(SequenceRecord):
 
 cdef PyTypeObject *sequence_record_class = <PyTypeObject *>SequenceRecord
 
+DEF PHRED_MAX=93
+
 cdef class QCMetrics:
     cdef:
         object seq_name
         object qual_name
+        uint8_t phred_offset
 
     def __cinit__(self):
         self.seq_name = "sequence"
         self.qual_name = "qualities"
+        self.phred_offset = 33
 
 
     def add_read(self, read):
@@ -37,5 +41,12 @@ cdef class QCMetrics:
             # Thanks to guarantees in dnaio, we know all strings are ascii
             const uint8_t *sequence = <uint8_t *>PyUnicode_DATA(sequence_obj)
             const uint8_t *qualities = <uint8_t *>PyUnicode_DATA(qualities_obj)
+            # dnaio guarantees sequence and qualities have the same length.
             Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(sequence_obj)
-            Py_ssize_t qualities_length = PyUnicode_GET_LENGTH(qualities_obj)
+            size_t i
+            uint8_t c, q
+        for i in range(<size_t>sequence_length):
+            c=sequence[i]
+            q=qualities[i] - self.phred_offset
+            if q > PHRED_MAX:
+                raise ValueError(f"Not a valid phred character: {<char>qualities[i]}")
