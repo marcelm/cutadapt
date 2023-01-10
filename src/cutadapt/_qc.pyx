@@ -22,12 +22,11 @@ DEF PHRED_TABLE_SIZE=PHRED_MAX + 1
 # Nice trick from fastp: A,C, G, T, N all have different last three
 # bits. So this requires only 8 entries per count array.
 DEF NUC_TABLE_SIZE=8
-DEF PHRED_NUC_MATRIX_SIZE=PHRED_TABLE_SIZE * NUC_TABLE_SIZE * 8
-
 NUMBER_OF_NUCS = NUC_TABLE_SIZE
 NUMBER_OF_PHREDS = PHRED_TABLE_SIZE
-TABLE_SIZE = PHRED_NUC_MATRIX_SIZE
+TABLE_SIZE = PHRED_TABLE_SIZE * NUC_TABLE_SIZE
 
+ctypedef counter_t[PHRED_TABLE_SIZE][NUC_TABLE_SIZE] counttable_t
 cdef class QCMetrics:
     cdef:
         object seq_name
@@ -36,7 +35,7 @@ cdef class QCMetrics:
         # Illumina reads often use a limited range of qualities across the
         # sprectrum. Putting phreds first therefore gives nice dense spots
         # in the table that are accessed often leading to better cache locality.
-        counter_t[PHRED_TABLE_SIZE][NUC_TABLE_SIZE] *count_tables
+        counttable_t *count_tables
         Py_ssize_t max_length
 
     def __cinit__(self):
@@ -68,7 +67,7 @@ cdef class QCMetrics:
             uint8_t c, q
             uint8_t c_index
         if sequence_length > self.max_length:
-            self.count_tables =<counter_t (*)[PHRED_TABLE_SIZE][NUC_TABLE_SIZE]>PyMem_Realloc(self.count_tables, sequence_length * PHRED_NUC_MATRIX_SIZE)
+            self.count_tables =<counttable_t *>PyMem_Realloc(self.count_tables, sequence_length * sizeof(counttable_t))
             self.max_length = sequence_length
 
         for i in range(<size_t>sequence_length):
@@ -82,7 +81,7 @@ cdef class QCMetrics:
     def count_table_view(self):
             return PyMemoryView_FromMemory(
                 <char *>self.count_tables,
-                self.max_length * PHRED_NUC_MATRIX_SIZE,
+                self.max_length * sizeof(counttable_t),
                 PyBUF_READ)
 
 
