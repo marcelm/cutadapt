@@ -17,26 +17,10 @@ if not PyType_CheckExact(SequenceRecord):
 cdef PyTypeObject *sequence_record_class = <PyTypeObject *>SequenceRecord
 
 DEF PHRED_MAX=93
-DEF NUC_MAX=5
+# Nice trick from fastp: A,C, G, T, N all have different last three
+# bits. So this requires only 8 entries per count array.
+DEF NUC_MAX=8
 ctypedef size_t counter_t
-
-cdef inline uint8_t nucleotide_index_from_char(uint8_t c):
-    # Nice trick from fastp: A,C, G, T, N all have different last three
-    # bits. So this requires only 8 entries per count array.
-    # We can take this further. Note that by design, upper and lowercase
-    # ASCII alphabetic characters share the last 5 bits.
-    # char     &0b1111  >> 1   &0b11
-    # A, a     0001     000    00
-    # C, c     0011     001    01
-    # G, g     0111     011    11
-    # T, t     0100     010    10
-    # N, n     1110     111    11
-    # N >> 3 & 0b1 == 1. For A,C,G,T this is 0.
-    # The following calculation is branchless and guaranteed to be
-    # 0 (A), 1 (C), 2 (T), 3 (G) or 4 (N). Works also with lowercase.
-    # Other characters don't throw errors. It is garbage in, garbage out.
-    # The guarantees mean no bounds check is required on the result.
-    return ((c & 0b111) >> 1) + ((c >> 3) & 0b1)
 
 cdef class QCMetrics:
     cdef:
@@ -83,11 +67,11 @@ cdef class QCMetrics:
             q=qualities[i] - self.phred_offset
             if q > PHRED_MAX:
                 raise ValueError(f"Not a valid phred character: {<char>qualities[i]}")
-            c_index = nucleotide_index_from_char(c)
+            c_index = c & 0b111
             self.count_tables[i][c_index][q] += 1
 
-def count_table_view(self):
-        return PyMemoryView_FromMemory(
-            <char *>self.count_tables,
-            self.max_length * sizeof(counter_t) * NUC_MAX * PHRED_MAX,
-            PyBUF_READ)
+    def count_table_view(self):
+            return PyMemoryView_FromMemory(
+                <char *>self.count_tables,
+                self.max_length * sizeof(counter_t) * NUC_MAX * PHRED_MAX,
+                PyBUF_READ)
