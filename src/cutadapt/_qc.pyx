@@ -45,8 +45,24 @@ cdef class QCMetrics:
             Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(sequence_obj)
             size_t i
             uint8_t c, q
+            uint8_t c_index
         for i in range(<size_t>sequence_length):
             c=sequence[i]
             q=qualities[i] - self.phred_offset
             if q > PHRED_MAX:
                 raise ValueError(f"Not a valid phred character: {<char>qualities[i]}")
+            # Nice trick from fastp: A,C, G, T, N all have different last three
+            # bits. So this requires only 8 entries per count array.
+            # We can take this further. Note that by design, upper and lowercase
+            # ASCII alphabetic characters share the last 5 bits.
+            # char     &0b1111  >> 1   &0b11
+            # A, a     0001     000    00
+            # C, c     0011     001    01
+            # G, g     0111     011    11
+            # T, t     0100     010    10
+            # N, n     1110     111    11
+            # N >> 3 & 0b1 == 1. For A,C,G,T this is 0.
+            # The following calculation is branchless and guaranteed to be
+            # 0 (A), 1 (C), 2 (T), 3 (G) or 4 (N). Works also with lowercase.
+            c_index = ((c & 0b111) >> 1) + ((c >> 3) & 0b1)
+
