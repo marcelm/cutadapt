@@ -30,17 +30,21 @@ class QCMetricsReport:
     def total_gc_content(self):
         return self._total_gc / (self._total_at + self._total_gc)
 
-    def quality_plot(self):
-        plot = pygal.Line()
-
-        #plot.title("Quality scores")
-        #plot.x_labels(list(range(self.max_length)))
+    def quality_plot(self) -> str:
+        plot = pygal.Line(
+            title="Quality per position",
+            dots_size=1,
+            x_labels = list(range(1, self.max_length + 1)),
+            x_labels_major=list(range(0, self.max_length, 10)),
+            show_minor_x_labels=False,
+            truncate_label=-1,
+        )
+        plot.add("mean", self.mean_qualities)
         plot.add("A", self.per_base_qualities[A])
         plot.add("G", self.per_base_qualities[G])
         plot.add("C", self.per_base_qualities[C])
         plot.add("T", self.per_base_qualities[T])
-        plot.add("N", self.per_base_qualities[N])
-        return plot.render()
+        return plot.render().decode("UTF-8")
 
     def __init__(self, metrics: QCMetrics):
         """Aggregate all data from a QCMetrics counter"""
@@ -124,5 +128,5 @@ if __name__ == "__main__":  # pragma: no cover
         for read in reader:
             metrics.add_read(read)
     report = QCMetricsReport(metrics)
-    report.quality_plot()
+    print(report.quality_plot())
 
