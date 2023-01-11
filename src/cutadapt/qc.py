@@ -4,6 +4,8 @@ from typing import List
 
 import dnaio
 
+import pygal
+
 from ._qc import NUMBER_OF_NUCS, NUMBER_OF_PHREDS, QCMetrics
 
 N, A, C, G, T = 0, 1, 2, 3, 4
@@ -27,6 +29,18 @@ class QCMetricsReport:
     @property
     def total_gc_content(self):
         return self._total_gc / (self._total_at + self._total_gc)
+
+    def quality_plot(self):
+        plot = pygal.Line()
+
+        #plot.title("Quality scores")
+        #plot.x_labels(list(range(self.max_length)))
+        plot.add("A", self.per_base_qualities[A])
+        plot.add("G", self.per_base_qualities[G])
+        plot.add("C", self.per_base_qualities[C])
+        plot.add("T", self.per_base_qualities[T])
+        plot.add("N", self.per_base_qualities[N])
+        return plot.render()
 
     def __init__(self, metrics: QCMetrics):
         """Aggregate all data from a QCMetrics counter"""
@@ -109,5 +123,6 @@ if __name__ == "__main__":  # pragma: no cover
     with dnaio.open(sys.argv[1]) as reader:
         for read in reader:
             metrics.add_read(read)
-    QCMetricsReport(metrics)
+    report = QCMetricsReport(metrics)
+    report.quality_plot()
 

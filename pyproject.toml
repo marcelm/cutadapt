@@ -24,6 +24,7 @@ dynamic = ["version"]
 dependencies = [
     "dnaio >= 0.9.1",
     "xopen >= 1.6.0",
+    "pygal >= 3.0.0",
 ]
 
 [project.urls]
