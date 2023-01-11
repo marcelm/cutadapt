@@ -11,16 +11,6 @@ from ._qc import NUMBER_OF_NUCS, NUMBER_OF_PHREDS, QCMetrics
 N, A, C, G, T = 0, 1, 2, 3, 4
 PHRED_TO_ERROR_RATE = [10 ** (-p /10) for p in range(NUMBER_OF_PHREDS)]
 
-HTML_REPORT = """
-<html>
-<head>
-    <meta http-equiv="content-type" content="text/html:charset=utf-8">
-    <title>Cutadapt report</title>
-</head>
-<h1>Cutadapt report</h1>
-{quality_graph}
-</html>
-"""
 
 class QCMetricsReport:
     total_reads: int
@@ -55,6 +45,18 @@ class QCMetricsReport:
         plot.add("C", self.per_base_qualities[C])
         plot.add("T", self.per_base_qualities[T])
         return plot.render().decode("UTF-8")
+
+    def html_report(self):
+        return f"""
+        <html>
+        <head>
+            <meta http-equiv="content-type" content="text/html:charset=utf-8">
+            <title>Cutadapt report</title>
+        </head>
+        <h1>Cutadapt report</h1>
+        {self.quality_plot()}
+        </html>
+        """
 
     def __init__(self, metrics: QCMetrics):
         """Aggregate all data from a QCMetrics counter"""
@@ -138,5 +140,5 @@ if __name__ == "__main__":  # pragma: no cover
         for read in reader:
             metrics.add_read(read)
     report = QCMetricsReport(metrics)
-    print(HTML_REPORT.format(quality_graph=report.quality_plot()))
+    print(report.html_report())
 
