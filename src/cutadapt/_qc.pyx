@@ -67,8 +67,8 @@ cdef class QCMetrics:
         # sprectrum. Putting phreds first therefore gives nice dense spots
         # in the table that are accessed often leading to better cache locality.
         counttable_t *count_tables
-        Py_ssize_t max_length
-        cdef readonly size_t number_of_reads
+        readonly Py_ssize_t max_length
+        readonly size_t number_of_reads
     def __cinit__(self):
         self.seq_name = "sequence"
         self.qual_name = "qualities"
