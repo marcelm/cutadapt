@@ -17,12 +17,42 @@ if not PyType_CheckExact(SequenceRecord):
 
 cdef PyTypeObject *sequence_record_class = <PyTypeObject *>SequenceRecord
 
+# Nice trick from fastp: A,C, G, T, N all have different last three
+# bits. So this requires only 8 entries per count array. Fastp performs
+# a bitwise and of 0b111 on every character.
+# This can be taken further by using  a lookup table. A=1, C=2, G=3, T=4.
+# Lowercase a,c,g and t are supported. All other characters are index 0 and
+# are considered N. This way we can make a very dense table, and don't have to
+# check every nucleotide if it is within bounds. Furthermore, odd characters
+# such as IUPAC K will map to N, unlike the fastp method where K will map to C.
+cdef extern from *:
+    """
+    #include <stdint.h>
+    const uint8_t NUCLEOTIDE_TO_INDEX[128] = {
+        // Control characters
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        // Interpunction numbers etc
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        // A, B, C, D, E, F, G, H, I, J, K, L, M, N, O,
+        0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0,
+     // P, Q, R, S, T, U, V, W, X, Y, Z,  
+        0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        // a, b, c, d, e, f, g, h, i, j, k, l, m, n, o,
+        0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0,
+     // p, q, r, s, t, u, v, w, x, y, z, 
+        0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    };
+    """
+    const uint8_t NUCLEOTIDE_TO_INDEX[128]
+
 ctypedef size_t counter_t
 DEF PHRED_MAX=93
 DEF PHRED_TABLE_SIZE=PHRED_MAX + 1
 # Nice trick from fastp: A,C, G, T, N all have different last three
 # bits. So this requires only 8 entries per count array.
-DEF NUC_TABLE_SIZE=8
+DEF NUC_TABLE_SIZE=5
 NUMBER_OF_NUCS = NUC_TABLE_SIZE
 NUMBER_OF_PHREDS = PHRED_TABLE_SIZE
 TABLE_SIZE = PHRED_TABLE_SIZE * NUC_TABLE_SIZE
@@ -87,7 +117,7 @@ cdef class QCMetrics:
             q=qualities[i] - self.phred_offset
             if q > PHRED_MAX:
                 raise ValueError(f"Not a valid phred character: {<char>qualities[i]}")
-            c_index = c & 0b111
+            c_index = NUCLEOTIDE_TO_INDEX[c]
             self.count_tables[i][q][c_index] += 1
 
     def count_table_view(self):
@@ -95,23 +125,3 @@ cdef class QCMetrics:
                 <char *>self.count_tables,
                 self.max_length * sizeof(counttable_t),
                 PyBUF_READ)
-
-
-cdef inline uint8_t nucleotide_index_from_char(uint8_t c):
-    # Nice trick from fastp: A,C, G, T, N all have different last three
-    # bits. So this requires only 8 entries per count array.
-    # We can take this further. Note that by design, upper and lowercase
-    # ASCII alphabetic characters share the last 5 bits.
-    # char     &0b1111  >> 1   &0b11
-    # A, a     0001     000    00
-    # C, c     0011     001    01
-    # G, g     0111     011    11
-    # T, t     0100     010    10
-    # N, n     1110     111    11
-    # N >> 3 & 0b1 == 1. For A,C,G,T this is 0.
-    # The following calculation is branchless and guaranteed to be
-    # 0 (A), 1 (C), 2 (T), 3 (G) or 4 (N). Works also with lowercase.
-    # Other characters don't throw errors. It is garbage in, garbage out.
-    # The guarantees mean no bounds check is required on the result.
-    # Unfortunately this is muh slower, so we cannot use it.
-    return ((c & 0b111) >> 1) + ((c >> 3) & 0b1)
