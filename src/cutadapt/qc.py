@@ -23,6 +23,8 @@ def analyse_metrics(metrics: QCMetrics):
     grand_total_bases = 0
     grand_total_gc = 0
     grand_total_at = 0
+    grand_total_q20 = 0
+    grand_total_q30 = 0
 
     for sequence_pos, table_offset in enumerate(range(0, len(matrix), table_size)):
         error_rates = [0.0 for _ in range(5)]
@@ -31,10 +33,14 @@ def analyse_metrics(metrics: QCMetrics):
         for phred, row_offset in enumerate(range(0, table_size, NUMBER_OF_NUCS)):
             nucs = table[row_offset:row_offset+NUMBER_OF_NUCS]
             for n_index, nuc_count in enumerate(nucs):
+                if phred >= 20:
+                    grand_total_q20 += nuc_count
+                if phred >= 30:
+                    grand_total_q30 += nuc_count
                 error_rates[n_index] += PHRED_TO_ERROR_RATE[phred] * nuc_count
                 base_counts[n_index] += nuc_count
         total_bases = sum(base_counts)
-        for i in range(5):
+        for i in range(NUMBER_OF_NUCS):
             base_count = base_counts[i]
             base_content[i][sequence_pos] = base_count / total_bases
             if base_count:
@@ -61,8 +67,10 @@ def analyse_metrics(metrics: QCMetrics):
         length_count += (number_of_sequences_exactly_length * i)
     print(length_count / metrics.number_of_reads)
     print(grand_total_gc / (grand_total_at + grand_total_gc))
+    print(metrics.number_of_reads)
     print(grand_total_bases)
-    print(length_counts)
+    print(grand_total_q20 / grand_total_bases)
+    print(grand_total_q30 / grand_total_bases)
     print(mean_qualities)
     print(qualities)
     print(base_content)
