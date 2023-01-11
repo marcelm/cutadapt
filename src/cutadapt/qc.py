@@ -17,6 +17,7 @@ def analyse_metrics(metrics: QCMetrics):
     length_counts = [0 for _ in range(sequence_length + 1)]
     length_counts[0] = metrics.number_of_reads
     qualities = [[0.0 for _ in range(sequence_length)] for _ in range(5)]
+    mean_qualities = [0.0 for _ in range(sequence_length)]
     base_content = [[0.0 for _ in range(sequence_length)] for _ in range(5)]
     gc_content = [0.0 for _ in range(sequence_length)]
     grand_total_bases = 0
@@ -30,7 +31,7 @@ def analyse_metrics(metrics: QCMetrics):
         for phred, row_offset in enumerate(range(0, table_size, NUMBER_OF_NUCS)):
             nucs = table[row_offset:row_offset+NUMBER_OF_NUCS]
             for n_index, nuc_count in enumerate(nucs):
-                error_rates[n_index] += PHRED_TO_ERROR_RATE[phred]
+                error_rates[n_index] += PHRED_TO_ERROR_RATE[phred] * nuc_count
                 base_counts[n_index] += nuc_count
         total_bases = sum(base_counts)
         for i in range(5):
@@ -39,15 +40,23 @@ def analyse_metrics(metrics: QCMetrics):
             if base_count:
                 average_error = error_rates[i] / base_count
                 qualities[i][sequence_pos] = -10 * math.log10(average_error)
+        mean_qualities[sequence_pos] = -10 * math.log10(sum(error_rates) / total_bases)
         at = base_counts[A] + base_counts[T]
         gc = base_counts[G] + base_counts[C]
         # Don't include N in gc content calculation
         gc_content[sequence_pos] = gc / (at + gc)
         grand_total_at += at
         grand_total_gc += gc
-        length_counts[sequence_pos] += total_bases
+        # Bases at pos 0 are for a sequence of length 1
+        length_counts[sequence_pos + 1] += total_bases
         grand_total_bases += total_bases
-
+    print(grand_total_gc / (grand_total_at + grand_total_gc))
+    print(grand_total_bases)
+    print(length_counts)
+    print(mean_qualities)
+    print(qualities)
+    print(base_content)
+    print(gc_content)
 
 if __name__ == "__main__":  # pragma: no cover
     metrics = QCMetrics()
