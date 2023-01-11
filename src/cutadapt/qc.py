@@ -35,9 +35,10 @@ def analyse_metrics(metrics: QCMetrics):
         total_bases = sum(base_counts)
         for i in range(5):
             base_count = base_counts[i]
-            average_error = error_rates[i] / base_count
-            qualities[i][sequence_pos] = -10 * math.log10(average_error)
             base_content[i][sequence_pos] = base_count / total_bases
+            if base_count:
+                average_error = error_rates[i] / base_count
+                qualities[i][sequence_pos] = -10 * math.log10(average_error)
         at = base_counts[A] + base_counts[T]
         gc = base_counts[G] + base_counts[C]
         # Don't include N in gc content calculation
