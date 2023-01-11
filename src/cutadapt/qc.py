@@ -50,6 +50,16 @@ def analyse_metrics(metrics: QCMetrics):
         # Bases at pos 0 are for a sequence of length 1
         length_counts[sequence_pos + 1] += total_bases
         grand_total_bases += total_bases
+    sequence_lengths = [0 for _ in range(sequence_length + 1)]
+    previous_count = 0
+    length_count = 0
+    for i in range(sequence_length, 0, -1):
+        number_of_sequences_at_least_length = length_counts[i]
+        number_of_sequences_exactly_length = number_of_sequences_at_least_length - previous_count
+        sequence_lengths[i] = number_of_sequences_exactly_length
+        previous_count = number_of_sequences_at_least_length
+        length_count += (number_of_sequences_exactly_length * i)
+    print(length_count / metrics.number_of_reads)
     print(grand_total_gc / (grand_total_at + grand_total_gc))
     print(grand_total_bases)
     print(length_counts)
@@ -57,6 +67,8 @@ def analyse_metrics(metrics: QCMetrics):
     print(qualities)
     print(base_content)
     print(gc_content)
+    print(sequence_lengths)
+
 
 if __name__ == "__main__":  # pragma: no cover
     metrics = QCMetrics()
