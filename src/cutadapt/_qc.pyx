@@ -4,7 +4,7 @@ from cpython.mem cimport PyMem_Realloc, PyMem_Free
 from cpython.unicode cimport PyUnicode_GET_LENGTH
 from cpython.object cimport PyObject_GetAttr, PyTypeObject, Py_TYPE
 from cpython.type cimport PyType_CheckExact
-from libc.stdint cimport uint8_t
+from libc.stdint cimport uint8_t, uint64_t
 from libc.string cimport memset
 
 cdef extern from "Python.h":
@@ -47,7 +47,7 @@ cdef extern from *:
     """
     const uint8_t NUCLEOTIDE_TO_INDEX[128]
 
-ctypedef size_t counter_t
+ctypedef uint64_t counter_t
 DEF PHRED_MAX=93
 # Any phred value above the limit is capped at the limit. This way the
 # table is significantly reduced in size. With a phred limit of 50, there
