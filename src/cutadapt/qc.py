@@ -63,6 +63,23 @@ class QCMetricsReport:
         plot.add("", self.sequence_lengths)
         return plot.render(is_unicode=True)
 
+    def base_content_plot(self) -> str:
+        plot = pygal.Line(
+            title="Base content",
+            dots_size=1,
+            x_labels = list(range(1, self.max_length + 1)),
+            x_labels_major=list(range(0, self.max_length, 10)),
+            show_minor_x_labels=False,
+            truncate_label=-1,
+        )
+        plot.add("GC", self.gc_content)
+        plot.add("A", self.base_content[A])
+        plot.add("G", self.base_content[G])
+        plot.add("C", self.base_content[C])
+        plot.add("T", self.base_content[T])
+        plot.add("N", self.base_content[N])
+        return plot.render(is_unicode=True)
+
     def html_report(self):
         return f"""
         <html>
@@ -91,6 +108,8 @@ class QCMetricsReport:
         </html>
         <h2>Sequence length distribution</h2>
         {self.sequence_length_distribution_plot()}
+        <h2>Base content</h2>
+        {self.base_content_plot()}
         """
 
     def __init__(self, metrics: QCMetrics):
