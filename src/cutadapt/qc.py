@@ -27,8 +27,14 @@ class QCMetricsReport:
     gc_content: List[float]
 
     @property
-    def total_gc_content(self):
+    def total_gc_fraction(self) -> float:
         return self._total_gc / (self._total_at + self._total_gc)
+
+    def mean_length(self) -> float:
+        total_lengths = 0
+        for length, number_of_reads in enumerate(self.sequence_lengths):
+            total_lengths += length * number_of_reads
+        return total_lengths / self.total_reads
 
     def quality_plot(self) -> str:
         plot = pygal.Line(
@@ -54,6 +60,22 @@ class QCMetricsReport:
             <title>Cutadapt report</title>
         </head>
         <h1>Cutadapt report</h1>
+        <h2>Summary</h2>
+        <table>
+        <tr><td>Mean length</td><td align="right">{self.mean_length()}</td></tr>
+        <tr><td>total reads</td><td align="right">{self.total_reads}</td></tr>
+        <tr><td>total bases</td><td align="right">{self.total_bases}</td></tr>
+        <tr>
+            <td>Q20 bases</td>
+            <td align="right">{self.q20_bases} ({self.q20_bases * 100 / self.total_bases:.2f}%)</td>
+        </tr>
+        <tr>
+            <td>Q30 bases</td>
+            <td align="right">{self.q30_bases} ({self.q30_bases * 100 / self.total_bases:.2f}%)</td>
+        </tr>
+        <tr><td>GC content</td><td align="right">{self.total_gc_fraction * 100:.2f}%</td></tr>
+        </table>
+        <h2>Quality scores</h2>
         {self.quality_plot()}
         </html>
         """
