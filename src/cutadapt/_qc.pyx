@@ -22,9 +22,10 @@ cdef PyTypeObject *sequence_record_class = <PyTypeObject *>SequenceRecord
 # a bitwise and of 0b111 on every character.
 # This can be taken further by using  a lookup table. A=1, C=2, G=3, T=4.
 # Lowercase a,c,g and t are supported. All other characters are index 0 and
-# are considered N. This way we can make a very dense table, and don't have to
-# check every nucleotide if it is within bounds. Furthermore, odd characters
-# such as IUPAC K will map to N, unlike the fastp method where K will map to C.
+# are considered N. This way we can make a very dense count table, and don't
+# have to check every nucleotide if it is within bounds. Furthermore, odd
+# characters such as IUPAC K will map to N, unlike the fastp method where K
+# will map to C.
 cdef extern from *:
     """
     #include <stdint.h>
@@ -46,35 +47,30 @@ cdef extern from *:
     };
     """
     const uint8_t NUCLEOTIDE_TO_INDEX[128]
-
-ctypedef uint64_t counter_t
-DEF PHRED_MAX=93
-# Any phred value above the limit is capped at the limit. This way the
-# table is significantly reduced in size. With a phred limit of 50, there
-# are 51 possible threads. With 5 nucleotides and a 8 byte counter_t this
-# means the table is slightly smaller than 2k. Which means we can fit 2 in a
-# memory page. This improves performance and memory usage. Phreds above 50
-# are rare (non existent?) and for the average higher phred scores do not
-# contribute much compared to lower phred scores. So capping at 50 will have
-# no meaningful effect on the resulting stats.
-DEF PHRED_LIMIT=50
-DEF PHRED_TABLE_SIZE=PHRED_LIMIT + 1
-# Nice trick from fastp: A,C, G, T, N all have different last three
-# bits. So this requires only 8 entries per count array.
 DEF NUC_TABLE_SIZE=5
+
+DEF PHRED_MAX=93    # Used to check for valid phred values.
+DEF PHRED_LIMIT=50  # Used to cap the phred at this maximum value.
+# Phreds above 50 are rare (non-existent?) and contribute very little to the
+# average phred score. By capping them the count table is meaningfully reduced
+# in size. This helps with memory usage and speed.
+DEF PHRED_TABLE_SIZE=PHRED_LIMIT + 1
 NUMBER_OF_NUCS = NUC_TABLE_SIZE
 NUMBER_OF_PHREDS = PHRED_TABLE_SIZE
 TABLE_SIZE = PHRED_TABLE_SIZE * NUC_TABLE_SIZE
 
+ctypedef uint64_t counter_t
+# Illumina reads often use a limited set of phreds rather than the full range
+# of 0-93. Putting phreds before nucleotides in the array type therefore gives
+# nice dense spots in the array where all nucleotides with the same phred sit
+# next to eachother. That leads to better cache locality.
 ctypedef counter_t[PHRED_TABLE_SIZE][NUC_TABLE_SIZE] counttable_t
+
 cdef class QCMetrics:
     cdef:
         object seq_name
         object qual_name
         uint8_t phred_offset
-        # Illumina reads often use a limited range of qualities across the
-        # sprectrum. Putting phreds first therefore gives nice dense spots
-        # in the table that are accessed often leading to better cache locality.
         counttable_t *count_tables
         readonly Py_ssize_t max_length
         readonly size_t number_of_reads
@@ -104,9 +100,10 @@ cdef class QCMetrics:
             raise TypeError(f"read should be a dnaio.SequenceRecord object, "
                             f"got {type(read)}")
         cdef:
-            # Use PyObject_GetAttr rather than relying on Cython or using
-            # PyObject_GetAttrString, that will create a new unicode object
-            # With PyUnicode_FromString *every single time*.
+            # Use PyObject_GetAttr rather than relying on Cython (which uses
+            # PyObject_GetAttrString) or using PyObject_GetAttrString. as that
+            # will create a new unicode object With PyUnicode_FromString
+            # *every single time*.
             object sequence_obj = PyObject_GetAttr(read, self.seq_name)
             object qualities_obj = PyObject_GetAttr(read, self.qual_name)
             # Thanks to guarantees in dnaio, we know all strings are ascii
@@ -115,8 +112,7 @@ cdef class QCMetrics:
             # dnaio guarantees sequence and qualities have the same length.
             Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(sequence_obj)
             size_t i
-            uint8_t c, q
-            uint8_t c_index
+            uint8_t c, q, c_index
         if sequence_length > self.max_length:
             self._resize(sequence_length)
 
