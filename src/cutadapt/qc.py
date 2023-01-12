@@ -46,6 +46,7 @@ class QCMetricsReport:
             truncate_label=-1,
             width=1000,
             explicit_size=True,
+            disable_xml_declaration=True,
         )
         plot.add("mean", self.mean_qualities)
         plot.add("A", self.per_base_qualities[A])
@@ -63,6 +64,7 @@ class QCMetricsReport:
             truncate_label=-1,
             width=1000,
             explicit_size=True,
+            disable_xml_declaration=True,
         )
         plot.add("Length", self.sequence_lengths)
         return plot.render(is_unicode=True)
@@ -77,6 +79,7 @@ class QCMetricsReport:
             truncate_label=-1,
             width=1000,
             explicit_size=True,
+            disable_xml_declaration=True,
         )
         plot.add("GC", self.gc_content)
         plot.add("A", self.base_content[A])
