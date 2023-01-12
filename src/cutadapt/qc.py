@@ -44,6 +44,8 @@ class QCMetricsReport:
             x_labels_major=list(range(0, self.max_length, 10)),
             show_minor_x_labels=False,
             truncate_label=-1,
+            width=1000,
+            explicit_size=True,
         )
         plot.add("mean", self.mean_qualities)
         plot.add("A", self.per_base_qualities[A])
@@ -59,6 +61,8 @@ class QCMetricsReport:
             x_labels_major=list(range(0, self.max_length, 10)),
             show_minor_x_labels=False,
             truncate_label=-1,
+            width=1000,
+            explicit_size=True,
         )
         plot.add("Length", self.sequence_lengths)
         return plot.render(is_unicode=True)
@@ -71,6 +75,8 @@ class QCMetricsReport:
             x_labels_major=list(range(0, self.max_length, 10)),
             show_minor_x_labels=False,
             truncate_label=-1,
+            width=1000,
+            explicit_size=True,
         )
         plot.add("GC", self.gc_content)
         plot.add("A", self.base_content[A])
