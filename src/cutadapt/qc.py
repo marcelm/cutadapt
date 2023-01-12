@@ -55,12 +55,12 @@ class QCMetricsReport:
     def sequence_length_distribution_plot(self) -> str:
         plot = pygal.Bar(
             title="Sequence length distribution",
-            x_labels=list(range(1, self.max_length + 1)),
+            x_labels=list(range(0, self.max_length + 1)),
             x_labels_major=list(range(0, self.max_length, 10)),
             show_minor_x_labels=False,
             truncate_label=-1,
         )
-        plot.add("", self.sequence_lengths)
+        plot.add("Length", self.sequence_lengths)
         return plot.render(is_unicode=True)
 
     def base_content_plot(self) -> str:
