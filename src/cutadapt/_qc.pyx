@@ -49,7 +49,16 @@ cdef extern from *:
 
 ctypedef size_t counter_t
 DEF PHRED_MAX=93
-DEF PHRED_TABLE_SIZE=PHRED_MAX + 1
+# Any phred value above the limit is capped at the limit. This way the
+# table is significantly reduced in size. With a phred limit of 50, there
+# are 51 possible threads. With 5 nucleotides and a 8 byte counter_t this
+# means the table is slightly smaller than 2k. Which means we can fit 2 in a
+# memory page. This improves performance and memory usage. Phreds above 50
+# are rare (non existent?) and for the average higher phred scores do not
+# contribute much compared to lower phred scores. So capping at 50 will have
+# no meaningful effect on the resulting stats.
+DEF PHRED_LIMIT=50
+DEF PHRED_TABLE_SIZE=PHRED_LIMIT + 1
 # Nice trick from fastp: A,C, G, T, N all have different last three
 # bits. So this requires only 8 entries per count array.
 DEF NUC_TABLE_SIZE=5
@@ -117,6 +126,8 @@ cdef class QCMetrics:
             q=qualities[i] - self.phred_offset
             if q > PHRED_MAX:
                 raise ValueError(f"Not a valid phred character: {<char>qualities[i]}")
+            if q > PHRED_LIMIT:
+                q = PHRED_LIMIT
             c_index = NUCLEOTIDE_TO_INDEX[c]
             self.count_tables[i][q][c_index] += 1
 
