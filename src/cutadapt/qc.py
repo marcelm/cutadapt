@@ -36,9 +36,9 @@ class QCMetricsReport:
             total_lengths += length * number_of_reads
         return total_lengths / self.total_reads
 
-    def quality_plot(self) -> str:
+    def per_base_quality_plot(self) -> str:
         plot = pygal.Line(
-            title="Quality per position",
+            title="Per base sequence quality",
             dots_size=1,
             x_labels = list(range(1, self.max_length + 1)),
             x_labels_major=list(range(0, self.max_length, 10)),
@@ -50,7 +50,18 @@ class QCMetricsReport:
         plot.add("G", self.per_base_qualities[G])
         plot.add("C", self.per_base_qualities[C])
         plot.add("T", self.per_base_qualities[T])
-        return plot.render().decode("UTF-8")
+        return plot.render(is_unicode=True)
+
+    def sequence_length_distribution_plot(self) -> str:
+        plot = pygal.Bar(
+            title="Sequence length distribution",
+            x_labels=list(range(1, self.max_length + 1)),
+            x_labels_major=list(range(0, self.max_length, 10)),
+            show_minor_x_labels=False,
+            truncate_label=-1,
+        )
+        plot.add("", self.sequence_lengths)
+        return plot.render(is_unicode=True)
 
     def html_report(self):
         return f"""
@@ -76,8 +87,10 @@ class QCMetricsReport:
         <tr><td>GC content</td><td align="right">{self.total_gc_fraction * 100:.2f}%</td></tr>
         </table>
         <h2>Quality scores</h2>
-        {self.quality_plot()}
+        {self.per_base_quality_plot()}
         </html>
+        <h2>Sequence length distribution</h2>
+        {self.sequence_length_distribution_plot()}
         """
 
     def __init__(self, metrics: QCMetrics):
