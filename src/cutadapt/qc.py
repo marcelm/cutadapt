@@ -4,7 +4,7 @@ from typing import List
 
 import dnaio
 
-import pygal
+import pygal  # type: ignore
 
 from ._qc import NUMBER_OF_NUCS, NUMBER_OF_PHREDS, QCMetrics
 
