@@ -9,7 +9,9 @@ import pygal  # type: ignore
 from ._qc import NUMBER_OF_NUCS, NUMBER_OF_PHREDS, QCMetrics
 
 N, A, C, G, T = 0, 1, 2, 3, 4
-PHRED_TO_ERROR_RATE = [10 ** (-p / 10) for p in range(NUMBER_OF_PHREDS)]
+PHRED_TO_ERROR_RATE = [
+    sum(10 ** (-p / 10) for p in range(start * 4, start * 4 + 4)) / 4
+    for start in range(NUMBER_OF_PHREDS)]
 
 
 class QCMetricsReport:
@@ -129,9 +131,9 @@ class QCMetricsReport:
         sequence_length = metrics.max_length
         length_counts = [0 for _ in range(sequence_length + 1)]
         length_counts[0] = metrics.number_of_reads
-        qualities = [[0.0 for _ in range(sequence_length)] for _ in range(5)]
+        qualities = [[0.0 for _ in range(sequence_length)] for _ in range(NUMBER_OF_NUCS)]
         mean_qualities = [0.0 for _ in range(sequence_length)]
-        base_content = [[0.0 for _ in range(sequence_length)] for _ in range(5)]
+        base_content = [[0.0 for _ in range(sequence_length)] for _ in range(NUMBER_OF_NUCS)]
         gc_content = [0.0 for _ in range(sequence_length)]
         grand_total_bases = 0
         grand_total_gc = 0
@@ -140,8 +142,8 @@ class QCMetricsReport:
         grand_total_q30 = 0
 
         for sequence_pos, table_offset in enumerate(range(0, len(matrix), table_size)):
-            error_rates = [0.0 for _ in range(5)]
-            base_counts = [0 for _ in range(5)]
+            error_rates = [0.0 for _ in range(NUMBER_OF_NUCS)]
+            base_counts = [0 for _ in range(NUMBER_OF_NUCS)]
             table = matrix[table_offset : table_offset + table_size]
             for phred, row_offset in enumerate(range(0, table_size, NUMBER_OF_NUCS)):
                 nucs = table[row_offset : row_offset + NUMBER_OF_NUCS]

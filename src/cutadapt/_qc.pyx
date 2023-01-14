@@ -50,11 +50,16 @@ cdef extern from *:
 DEF NUC_TABLE_SIZE=5
 
 DEF PHRED_MAX=93    # Used to check for valid phred values.
-DEF PHRED_LIMIT=50  # Used to cap the phred at this maximum value.
-# Phreds above 50 are rare (non-existent?) and contribute very little to the
-# average phred score. By capping them the count table is meaningfully reduced
-# in size. This helps with memory usage and speed.
-DEF PHRED_TABLE_SIZE=PHRED_LIMIT + 1
+
+# Create only 12 categories of phreds to save memory. The categories are still
+# small enough to contain useful anymore.
+DEF PHRED_LIMIT=47  # Used to cap the phred at this maximum value.
+cdef inline uint8_t phred_to_index(uint8_t phred):
+    if phred > PHRED_LIMIT:
+        phred = PHRED_LIMIT
+    return phred >> 2
+
+DEF PHRED_TABLE_SIZE=PHRED_LIMIT // 4 + 1
 NUMBER_OF_NUCS = NUC_TABLE_SIZE
 NUMBER_OF_PHREDS = PHRED_TABLE_SIZE
 TABLE_SIZE = PHRED_TABLE_SIZE * NUC_TABLE_SIZE
@@ -112,7 +117,7 @@ cdef class QCMetrics:
             # dnaio guarantees sequence and qualities have the same length.
             Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(sequence_obj)
             size_t i
-            uint8_t c, q, c_index
+            uint8_t c, q, c_index, q_index
         if sequence_length > self.max_length:
             self._resize(sequence_length)
 
@@ -122,10 +127,9 @@ cdef class QCMetrics:
             q=qualities[i] - self.phred_offset
             if q > PHRED_MAX:
                 raise ValueError(f"Not a valid phred character: {<char>qualities[i]}")
-            if q > PHRED_LIMIT:
-                q = PHRED_LIMIT
+            q_index = phred_to_index(q)
             c_index = NUCLEOTIDE_TO_INDEX[c]
-            self.count_tables[i][q][c_index] += 1
+            self.count_tables[i][q_index][c_index] += 1
 
     def count_table_view(self):
             return PyMemoryView_FromMemory(
