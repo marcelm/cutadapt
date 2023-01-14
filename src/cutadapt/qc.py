@@ -119,6 +119,7 @@ class QCMetricsReport:
         {self.sequence_length_distribution_plot()}
         <h2>Base content</h2>
         {self.base_content_plot()}
+        </html>
         """
 
     def __init__(self, metrics: QCMetrics):
