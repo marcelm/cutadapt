@@ -154,6 +154,23 @@ class QCMetricsReport:
             mean_qualites[cat_index] = -10 * math.log10(total_prob / total)
         return mean_qualites
 
+    def per_base_qualities(self) -> List[List[float]]:
+        base_qualities = [[0.0 for _ in range(len(self.data_categories))]
+                              for _ in range(NUMBER_OF_NUCS)]
+        for cat_index, table in enumerate(self._tables()):
+            nuc_probs = [0.0 for _ in range(NUMBER_OF_NUCS)]
+            nuc_counts = [0 for _ in range(NUMBER_OF_NUCS)]
+            for phred_p_value, offset in zip(PHRED_TO_ERROR_RATE,
+                                             range(0, TABLE_SIZE,NUMBER_OF_NUCS)):
+                nucs = table[offset: offset + NUMBER_OF_NUCS]
+                for i, count in enumerate(nucs):
+                    nuc_counts[i] += count
+                    nuc_probs[i] += (phred_p_value * count)
+            for i in range(NUMBER_OF_NUCS):
+                if nuc_counts[i] == 0:
+                    continue
+                base_qualities[i][cat_index] = -10 * math.log10(nuc_probs[i] / nuc_counts[i])
+        return base_qualities
 
     def per_base_quality_plot(self) -> str:
         plot = pygal.Line(
@@ -165,6 +182,11 @@ class QCMetricsReport:
             explicit_size=True,
             disable_xml_declaration=True,
         )
+        per_base_qualities = self.per_base_qualities()
+        plot.add("A", per_base_qualities[A])
+        plot.add("C", per_base_qualities[C])
+        plot.add("G", per_base_qualities[G])
+        plot.add("T", per_base_qualities[T])
         plot.add("mean", self.mean_qualities())
         return plot.render(is_unicode=True)
 
