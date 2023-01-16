@@ -31,8 +31,8 @@ def equidistant_ranges(length: int, parts: int) -> Iterator[Tuple[int, int]]:
 
 class QCMetricsReport:
     raw_count_matrix: array.ArrayType
-    aggregated_count_matrix = array.ArrayType
-    raw_sequence_lengths = array.ArrayType
+    aggregated_count_matrix: array.ArrayType
+    raw_sequence_lengths: array.ArrayType
     _data_ranges: List[range]
     data_categories: List[str]
     max_length: int
