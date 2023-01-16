@@ -107,7 +107,6 @@ class QCMetricsReport:
                 content[i][cat_index] = sum(table[i::NUMBER_OF_NUCS]) / total
         return content
 
-    @property
     def total_gc_fraction(self) -> float:
         total_nucs = [
             sum(self.aggregated_count_matrix[i:len(self.aggregated_count_matrix):NUMBER_OF_NUCS])
@@ -195,7 +194,7 @@ class QCMetricsReport:
             <td>Q30 bases</td>
             <td align="right">{self.q30_bases} ({self.q30_bases * 100 / self.total_bases:.2f}%)</td>
         </tr>
-        <tr><td>GC content</td><td align="right">{self.total_gc_fraction * 100:.2f}%</td></tr>
+        <tr><td>GC content</td><td align="right">{self.total_gc_fraction() * 100:.2f}%</td></tr>
         </table>
         <h2>Quality scores</h2>
         {self.per_base_quality_plot()}
