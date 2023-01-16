@@ -33,7 +33,7 @@ class QCMetricsReport:
     raw_count_matrix: array.ArrayType
     aggregated_count_matrix = array.ArrayType
     raw_sequence_lengths = array.ArrayType
-    _data_ranges: List[Iterable[int]]
+    _data_ranges: List[range]
     data_categories: List[str]
     max_length: int
     total_reads: int
