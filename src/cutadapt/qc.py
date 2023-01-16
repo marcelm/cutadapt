@@ -98,6 +98,15 @@ class QCMetricsReport:
         for i in range(0, len(category_view), TABLE_SIZE):
             yield category_view[i:i + TABLE_SIZE]
 
+    def base_content(self) -> List[List[float]]:
+        content = [[0.0 for _ in range(len(self.data_categories))]
+                        for _ in range(NUMBER_OF_NUCS)]
+        for cat_index, table in enumerate(self._tables()):
+            total = sum(table)
+            for i in range(NUMBER_OF_NUCS):
+                content[i][cat_index] = sum(table[i::NUMBER_OF_NUCS]) / total
+        return content
+
     @property
     def total_gc_fraction(self) -> float:
         total_nucs = [
@@ -151,20 +160,18 @@ class QCMetricsReport:
         plot = pygal.Line(
             title="Base content",
             dots_size=1,
-            x_labels=list(range(1, self.max_length + 1)),
-            x_labels_major=list(range(0, self.max_length, 10)),
-            show_minor_x_labels=False,
+            x_labels=self.data_categories,
             truncate_label=-1,
             width=1000,
             explicit_size=True,
             disable_xml_declaration=True,
         )
-        plot.add("GC", self.gc_content)
-        plot.add("A", self.base_content[A])
-        plot.add("G", self.base_content[G])
-        plot.add("C", self.base_content[C])
-        plot.add("T", self.base_content[T])
-        plot.add("N", self.base_content[N])
+        base_content = self.base_content()
+        plot.add("A", base_content[A])
+        plot.add("G", base_content[G])
+        plot.add("C", base_content[C])
+        plot.add("T", base_content[T])
+        plot.add("N", base_content[N])
         return plot.render(is_unicode=True)
 
     def html_report(self):
