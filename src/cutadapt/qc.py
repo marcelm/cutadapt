@@ -116,6 +116,18 @@ class QCMetricsReport:
         gc = total_nucs[G] + total_nucs[C]
         return gc / (at + gc)
 
+    def q20_bases(self):
+        q20s = 0
+        for table in self._tables():
+            q20s += sum(table[NUMBER_OF_NUCS * 5:])
+        return q20s
+
+    def q28_bases(self):
+        q28s = 0
+        for table in self._tables():
+            q28s += sum(table[NUMBER_OF_NUCS * 7:])
+        return q28s
+
     def mean_length(self) -> float:
         total_lengths = 0
         for length, number_of_reads in enumerate(self.raw_sequence_lengths):
@@ -188,11 +200,11 @@ class QCMetricsReport:
         <tr><td>total bases</td><td align="right">{self.total_bases}</td></tr>
         <tr>
             <td>Q20 bases</td>
-            <td align="right">{self.q20_bases} ({self.q20_bases * 100 / self.total_bases:.2f}%)</td>
+            <td align="right">{self.q20_bases()} ({self.q20_bases() * 100 / self.total_bases:.2f}%)</td>
         </tr>
         <tr>
-            <td>Q30 bases</td>
-            <td align="right">{self.q30_bases} ({self.q30_bases * 100 / self.total_bases:.2f}%)</td>
+            <td>Q28 bases</td>
+            <td align="right">{self.q28_bases()} ({self.q28_bases() * 100 / self.total_bases:.2f}%)</td>
         </tr>
         <tr><td>GC content</td><td align="right">{self.total_gc_fraction() * 100:.2f}%</td></tr>
         </table>
