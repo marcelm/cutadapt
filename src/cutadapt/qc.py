@@ -37,6 +37,7 @@ class QCMetricsReport:
     data_categories: List[str]
     max_length: int
     total_reads: int
+    total_bases: int
 
     def __init__(self, metrics: QCMetrics, graph_resolution: int = 100):
         """Aggregate all data from a QCMetrics counter"""
@@ -90,6 +91,12 @@ class QCMetricsReport:
             raw_sequence_lengths[i] = number_at_least - previous_count
             previous_count = number_at_least
         self.raw_sequence_lengths = raw_sequence_lengths
+        self.total_bases = sum(memoryview(raw_base_counts)[1:])
+
+    def _tables(self) -> Iterator[memoryview]:
+        category_view = memoryview(self.aggregated_count_matrix)
+        for i in range(0, len(category_view), TABLE_SIZE):
+            yield category_view[i:i + TABLE_SIZE]
 
     @property
     def total_gc_fraction(self) -> float:
