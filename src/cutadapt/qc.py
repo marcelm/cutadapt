@@ -42,7 +42,10 @@ class QCMetricsReport:
 
         self.total_reads = metrics.number_of_reads
         self.max_length = metrics.max_length
-        self.raw_count_matrix = array.array("Q", metrics.count_table_view().cast("Q"))
+        self.raw_count_matrix = array.array("Q")
+        # Python will treat the memoryview as an iterable in the array constructor
+        # use from_bytes instead for direct memcpy.
+        self.raw_count_matrix.frombytes(metrics.count_table_view())
         # use bytes constructor to initialize the aggregated count matrix to 0.
         self.aggregated_count_matrix = array.array(
             "Q", bytes(8 * TABLE_SIZE * graph_resolution))
