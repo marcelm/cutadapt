@@ -139,23 +139,33 @@ class QCMetricsReport:
         lengths = [sum(seqlength_view[r.start:r.stop]) for r in self._data_ranges]
         return [self.raw_sequence_lengths[0]] + lengths
 
+    def mean_qualities(self):
+        mean_qualites = [0.0 for _ in range(len(self.data_categories))]
+        for cat_index, table in enumerate(self._tables()):
+            total = 0
+            total_prob = 0.0
+            for phred_p_value, offset in zip(PHRED_TO_ERROR_RATE, range(0, TABLE_SIZE, NUMBER_OF_NUCS)):
+                nucs = table[offset: offset + NUMBER_OF_NUCS]
+                count = sum(nucs)
+                total += count
+                total_prob += (count * phred_p_value)
+            if total == 0:
+                continue
+            mean_qualites[cat_index] = -10 * math.log10(total_prob / total)
+        return mean_qualites
+
+
     def per_base_quality_plot(self) -> str:
         plot = pygal.Line(
             title="Per base sequence quality",
             dots_size=1,
-            x_labels=list(range(1, self.max_length + 1)),
-            x_labels_major=list(range(0, self.max_length, 10)),
-            show_minor_x_labels=False,
+            x_labels=self.data_categories,
             truncate_label=-1,
             width=1000,
             explicit_size=True,
             disable_xml_declaration=True,
         )
-        plot.add("mean", self.mean_qualities)
-        plot.add("A", self.per_base_qualities[A])
-        plot.add("G", self.per_base_qualities[G])
-        plot.add("C", self.per_base_qualities[C])
-        plot.add("T", self.per_base_qualities[T])
+        plot.add("mean", self.mean_qualities())
         return plot.render(is_unicode=True)
 
     def sequence_length_distribution_plot(self) -> str:
