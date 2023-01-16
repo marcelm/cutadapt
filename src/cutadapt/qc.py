@@ -1,6 +1,6 @@
 import math
 import sys
-from typing import List
+from typing import Iterator, List, Tuple
 
 import dnaio
 
@@ -12,6 +12,20 @@ N, A, C, G, T = 0, 1, 2, 3, 4
 PHRED_TO_ERROR_RATE = [
     sum(10 ** (-p / 10) for p in range(start * 4, start * 4 + 4)) / 4
     for start in range(NUMBER_OF_PHREDS)]
+
+
+def equidistant_ranges(length: int, parts: int) -> Iterator[Tuple[int, int]]:
+    size = length // parts
+    remainder = length % parts
+    small_parts = parts - remainder
+    start = 0
+    for i in range(parts):
+        part_size = size if i < small_parts else size + 1
+        if part_size == 0:
+            continue
+        stop = start + part_size
+        yield start, stop
+        start = stop
 
 
 class QCMetricsReport:
