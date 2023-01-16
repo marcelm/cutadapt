@@ -1,7 +1,7 @@
 import array
 import math
 import sys
-from typing import Iterator, List, Tuple
+from typing import Iterator, Iterable, List, Tuple
 
 import dnaio
 
@@ -32,23 +32,16 @@ def equidistant_ranges(length: int, parts: int) -> Iterator[Tuple[int, int]]:
 class QCMetricsReport:
     raw_count_matrix: array.ArrayType
     aggregated_count_matrix = array.ArrayType
-    total_reads: int
-    total_bases: int
-    q20_bases: int
-    q30_bases: int
-    _total_gc: int
-    _total_at: int
+    _data_ranges: List[Iterable[int]]
+    data_categories: List[str]
     max_length: int
-    sequence_lengths: List[int]
-    per_base_qualities: List[List[float]]
-    mean_qualities: List[float]
-    base_content: List[List[float]]
-    gc_content: List[float]
+    total_reads: int
 
     def __init__(self, metrics: QCMetrics, graph_resolution: int = 100):
         """Aggregate all data from a QCMetrics counter"""
 
         self.total_reads = metrics.number_of_reads
+        self.max_length = metrics.max_length
         self.raw_count_matrix = array.array("Q", metrics.count_table_view().cast("Q"))
         # use bytes constructor to initialize the aggregated count matrix to 0.
         self.aggregated_count_matrix = array.array(
