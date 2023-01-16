@@ -74,6 +74,7 @@ class QCMetricsReport:
                 table = matrix[offset: offset+table_size]
                 for i, count in enumerate(table):
                     cat_view[i] += count
+        self.total_bases = sum(self.aggregated_count_matrix)
 
         raw_sequence_lengths = array.array(
             "Q", bytes(8 * (self.max_length + 1)))
@@ -91,7 +92,6 @@ class QCMetricsReport:
             raw_sequence_lengths[i] = number_at_least - previous_count
             previous_count = number_at_least
         self.raw_sequence_lengths = raw_sequence_lengths
-        self.total_bases = sum(memoryview(raw_base_counts)[1:])
 
     def _tables(self) -> Iterator[memoryview]:
         category_view = memoryview(self.aggregated_count_matrix)
@@ -134,6 +134,11 @@ class QCMetricsReport:
             total_lengths += length * number_of_reads
         return total_lengths / self.total_reads
 
+    def sequence_lengths(self):
+        seqlength_view = memoryview(self.raw_sequence_lengths)[1:]
+        lengths = [sum(seqlength_view[r.start:r.stop]) for r in self._data_ranges]
+        return [self.raw_sequence_lengths[0]] + lengths
+
     def per_base_quality_plot(self) -> str:
         plot = pygal.Line(
             title="Per base sequence quality",
@@ -156,15 +161,13 @@ class QCMetricsReport:
     def sequence_length_distribution_plot(self) -> str:
         plot = pygal.Bar(
             title="Sequence length distribution",
-            x_labels=list(range(0, self.max_length + 1)),
-            x_labels_major=list(range(0, self.max_length, 10)),
-            show_minor_x_labels=False,
+            x_labels=["0"] + self.data_categories,
             truncate_label=-1,
             width=1000,
             explicit_size=True,
             disable_xml_declaration=True,
         )
-        plot.add("Length", self.sequence_lengths)
+        plot.add("Length", self.sequence_lengths())
         return plot.render(is_unicode=True)
 
     def base_content_plot(self) -> str:
