@@ -1,3 +1,4 @@
+import array
 import math
 import sys
 from typing import Iterator, List, Tuple
@@ -6,7 +7,7 @@ import dnaio
 
 import pygal  # type: ignore
 
-from ._qc import NUMBER_OF_NUCS, NUMBER_OF_PHREDS, QCMetrics
+from ._qc import NUMBER_OF_NUCS, NUMBER_OF_PHREDS, TABLE_SIZE, QCMetrics
 
 N, A, C, G, T = 0, 1, 2, 3, 4
 PHRED_TO_ERROR_RATE = [
@@ -29,6 +30,8 @@ def equidistant_ranges(length: int, parts: int) -> Iterator[Tuple[int, int]]:
 
 
 class QCMetricsReport:
+    raw_count_matrix: array.ArrayType
+    aggregated_count_matrix = array.ArrayType
     total_reads: int
     total_bases: int
     q20_bases: int
@@ -41,6 +44,105 @@ class QCMetricsReport:
     mean_qualities: List[float]
     base_content: List[List[float]]
     gc_content: List[float]
+
+    def __init__(self, metrics: QCMetrics, graph_resolution: int = 100):
+        """Aggregate all data from a QCMetrics counter"""
+
+        self.total_reads = metrics.number_of_reads
+        self.raw_count_matrix = array.array("Q", metrics.count_table_view().cast("Q"))
+        # use bytes constructor to initialize the aggregated count matrix to 0.
+        self.aggregated_count_matrix = array.array(
+            "Q", bytes(8 * TABLE_SIZE * graph_resolution))
+        self._data_ranges = [
+            range(*r) for r in equidistant_ranges(metrics.max_length, graph_resolution)
+        ]
+        # Use one-based indexing for the graph categories. I.e. 1 is the first base.
+        self.data_categories = [
+            f"{r.start + 1}-{r.stop}"
+            if r.start + 1 != r.stop else f"{r.start + 1}"
+            for r in self._data_ranges
+        ]
+
+        matrix = memoryview(self.raw_count_matrix)
+        categories_view = memoryview(self.aggregated_count_matrix)
+
+        table_size = TABLE_SIZE
+        for cat_index, category_range in enumerate(self._data_ranges):
+            cat_offset = cat_index * table_size
+            cat_view = categories_view[cat_offset: cat_offset + table_size]
+            for table_index in category_range:
+                offset = table_index * table_size
+                table = matrix[offset: offset+table_size]
+                for i, count in enumerate(table):
+                    cat_view[i] += count
+
+        # sequence_length = metrics.max_length
+        # length_counts = [0 for _ in range(sequence_length + 1)]
+        # length_counts[0] = metrics.number_of_reads
+        # qualities = [[0.0 for _ in range(sequence_length)] for _ in range(NUMBER_OF_NUCS)]
+        # mean_qualities = [0.0 for _ in range(sequence_length)]
+        # base_content = [[0.0 for _ in range(sequence_length)] for _ in range(NUMBER_OF_NUCS)]
+        # gc_content = [0.0 for _ in range(sequence_length)]
+        # grand_total_bases = 0
+        # grand_total_gc = 0
+        # grand_total_at = 0
+        # grand_total_q20 = 0
+        # grand_total_q30 = 0
+        #
+        # for sequence_pos, table_offset in enumerate(range(0, len(matrix), table_size)):
+        #     error_rates = [0.0 for _ in range(NUMBER_OF_NUCS)]
+        #     base_counts = [0 for _ in range(NUMBER_OF_NUCS)]
+        #     table = matrix[table_offset : table_offset + table_size]
+        #     for phred, row_offset in enumerate(range(0, table_size, NUMBER_OF_NUCS)):
+        #         nucs = table[row_offset : row_offset + NUMBER_OF_NUCS]
+        #         for n_index, nuc_count in enumerate(nucs):
+        #             if phred >= 20:
+        #                 grand_total_q20 += nuc_count
+        #             if phred >= 30:
+        #                 grand_total_q30 += nuc_count
+        #             error_rates[n_index] += PHRED_TO_ERROR_RATE[phred] * nuc_count
+        #             base_counts[n_index] += nuc_count
+        #     total_bases = sum(base_counts)
+        #     for i in range(NUMBER_OF_NUCS):
+        #         base_count = base_counts[i]
+        #         base_content[i][sequence_pos] = base_count / total_bases
+        #         if base_count:
+        #             average_error = error_rates[i] / base_count
+        #             qualities[i][sequence_pos] = -10 * math.log10(average_error)
+        #     mean_qualities[sequence_pos] = -10 * math.log10(
+        #         sum(error_rates) / total_bases
+        #     )
+        #     at = base_counts[A] + base_counts[T]
+        #     gc = base_counts[G] + base_counts[C]
+        #     # Don't include N in gc content calculation
+        #     gc_content[sequence_pos] = gc / (at + gc)
+        #     grand_total_at += at
+        #     grand_total_gc += gc
+        #     # Bases at pos 0 are for a sequence of length 1
+        #     length_counts[sequence_pos + 1] += total_bases
+        #     grand_total_bases += total_bases
+        # sequence_lengths = [0 for _ in range(sequence_length + 1)]
+        # previous_count = 0
+        # for i in range(sequence_length, 0, -1):
+        #     number_of_sequences_at_least_length = length_counts[i]
+        #     number_of_sequences_exactly_length = (
+        #         number_of_sequences_at_least_length - previous_count
+        #     )
+        #     sequence_lengths[i] = number_of_sequences_exactly_length
+        #     previous_count = number_of_sequences_at_least_length
+        #
+        #
+        # self.total_bases = grand_total_bases
+        # self.q20_bases = grand_total_q20
+        # self.q30_bases = grand_total_q30
+        # self._total_gc = grand_total_gc
+        # self._total_at = grand_total_at
+        # self.max_length = metrics.max_length
+        # self.sequence_lengths = sequence_lengths
+        # self.per_base_qualities = qualities
+        # self.mean_qualities = mean_qualities
+        # self.base_content = base_content
+        # self.gc_content = gc_content
 
     @property
     def total_gc_fraction(self) -> float:
@@ -137,78 +239,6 @@ class QCMetricsReport:
         {self.base_content_plot()}
         </html>
         """
-
-    def __init__(self, metrics: QCMetrics):
-        """Aggregate all data from a QCMetrics counter"""
-        matrix = metrics.count_table_view().cast("Q")
-        table_size = NUMBER_OF_NUCS * NUMBER_OF_PHREDS
-        sequence_length = metrics.max_length
-        length_counts = [0 for _ in range(sequence_length + 1)]
-        length_counts[0] = metrics.number_of_reads
-        qualities = [[0.0 for _ in range(sequence_length)] for _ in range(NUMBER_OF_NUCS)]
-        mean_qualities = [0.0 for _ in range(sequence_length)]
-        base_content = [[0.0 for _ in range(sequence_length)] for _ in range(NUMBER_OF_NUCS)]
-        gc_content = [0.0 for _ in range(sequence_length)]
-        grand_total_bases = 0
-        grand_total_gc = 0
-        grand_total_at = 0
-        grand_total_q20 = 0
-        grand_total_q30 = 0
-
-        for sequence_pos, table_offset in enumerate(range(0, len(matrix), table_size)):
-            error_rates = [0.0 for _ in range(NUMBER_OF_NUCS)]
-            base_counts = [0 for _ in range(NUMBER_OF_NUCS)]
-            table = matrix[table_offset : table_offset + table_size]
-            for phred, row_offset in enumerate(range(0, table_size, NUMBER_OF_NUCS)):
-                nucs = table[row_offset : row_offset + NUMBER_OF_NUCS]
-                for n_index, nuc_count in enumerate(nucs):
-                    if phred >= 20:
-                        grand_total_q20 += nuc_count
-                    if phred >= 30:
-                        grand_total_q30 += nuc_count
-                    error_rates[n_index] += PHRED_TO_ERROR_RATE[phred] * nuc_count
-                    base_counts[n_index] += nuc_count
-            total_bases = sum(base_counts)
-            for i in range(NUMBER_OF_NUCS):
-                base_count = base_counts[i]
-                base_content[i][sequence_pos] = base_count / total_bases
-                if base_count:
-                    average_error = error_rates[i] / base_count
-                    qualities[i][sequence_pos] = -10 * math.log10(average_error)
-            mean_qualities[sequence_pos] = -10 * math.log10(
-                sum(error_rates) / total_bases
-            )
-            at = base_counts[A] + base_counts[T]
-            gc = base_counts[G] + base_counts[C]
-            # Don't include N in gc content calculation
-            gc_content[sequence_pos] = gc / (at + gc)
-            grand_total_at += at
-            grand_total_gc += gc
-            # Bases at pos 0 are for a sequence of length 1
-            length_counts[sequence_pos + 1] += total_bases
-            grand_total_bases += total_bases
-        sequence_lengths = [0 for _ in range(sequence_length + 1)]
-        previous_count = 0
-        for i in range(sequence_length, 0, -1):
-            number_of_sequences_at_least_length = length_counts[i]
-            number_of_sequences_exactly_length = (
-                number_of_sequences_at_least_length - previous_count
-            )
-            sequence_lengths[i] = number_of_sequences_exactly_length
-            previous_count = number_of_sequences_at_least_length
-
-        self.total_reads = metrics.number_of_reads
-        self.total_bases = grand_total_bases
-        self.q20_bases = grand_total_q20
-        self.q30_bases = grand_total_q30
-        self._total_gc = grand_total_gc
-        self._total_at = grand_total_at
-        self.max_length = metrics.max_length
-        self.sequence_lengths = sequence_lengths
-        self.per_base_qualities = qualities
-        self.mean_qualities = mean_qualities
-        self.base_content = base_content
-        self.gc_content = gc_content
 
 
 if __name__ == "__main__":  # pragma: no cover
