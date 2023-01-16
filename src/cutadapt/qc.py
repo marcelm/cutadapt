@@ -1,7 +1,7 @@
 import array
 import math
 import sys
-from typing import Iterator, Iterable, List, Tuple
+from typing import Iterator, List, Tuple
 
 import dnaio
 
@@ -12,7 +12,8 @@ from ._qc import NUMBER_OF_NUCS, NUMBER_OF_PHREDS, TABLE_SIZE, QCMetrics
 N, A, C, G, T = 0, 1, 2, 3, 4
 PHRED_TO_ERROR_RATE = [
     sum(10 ** (-p / 10) for p in range(start * 4, start * 4 + 4)) / 4
-    for start in range(NUMBER_OF_PHREDS)]
+    for start in range(NUMBER_OF_PHREDS)
+]
 
 
 def equidistant_ranges(length: int, parts: int) -> Iterator[Tuple[int, int]]:
@@ -50,15 +51,15 @@ class QCMetricsReport:
         self.raw_count_matrix.frombytes(metrics.count_table_view())
         # use bytes constructor to initialize the aggregated count matrix to 0.
         self.aggregated_count_matrix = array.array(
-            "Q", bytes(8 * TABLE_SIZE * graph_resolution))
+            "Q", bytes(8 * TABLE_SIZE * graph_resolution)
+        )
 
         self._data_ranges = [
             range(*r) for r in equidistant_ranges(metrics.max_length, graph_resolution)
         ]
         # Use one-based indexing for the graph categories. I.e. 1 is the first base.
         self.data_categories = [
-            f"{r.start + 1}-{r.stop}"
-            if r.start + 1 != r.stop else f"{r.start + 1}"
+            f"{r.start + 1}-{r.stop}" if r.start + 1 != r.stop else f"{r.start + 1}"
             for r in self._data_ranges
         ]
 
@@ -68,22 +69,20 @@ class QCMetricsReport:
         table_size = TABLE_SIZE
         for cat_index, category_range in enumerate(self._data_ranges):
             cat_offset = cat_index * table_size
-            cat_view = categories_view[cat_offset: cat_offset + table_size]
+            cat_view = categories_view[cat_offset : cat_offset + table_size]
             for table_index in category_range:
                 offset = table_index * table_size
-                table = matrix[offset: offset+table_size]
+                table = matrix[offset : offset + table_size]
                 for i, count in enumerate(table):
                     cat_view[i] += count
         self.total_bases = sum(self.aggregated_count_matrix)
 
-        raw_sequence_lengths = array.array(
-            "Q", bytes(8 * (self.max_length + 1)))
-        raw_base_counts = array.array(
-            "Q", bytes(8 * (self.max_length + 1)))
+        raw_sequence_lengths = array.array("Q", bytes(8 * (self.max_length + 1)))
+        raw_base_counts = array.array("Q", bytes(8 * (self.max_length + 1)))
         # All reads have at least 0 bases
         raw_base_counts[0] = self.total_reads
         for i in range(self.max_length):
-            table = matrix[i * 60:(i + 1)*60]
+            table = matrix[i * 60 : (i + 1) * 60]
             raw_base_counts[i + 1] = sum(table)
 
         previous_count = 0
@@ -96,11 +95,13 @@ class QCMetricsReport:
     def _tables(self) -> Iterator[memoryview]:
         category_view = memoryview(self.aggregated_count_matrix)
         for i in range(0, len(category_view), TABLE_SIZE):
-            yield category_view[i:i + TABLE_SIZE]
+            yield category_view[i : i + TABLE_SIZE]
 
     def base_content(self) -> List[List[float]]:
-        content = [[0.0 for _ in range(len(self.data_categories))]
-                        for _ in range(NUMBER_OF_NUCS)]
+        content = [
+            [0.0 for _ in range(len(self.data_categories))]
+            for _ in range(NUMBER_OF_NUCS)
+        ]
         for cat_index, table in enumerate(self._tables()):
             total = sum(table)
             for i in range(NUMBER_OF_NUCS):
@@ -109,7 +110,11 @@ class QCMetricsReport:
 
     def total_gc_fraction(self) -> float:
         total_nucs = [
-            sum(self.aggregated_count_matrix[i:len(self.aggregated_count_matrix):NUMBER_OF_NUCS])
+            sum(
+                self.aggregated_count_matrix[
+                    i : len(self.aggregated_count_matrix) : NUMBER_OF_NUCS
+                ]
+            )
             for i in range(NUMBER_OF_NUCS)
         ]
         at = total_nucs[A] + total_nucs[T]
@@ -119,13 +124,13 @@ class QCMetricsReport:
     def q20_bases(self):
         q20s = 0
         for table in self._tables():
-            q20s += sum(table[NUMBER_OF_NUCS * 5:])
+            q20s += sum(table[NUMBER_OF_NUCS * 5 :])
         return q20s
 
     def q28_bases(self):
         q28s = 0
         for table in self._tables():
-            q28s += sum(table[NUMBER_OF_NUCS * 7:])
+            q28s += sum(table[NUMBER_OF_NUCS * 7 :])
         return q28s
 
     def mean_length(self) -> float:
@@ -136,7 +141,7 @@ class QCMetricsReport:
 
     def sequence_lengths(self):
         seqlength_view = memoryview(self.raw_sequence_lengths)[1:]
-        lengths = [sum(seqlength_view[r.start:r.stop]) for r in self._data_ranges]
+        lengths = [sum(seqlength_view[r.start : r.stop]) for r in self._data_ranges]
         return [self.raw_sequence_lengths[0]] + lengths
 
     def mean_qualities(self):
@@ -144,32 +149,39 @@ class QCMetricsReport:
         for cat_index, table in enumerate(self._tables()):
             total = 0
             total_prob = 0.0
-            for phred_p_value, offset in zip(PHRED_TO_ERROR_RATE, range(0, TABLE_SIZE, NUMBER_OF_NUCS)):
-                nucs = table[offset: offset + NUMBER_OF_NUCS]
+            for phred_p_value, offset in zip(
+                PHRED_TO_ERROR_RATE, range(0, TABLE_SIZE, NUMBER_OF_NUCS)
+            ):
+                nucs = table[offset : offset + NUMBER_OF_NUCS]
                 count = sum(nucs)
                 total += count
-                total_prob += (count * phred_p_value)
+                total_prob += count * phred_p_value
             if total == 0:
                 continue
             mean_qualites[cat_index] = -10 * math.log10(total_prob / total)
         return mean_qualites
 
     def per_base_qualities(self) -> List[List[float]]:
-        base_qualities = [[0.0 for _ in range(len(self.data_categories))]
-                              for _ in range(NUMBER_OF_NUCS)]
+        base_qualities = [
+            [0.0 for _ in range(len(self.data_categories))]
+            for _ in range(NUMBER_OF_NUCS)
+        ]
         for cat_index, table in enumerate(self._tables()):
             nuc_probs = [0.0 for _ in range(NUMBER_OF_NUCS)]
             nuc_counts = [0 for _ in range(NUMBER_OF_NUCS)]
-            for phred_p_value, offset in zip(PHRED_TO_ERROR_RATE,
-                                             range(0, TABLE_SIZE,NUMBER_OF_NUCS)):
-                nucs = table[offset: offset + NUMBER_OF_NUCS]
+            for phred_p_value, offset in zip(
+                PHRED_TO_ERROR_RATE, range(0, TABLE_SIZE, NUMBER_OF_NUCS)
+            ):
+                nucs = table[offset : offset + NUMBER_OF_NUCS]
                 for i, count in enumerate(nucs):
                     nuc_counts[i] += count
-                    nuc_probs[i] += (phred_p_value * count)
+                    nuc_probs[i] += phred_p_value * count
             for i in range(NUMBER_OF_NUCS):
                 if nuc_counts[i] == 0:
                     continue
-                base_qualities[i][cat_index] = -10 * math.log10(nuc_probs[i] / nuc_counts[i])
+                base_qualities[i][cat_index] = -10 * math.log10(
+                    nuc_probs[i] / nuc_counts[i]
+                )
         return base_qualities
 
     def per_base_quality_plot(self) -> str:
@@ -207,7 +219,7 @@ class QCMetricsReport:
             title="Base content",
             dots_size=1,
             x_labels=self.data_categories,
-            y_labels=[i/10 for i in range(11)],
+            y_labels=[i / 10 for i in range(11)],
             truncate_label=-1,
             width=1000,
             explicit_size=True,
@@ -257,7 +269,7 @@ class QCMetricsReport:
 
 if __name__ == "__main__":  # pragma: no cover
     metrics = QCMetrics()
-    with dnaio.open(sys.argv[1]) as reader:
+    with dnaio.open(sys.argv[1]) as reader:  # type: ignore
         for read in reader:
             metrics.add_read(read)
     report = QCMetricsReport(metrics)
