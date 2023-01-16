@@ -203,21 +203,22 @@ class QCMetricsReport:
         return plot.render(is_unicode=True)
 
     def base_content_plot(self) -> str:
-        plot = pygal.Line(
+        plot = pygal.StackedLine(
             title="Base content",
             dots_size=1,
             x_labels=self.data_categories,
+            y_labels=[i/10 for i in range(11)],
             truncate_label=-1,
             width=1000,
             explicit_size=True,
             disable_xml_declaration=True,
         )
         base_content = self.base_content()
-        plot.add("A", base_content[A])
-        plot.add("G", base_content[G])
-        plot.add("C", base_content[C])
-        plot.add("T", base_content[T])
-        plot.add("N", base_content[N])
+        plot.add("G", base_content[G], fill=True)
+        plot.add("C", base_content[C], fill=True)
+        plot.add("A", base_content[A], fill=True)
+        plot.add("T", base_content[T], fill=True)
+        plot.add("N", base_content[N], fill=True)
         return plot.render(is_unicode=True)
 
     def html_report(self):
