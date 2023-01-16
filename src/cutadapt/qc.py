@@ -32,6 +32,7 @@ def equidistant_ranges(length: int, parts: int) -> Iterator[Tuple[int, int]]:
 class QCMetricsReport:
     raw_count_matrix: array.ArrayType
     aggregated_count_matrix = array.ArrayType
+    raw_sequence_lengths = array.ArrayType
     _data_ranges: List[Iterable[int]]
     data_categories: List[str]
     max_length: int
@@ -49,6 +50,7 @@ class QCMetricsReport:
         # use bytes constructor to initialize the aggregated count matrix to 0.
         self.aggregated_count_matrix = array.array(
             "Q", bytes(8 * TABLE_SIZE * graph_resolution))
+
         self._data_ranges = [
             range(*r) for r in equidistant_ranges(metrics.max_length, graph_resolution)
         ]
@@ -71,6 +73,23 @@ class QCMetricsReport:
                 table = matrix[offset: offset+table_size]
                 for i, count in enumerate(table):
                     cat_view[i] += count
+
+        raw_sequence_lengths = array.array(
+            "Q", bytes(8 * (self.max_length + 1)))
+        raw_base_counts = array.array(
+            "Q", bytes(8 * (self.max_length + 1)))
+        # All reads have at least 0 bases
+        raw_base_counts[0] = self.total_reads
+        for i in range(self.max_length):
+            table = matrix[i * 60:(i + 1)*60]
+            raw_base_counts[i + 1] = sum(table)
+
+        previous_count = 0
+        for i in range(self.max_length, 0, -1):
+            number_at_least = raw_base_counts[i]
+            raw_sequence_lengths[i] = number_at_least - previous_count
+            previous_count = number_at_least
+        self.raw_sequence_lengths = raw_sequence_lengths
 
         # sequence_length = metrics.max_length
         # length_counts = [0 for _ in range(sequence_length + 1)]
