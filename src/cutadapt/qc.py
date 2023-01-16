@@ -100,7 +100,13 @@ class QCMetricsReport:
 
     @property
     def total_gc_fraction(self) -> float:
-        return self._total_gc / (self._total_at + self._total_gc)
+        total_nucs = [
+            sum(self.aggregated_count_matrix[i:len(self.aggregated_count_matrix):NUMBER_OF_NUCS])
+            for i in range(NUMBER_OF_NUCS)
+        ]
+        at = total_nucs[A] + total_nucs[T]
+        gc = total_nucs[G] + total_nucs[C]
+        return gc / (at + gc)
 
     def mean_length(self) -> float:
         total_lengths = 0
