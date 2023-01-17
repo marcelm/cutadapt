@@ -148,6 +148,12 @@ class QCMetricsReport:
             q28s += sum(table[NUMBER_OF_NUCS * 7 :])
         return q28s
 
+    def min_length(self) -> int:
+        for length, count in enumerate(self.raw_sequence_lengths):
+            if count > 0:
+                return length
+        return 0
+
     def mean_length(self) -> float:
         total_lengths = 0
         for length, number_of_reads in enumerate(self.raw_sequence_lengths):
@@ -258,7 +264,8 @@ class QCMetricsReport:
         <h1>Cutadapt report</h1>
         <h2>Summary</h2>
         <table>
-        <tr><td>Mean length</td><td align="right">{self.mean_length()}</td></tr>
+        <tr><td>Mean length</td><td align="right">{self.mean_length():.2f}</td></tr>
+        <tr><td>Length range (min-max)</td><td align="right">{self.min_length()}-{self.max_length}</td></tr>
         <tr><td>total reads</td><td align="right">{self.total_reads}</td></tr>
         <tr><td>total bases</td><td align="right">{self.total_bases}</td></tr>
         <tr>
