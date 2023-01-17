@@ -172,10 +172,7 @@ class QCMetricsReport:
         return 0
 
     def mean_length(self) -> float:
-        total_lengths = 0
-        for length, number_of_reads in enumerate(self.raw_sequence_lengths):
-            total_lengths += length * number_of_reads
-        return total_lengths / self.total_reads
+        return self.total_bases / self.total_reads
 
     def sequence_lengths(self):
         seqlength_view = memoryview(self.raw_sequence_lengths)[1:]
