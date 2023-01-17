@@ -68,7 +68,11 @@ class QCMetricsReport:
             previous_count = number_at_least
         self.raw_sequence_lengths = raw_sequence_lengths
 
-        minimum_reads_last_bucket = (0.2 / graph_resolution) * self.total_reads
+        # Nanopore data has a very long tail. To prevent almost empty data
+        # categories which effectively reduce the resolution of the graph
+        # make sure the last category contains at least 10% of the expected
+        # data given an equal distribution across categories.
+        minimum_reads_last_bucket = (0.1 / graph_resolution) * self.total_reads
         counter = 0
         i = 0
         for i, count in enumerate(reversed(raw_sequence_lengths)):
