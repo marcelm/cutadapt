@@ -80,13 +80,14 @@ class QCMetricsReport:
             if counter > minimum_reads_last_bucket:
                 break
         if i > 0:
-            last_bucket = [(self.max_length -i, self.max_length)]
+            last_bucket = [(self.max_length - i, self.max_length)]
             graph_resolution -= 1
         else:
             last_bucket = []
-        self._data_ranges = list(
-            equidistant_ranges(metrics.max_length - i, graph_resolution)
-        ) + last_bucket
+        self._data_ranges = (
+            list(equidistant_ranges(metrics.max_length - i, graph_resolution))
+            + last_bucket
+        )
         # Use one-based indexing for the graph categories. I.e. 1 is the first base.
         self.data_categories = [
             f"{start + 1}-{stop}" if start + 1 != stop else f"{start + 1}"
@@ -107,7 +108,6 @@ class QCMetricsReport:
                 for i, count in enumerate(table):
                     cat_view[i] += count
         self.total_bases = sum(self.aggregated_count_matrix)
-
 
     def _tables(self) -> Iterator[memoryview]:
         category_view = memoryview(self.aggregated_count_matrix)
@@ -166,7 +166,7 @@ class QCMetricsReport:
 
     def sequence_lengths(self):
         seqlength_view = memoryview(self.raw_sequence_lengths)[1:]
-        lengths = [sum(seqlength_view[start : stop]) for start, stop in self._data_ranges]
+        lengths = [sum(seqlength_view[start:stop]) for start, stop in self._data_ranges]
         return [self.raw_sequence_lengths[0]] + lengths
 
     def mean_qualities(self):
