@@ -40,9 +40,10 @@ def base_weighted_categories(
     total = 0
     for stop, count in enumerate(base_counts, start=1):
         total += count
-        if count >= enough_bases:
+        if total >= enough_bases:
             yield start, stop
             start = stop
+            enough_bases += per_category
     if start != len(base_counts):
         yield start, len(base_counts)
 
