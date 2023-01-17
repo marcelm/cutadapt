@@ -1,7 +1,7 @@
 import array
 import math
 import sys
-from typing import Iterator, List, Tuple
+from typing import Iterator, List, Sequence, Tuple
 
 import dnaio
 
@@ -28,6 +28,23 @@ def equidistant_ranges(length: int, parts: int) -> Iterator[Tuple[int, int]]:
         stop = start + part_size
         yield start, stop
         start = stop
+
+
+def base_weighted_categories(
+    base_counts: Sequence[int], number_of_categories: int
+) -> Iterator[Tuple[int, int]]:
+    total_bases = sum(base_counts)
+    per_category = total_bases // number_of_categories
+    enough_bases = per_category
+    start = 0
+    total = 0
+    for stop, count in enumerate(base_counts, start=1):
+        total += count
+        if count >= enough_bases:
+            yield start, stop
+            start = stop
+    if start != len(base_counts):
+        yield start, len(base_counts)
 
 
 class QCMetricsReport:
@@ -67,27 +84,23 @@ class QCMetricsReport:
             raw_sequence_lengths[i] = number_at_least - previous_count
             previous_count = number_at_least
         self.raw_sequence_lengths = raw_sequence_lengths
+        self.total_bases = sum(memoryview(raw_base_counts)[1:])
 
-        # Nanopore data has a very long tail. To prevent almost empty data
-        # categories which effectively reduce the resolution of the graph
-        # make sure the last category contains at least 10% of the expected
-        # data given an equal distribution across categories.
-        minimum_reads_last_bucket = (0.1 / graph_resolution) * self.total_reads
-        counter = 0
-        i = 0
-        for i, count in enumerate(reversed(raw_sequence_lengths)):
-            counter += count
-            if counter > minimum_reads_last_bucket:
-                break
-        if i > 0:
-            last_bucket = [(self.max_length - i, self.max_length)]
-            graph_resolution -= 1
+        expected_bases_per_position = self.total_bases / self.max_length
+        if raw_base_counts[-1] > (0.5 * expected_bases_per_position):
+            # Most reads are max length. Use an equidistant distribution
+            self._data_ranges = list(
+                equidistant_ranges(metrics.max_length, graph_resolution)
+            )
         else:
-            last_bucket = []
-        self._data_ranges = (
-            list(equidistant_ranges(metrics.max_length - i, graph_resolution))
-            + last_bucket
-        )
+            # We have greater variance in the length of the reads. Use the
+            # base counts to get roughly equal base counts per category.
+            self._data_ranges = list(
+                base_weighted_categories(
+                    memoryview(raw_base_counts)[1:], graph_resolution
+                )
+            )
+
         # Use one-based indexing for the graph categories. I.e. 1 is the first base.
         self.data_categories = [
             f"{start + 1}-{stop}" if start + 1 != stop else f"{start + 1}"
@@ -107,7 +120,6 @@ class QCMetricsReport:
                 table = matrix[offset : offset + table_size]
                 for i, count in enumerate(table):
                     cat_view[i] += count
-        self.total_bases = sum(self.aggregated_count_matrix)
 
     def _tables(self) -> Iterator[memoryview]:
         category_view = memoryview(self.aggregated_count_matrix)
