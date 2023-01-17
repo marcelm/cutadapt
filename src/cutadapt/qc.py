@@ -34,7 +34,7 @@ class QCMetricsReport:
     raw_count_matrix: array.ArrayType
     aggregated_count_matrix: array.ArrayType
     raw_sequence_lengths: array.ArrayType
-    _data_ranges: List[range]
+    _data_ranges: List[Tuple[int, int]]
     data_categories: List[str]
     max_length: int
     total_reads: int
@@ -50,32 +50,8 @@ class QCMetricsReport:
         # use from_bytes instead for direct memcpy.
         self.raw_count_matrix.frombytes(metrics.count_table_view())
         # use bytes constructor to initialize the aggregated count matrix to 0.
-        self.aggregated_count_matrix = array.array(
-            "Q", bytes(8 * TABLE_SIZE * graph_resolution)
-        )
-
-        self._data_ranges = [
-            range(*r) for r in equidistant_ranges(metrics.max_length, graph_resolution)
-        ]
-        # Use one-based indexing for the graph categories. I.e. 1 is the first base.
-        self.data_categories = [
-            f"{r.start + 1}-{r.stop}" if r.start + 1 != r.stop else f"{r.start + 1}"
-            for r in self._data_ranges
-        ]
 
         matrix = memoryview(self.raw_count_matrix)
-        categories_view = memoryview(self.aggregated_count_matrix)
-
-        table_size = TABLE_SIZE
-        for cat_index, category_range in enumerate(self._data_ranges):
-            cat_offset = cat_index * table_size
-            cat_view = categories_view[cat_offset : cat_offset + table_size]
-            for table_index in category_range:
-                offset = table_index * table_size
-                table = matrix[offset : offset + table_size]
-                for i, count in enumerate(table):
-                    cat_view[i] += count
-        self.total_bases = sum(self.aggregated_count_matrix)
 
         raw_sequence_lengths = array.array("Q", bytes(8 * (self.max_length + 1)))
         raw_base_counts = array.array("Q", bytes(8 * (self.max_length + 1)))
@@ -92,6 +68,43 @@ class QCMetricsReport:
             previous_count = number_at_least
         self.raw_sequence_lengths = raw_sequence_lengths
 
+        minimum_reads_last_bucket = (0.2 / graph_resolution) * self.total_reads
+        counter = 0
+        i = 0
+        for i, count in enumerate(reversed(raw_sequence_lengths)):
+            counter += count
+            if counter > minimum_reads_last_bucket:
+                break
+        if i > 0:
+            last_bucket = [(self.max_length -i, self.max_length)]
+            graph_resolution -= 1
+        else:
+            last_bucket = []
+        self._data_ranges = list(
+            equidistant_ranges(metrics.max_length - i, graph_resolution)
+        ) + last_bucket
+        # Use one-based indexing for the graph categories. I.e. 1 is the first base.
+        self.data_categories = [
+            f"{start + 1}-{stop}" if start + 1 != stop else f"{start + 1}"
+            for start, stop in self._data_ranges
+        ]
+
+        self.aggregated_count_matrix = array.array(
+            "Q", bytes(8 * TABLE_SIZE * len(self.data_categories))
+        )
+        categories_view = memoryview(self.aggregated_count_matrix)
+        table_size = TABLE_SIZE
+        for cat_index, (start, stop) in enumerate(self._data_ranges):
+            cat_offset = cat_index * table_size
+            cat_view = categories_view[cat_offset : cat_offset + table_size]
+            for table_index in range(start, stop):
+                offset = table_index * table_size
+                table = matrix[offset : offset + table_size]
+                for i, count in enumerate(table):
+                    cat_view[i] += count
+        self.total_bases = sum(self.aggregated_count_matrix)
+
+
     def _tables(self) -> Iterator[memoryview]:
         category_view = memoryview(self.aggregated_count_matrix)
         for i in range(0, len(category_view), TABLE_SIZE):
@@ -104,6 +117,8 @@ class QCMetricsReport:
         ]
         for cat_index, table in enumerate(self._tables()):
             total = sum(table)
+            if total == 0:
+                continue
             for i in range(NUMBER_OF_NUCS):
                 content[i][cat_index] = sum(table[i::NUMBER_OF_NUCS]) / total
         return content
@@ -141,7 +156,7 @@ class QCMetricsReport:
 
     def sequence_lengths(self):
         seqlength_view = memoryview(self.raw_sequence_lengths)[1:]
-        lengths = [sum(seqlength_view[r.start : r.stop]) for r in self._data_ranges]
+        lengths = [sum(seqlength_view[start : stop]) for start, stop in self._data_ranges]
         return [self.raw_sequence_lengths[0]] + lengths
 
     def mean_qualities(self):
