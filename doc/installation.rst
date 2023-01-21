@@ -23,6 +23,14 @@ To then install Cutadapt into a new Conda environment, use this command::
 Here, ``cutadaptenv`` is the name of the Conda environment. You can
 choose a different name.
 
+If you are on macOS and your machine uses an M1/M2 processor (Apple Silicon),
+you may need to run this command instead::
+
+       CONDA_SUBDIR=osx-64 conda create -n cutadaptenv cutadapt
+
+(If you have problems, see `this issue for troubleshooting
+<https://github.com/marcelm/cutadapt/issues/672>`_.)
+
 Then activate the environment. This needs to be done every time you open a
 new shell before you can use Cutadapt::
 
