@@ -158,7 +158,7 @@ cdef class KmerFinder:
             elif start > seq_length:
                 continue
             if stop < 0:
-                step = seq_length + stop
+                stop = seq_length + stop
                 if stop <= 0:  # No need to search
                     continue
             elif stop == 0:
