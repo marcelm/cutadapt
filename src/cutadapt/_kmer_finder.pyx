@@ -18,7 +18,7 @@ cdef extern from "Python.h":
 ctypedef struct KmerSearchEntry:
     size_t mask_offset
     ssize_t search_start
-    ssize_t search_stop
+    ssize_t search_stop  # 0 if going to end of sequence.
     bitmask_t zero_mask
     bitmask_t found_mask
 
@@ -117,7 +117,7 @@ cdef class KmerFinder:
                 self.search_masks = <bitmask_t *>PyMem_Realloc(self.search_masks, self.number_of_searches * sizeof(bitmask_t) * BITMASK_INDEX_SIZE)
                 mask_offset = i * BITMASK_INDEX_SIZE
                 self.search_entries[i].search_start  = start
-                if stop is None:
+                if stop is None:  # Encode 'end of sequence' as 0.
                     stop = 0
                 self.search_entries[i].search_stop = stop
                 self.search_entries[i].mask_offset = mask_offset
@@ -161,7 +161,7 @@ cdef class KmerFinder:
                 stop = seq_length + stop
                 if stop <= 0:  # No need to search
                     continue
-            elif stop == 0:
+            elif stop == 0:  # stop == 0 means go to end of sequence.
                 stop = seq_length
             search_length = stop - start
             if search_length <= 0:
