@@ -8,6 +8,42 @@ from libc.stdint cimport uint8_t
 
 from ._match_tables import matches_lookup
 
+"""
+Kmer finder that works using an enhanced shift-or algorithm. 
+
+Shift-or works by using a bitmatrix to determine matches in words. For the
+four-letter alphabet we can make the following bitmatrix for the word ACGTA
+
+                                                                    ATGCA
+0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11101110  A
+0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111101  C
+0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111011  G
+0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11110111  T
+
+However, this leaves a lot of bits unused in the machine word. It is also
+possible to use as many bits in a bitmask as possible, leaving a barrier 
+of 1's inbetween as in the following example with two words.
+
+                                                          $ACATT_AG$ATGCA
+0b11111111_11111111_11111111_11111111_11111111_11111111_11101011_01101110  A
+0b11111111_11111111_11111111_11111111_11111111_11111111_11110111_11111101  C
+0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_10111011  G
+0b11111111_11111111_11111111_11111111_11111111_11111111_11111100_11110111  T
+
+Normal shift-or starts with pushing in 0s from the right. The same can be 
+achieved for multiword by multiplying with a zero-mask with a zero at each
+word start position.
+Normal shift-or only checks a single bit. The bit that is at exactly the
+length of the word. We can check multiple bits simultaneously by using a
+mask that checks for each bit that is at the end of a word (noted by $ in
+the example).
+
+This way we can check for multiple words simultaneously. It does not scale
+if the combined length of the words exceeds a machine integer, but for 
+cutadapt the words that are searched are usually smaller. (Illumina adapter
+is 33 bases for example).
+
+"""
 # Dnaio conveniently ensures that all sequences are ASCII only.
 DEF BITMASK_INDEX_SIZE = 128
 
