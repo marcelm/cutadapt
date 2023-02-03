@@ -1,14 +1,9 @@
-import operator
 import string
 
 import pytest
 
-from cutadapt._align import _upper_table, _acgt_table, _iupac_table
+from cutadapt._match_tables import matches_lookup
 from cutadapt.adapters import KmerFinder
-
-UPPER_TABLE: bytes = _upper_table()
-ACGT_TABLE: bytes = _acgt_table()
-IUPAC_TABLE: bytes = _iupac_table()
 
 KMER_FINDER_TESTS = [
     # kmer, start, stop, ref_wildcards, query_wildcards, sequence, expected
@@ -53,27 +48,26 @@ def test_kmer_finder(
 
 
 @pytest.mark.parametrize(
-    ["ref_table", "query_table", "comp_op", "ref_wildcards", "query_wildcards"],
+    ["ref_wildcards", "query_wildcards"],
     [
-        (UPPER_TABLE, UPPER_TABLE, operator.eq, False, False),
-        (IUPAC_TABLE, ACGT_TABLE, operator.and_, True, False),
-        (ACGT_TABLE, IUPAC_TABLE, operator.and_, False, True),
-        (IUPAC_TABLE, IUPAC_TABLE, operator.and_, True, True),
+        (False, False),
+        (True, False),
+        (False, True),
+        (True, True),
     ],
 )
-def test_kmer_finder_per_char_matching(
-    ref_table, query_table, comp_op, ref_wildcards, query_wildcards
-):
+def test_kmer_finder_per_char_matching(ref_wildcards, query_wildcards):
+    match_table = matches_lookup(ref_wildcards, query_wildcards)
     for char in string.ascii_letters:
+        matches = match_table[ord(char)]
+        positions_and_kmers = [(0, None, [char])]
         kmer_finder = KmerFinder(
-            [(0, None, [char])],
+            positions_and_kmers,
             ref_wildcards=ref_wildcards,
             query_wildcards=query_wildcards,
         )
-        ref_char = ref_table[ord(char)]
         for comp_char in string.ascii_letters:
-            query_char = query_table[ord(comp_char)]
-            should_match = bool(comp_op(ref_char, query_char))
+            should_match = comp_char.encode("ascii") in matches
             if kmer_finder.kmers_present(comp_char) is not should_match:
                 raise ValueError(
                     f"{char} should{' ' if should_match else ' not '}match {comp_char}"

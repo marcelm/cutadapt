@@ -6,6 +6,8 @@ from libc.string cimport memcpy, memset, strlen
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
 from libc.stdint cimport uint8_t
 
+from ._match_tables import matches_lookup
+
 # Dnaio conveniently ensures that all sequences are ASCII only.
 DEF BITMASK_INDEX_SIZE = 128
 
@@ -81,7 +83,7 @@ cdef class KmerFinder:
         cdef size_t max_total_length = sizeof(bitmask_t) * 8
         # The maximum length of a word. Since word_length + 1 bits are needed to search.
         cdef ssize_t max_word_length = max_total_length - 1
-
+        match_lookup = matches_lookup(ref_wildcards, query_wildcards)
         for (start, stop, kmers) in positions_and_kmers:
             index = 0 
             while index < len(kmers):
@@ -125,7 +127,7 @@ cdef class KmerFinder:
                 self.search_entries[i].found_mask = found_mask
                 # Offset -1 because we don't count the last NULL byte
                 populate_needle_mask(self.search_masks + mask_offset, search_word, offset - 1,
-                                     self.ref_wildcards, self.query_wildcards)
+                                     match_lookup)
         self.positions_and_kmers = positions_and_kmers
 
     def __reduce__(self):
@@ -188,7 +190,7 @@ cdef void set_masks(bitmask_t *needle_mask, size_t pos, const char *chars):
         needle_mask[<uint8_t>chars[i]] &= ~(<bitmask_t>1ULL << pos)
 
 cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t needle_length,
-                          bint ref_wildcards, bint query_wildcards):
+                          match_lookup):
     cdef size_t i
     cdef char c
     cdef uint8_t j
@@ -199,87 +201,7 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
         c = needle[i]
         if c == 0:
             continue
-        if c == b"A" or c == b"a":
-            set_masks(needle_mask, i, "Aa")
-            if query_wildcards:
-                set_masks(needle_mask, i, "RWMDHVNrwmdhvn")
-        elif c == b"C" or c == b"c":
-            set_masks(needle_mask, i, "Cc")
-            if query_wildcards:
-                set_masks(needle_mask, i, "YSMBHVNysmbhvn")
-        elif c == b"G" or c == b"g":
-            set_masks(needle_mask, i, "Gg")
-            if query_wildcards:
-                set_masks(needle_mask, i, "RSKBDVNrskbdvn")
-        elif c == b"T" or c == b"t":
-            set_masks(needle_mask, i, "Tt")
-            if ref_wildcards:
-                set_masks(needle_mask, i, "Uu")
-            if query_wildcards:
-                set_masks(needle_mask, i, "UYWKBDHNuywkbdhn")
-        elif (c == b"U" or c == b"u") and (ref_wildcards or query_wildcards):
-            set_masks(needle_mask, i, "TtUu")
-            if query_wildcards:
-                set_masks(needle_mask, i, "YWKBDHNywkbdhn")
-        elif (c == b"R" or c == b"r") and ref_wildcards:
-            set_masks(needle_mask, i, "AaGg")
-            if query_wildcards:
-                set_masks(needle_mask, i, "RSWKMBDHVNrswkmbdhvn")
-        elif (c == b"Y" or c == b"y") and ref_wildcards:
-            set_masks(needle_mask, i, "CcTtUu")
-            if query_wildcards:
-                set_masks(needle_mask, i, "YSWKMBDHVNyswkmbdhvn")
-        elif (c == b"S" or c == b"s") and ref_wildcards:
-            set_masks(needle_mask, i, "GgCc")
-            if query_wildcards:
-                set_masks(needle_mask, i, "YRSKMBDHVNyrskmbdhvn")
-        elif (c == b"W" or c == b"w") and ref_wildcards:
-            set_masks(needle_mask, i, "AaTtUu")
-            if query_wildcards:
-                set_masks(needle_mask, i, "YRWKMBDHVNyrwkmbdhvn")
-        elif (c == b"K" or c == b"k") and ref_wildcards:
-            set_masks(needle_mask, i, "GgTtUu")
-            if query_wildcards:
-                set_masks(needle_mask, i, "YRWSKBDHVNyrwskbdhvn")
-        elif (c == b"M" or c == b"m") and ref_wildcards:
-            set_masks(needle_mask, i, "AaCc")
-            if query_wildcards:
-                set_masks(needle_mask, i, "YRWSMBDHVNyrwsmbdhvn")
-        elif (c == b"B" or  c == b"b") and ref_wildcards:
-            set_masks(needle_mask, i, "CcGgTtUu")
-            if query_wildcards:
-                set_masks(needle_mask, i, "RYSWKMBDHVNryswkmbdhvn")
-        elif (c == b"D" or c == b"d") and ref_wildcards:
-            set_masks(needle_mask, i, "AaGgTtUu")
-            if query_wildcards:
-                set_masks(needle_mask, i, "RYSWKMBDHVNryswkmbdhvn")
-        elif (c == b"H" or c == b"h") and ref_wildcards:
-            set_masks(needle_mask, i, "AaCcTtUu")
-            if query_wildcards:
-                set_masks(needle_mask, i, "RYSWKMBDHVNryswkmbdhvn")
-        elif (c == b"V" or c == b"v") and ref_wildcards:
-            set_masks(needle_mask, i, "AaCcGg")
-            if query_wildcards:
-                set_masks(needle_mask, i, "RYSWKMBDHVNryswkmbdhvn")
-        elif (c == b"N" or c == b"n") and ref_wildcards:
-            if query_wildcards:  # Proper IUPAC matching
-                set_masks(needle_mask, i, "ACGTURYSWKMBDHVNacgturyswkmbdhvn")
-            else:  # N matches literally everything except \00
-                for j in range(1,128):
-                    needle_mask[j] &= ~(<bitmask_t>1ULL << i)
-        elif query_wildcards and not ref_wildcards:
-            # All non-AGCT characters match to N
-            set_masks(needle_mask, i, "Nn")
-        elif ref_wildcards:
-            # ref and query wildcards are True. Perform proper IUPAC matching.
-            # All unknown characters do not match.
-            pass
-        else:
-            if chr(c).isalpha():
-                bothcase = chr(c).lower() + chr(c).upper()
-                set_masks(needle_mask, i, bothcase.encode("ascii"))
-            else:
-                needle_mask[<uint8_t>c] &= ~(<bitmask_t>1ULL << i)
+        set_masks(needle_mask, i, match_lookup[c])
 
 
 cdef bint shift_or_multiple_is_present(
