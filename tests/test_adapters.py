@@ -77,33 +77,22 @@ def test_front_adapter_finds_leftmost_match():
 
 def test_rightmost_front_adapter():
     adapter = RightmostFrontAdapter("CTGAATT", max_errors=1, min_overlap=3)
-    match = adapter.match_to("GGCTGAATTGGG")
-    assert match.astart == 0
-    assert match.astop == 7
-    assert match.rstart == 2
-    assert match.rstop == 9
-    assert match.errors == 0
-
-    match = adapter.match_to("GGCTGAATTGGGCTGAATTGGG")
-    assert match.astart == 0
-    assert match.astop == 7
-    assert match.rstart == 12
-    assert match.rstop == 19
-    assert match.errors == 0
-
-    match = adapter.match_to("GGCTGAATTGGGCTGTATTGGG")
-    assert match.astart == 0
-    assert match.astop == 7
-    assert match.rstart == 12
-    assert match.rstop == 19
-    assert match.errors == 1
-
-    match = adapter.match_to("GGCTTAATTGGGCTGAATTGGG")
-    assert match.astart == 0
-    assert match.astop == 7
-    assert match.rstart == 12
-    assert match.rstop == 19
-    assert match.errors == 0
+    for s, err in [
+        ("GG(ctgaatt)GGG", 0),
+        ("GGctgaattGGG(ctgaatt)GGG", 0),
+        ("GGctgaattGGG(ctgtatt)GGG", 1),
+        ("GGCTTAATTGGG(ctgaatt)GGG", 0),
+    ]:
+        seq = s.replace("(", "").replace(")", "").upper()
+        rstart = s.index("(")
+        rstop = s.index(")") - 1
+        match = adapter.match_to(seq)
+        assert match is not None
+        assert match.astart == 0
+        assert match.astop == 7
+        assert match.rstart == rstart
+        assert match.rstop == rstop
+        assert match.errors == err
 
 
 def test_rightmost_front_adapter_partial_occurrence():
