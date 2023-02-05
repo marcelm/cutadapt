@@ -221,13 +221,12 @@ def test_make_adapter_front():
     assert "not possible" in e.value.args[0]
 
 
-def test_make_adapter_rightmost_front():
+def test_make_adapter_rightmost():
     a = make_adapter("ACGT; rightmost", "front", dict())
     assert isinstance(a, RightmostFrontAdapter)
 
-    with pytest.raises(ValueError) as e:
-        make_adapter("ACGT; rightmost", "back", dict())
-    assert "only allowed" in e.value.args[0]
+    a = make_adapter("ACGT; rightmost", "back", dict())
+    assert isinstance(a, RightmostBackAdapter)
 
 
 def test_make_adapter_back():
@@ -479,7 +478,13 @@ def test_anywhere_parameter_front():
     assert trimmed_read.sequence == ""
 
 
-def test_linked_adapter_rightmost():
+def test_linked_adapter_rightmost_front():
     a = make_adapter("ACG;rightmost...TGT", "back", dict())
     assert isinstance(a, LinkedAdapter)
     assert isinstance(a.front_adapter, RightmostFrontAdapter)
+
+
+def test_linked_adapter_rightmost_back():
+    a = make_adapter("ACG...TGT;rightmost", "back", dict())
+    assert isinstance(a, LinkedAdapter)
+    assert isinstance(a.back_adapter, RightmostBackAdapter)

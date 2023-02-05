@@ -97,7 +97,37 @@ def test_rightmost_front_adapter():
 
 def test_rightmost_front_adapter_partial_occurrence():
     adapter = RightmostFrontAdapter("TTTTACGT")
-    match = adapter.match_to("ACGTAAAAAAAA")
+    match = adapter.match_to("acgtAAAAAAAA")
+    assert match is not None
+    assert match.astart == 4
+    assert match.astop == 8
+    assert match.rstart == 0
+    assert match.rstop == 4
+
+
+def test_rightmost_back_adapter():
+    adapter = RightmostBackAdapter("CTGAATT", max_errors=1, min_overlap=3)
+    for s, err in [
+        ("GG(ctgaatt)GGG", 0),
+        ("GGctgaattGGG(ctgaatt)GGG", 0),
+        ("GGctgaattGGG(ctgtatt)GGG", 1),
+        ("GGCTTAATTGGG(ctgaatt)GGG", 0),
+    ]:
+        rstart = s.index("(")
+        rstop = s.index(")") - 1
+        seq = s.replace("(", "").replace(")", "").upper()
+        match = adapter.match_to(seq)
+        assert match is not None
+        assert match.astart == 0
+        assert match.astop == 7
+        assert match.rstart == rstart
+        assert match.rstop == rstop
+        assert match.errors == err
+
+
+def test_rightmost_back_adapter_partial_occurrence():
+    adapter = RightmostBackAdapter("TGCATTTT")
+    match = adapter.match_to("AAAAAAAATGCA")
     assert match is not None
     assert match.astart == 4
     assert match.astop == 8
