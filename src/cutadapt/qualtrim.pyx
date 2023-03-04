@@ -58,7 +58,7 @@ def quality_trim_index(str qualities, int cutoff_front, int cutoff_back, int bas
     s = 0
     for i in reversed(range(n)):
         s += cutoff_back - (qual[i] - base)
-        if s < 0 and n - i >= min_bin
+        if s < 0 and n - i >= min_bin:
             break
         if s > max_qual:
             max_qual = s
