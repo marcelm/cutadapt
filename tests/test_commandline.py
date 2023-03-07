@@ -1105,3 +1105,20 @@ def test_terminates_correctly_on_error_in_subprocess(tmp_path):
     ]
     with pytest.raises(SystemExit):
         main(params)
+
+
+def test_json_report_with_demultiplexing_and_discard_untrimmed(tmp_path):
+    stats = main(
+        [
+            "--json",
+            str(tmp_path / "demux.cutadapt.json"),
+            "--discard-untrimmed",
+            "-a",
+            "name=ACGT",
+            "-o",
+            str(tmp_path / "{name}.fastq"),
+            datapath("illumina.fastq.gz"),
+        ]
+    )
+    assert stats.n == 100
+    assert stats.written == 64

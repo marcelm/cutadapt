@@ -666,7 +666,7 @@ def determine_paired(args) -> bool:
     """
     Determine whether we should work in paired-end mode.
     """
-    # Usage of any of these options enables paired-end mode
+    # Any of these options enable paired-end mode
     return bool(
         args.paired_output
         or args.interleaved

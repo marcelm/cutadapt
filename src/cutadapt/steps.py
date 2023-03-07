@@ -52,8 +52,7 @@ class PairedEndStep(ABC):
 
 class HasStatistics(ABC):
     """
-    Used for the final steps (sinks), which also need to keep
-    track of read length statistics
+    Used for the final steps (sinks), which need to keep track of read length statistics
     """
 
     @abstractmethod
@@ -61,7 +60,17 @@ class HasStatistics(ABC):
         pass
 
 
-class SingleEndFilter(SingleEndStep):
+class HasFilterStatistics(ABC):
+    @abstractmethod
+    def filtered(self) -> int:
+        """Return number of filtered reads or read pairs"""
+
+    @abstractmethod
+    def descriptive_identifier(self) -> str:
+        """Name used in statistics"""
+
+
+class SingleEndFilter(SingleEndStep, HasFilterStatistics):
     """
     A pipeline step that can filter reads, can redirect filtered ones to a writer, and
     counts how many were filtered.
@@ -69,26 +78,29 @@ class SingleEndFilter(SingleEndStep):
 
     def __init__(self, predicate: Predicate, writer):
         super().__init__()
-        self.filtered = 0
-        self.predicate = predicate
-        self.writer = writer
+        self._filtered = 0
+        self._predicate = predicate
+        self._writer = writer
 
     def __repr__(self):
-        return f"SingleEndFilter(predicate={self.predicate}, writer={self.writer})"
+        return f"SingleEndFilter(predicate={self._predicate}, writer={self._writer})"
 
     def descriptive_identifier(self) -> str:
-        return self.predicate.descriptive_identifier()
+        return self._predicate.descriptive_identifier()
+
+    def filtered(self) -> int:
+        return self._filtered
 
     def __call__(self, read, info: ModificationInfo) -> bool:
-        if self.predicate.test(read, info):
-            self.filtered += 1
-            if self.writer is not None:
-                self.writer.write(read)
+        if self._predicate.test(read, info):
+            self._filtered += 1
+            if self._writer is not None:
+                self._writer.write(read)
             return DISCARD
         return KEEP
 
 
-class PairedEndFilter(PairedEndStep):
+class PairedEndFilter(PairedEndStep, HasFilterStatistics):
     """
     A pipeline step that can filter paired-end reads, redirect them to a file, and counts
     how many read pairs were filtered.
@@ -114,7 +126,7 @@ class PairedEndFilter(PairedEndStep):
         if pair_filter_mode not in ("any", "both", "first"):
             raise ValueError("pair_filter_mode must be 'any', 'both' or 'first'")
         self._pair_filter_mode = pair_filter_mode
-        self.filtered = 0
+        self._filtered = 0
         self.predicate1 = predicate1
         self.predicate2 = predicate2
         self.writer = writer
@@ -143,6 +155,9 @@ class PairedEndFilter(PairedEndStep):
             assert self.predicate2 is not None
             return self.predicate2.descriptive_identifier()
 
+    def filtered(self) -> int:
+        return self._filtered
+
     def _is_filtered_any(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
     ) -> bool:
@@ -167,7 +182,7 @@ class PairedEndFilter(PairedEndStep):
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
     ) -> bool:
         if self._is_filtered(read1, read2, info1, info2):
-            self.filtered += 1
+            self._filtered += 1
             if self.writer is not None:
                 self.writer.write(read1, read2)
             return DISCARD
@@ -309,7 +324,7 @@ class PairedEndSink(PairedEndStep, HasStatistics):
         return self._statistics
 
 
-class Demultiplexer(SingleEndStep, HasStatistics):
+class Demultiplexer(SingleEndStep, HasStatistics, HasFilterStatistics):
     """
     Demultiplex trimmed reads. Reads are written to different output files
     depending on which adapter matches.
@@ -325,6 +340,7 @@ class Demultiplexer(SingleEndStep, HasStatistics):
         self._writers = writers
         self._untrimmed_writer = self._writers.get(None, None)
         self._statistics = ReadLengthStatistics()
+        self._filtered = 0
 
     def __repr__(self):
         return f"<Demultiplexer len(writers)={len(self._writers)}>"
@@ -340,13 +356,21 @@ class Demultiplexer(SingleEndStep, HasStatistics):
         elif self._untrimmed_writer is not None:
             self._statistics.update(read)
             self._untrimmed_writer.write(read)
+        else:
+            self._filtered += 1
         return DISCARD
+
+    def descriptive_identifier(self) -> str:
+        return "discard_untrimmed"
 
     def get_statistics(self) -> ReadLengthStatistics:
         return self._statistics
 
+    def filtered(self) -> int:
+        return self._filtered
 
-class PairedDemultiplexer(PairedEndStep, HasStatistics):
+
+class PairedDemultiplexer(PairedEndStep, HasStatistics, HasFilterStatistics):
     """
     Demultiplex trimmed paired-end reads. Reads are written to different output files
     depending on which adapter (in read 1) matches.
@@ -357,6 +381,7 @@ class PairedDemultiplexer(PairedEndStep, HasStatistics):
         self._writers = writers
         self._untrimmed_writer = self._writers.get(None, None)
         self._statistics = ReadLengthStatistics()
+        self._filtered = 0
 
     def __call__(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
@@ -369,10 +394,18 @@ class PairedDemultiplexer(PairedEndStep, HasStatistics):
         elif self._untrimmed_writer is not None:
             self._statistics.update2(read1, read2)
             self._untrimmed_writer.write(read1, read2)
+        else:
+            self._filtered += 1
         return DISCARD
+
+    def descriptive_identifier(self) -> str:
+        return "discard_untrimmed"
 
     def get_statistics(self) -> ReadLengthStatistics:
         return self._statistics
+
+    def filtered(self) -> int:
+        return self._filtered
 
 
 class CombinatorialDemultiplexer(PairedEndStep, HasStatistics):

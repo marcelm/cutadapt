@@ -30,7 +30,7 @@ from .modifiers import (
     PairedEndModifierWrapper,
 )
 from .statistics import ReadLengthStatistics
-from .steps import SingleEndFilter, PairedEndFilter, HasStatistics
+from .steps import HasStatistics, HasFilterStatistics
 
 FILTERS = {
     "too_short": "that were too short",
@@ -141,9 +141,9 @@ class Statistics:
     def _collect_step(self, step) -> None:
         if isinstance(step, HasStatistics):
             self.read_length_statistics += step.get_statistics()
-        if isinstance(step, (SingleEndFilter, PairedEndFilter)):
+        if isinstance(step, HasFilterStatistics):
             name = step.descriptive_identifier()
-            self.filtered[name] = step.filtered
+            self.filtered[name] = step.filtered()
 
     def _collect_modifier(self, m) -> None:
         if isinstance(m, PairedAdapterCutter):
