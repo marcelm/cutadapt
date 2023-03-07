@@ -737,7 +737,7 @@ class RightmostFrontAdapter(FrontAdapter):
     def _kmer_finder(self):
         self.sequence = self.sequence[::-1]
         kmer_finder = self._make_kmer_finder(
-            front_adapter=True, back_adapter=self._force_anywhere
+            back_adapter=True, front_adapter=self._force_anywhere
         )
         self.sequence = self.sequence[::-1]
         return kmer_finder
