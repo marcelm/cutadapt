@@ -10,6 +10,10 @@ development version
   when the :ref:`rightmost <rightmost>` adapter-search parameter was used.
 * :issue:`662`: Fixed assertion error when ``--discard-untrimmed`` was used
   together with ``--json`` and demultiplexing.
+* :pr:`663`: Cutadapt became significantly faster due to an added runtime
+  heuristic that avoids running the full alignment algorithm if it can be
+  proven that it cannot succeed. Thanks to @rhpvorderman for this great
+  improvement!
 
 v4.2 (2022-12-09)
 -----------------
@@ -20,7 +24,7 @@ v4.2 (2022-12-09)
 * :issue:`546`: Automatically replace ``I`` in adapter sequences with ``N``.
   ``I`` is used to encode inosine, which matches any base. Contributed by @peterjc.
 * :issue:`528`: Cutadapt should now no long hang in multicore mode when an error
-  was raised in a worker process (for exampl, when an incorrectly formatted
+  was raised in a worker process (for example, when an incorrectly formatted
   FASTQ file was encountered).
 
 v4.1 (2022-06-07)
