@@ -14,6 +14,9 @@ development version
   heuristic that avoids running the full alignment algorithm if it can be
   proven that it cannot succeed. Thanks to @rhpvorderman for this great
   improvement!
+* :issue:`674`: When reading 3' adapters from an external file, they can now
+  all be anchored by using the syntax ``-a file$:adapters.fasta`` (note the
+  ``$`` in ``file$:``).
 
 v4.2 (2022-12-09)
 -----------------

@@ -10,6 +10,7 @@ from cutadapt.adapters import (
     InvalidCharacter,
     PrefixAdapter,
     RightmostFrontAdapter,
+    SuffixAdapter,
 )
 from cutadapt.parser import (
     AdapterSpecification,
@@ -312,7 +313,7 @@ def test_parse_file_notation_with_parameters(tmp_path):
     assert a.indels is True
 
 
-def test_parse_file_notation_with_anchoring(tmp_path):
+def test_parse_file_notation_with_5prime_anchoring(tmp_path):
     tmp = tmp_path / "adapters.fasta"
     tmp.write_text(
         dedent(
@@ -333,6 +334,30 @@ def test_parse_file_notation_with_anchoring(tmp_path):
     assert len(adapters) == 2
     for a in adapters:
         assert isinstance(a, PrefixAdapter)
+        assert a.max_error_rate == 0.3
+
+
+def test_parse_file_notation_with_3prime_anchoring(tmp_path):
+    tmp = tmp_path / "adapters.fasta"
+    tmp.write_text(
+        dedent(
+            """>first
+            ACCGGGTTTT
+            >second
+            AAAACCCGGT
+            """
+        )
+    )
+    adapters = list(
+        make_adapters_from_one_specification(
+            "file$:" + os.fspath(tmp) + ";max_errors=0.3",
+            adapter_type="back",
+            search_parameters=dict(),
+        )
+    )
+    assert len(adapters) == 2
+    for a in adapters:
+        assert isinstance(a, SuffixAdapter)
         assert a.max_error_rate == 0.3
 
 

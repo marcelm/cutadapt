@@ -1721,6 +1721,9 @@ adapters. The other adapter options ``-b`` and ``-g`` also support this.
 With ``-g``, you can also write ``-g ^file:adapters.fasta`` to specify that
 all adapters read from ``adapters.fasta`` should be anchored.
 
+Similarly, with ``-a``, you can also write ``-a file$:adapters.fasta`` to
+anchor all adapters to the 3' end.
+
 The ``file:`` syntax can be combined with the regular way of specifying an
 adapter. But no matter how you specify multiple adapter sequences, remember
 that only the best matching adapter is trimmed from each read.
@@ -1750,6 +1753,9 @@ instead.
 
 .. versionadded:: 4.1
    Ability to anchor 5’ adapters from an external file with ``-g ^file:``
+
+.. versionadded:: 4.3
+   Ability to anchor 3' adapters from an external file with ``-a file$:``
 
 
 .. _named-adapters:
@@ -1990,8 +1996,7 @@ following conditions need to be met in order for index creation to be enabled:
 
 * The barcodes/adapters must be anchored:
   For 5’ adapters, use ``-g ^ADAPTER`` or ``-g ^file:adapters.fasta``.
-  For 3’ adapters, use ``-a ADAPTER$`` or ``-a file:adapters.fasta`` with ``$`` added to each
-  sequence in the FASTA file.
+  For 3’ adapters, use ``-a ADAPTER$`` or ``-a file$:adapters.fasta``.
 * The maximum error rate (``-e``) must be set such that at most 2 errors are allowed:
   Use ``-e 0``, ``-e 1`` or ``-e 2``.
 * No IUPAC wildcards must be used in the barcode/adapter. Also, you cannot use the option

@@ -397,18 +397,28 @@ def make_adapters_from_one_specification(
     """
     Parse an adapter specification and yield appropriate Adapter classes.
     """
-    if spec.startswith("file:") or spec.startswith("^file:"):
+    if (
+        spec.startswith("file:")
+        or spec.startswith("^file:")
+        or spec.startswith("file$:")
+    ):
+        anchoring_prefix = ""
+        anchoring_suffix = ""
         if spec.startswith("^"):
             spec = spec[1:]
             anchoring_prefix = "^"
-        else:
-            anchoring_prefix = ""
+        elif spec.startswith("file$:"):
+            spec = "file:" + spec[6:]
+            anchoring_suffix = "$"
         path, _, parameters_spec = spec[5:].partition(";")
         parameters = search_parameters.copy()
         parameters.update(parse_search_parameters(parameters_spec))
         for name, spec in read_adapters_fasta(path):
             yield make_adapter(
-                anchoring_prefix + spec, adapter_type, parameters, name=name
+                anchoring_prefix + spec + anchoring_suffix,
+                adapter_type,
+                parameters,
+                name=name,
             )
     else:
         try:
