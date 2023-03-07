@@ -520,6 +520,7 @@ class Renamer(SingleEndModifier):
     }
 
     def __init__(self, template: str):
+        template = template.replace(r"\t", "\t")
         try:
             self._tokens = list(tokenize_braces(template))
         except TokenizeError as e:
@@ -608,7 +609,7 @@ class PairedEndRenamer(PairedEndModifier):
         except TokenizeError as e:
             raise InvalidTemplate(f"Error in template '{template}': {e}")
         Renamer.raise_if_invalid_variable(self._tokens, self._get_allowed_variables())
-        self._template = template
+        self._template = template.replace(r"\t", "\t")
 
     @staticmethod
     def _get_allowed_variables() -> Set[str]:

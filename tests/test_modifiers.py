@@ -228,6 +228,12 @@ class TestRenamer:
         info = ModificationInfo(read)
         assert renamer(read, info).name == "theid extra"
 
+    def test_tab_escape(self):
+        renamer = Renamer(r"{id} extra\tand a tab")
+        read = Sequence("theid thecomment", "ACGT")
+        info = ModificationInfo(read)
+        assert renamer(read, info).name == "theid extra\tand a tab"
+
     def test_comment_template_variable(self):
         renamer = Renamer("{id}_extra {comment}")
         read = Sequence("theid thecomment", "ACGT")
@@ -332,6 +338,16 @@ class TestPairedEndRenamer:
     def test_invalid_template_variable(self):
         with pytest.raises(InvalidTemplate):
             PairedEndRenamer("{id} {invalid}")
+
+    def test_tab_escape(self):
+        renamer = PairedEndRenamer(r"{id} {comment}\tand a tab")
+        r1 = Sequence("theid comment1", "ACGT")
+        r2 = Sequence("theid comment2", "ACGT")
+        info1 = ModificationInfo(r1)
+        info2 = ModificationInfo(r2)
+        renamed1, renamed2 = renamer(r1, r2, info1, info2)
+        assert renamed1.name == "theid comment1\tand a tab"
+        assert renamed2.name == "theid comment2\tand a tab"
 
     def test_ids_not_identical(self):
         renamer = PairedEndRenamer("{id} abc {comment} xyz")

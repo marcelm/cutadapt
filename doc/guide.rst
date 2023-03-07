@@ -1187,6 +1187,8 @@ For example, in this FASTQ header, the read ID is ``read1234`` and the comment i
 The ``--rename`` option expects a *template string* such as
 ``{id} extra_info {adapter_name}`` as a parameter. It can contain regular text
 and placeholders that consist of a name enclosed in curly braces (``{placeholdername}``).
+The character sequence ``\t`` will be replaced by a tab character (this is currently the only
+allowed escape sequence).
 
 The read name will be set to the template string in which the placeholders are
 replaced with the actual values relevant for the current read.
@@ -1208,6 +1210,7 @@ The following placeholders are currently available for single-end reads:
   used with a negative length argument)
 * ``{rc}`` -- this is replaced with the string ``rc`` if the read was reverse complemented.
   This only applies when :ref:`reverse complementing <reverse-complement>` was requested.
+* ``\t`` -- not a placeholder, but will be replaced with the tab character.
 
 For example, assume you have this input read in ``in.fasta``::
 
@@ -1234,6 +1237,8 @@ Will result in this modified read::
 .. versionadded:: 3.6
     The ``{match_sequence}`` placeholder.
 
+.. versionadded:: 4.3
+    The ``\t`` escape sequence.
 
 ``--rename`` also renames paired-end reads
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

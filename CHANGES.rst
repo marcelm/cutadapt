@@ -17,6 +17,9 @@ development version
 * :issue:`674`: When reading 3' adapters from an external file, they can now
   all be anchored by using the syntax ``-a file$:adapters.fasta`` (note the
   ``$`` in ``file$:``).
+* :issue:`669`: The ``--rename`` option now understands the ``\t`` escape
+  sequence and will insert a tab character in its place. This is useful when
+  transferring FASTQ header comments to SAM tags.
 
 v4.2 (2022-12-09)
 -----------------
