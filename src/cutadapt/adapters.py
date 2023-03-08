@@ -591,13 +591,13 @@ class SingleAdapter(Adapter, ABC):
         self.aligner = self._aligner()
         self.kmer_finder = self._kmer_finder()
 
-    def _make_aligner(self, flags: int) -> Aligner:
+    def _make_aligner(self, sequence: str, flags: int) -> Aligner:
         # TODO
         # Indels are suppressed by setting their cost very high, but a different algorithm
         # should be used instead.
         indel_cost = 1 if self.indels else 100000
         return Aligner(
-            self.sequence,
+            sequence,
             self.max_error_rate,
             flags=flags,
             wildcard_ref=self.adapter_wildcards,
@@ -607,10 +607,14 @@ class SingleAdapter(Adapter, ABC):
         )
 
     def _make_kmer_finder(
-        self, back_adapter: bool, front_adapter: bool, internal: bool = True
+        self,
+        sequence: str,
+        back_adapter: bool,
+        front_adapter: bool,
+        internal: bool = True,
     ) -> KmerFinder:
         positions_and_kmers = create_positions_and_kmers(
-            self.sequence,
+            sequence,
             self.min_overlap,
             self.max_error_rate,
             back_adapter,
@@ -680,12 +684,13 @@ class FrontAdapter(SingleAdapter):
 
     def _aligner(self) -> Aligner:
         return self._make_aligner(
-            Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value
+            self.sequence,
+            Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value,
         )
 
     def _kmer_finder(self):
         return self._make_kmer_finder(
-            back_adapter=self._force_anywhere, front_adapter=True
+            self.sequence, back_adapter=self._force_anywhere, front_adapter=True
         )
 
     def match_to(self, sequence: str):
@@ -727,19 +732,16 @@ class RightmostFrontAdapter(FrontAdapter):
         return "rightmost_five_prime"
 
     def _aligner(self) -> Aligner:
-        self.sequence = self.sequence[::-1]
         aligner = self._make_aligner(
-            Where.ANYWHERE.value if self._force_anywhere else Where.BACK.value
+            self.sequence[::-1],
+            Where.ANYWHERE.value if self._force_anywhere else Where.BACK.value,
         )
-        self.sequence = self.sequence[::-1]
         return aligner
 
     def _kmer_finder(self):
-        self.sequence = self.sequence[::-1]
         kmer_finder = self._make_kmer_finder(
-            back_adapter=True, front_adapter=self._force_anywhere
+            self.sequence[::-1], back_adapter=True, front_adapter=self._force_anywhere
         )
-        self.sequence = self.sequence[::-1]
         return kmer_finder
 
     def match_to(self, sequence: str):
@@ -790,12 +792,13 @@ class BackAdapter(SingleAdapter):
 
     def _aligner(self):
         return self._make_aligner(
-            Where.ANYWHERE.value if self._force_anywhere else Where.BACK.value
+            self.sequence,
+            Where.ANYWHERE.value if self._force_anywhere else Where.BACK.value,
         )
 
     def _kmer_finder(self):
         return self._make_kmer_finder(
-            back_adapter=True, front_adapter=self._force_anywhere
+            self.sequence, back_adapter=True, front_adapter=self._force_anywhere
         )
 
     def match_to(self, sequence: str):
@@ -836,10 +839,12 @@ class AnywhereAdapter(SingleAdapter):
         return "anywhere"
 
     def _aligner(self):
-        return self._make_aligner(Where.ANYWHERE.value)
+        return self._make_aligner(self.sequence, Where.ANYWHERE.value)
 
     def _kmer_finder(self):
-        return self._make_kmer_finder(back_adapter=True, front_adapter=True)
+        return self._make_kmer_finder(
+            self.sequence, back_adapter=True, front_adapter=True
+        )
 
     def match_to(self, sequence: str):
         """
@@ -879,11 +884,14 @@ class NonInternalFrontAdapter(FrontAdapter):
         return "noninternal_five_prime"
 
     def _aligner(self):
-        return self._make_aligner(Where.FRONT_NOT_INTERNAL.value)
+        return self._make_aligner(self.sequence, Where.FRONT_NOT_INTERNAL.value)
 
     def _kmer_finder(self):
         return self._make_kmer_finder(
-            front_adapter=True, back_adapter=self._force_anywhere, internal=False
+            self.sequence,
+            front_adapter=True,
+            back_adapter=self._force_anywhere,
+            internal=False,
         )
 
     def match_to(self, sequence: str):
@@ -913,11 +921,14 @@ class NonInternalBackAdapter(BackAdapter):
         return "noninternal_three_prime"
 
     def _aligner(self):
-        return self._make_aligner(Where.BACK_NOT_INTERNAL.value)
+        return self._make_aligner(self.sequence, Where.BACK_NOT_INTERNAL.value)
 
     def _kmer_finder(self):
         return self._make_kmer_finder(
-            back_adapter=True, front_adapter=self._force_anywhere, internal=False
+            self.sequence,
+            back_adapter=True,
+            front_adapter=self._force_anywhere,
+            internal=False,
         )
 
     def match_to(self, sequence: str):
@@ -961,7 +972,7 @@ class PrefixAdapter(NonInternalFrontAdapter):
                 min_overlap=self.min_overlap,
             )
         else:
-            return self._make_aligner(Where.PREFIX.value)
+            return self._make_aligner(self.sequence, Where.PREFIX.value)
 
     def _kmer_finder(self):
         if isinstance(self.aligner, PrefixComparer):
@@ -998,7 +1009,7 @@ class SuffixAdapter(NonInternalBackAdapter):
                 min_overlap=self.min_overlap,
             )
         else:
-            return self._make_aligner(Where.SUFFIX.value)
+            return self._make_aligner(self.sequence, Where.SUFFIX.value)
 
     def _kmer_finder(self):
         if isinstance(self.aligner, SuffixComparer):
