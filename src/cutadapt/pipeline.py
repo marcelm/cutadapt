@@ -2,12 +2,22 @@ import io
 import os
 import sys
 import logging
-from typing import List, Optional, BinaryIO, TextIO, Any, Tuple, Dict, Sequence, Union
+from typing import (
+    List,
+    Optional,
+    BinaryIO,
+    TextIO,
+    Any,
+    Tuple,
+    Dict,
+    Sequence,
+    Union,
+    TYPE_CHECKING,
+)
 from abc import ABC, abstractmethod
-from multiprocessing import Process, Pipe, Queue
-from pathlib import Path
-import multiprocessing.connection
+import multiprocessing
 from multiprocessing.connection import Connection
+from pathlib import Path
 import traceback
 
 import dnaio
@@ -51,6 +61,14 @@ from .steps import (
 )
 
 logger = logging.getLogger()
+
+mpctx = multiprocessing.get_context()
+
+# See https://github.com/python/typeshed/issues/9860
+if TYPE_CHECKING:
+    mpctx_Process = multiprocessing.Process
+else:
+    mpctx_Process = mpctx.Process
 
 
 class InputFiles:
@@ -702,7 +720,7 @@ class PairedEndPipeline(Pipeline):
         self._maximum_length = value
 
 
-class ReaderProcess(Process):
+class ReaderProcess(mpctx_Process):
     """
     Read chunks of FASTA or FASTQ data (single-end or paired) and send them to a worker.
 
@@ -719,8 +737,8 @@ class ReaderProcess(Process):
         self,
         path: str,
         path2: Optional[str],
-        connections: Sequence[Connection],
-        queue: Queue,
+        connections: Sequence[multiprocessing.connection.Connection],
+        queue: multiprocessing.Queue,
         buffer_size: int,
         stdin_fd,
     ):
@@ -787,7 +805,7 @@ class ReaderProcess(Process):
             self.connections[worker_index].send(-1)
 
 
-class WorkerProcess(Process):
+class WorkerProcess(mpctx_Process):
     """
     The worker repeatedly reads chunks of data from the read_pipe, runs the pipeline on it
     and sends the processed chunks to the write_pipe.
@@ -805,7 +823,7 @@ class WorkerProcess(Process):
         orig_outfiles: OutputFiles,
         read_pipe: Connection,
         write_pipe: Connection,
-        need_work_queue: Queue,
+        need_work_queue: multiprocessing.Queue,
     ):
         super().__init__()
         self._id = id_
@@ -960,7 +978,7 @@ class ParallelPipelineRunner(PipelineRunner):
     ):
         super().__init__(pipeline, progress)
         self._n_workers = n_workers
-        self._need_work_queue: Queue = Queue()
+        self._need_work_queue: multiprocessing.Queue = mpctx.Queue()
         self._buffer_size = 4 * 1024**2 if buffer_size is None else buffer_size
         self._outfiles = outfiles
         self._assign_input(inpaths.path1, inpaths.path2, inpaths.interleaved)
@@ -974,7 +992,7 @@ class ParallelPipelineRunner(PipelineRunner):
         self._two_input_files = path2 is not None
         self._interleaved_input = interleaved
         # the workers read from these connections
-        connections = [Pipe(duplex=False) for _ in range(self._n_workers)]
+        connections = [mpctx.Pipe(duplex=False) for _ in range(self._n_workers)]
         self._connections, connw = zip(*connections)
         try:
             fileno = sys.stdin.fileno()
@@ -997,7 +1015,7 @@ class ParallelPipelineRunner(PipelineRunner):
         workers = []
         connections = []
         for index in range(self._n_workers):
-            conn_r, conn_w = Pipe(duplex=False)
+            conn_r, conn_w = mpctx.Pipe(duplex=False)
             connections.append(conn_r)
             worker = WorkerProcess(
                 index,
@@ -1047,7 +1065,7 @@ class ParallelPipelineRunner(PipelineRunner):
     @staticmethod
     def _try_receive(connection):
         """
-        Try to receive data over self.connection and return it.
+        Try to receive data over `self.connection` and return it.
         If an exception was received, raise it.
         """
         result = connection.recv()

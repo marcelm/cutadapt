@@ -539,8 +539,8 @@ class SingleAdapter(Adapter, ABC):
         The error rate is the number of errors in the alignment divided by the length
         of the part of the alignment that matches the adapter.
 
-        min_overlap: Report a match only if at least this number of bases of the adapter match the
-            read.
+        min_overlap: Report a match only if at least this number of bases of the adapter are
+            aligned to the read.
 
         read_wildcards: Whether IUPAC wildcards in the read are allowed.
 
