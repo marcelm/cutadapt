@@ -237,11 +237,6 @@ class Pipeline(ABC):
         self.discard_trimmed = False
         self.discard_untrimmed = False
 
-    def connect_io(self, infiles: InputFiles, outfiles: OutputFiles) -> None:
-        self._infiles = infiles
-        self._reader = infiles.open()
-        self._set_output(outfiles)
-
     @abstractmethod
     def _open_writer(
         self,
@@ -350,11 +345,15 @@ class Pipeline(ABC):
             f.flush()
 
     def close(self) -> None:
+        # TODO
+        # closing is not symmetric, should only be done after a connect_io
+        # introduce a ConnectedPipeline?
         self._close_input()
         self._close_output()
 
     def _close_input(self) -> None:
-        self._reader.close()
+        if self._reader is not None:
+            self._reader.close()
         if self._infiles is not None:
             self._infiles.close()
 
@@ -363,8 +362,8 @@ class Pipeline(ABC):
             f.close()
         # Closing a TextIOWrapper also closes the underlying file, so
         # this closes some files a second time.
-        assert self._outfiles is not None
-        self._outfiles.close()
+        if self._outfiles is not None:
+            self._outfiles.close()
 
     @property
     def uses_qualities(self) -> bool:
@@ -373,7 +372,10 @@ class Pipeline(ABC):
 
     @abstractmethod
     def process_reads(
-        self, progress: Optional[Progress] = None
+        self,
+        infiles: InputFiles,
+        outfiles: OutputFiles,
+        progress: Optional[Progress] = None,
     ) -> Tuple[int, int, Optional[int]]:
         pass
 
@@ -465,9 +467,15 @@ class SingleEndPipeline(Pipeline):
         self._modifiers: List[SingleEndModifier] = modifiers
 
     def process_reads(
-        self, progress: Optional[Progress] = None
+        self,
+        infiles: InputFiles,
+        outfiles: OutputFiles,
+        progress: Optional[Progress] = None,
     ) -> Tuple[int, int, Optional[int]]:
         """Run the pipeline. Return statistics"""
+        self._infiles = infiles
+        self._reader = infiles.open()
+        self._set_output(outfiles)
         n = 0  # no. of processed reads
         total_bp = 0
         for read in self._reader:
@@ -600,8 +608,14 @@ class PairedEndPipeline(Pipeline):
         self._modifiers.append(modifier)
 
     def process_reads(
-        self, progress: Optional[Progress] = None
+        self,
+        infiles: InputFiles,
+        outfiles: OutputFiles,
+        progress: Optional[Progress] = None,
     ) -> Tuple[int, int, Optional[int]]:
+        self._infiles = infiles
+        self._reader = infiles.open()
+        self._set_output(outfiles)
         n = 0  # no. of processed reads
         total1_bp = 0
         total2_bp = 0
@@ -858,8 +872,7 @@ class WorkerProcess(mpctx_Process):
 
                 infiles = self._make_input_files()
                 outfiles = self._original_outfiles.as_bytesio()
-                self._pipeline.connect_io(infiles, outfiles)
-                (n, bp1, bp2) = self._pipeline.process_reads()
+                (n, bp1, bp2) = self._pipeline.process_reads(infiles, outfiles)
                 self._pipeline.flush()
                 cur_stats = Statistics().collect(n, bp1, bp2, [], self._pipeline._steps)
                 stats += cur_stats
@@ -1094,11 +1107,12 @@ class SerialPipelineRunner(PipelineRunner):
         progress: Progress,
     ):
         super().__init__(pipeline, progress)
-        self._pipeline.connect_io(infiles, outfiles)
+        self._infiles = infiles
+        self._outfiles = outfiles
 
     def run(self) -> Statistics:
         (n, total1_bp, total2_bp) = self._pipeline.process_reads(
-            progress=self._progress
+            self._infiles, self._outfiles, progress=self._progress
         )
         if self._progress is not None:
             self._progress.close()
