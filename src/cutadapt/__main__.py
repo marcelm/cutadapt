@@ -487,7 +487,7 @@ def open_output_files(
             "and --untrimmed-output options can be used at the same time."
         )
 
-    demultiplex_mode = determine_demultiplex_mode(args)
+    demultiplex_mode = determine_demultiplex_mode(args.output, args.paired_output)
     if demultiplex_mode and args.discard_trimmed:
         raise CommandLineError("Do not use --discard-trimmed when demultiplexing.")
     if demultiplex_mode == "combinatorial" and args.pair_adapters:
@@ -630,26 +630,26 @@ def open_demultiplex_out(adapter_names: Sequence[str], args, file_opener):
     return demultiplex_out, demultiplex_out2, untrimmed, untrimmed2
 
 
-def determine_demultiplex_mode(args) -> Union[str, bool]:
+def determine_demultiplex_mode(
+    output: Optional[str], paired_output: Optional[str]
+) -> Union[str, bool]:
     """Return one of "normal", "combinatorial" or False"""
 
-    demultiplex = args.output is not None and "{name}" in args.output
+    demultiplex = output is not None and "{name}" in output
 
-    if args.paired_output is not None and (
-        demultiplex != ("{name}" in args.paired_output)
-    ):
+    if paired_output is not None and (demultiplex != ("{name}" in paired_output)):
         raise CommandLineError(
             'When demultiplexing paired-end data, "{name}" must appear in '
             "both output file names (-o and -p)"
         )
 
     demultiplex_combinatorial = (
-        args.output is not None
-        and args.paired_output is not None
-        and "{name1}" in args.output
-        and "{name2}" in args.output
-        and "{name1}" in args.paired_output
-        and "{name2}" in args.paired_output
+        output is not None
+        and paired_output is not None
+        and "{name1}" in output
+        and "{name2}" in output
+        and "{name1}" in paired_output
+        and "{name2}" in paired_output
     )
     if demultiplex and demultiplex_combinatorial:
         raise CommandLineError("You cannot combine {name} with {name1} and {name2}")
