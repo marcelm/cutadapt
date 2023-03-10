@@ -2,6 +2,7 @@ import io
 import os
 import sys
 import logging
+from contextlib import ExitStack
 from typing import (
     List,
     Optional,
@@ -13,6 +14,7 @@ from typing import (
     Sequence,
     Union,
     TYPE_CHECKING,
+    Iterator,
 )
 from abc import ABC, abstractmethod
 import multiprocessing
@@ -91,17 +93,12 @@ class InputFiles:
 
 
 class InputPaths:
-    def __init__(
-        self, path1: str, path2: Optional[str] = None, interleaved: bool = False
-    ):
-        self.path1 = path1
-        self.path2 = path2
+    def __init__(self, *paths: str, interleaved: bool = False):
+        self.paths = paths
         self.interleaved = interleaved
 
     def open(self) -> InputFiles:
-        files = [xopen_rb_raise_limit(self.path1)]
-        if self.path2 is not None:
-            files.append(xopen_rb_raise_limit(self.path2))
+        files = [xopen_rb_raise_limit(path) for path in self.paths]
         return InputFiles(*files, interleaved=self.interleaved)
 
 
@@ -733,17 +730,15 @@ class ReaderProcess(mpctx_Process):
 
     def __init__(
         self,
-        path: str,
-        path2: Optional[str],
-        connections: Sequence[multiprocessing.connection.Connection],
+        *paths: str,
+        connections: Sequence[Connection],
         queue: multiprocessing.Queue,
         buffer_size: int,
         stdin_fd,
     ):
         """
         Args:
-            path: path to first input file
-            path2: path to second input file (for paired-end data)
+            paths: path to input files
             connections: a list of Connection objects, one for each worker.
             queue: a Queue of worker indices. A worker writes its own index into this
                 queue to notify the reader that it is ready to receive more data.
@@ -757,8 +752,11 @@ class ReaderProcess(mpctx_Process):
             picklable.
         """
         super().__init__()
-        self.path = path
-        self.path2 = path2
+        if len(paths) > 2:
+            raise ValueError("Reading from more than two files currently not supported")
+        if not paths:
+            raise ValueError("Must provide at least one file")
+        self._paths = paths
         self.connections = connections
         self.queue = queue
         self.buffer_size = buffer_size
@@ -769,24 +767,31 @@ class ReaderProcess(mpctx_Process):
             sys.stdin.close()
             sys.stdin = os.fdopen(self.stdin_fd)
         try:
-            with xopen_rb_raise_limit(self.path) as f:
-                if self.path2:
-                    with xopen_rb_raise_limit(self.path2) as f2:
-                        for chunk_index, (chunk1, chunk2) in enumerate(
-                            dnaio.read_paired_chunks(f, f2, self.buffer_size)
-                        ):
-                            self.send_to_worker(chunk_index, chunk1, chunk2)
-                else:
-                    for chunk_index, chunk in enumerate(
-                        dnaio.read_chunks(f, self.buffer_size)
-                    ):
-                        self.send_to_worker(chunk_index, chunk)
+            with ExitStack() as stack:
+                files = [
+                    stack.enter_context(xopen_rb_raise_limit(path))
+                    for path in self._paths
+                ]
+                for index, chunks in enumerate(self._read_chunks(*files)):
+                    self.send_to_worker(index, *chunks)
             self.shutdown()
         except Exception as e:
             # TODO better send this to a common "something went wrong" Queue
             for connection in self.connections:
                 connection.send(-2)
                 connection.send((e, traceback.format_exc()))
+
+    def _read_chunks(self, *files) -> Iterator[Tuple[memoryview, ...]]:
+        if len(files) == 1:
+            for chunk in dnaio.read_chunks(files[0], self.buffer_size):
+                yield (chunk,)
+        elif len(files) == 2:
+            for chunks in dnaio.read_paired_chunks(
+                files[0], files[1], self.buffer_size
+            ):
+                yield chunks
+        else:
+            raise NotImplementedError
 
     def send_to_worker(self, chunk_index, chunk1, chunk2=None):
         worker_index = self.queue.get()
@@ -816,7 +821,7 @@ class WorkerProcess(mpctx_Process):
         self,
         id_: int,
         pipeline: Pipeline,
-        two_input_files: bool,
+        n_input_files: int,
         interleaved_input: bool,
         orig_outfiles: OutputFiles,
         read_pipe: Connection,
@@ -826,7 +831,7 @@ class WorkerProcess(mpctx_Process):
         super().__init__()
         self._id = id_
         self._pipeline = pipeline
-        self._two_input_files = two_input_files
+        self._n_input_files = n_input_files
         self._interleaved_input = interleaved_input
         self._read_pipe = read_pipe
         self._write_pipe = write_pipe
@@ -873,12 +878,9 @@ class WorkerProcess(mpctx_Process):
             self._write_pipe.send((e, traceback.format_exc()))
 
     def _make_input_files(self) -> InputFiles:
-        data = self._read_pipe.recv_bytes()
-        files = [io.BytesIO(data)]
-
-        if self._two_input_files:
-            data = self._read_pipe.recv_bytes()
-            files.append(io.BytesIO(data))
+        files = [
+            io.BytesIO(self._read_pipe.recv_bytes()) for _ in range(self._n_input_files)
+        ]
         return InputFiles(*files, interleaved=self._interleaved_input)
 
     def _send_outfiles(self, outfiles: OutputFiles, chunk_index: int, n_reads: int):
@@ -977,15 +979,15 @@ class ParallelPipelineRunner(PipelineRunner):
         self._need_work_queue: multiprocessing.Queue = mpctx.Queue()
         self._buffer_size = 4 * 1024**2 if buffer_size is None else buffer_size
         self._outfiles = outfiles
-        self._assign_input(inpaths.path1, inpaths.path2, inpaths.interleaved)
+
+        self._assign_input(*inpaths.paths, interleaved=inpaths.interleaved)
 
     def _assign_input(
         self,
-        path1: str,
-        path2: Optional[str] = None,
+        *paths: str,
         interleaved: bool = False,
     ) -> None:
-        self._two_input_files = path2 is not None
+        self._n_input_files = len(paths)
         self._interleaved_input = interleaved
         # the workers read from these connections
         connections = [mpctx.Pipe(duplex=False) for _ in range(self._n_workers)]
@@ -997,12 +999,11 @@ class ParallelPipelineRunner(PipelineRunner):
             # that does not have a file descriptor.
             fileno = -1
         self._reader_process = ReaderProcess(
-            path1,
-            path2,
-            connw,
-            self._need_work_queue,
-            self._buffer_size,
-            fileno,
+            *paths,
+            connections=connw,
+            queue=self._need_work_queue,
+            buffer_size=self._buffer_size,
+            stdin_fd=fileno,
         )
         self._reader_process.daemon = True
         self._reader_process.start()
@@ -1016,7 +1017,7 @@ class ParallelPipelineRunner(PipelineRunner):
             worker = WorkerProcess(
                 index,
                 self._pipeline,
-                self._two_input_files,
+                self._n_input_files,
                 self._interleaved_input,
                 self._outfiles,
                 self._connections[index],
