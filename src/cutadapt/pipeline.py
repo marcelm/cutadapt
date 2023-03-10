@@ -74,23 +74,20 @@ else:
 class InputFiles:
     def __init__(
         self,
-        file1: BinaryIO,
-        file2: Optional[BinaryIO] = None,
+        *files: BinaryIO,
         interleaved: bool = False,
     ):
-        self.file1 = file1
-        self.file2 = file2
+        self._files = files
         self.interleaved = interleaved
+        for f in self._files:
+            assert f is not None
 
     def open(self):
-        return dnaio.open(
-            self.file1, file2=self.file2, interleaved=self.interleaved, mode="r"
-        )
+        return dnaio.open(*self._files, interleaved=self.interleaved, mode="r")
 
     def close(self) -> None:
-        self.file1.close()
-        if self.file2 is not None:
-            self.file2.close()
+        for file in self._files:
+            file.close()
 
 
 class InputPaths:
@@ -102,9 +99,10 @@ class InputPaths:
         self.interleaved = interleaved
 
     def open(self) -> InputFiles:
-        file1 = xopen_rb_raise_limit(self.path1)
-        file2 = xopen_rb_raise_limit(self.path2) if self.path2 is not None else None
-        return InputFiles(file1, file2, self.interleaved)
+        files = [xopen_rb_raise_limit(self.path1)]
+        if self.path2 is not None:
+            files.append(xopen_rb_raise_limit(self.path2))
+        return InputFiles(*files, interleaved=self.interleaved)
 
 
 class OutputFiles:
@@ -876,14 +874,12 @@ class WorkerProcess(mpctx_Process):
 
     def _make_input_files(self) -> InputFiles:
         data = self._read_pipe.recv_bytes()
-        input = io.BytesIO(data)
+        files = [io.BytesIO(data)]
 
         if self._two_input_files:
             data = self._read_pipe.recv_bytes()
-            input2: Optional[BinaryIO] = io.BytesIO(data)
-        else:
-            input2 = None
-        return InputFiles(input, input2, interleaved=self._interleaved_input)
+            files.append(io.BytesIO(data))
+        return InputFiles(*files, interleaved=self._interleaved_input)
 
     def _send_outfiles(self, outfiles: OutputFiles, chunk_index: int, n_reads: int):
         self._write_pipe.send(chunk_index)
