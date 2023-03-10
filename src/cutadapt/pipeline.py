@@ -237,16 +237,30 @@ class Pipeline(ABC):
         self.discard_trimmed = False
         self.discard_untrimmed = False
 
-    @abstractmethod
     def _open_writer(
         self,
-        file: BinaryIO,
-        file2: Optional[BinaryIO] = None,
+        *files: Optional[BinaryIO],
         force_fasta: Optional[bool] = None,
     ):
-        pass
+        # The files must already be file-like objects because we don’t want to
+        # take care of threads and compression levels here.
+        for f in files:
+            assert not isinstance(f, (str, bytes, Path))
+        if len(files) == 2 and files[1] is None:
+            files = files[:1]
+            interleaved = True
+        else:
+            interleaved = False
+        return open_raise_limit(
+            dnaio.open,
+            *files,
+            mode="w",
+            qualities=self.uses_qualities,
+            fileformat="fasta" if force_fasta else None,
+            interleaved=interleaved,
+        )
 
-    def _set_output(self, outfiles: OutputFiles) -> None:
+    def _set_output(self, outfiles: OutputFiles) -> None:  # noqa: C901
         self._steps = []
         self._textiowrappers = []
         self._outfiles = outfiles
@@ -263,6 +277,8 @@ class Pipeline(ABC):
                     self._wrap_single_end_step(step_class(textiowrapper))
                 )
 
+        files: List[Optional[BinaryIO]]
+
         # minimum length and maximum length
         for lengths, file1, file2, predicate_class in (
             (self._minimum_length, outfiles.too_short, outfiles.too_short2, TooShort),
@@ -270,7 +286,8 @@ class Pipeline(ABC):
         ):
             if lengths is None:
                 continue
-            writer = self._open_writer(file1, file2) if file1 else None
+            files = [file1, file2] if self.paired else [file1]
+            writer = self._open_writer(*files) if file1 else None
             f1 = predicate_class(lengths[0]) if lengths[0] is not None else None
             if len(lengths) == 2 and lengths[1] is not None:
                 f2 = predicate_class(lengths[1])
@@ -328,9 +345,10 @@ class Pipeline(ABC):
             elif self.discard_untrimmed:
                 self._steps.append(self._make_untrimmed_filter(None))
             elif outfiles.untrimmed:
-                untrimmed_writer = self._open_writer(
-                    outfiles.untrimmed, outfiles.untrimmed2
-                )
+                files = [outfiles.untrimmed]
+                if self.paired:
+                    files += [outfiles.untrimmed2]
+                untrimmed_writer = self._open_writer(*files)
                 self._steps.append(self._make_untrimmed_filter(untrimmed_writer))
 
             self._steps.append(self._final_filter(outfiles))
@@ -493,22 +511,6 @@ class SingleEndPipeline(Pipeline):
             progress.update(n % 10000)
         return (n, total_bp, None)
 
-    def _open_writer(
-        self,
-        file: BinaryIO,
-        file2: Optional[BinaryIO] = None,
-        force_fasta: Optional[bool] = None,
-    ):
-        assert file2 is None
-        assert not isinstance(file, (str, bytes, Path))
-        return open_raise_limit(
-            dnaio.open,
-            file,
-            mode="w",
-            qualities=self.uses_qualities,
-            fileformat="fasta" if force_fasta else None,
-        )
-
     def _make_filter(
         self, predicate1: Optional[Predicate], predicate2: Optional[Predicate], writer
     ):
@@ -638,26 +640,6 @@ class PairedEndPipeline(Pipeline):
             progress.update(n % 10000)
         return (n, total1_bp, total2_bp)
 
-    def _open_writer(
-        self,
-        file: BinaryIO,
-        file2: Optional[BinaryIO] = None,
-        force_fasta: Optional[bool] = None,
-    ):
-        # file and file2 must already be file-like objects because we don’t want to
-        # take care of threads and compression levels here.
-        for f in (file, file2):
-            assert not isinstance(f, (str, bytes, Path))
-        return open_raise_limit(
-            dnaio.open,
-            file,
-            file2=file2,
-            mode="w",
-            qualities=self.uses_qualities,
-            fileformat="fasta" if force_fasta else None,
-            interleaved=file2 is None,
-        )
-
     def _make_filter(
         self,
         predicate1: Optional[Predicate],
@@ -685,7 +667,9 @@ class PairedEndPipeline(Pipeline):
 
     def _final_filter(self, outfiles):
         writer = self._open_writer(
-            outfiles.out, outfiles.out2, force_fasta=outfiles.force_fasta
+            outfiles.out,
+            outfiles.out2,
+            force_fasta=outfiles.force_fasta,
         )
         return PairedEndSink(writer)
 
