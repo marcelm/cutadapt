@@ -3,17 +3,17 @@
 Changelog
 =========
 
-development version
--------------------
+v4.3 (2023-03-17)
+-----------------
 
-* :issue:`665`: 5' adapters did not allow partial matches in the beginning
-  when the :ref:`rightmost <rightmost>` adapter-search parameter was used.
-* :issue:`662`: Fixed assertion error when ``--discard-untrimmed`` was used
-  together with ``--json`` and demultiplexing.
 * :pr:`663`: Cutadapt became significantly faster due to an added runtime
   heuristic that avoids running the full alignment algorithm if it can be
   proven that it cannot succeed. Thanks to @rhpvorderman for this great
   improvement!
+* :issue:`665`: 5' adapters did not allow partial matches in the beginning
+  when the :ref:`rightmost <rightmost>` adapter-search parameter was used.
+* :issue:`662`: Fixed assertion error when ``--discard-untrimmed`` was used
+  together with ``--json`` and demultiplexing.
 * :issue:`674`: When reading 3' adapters from an external file, they can now
   all be anchored by using the syntax ``-a file$:adapters.fasta`` (note the
   ``$`` in ``file$:``).
