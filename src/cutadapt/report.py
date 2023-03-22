@@ -73,6 +73,9 @@ class Statistics:
         self.adapter_stats: List[List[AdapterStatistics]] = [[], []]
         self._collected: bool = False
 
+    def __repr__(self):
+        return f"Statistics(n={self.n}, paired={self.paired}, total_bp={self.total_bp})"
+
     def __iadd__(self, other: Any):
         if not isinstance(other, Statistics):
             raise ValueError(f"Cannot add {other.__type__.__name__}")
@@ -81,8 +84,10 @@ class Statistics:
 
         if self.paired is None:
             self.paired = other.paired
-        elif self.paired != other.paired:
-            raise ValueError("Incompatible Statistics: paired is not equal")
+        elif other.paired is not None and self.paired != other.paired:
+            raise ValueError(
+                f"Incompatible Statistics: paired is not equal ({self.paired} vs {other.paired})"
+            )
 
         self.reverse_complemented = add_if_not_none(
             self.reverse_complemented, other.reverse_complemented
