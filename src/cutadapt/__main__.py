@@ -611,8 +611,8 @@ def open_combinatorial_out(
 
 def open_demultiplex_out(
     adapter_names: Sequence[str],
-    output: str,
-    paired_output: Optional[str],
+    template1: str,
+    template2: Optional[str],
     untrimmed_output: Optional[str],
     untrimmed_paired_output: Optional[str],
     discard_untrimmed: bool,
@@ -620,24 +620,24 @@ def open_demultiplex_out(
 ):
     demultiplex_out = dict()
     demultiplex_out2: Optional[Dict[str, Any]] = (
-        dict() if paired_output is not None else None
+        dict() if template2 is not None else None
     )
     for name in adapter_names:
-        path1 = output.replace("{name}", name)
+        path1 = template1.replace("{name}", name)
         demultiplex_out[name] = file_opener.xopen(path1, "wb")
         if demultiplex_out2 is not None:
-            assert paired_output is not None
-            path2 = paired_output.replace("{name}", name)
+            assert template2 is not None
+            path2 = template2.replace("{name}", name)
             demultiplex_out2[name] = file_opener.xopen(path2, "wb")
-    untrimmed_path: Optional[str] = output.replace("{name}", "unknown")
+    untrimmed_path: Optional[str] = template1.replace("{name}", "unknown")
     if untrimmed_output:
         untrimmed_path = untrimmed_output
     if discard_untrimmed:
         untrimmed = None
     else:
         untrimmed = file_opener.xopen(untrimmed_path, "wb")
-    if paired_output is not None:
-        untrimmed2_path = paired_output.replace("{name}", "unknown")
+    if template2 is not None:
+        untrimmed2_path = template2.replace("{name}", "unknown")
         if untrimmed_paired_output:
             untrimmed2_path = untrimmed_paired_output
         if discard_untrimmed:
