@@ -2,7 +2,7 @@
 Tests write output (should it return True or False or write)
 """
 import pytest
-from dnaio import Sequence
+from dnaio import SequenceRecord
 
 from cutadapt.predicates import TooManyN
 from cutadapt.steps import PairedEndFilter
@@ -23,7 +23,7 @@ from cutadapt.steps import PairedEndFilter
 def test_too_many_n(seq, count, expected):
     # third parameter is True if read should be Trueed
     predicate = TooManyN(count=count)
-    _seq = Sequence("read1", seq, qualities="#" * len(seq))
+    _seq = SequenceRecord("read1", seq, qualities="#" * len(seq))
     assert predicate.test(_seq, []) == expected
 
 
@@ -42,8 +42,8 @@ def test_too_many_n_paired(seq1, seq2, count, expected):
         predicate, predicate, None, pair_filter_mode="first"
     )
     filter_any = PairedEndFilter(predicate, predicate, None, pair_filter_mode="any")
-    read1 = Sequence("read1", seq1, qualities="#" * len(seq1))
-    read2 = Sequence("read1", seq2, qualities="#" * len(seq2))
+    read1 = SequenceRecord("read1", seq1, qualities="#" * len(seq1))
+    read2 = SequenceRecord("read1", seq2, qualities="#" * len(seq2))
     assert (filter_legacy(read1, read2, [], []) is None) == predicate.test(read1, [])
     # True entire pair if one of the reads fulfills criteria
     assert (filter_any(read1, read2, [], []) is None) == expected

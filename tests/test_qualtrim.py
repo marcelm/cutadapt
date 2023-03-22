@@ -1,13 +1,13 @@
 import pytest
 
-from dnaio import Sequence
+from dnaio import SequenceRecord
 from cutadapt.qualtrim import nextseq_trim_index, expected_errors
 
 
 def test_nextseq_trim():
-    s = Sequence("n", "", "")
+    s = SequenceRecord("n", "", "")
     assert nextseq_trim_index(s, cutoff=22) == 0
-    s = Sequence(
+    s = SequenceRecord(
         "n",
         "TCTCGTATGCCGTCTTATGCTTGAAAAAAAAAAGGGGGGGGGGGGGGGGGNNNNNNNNNNNGGNGG",
         "AA//EAEE//A6///E//A//EA/EEEEEEAEA//EEEEEEEEEEEEEEE###########EE#EA",

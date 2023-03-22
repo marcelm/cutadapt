@@ -1,6 +1,6 @@
 import typing
 
-from dnaio import Sequence
+from dnaio import SequenceRecord
 from cutadapt.adapters import (
     BackAdapter,
     AnywhereAdapter,
@@ -11,8 +11,8 @@ from cutadapt.modifiers import AdapterCutter, ModificationInfo
 
 
 def test_statistics() -> None:
-    read = Sequence("name", "AAAACCCCAAAA")
-    adapters: typing.Sequence[Adapter] = [BackAdapter("CCCC", max_errors=0.1)]
+    read = SequenceRecord("name", "AAAACCCCAAAA")
+    adapters: typing.SequenceRecord[Adapter] = [BackAdapter("CCCC", max_errors=0.1)]
     cutter = AdapterCutter(adapters, times=3)
     cutter(read, ModificationInfo(read))
     assert isinstance(cutter.adapter_statistics[adapters[0]], BackAdapterStatistics)
@@ -31,7 +31,7 @@ def test_end_trim_with_mismatch():
     """
     adapter = BackAdapter("TCGATCGATCGAT", max_errors=0.1)
 
-    read = Sequence("foo1", "AAAAAAAAAAATCGTCGATC")
+    read = SequenceRecord("foo1", "AAAAAAAAAAATCGTCGATC")
     cutter = AdapterCutter([adapter], times=1)
     trimmed_read = cutter(read, ModificationInfo(read))
 
@@ -41,7 +41,7 @@ def test_end_trim_with_mismatch():
     # length 9 is 0.
     assert cutter.adapter_statistics[adapter].end.errors[9][1] == 1
 
-    read = Sequence("foo2", "AAAAAAAAAAATCGAACGA")
+    read = SequenceRecord("foo2", "AAAAAAAAAAATCGAACGA")
     cutter = AdapterCutter([adapter], times=1)
     trimmed_read = cutter(read, ModificationInfo(read))
 
@@ -59,7 +59,7 @@ def test_anywhere_with_errors():
         ("ccgtatttagAACCGGTT", "AACCGGTT"),  # one mismatch
         ("ccgatttagAACCGGTT", "AACCGGTT"),  # one deletion
     ):
-        read = Sequence("foo", seq)
+        read = SequenceRecord("foo", seq)
         cutter = AdapterCutter([adapter], times=1)
         trimmed_read = cutter(read, ModificationInfo(read))
         assert trimmed_read.sequence == expected_trimmed

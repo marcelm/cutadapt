@@ -2,7 +2,7 @@ import os
 from textwrap import dedent
 import pytest
 
-from dnaio import Sequence
+from dnaio import SequenceRecord
 from cutadapt.adapters import (
     LinkedAdapter,
     BackAdapter,
@@ -476,7 +476,7 @@ def test_anywhere_parameter_back():
     assert adapter._force_anywhere
 
     # TODO move the rest to a separate test
-    read = Sequence("foo1", "TGAAGTACACGGTTAAAAAAAAAA")
+    read = SequenceRecord("foo1", "TGAAGTACACGGTTAAAAAAAAAA")
     from cutadapt.modifiers import AdapterCutter
 
     cutter = AdapterCutter([adapter])
@@ -496,7 +496,7 @@ def test_anywhere_parameter_front():
     assert adapter._force_anywhere
 
     # TODO move the rest to a separate test
-    read = Sequence("foo1", "AAAAAAAAAACTGAAGTGAA")
+    read = SequenceRecord("foo1", "AAAAAAAAAACTGAAGTGAA")
     from cutadapt.modifiers import AdapterCutter
 
     cutter = AdapterCutter([adapter])

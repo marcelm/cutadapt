@@ -1,6 +1,6 @@
 import pytest
 
-from dnaio import Sequence
+from dnaio import SequenceRecord
 from cutadapt.adapters import (
     RemoveAfterMatch,
     RemoveBeforeMatch,
@@ -279,7 +279,7 @@ def test_linked_adapter():
     assert linked_adapter.front_adapter.min_overlap == 4
     assert linked_adapter.back_adapter.min_overlap == 3
 
-    read = Sequence(name="seq", sequence="AAAACCCCCTTTT")
+    read = SequenceRecord(name="seq", sequence="AAAACCCCCTTTT")
     trimmed = linked_adapter.match_to(read.sequence).trimmed(read)
     assert trimmed.name == "seq"
     assert trimmed.sequence == "CCCCC"
@@ -329,7 +329,7 @@ def test_info_record():
         adapter_wildcards=True,
         name="Foo",
     )
-    read = Sequence(name="abc", sequence="CCCCAGAACTACAGTCCCGGC")
+    read = SequenceRecord(name="abc", sequence="CCCCAGAACTACAGTCCCGGC")
     am = RemoveAfterMatch(
         astart=0,
         astop=17,
