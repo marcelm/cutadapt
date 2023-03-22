@@ -16,6 +16,7 @@ from typing import (
 import dnaio
 
 from .files import InputFiles, OutputFiles, open_raise_limit
+from .report import Statistics
 from .utils import Progress
 from .modifiers import (
     SingleEndModifier,
@@ -233,7 +234,7 @@ class Pipeline(ABC):
         infiles: InputFiles,
         outfiles: OutputFiles,
         progress: Optional[Progress] = None,
-    ) -> Tuple[int, int, Optional[int]]:
+    ) -> Statistics:
         pass
 
     @abstractmethod
@@ -273,7 +274,7 @@ class SingleEndPipeline(Pipeline):
         infiles: InputFiles,
         outfiles: OutputFiles,
         progress: Optional[Progress] = None,
-    ) -> Tuple[int, int, Optional[int]]:
+    ) -> Statistics:
         """Run the pipeline. Return statistics"""
         self._infiles = infiles
         self._reader = infiles.open()
@@ -294,7 +295,9 @@ class SingleEndPipeline(Pipeline):
                     break
         if progress is not None:
             progress.update(n % 10000)
-        return (n, total_bp, None)
+
+        stats = Statistics().collect(n, total_bp, None, self._modifiers, self._steps)
+        return stats
 
     def _make_filter(
         self, predicate1: Optional[Predicate], predicate2: Optional[Predicate], writer
@@ -399,7 +402,7 @@ class PairedEndPipeline(Pipeline):
         infiles: InputFiles,
         outfiles: OutputFiles,
         progress: Optional[Progress] = None,
-    ) -> Tuple[int, int, Optional[int]]:
+    ) -> Statistics:
         self._infiles = infiles
         self._reader = infiles.open()
         self._set_output(outfiles)
@@ -424,7 +427,12 @@ class PairedEndPipeline(Pipeline):
                     break
         if progress is not None:
             progress.update(n % 10000)
-        return (n, total1_bp, total2_bp)
+
+        stats = Statistics().collect(
+            n, total1_bp, total2_bp, self._modifiers, self._steps
+        )
+
+        return stats
 
     def _make_filter(
         self,
