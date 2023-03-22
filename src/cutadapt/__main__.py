@@ -791,103 +791,121 @@ def check_arguments(args, paired: bool) -> None:
         raise CommandLineError("--pair-adapters cannot be used with --times")
 
 
-def pipeline_from_parsed_args(args, paired, adapters, adapters2) -> Pipeline:
-    """
-    Set up a processing pipeline from parsed command-line arguments.
+class PipelineMaker:
+    def __init__(self, args, paired, adapters, adapters2):
+        self.args = args
+        self.action = None if args.action == "none" else args.action
+        self.paired = paired
+        self.adapters = adapters
+        self.adapters2 = adapters2
 
-    If there are any problems parsing the arguments, a CommandLineError is raised.
+    def make(self) -> Pipeline:
+        """
+        Set up a processing pipeline from parsed command-line arguments.
 
-    Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
-    """
-    if args.action == "none":
-        args.action = None
+        If there are any problems parsing the arguments, a CommandLineError is raised.
 
-    modifiers = []
-    modifiers.extend(make_unconditional_cutters(args.cut, args.cut2, paired))
-
-    if args.nextseq_trim is not None:
-        trimmer = NextseqQualityTrimmer(args.nextseq_trim, args.quality_base)
-        if paired:
-            modifiers.append((trimmer, copy.copy(trimmer)))
-        else:
-            modifiers.append(trimmer)
-
-    modifiers.extend(
-        make_quality_trimmers(
-            args.quality_cutoff, args.quality_cutoff2, args.quality_base, paired
+        Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
+        """
+        modifiers = []
+        modifiers.extend(
+            make_unconditional_cutters(self.args.cut, self.args.cut2, self.paired)
         )
-    )
-    modifiers.extend(
-        make_adapter_cutter(
-            adapters,
-            adapters2,
-            paired,
-            args.pair_adapters,
-            args.action,
-            args.times,
-            args.reverse_complement,
-            not args.rename,  # no "rc" suffix if --rename is used
-            args.index,
+
+        if self.args.nextseq_trim is not None:
+            trimmer = NextseqQualityTrimmer(
+                self.args.nextseq_trim, self.args.quality_base
+            )
+            if self.paired:
+                modifiers.append((trimmer, copy.copy(trimmer)))
+            else:
+                modifiers.append(trimmer)
+
+        modifiers.extend(
+            make_quality_trimmers(
+                self.args.quality_cutoff,
+                self.args.quality_cutoff2,
+                self.args.quality_base,
+                self.paired,
+            )
         )
-    )
-
-    for modifier in modifiers_applying_to_both_ends_if_paired(args):
-        if paired:
-            modifiers.append((modifier, copy.copy(modifier)))
-        else:
-            modifiers.append(modifier)
-
-    if args.rename and (args.prefix or args.suffix):
-        raise CommandLineError(
-            "Option --rename cannot be combined with --prefix (-x) or --suffix (-y)"
+        modifiers.extend(
+            make_adapter_cutter(
+                self.adapters,
+                self.adapters2,
+                self.paired,
+                self.args.pair_adapters,
+                self.action,
+                self.args.times,
+                self.args.reverse_complement,
+                not self.args.rename,  # no "rc" suffix if --rename is used
+                self.args.index,
+            )
         )
-    if args.rename and args.rename != "{header}":
-        try:
-            renamer = PairedEndRenamer(args.rename) if paired else Renamer(args.rename)
-            modifiers.append(renamer)
-        except InvalidTemplate as e:
-            raise CommandLineError(e)
 
-    # Create the processing pipeline
-    if paired:
-        pair_filter_mode = "any" if args.pair_filter is None else args.pair_filter
-        pipeline = PairedEndPipeline(modifiers, pair_filter_mode)  # type: Any
-    else:
-        pipeline = SingleEndPipeline(modifiers)
+        for modifier in modifiers_applying_to_both_ends_if_paired(self.args):
+            if self.paired:
+                modifiers.append((modifier, copy.copy(modifier)))
+            else:
+                modifiers.append(modifier)
 
-    # When adapters are being trimmed only in R1 or R2, override the pair filter mode
-    # as using the default of 'any' would regard all read pairs as untrimmed.
-    if (
-        isinstance(pipeline, PairedEndPipeline)
-        and (not adapters2 or not adapters)
-        and (
-            args.discard_untrimmed
-            or args.untrimmed_output
-            or args.untrimmed_paired_output
-        )
-    ):
-        pipeline.override_untrimmed_pair_filter = True
-
-    # Set filtering parameters
-    # Minimum/maximum length
-    for attr in "minimum_length", "maximum_length":
-        param = getattr(args, attr)
-        if param is not None:
-            lengths = parse_lengths(param)
-            if not paired and len(lengths) == 2:
-                raise CommandLineError(
-                    "Two minimum or maximum lengths given for single-end data"
+        if self.args.rename and (self.args.prefix or self.args.suffix):
+            raise CommandLineError(
+                "Option --rename cannot be combined with --prefix (-x) or --suffix (-y)"
+            )
+        if self.args.rename and self.args.rename != "{header}":
+            try:
+                renamer = (
+                    PairedEndRenamer(self.args.rename)
+                    if self.paired
+                    else Renamer(self.args.rename)
                 )
-            if paired and len(lengths) == 1:
-                lengths = (lengths[0], lengths[0])
-            setattr(pipeline, attr, lengths)
-    pipeline.max_n = args.max_n
-    pipeline.max_expected_errors = args.max_expected_errors
-    pipeline.discard_casava = args.discard_casava
-    pipeline.discard_trimmed = args.discard_trimmed
-    pipeline.discard_untrimmed = args.discard_untrimmed
+                modifiers.append(renamer)
+            except InvalidTemplate as e:
+                raise CommandLineError(e)
 
-    return pipeline
+        # Create the processing pipeline
+        if self.paired:
+            pair_filter_mode = (
+                "any" if self.args.pair_filter is None else self.args.pair_filter
+            )
+            pipeline = PairedEndPipeline(modifiers, pair_filter_mode)  # type: Any
+        else:
+            pipeline = SingleEndPipeline(modifiers)
+
+        # When adapters are being trimmed only in R1 or R2, override the pair filter mode
+        # as using the default of 'any' would regard all read pairs as untrimmed.
+        if (
+            isinstance(pipeline, PairedEndPipeline)
+            and (not self.adapters2 or not self.adapters)
+            and (
+                self.args.discard_untrimmed
+                or self.args.untrimmed_output
+                or self.args.untrimmed_paired_output
+            )
+        ):
+            pipeline.override_untrimmed_pair_filter = True
+
+        # Set filtering parameters
+        # Minimum/maximum length
+        for attr in "minimum_length", "maximum_length":
+            param = getattr(self.args, attr)
+            if param is not None:
+                lengths = parse_lengths(param)
+                if not self.paired and len(lengths) == 2:
+                    raise CommandLineError(
+                        "Two minimum or maximum lengths given for single-end data"
+                    )
+                if self.paired and len(lengths) == 1:
+                    lengths = (lengths[0], lengths[0])
+                setattr(pipeline, attr, lengths)
+        pipeline.max_n = self.args.max_n
+        pipeline.max_expected_errors = self.args.max_expected_errors
+        pipeline.discard_casava = self.args.discard_casava
+        pipeline.discard_trimmed = self.args.discard_trimmed
+        pipeline.discard_untrimmed = self.args.discard_untrimmed
+
+        return pipeline
 
 
 def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
@@ -1092,7 +1110,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         adapters, adapters2 = adapters_from_args(args)
         log_adapters(adapters, adapters2 if paired else None)
 
-        pipeline = pipeline_from_parsed_args(args, paired, adapters, adapters2)
+        pipeline = PipelineMaker(args, paired, adapters, adapters2).make()
         adapter_names: List[Optional[str]] = [a.name for a in adapters]
         adapter_names2: List[Optional[str]] = [a.name for a in adapters2]
         outfiles = open_output_files(
