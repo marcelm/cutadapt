@@ -55,7 +55,7 @@ def test_pipeline_single(tmp_path):
         AdapterCutter([adapter]),
     ]
 
-    def make_pipeline():
+    def make_pipeline(outfiles: OutputFiles):
         pipeline = SingleEndPipeline(modifiers)
         pipeline.minimum_length = (10,)
         pipeline.discard_untrimmed = True
@@ -64,11 +64,10 @@ def test_pipeline_single(tmp_path):
     inpaths = InputPaths(datapath("small.fastq"))
     info_file = file_opener.xopen_or_none(tmp_path / "info.txt", "wb")
     out = file_opener.xopen(tmp_path / "out.fastq", "wb")
-    outfiles = OutputFiles(info=info_file, out=out)
-    stats = run_pipeline(make_pipeline, inpaths, outfiles, cores=1)
+    with OutputFiles(info=info_file, out=out) as outfiles:
+        stats = run_pipeline(make_pipeline, inpaths, outfiles, cores=1)
     assert stats is not None
     json.dumps(stats.as_json())
-    outfiles.close()
     # TODO
     # - info file isn’t written, what is missing?
     # - see next function for more TODOs that also apply here
@@ -96,7 +95,7 @@ def test_pipeline_paired(tmp_path):
         (AdapterCutter([adapter]), None),
     ]
 
-    def make_pipeline():
+    def make_pipeline(outfiles: OutputFiles):
         pipeline = PairedEndPipeline(modifiers, "any")
         pipeline.minimum_length = (10, None)
         pipeline.discard_untrimmed = True

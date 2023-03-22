@@ -236,6 +236,12 @@ class OutputFiles:
                     getattr(result, attr)[k] = io.BytesIO()
         return result
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
     def close(self) -> None:
         """Close all output files that are not stdout"""
         for f in self:

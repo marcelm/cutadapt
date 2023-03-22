@@ -202,6 +202,12 @@ class Pipeline(ABC):
         for f in self._outfiles:
             f.flush()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
     def close(self) -> None:
         # TODO
         # closing is not symmetric, should only be done after a connect_io
@@ -220,8 +226,8 @@ class Pipeline(ABC):
             f.close()
         # Closing a TextIOWrapper also closes the underlying file, so
         # this closes some files a second time.
-        if self._outfiles is not None:
-            self._outfiles.close()
+        # if self._outfiles is not None:
+        #    self._outfiles.close()
 
     @property
     def uses_qualities(self) -> bool:

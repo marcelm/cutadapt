@@ -714,7 +714,7 @@ def test_combinatorial_demultiplexing(tmp_path, discarduntrimmed, cores):
     else:
         combinations.extend((a, b, True) for a, b in optional)
     main(params)
-    for (name1, name2, should_exist) in combinations:
+    for name1, name2, should_exist in combinations:
         for i in (1, 2):
             name = "combinatorial.{name1}_{name2}.{i}.fastq".format(
                 name1=name1, name2=name2, i=i

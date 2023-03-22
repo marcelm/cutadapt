@@ -5,7 +5,7 @@ import os
 import sys
 import traceback
 from abc import ABC, abstractmethod
-from contextlib import ExitStack, closing
+from contextlib import ExitStack
 from multiprocessing.connection import Connection
 from typing import (
     Any,
@@ -142,7 +142,7 @@ class WorkerProcess(mpctx_Process):
     def __init__(
         self,
         id_: int,
-        make_pipeline: Callable[[], Pipeline],
+        make_pipeline: Callable[[OutputFiles], Pipeline],
         n_input_files: int,
         interleaved_input: bool,
         orig_outfiles: OutputFiles,
@@ -195,7 +195,7 @@ class WorkerProcess(mpctx_Process):
         files = [io.BytesIO(chunk) for chunk in input_chunks]
         infiles = InputFiles(*files, interleaved=self._interleaved_input)
         outfiles = self._original_outfiles.as_bytesio()
-        pipeline = self._make_pipeline()
+        pipeline = self._make_pipeline(outfiles)
         stats = pipeline.process_reads(infiles, outfiles)
         pipeline.flush()
         output_chunks = []
@@ -243,7 +243,9 @@ class PipelineRunner(ABC):
     A read processing pipeline
     """
 
-    def __init__(self, make_pipeline: Callable[[], Pipeline], progress: Progress):
+    def __init__(
+        self, make_pipeline: Callable[[OutputFiles], Pipeline], progress: Progress
+    ):
         self._make_pipeline = make_pipeline
         self._progress = progress
 
@@ -287,7 +289,7 @@ class ParallelPipelineRunner(PipelineRunner):
 
     def __init__(
         self,
-        make_pipeline: Callable[[], Pipeline],
+        make_pipeline: Callable[[OutputFiles], Pipeline],
         inpaths: InputPaths,
         outfiles: OutputFiles,
         progress: Progress,
@@ -397,8 +399,8 @@ class ParallelPipelineRunner(PipelineRunner):
             raise e
         return result
 
-    def close(self) -> None:
-        self._outfiles.close()
+    def close(self):
+        pass
 
 
 class SerialPipelineRunner(PipelineRunner):
@@ -408,31 +410,31 @@ class SerialPipelineRunner(PipelineRunner):
 
     def __init__(
         self,
-        make_pipeline: Callable[[], Pipeline],
-        infiles: InputFiles,
+        make_pipeline: Callable[[OutputFiles], Pipeline],
+        inpaths: InputPaths,
         outfiles: OutputFiles,
         progress: Progress,
     ):
         super().__init__(make_pipeline, progress)
-        self._infiles = infiles
+        self._infiles = inpaths.open()
         self._outfiles = outfiles
 
     def run(self) -> Statistics:
-        with closing(self._make_pipeline()) as pipeline:
+        with self._make_pipeline(self._outfiles) as pipeline:
             stats = pipeline.process_reads(
                 self._infiles, self._outfiles, progress=self._progress
             )
-            if self._progress is not None:
-                self._progress.close()
+        if self._progress is not None:
+            self._progress.close()
 
         return stats
 
     def close(self):
-        pass
+        self._infiles.close()
 
 
 def run_pipeline(
-    pipeline_maker: Callable[[], Pipeline],
+    make_pipeline: Callable[[OutputFiles], Pipeline],
     inpaths: InputPaths,
     outfiles: OutputFiles,
     cores: int,
@@ -463,7 +465,7 @@ def run_pipeline(
     runner: PipelineRunner
     if cores > 1:
         runner = ParallelPipelineRunner(
-            pipeline_maker,
+            make_pipeline,
             inpaths,
             outfiles,
             progress,
@@ -471,9 +473,7 @@ def run_pipeline(
             buffer_size=buffer_size,
         )
     else:
-        runner = SerialPipelineRunner(
-            pipeline_maker, inpaths.open(), outfiles, progress
-        )
+        runner = SerialPipelineRunner(make_pipeline, inpaths, outfiles, progress)
 
     with runner:
         statistics = runner.run()

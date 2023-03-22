@@ -809,7 +809,7 @@ class PipelineMaker:
         self.adapters = adapters
         self.adapters2 = adapters2
 
-    def __call__(self) -> Pipeline:
+    def __call__(self, outfiles: OutputFiles) -> Pipeline:
         """
         Set up a processing pipeline from parsed command-line arguments.
 
@@ -1121,23 +1121,27 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         log_adapters(adapters, adapters2 if paired else None)
 
         make_pipeline = PipelineMaker(args, paired, adapters, adapters2)
-        # Create the pipeline once without running it to get errors early
-        make_pipeline()
         adapter_names: List[Optional[str]] = [a.name for a in adapters]
         adapter_names2: List[Optional[str]] = [a.name for a in adapters2]
-        outfiles = open_output_files(
+
+        with open_output_files(
             args, default_outfile, file_opener, adapter_names, adapter_names2
-        )
-        inpaths = InputPaths(*input_paths, interleaved=is_interleaved_input)
-        logger.info(
-            "Processing %s reads on %d core%s ...",
-            {False: "single-end", True: "paired-end"}[paired],
-            cores,
-            "s" if cores > 1 else "",
-        )
-        stats = run_pipeline(
-            make_pipeline, inpaths, outfiles, cores, progress, args.buffer_size
-        )
+        ) as outfiles:
+            # Create the pipeline once without running it to get errors early
+            with outfiles.as_bytesio() as bytesio_outfiles:
+                with make_pipeline(bytesio_outfiles):
+                    pass
+
+            inpaths = InputPaths(*input_paths, interleaved=is_interleaved_input)
+            logger.info(
+                "Processing %s reads on %d core%s ...",
+                {False: "single-end", True: "paired-end"}[paired],
+                cores,
+                "s" if cores > 1 else "",
+            )
+            stats = run_pipeline(
+                make_pipeline, inpaths, outfiles, cores, progress, args.buffer_size
+            )
 
     except KeyboardInterrupt:
         if args.debug:
