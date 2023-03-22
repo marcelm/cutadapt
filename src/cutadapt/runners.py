@@ -450,27 +450,13 @@ def run_pipeline(
     Returns:
         A Statistics object
     """
-    with make_runner(
-        pipeline, inpaths, outfiles, cores, progress, buffer_size
-    ) as runner:
-        statistics = runner.run()
-    return statistics
-
-
-def make_runner(
-    pipeline,
-    inpaths: InputPaths,
-    outfiles: OutputFiles,
-    cores: int,
-    progress: Union[bool, Progress, None] = None,
-    buffer_size: Optional[int] = None,
-):
     if progress is None or progress is False:
         progress = DummyProgress()
     elif progress is True:
         progress = Progress()
+    runner: PipelineRunner
     if cores > 1:
-        return ParallelPipelineRunner(
+        runner = ParallelPipelineRunner(
             pipeline,
             inpaths,
             outfiles,
@@ -479,4 +465,8 @@ def make_runner(
             buffer_size=buffer_size,
         )
     else:
-        return SerialPipelineRunner(pipeline, inpaths.open(), outfiles, progress)
+        runner = SerialPipelineRunner(pipeline, inpaths.open(), outfiles, progress)
+
+    with runner:
+        statistics = runner.run()
+    return statistics
