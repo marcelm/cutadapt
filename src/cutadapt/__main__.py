@@ -709,9 +709,9 @@ def determine_paired(args) -> bool:
     )
 
 
-def setup_input_files(
+def setup_input_paths(
     inputs: Sequence[str], paired: bool, interleaved: bool
-) -> Tuple[str, ...]:
+) -> InputPaths:
 
     if len(inputs) == 0:
         raise CommandLineError(
@@ -746,10 +746,13 @@ def setup_input_files(
             )
         input_paired_filename = None
 
+    paths: Tuple[str, ...]
     if input_paired_filename:
-        return (input_filename, input_paired_filename)
+        paths = (input_filename, input_paired_filename)
     else:
-        return (input_filename,)
+        paths = (input_filename,)
+
+    return InputPaths(*paths, interleaved=interleaved)
 
 
 def check_arguments(args, paired: bool) -> None:
@@ -1115,7 +1118,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
 
     try:
         is_interleaved_input = args.interleaved and len(args.inputs) == 1
-        input_paths = setup_input_files(args.inputs, paired, is_interleaved_input)
+        input_paths = setup_input_paths(args.inputs, paired, is_interleaved_input)
         check_arguments(args, paired)
         adapters, adapters2 = adapters_from_args(args)
         log_adapters(adapters, adapters2 if paired else None)
@@ -1132,7 +1135,6 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
                 with make_pipeline(bytesio_outfiles):
                     pass
 
-            inpaths = InputPaths(*input_paths, interleaved=is_interleaved_input)
             logger.info(
                 "Processing %s reads on %d core%s ...",
                 {False: "single-end", True: "paired-end"}[paired],
@@ -1140,7 +1142,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
                 "s" if cores > 1 else "",
             )
             stats = run_pipeline(
-                make_pipeline, inpaths, outfiles, cores, progress, args.buffer_size
+                make_pipeline, input_paths, outfiles, cores, progress, args.buffer_size
             )
 
     except KeyboardInterrupt:
@@ -1175,8 +1177,8 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
             json_dict = json_report(
                 stats=stats,
                 cmdlineargs=cmdlineargs,
-                path1=inpaths.paths[0],
-                path2=inpaths.paths[1] if len(inpaths.paths) > 1 else None,
+                path1=input_paths.paths[0],
+                path2=input_paths.paths[1] if len(input_paths.paths) > 1 else None,
                 cores=cores,
                 paired=paired,
                 gc_content=args.gc_content / 100.0,
