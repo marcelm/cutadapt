@@ -38,10 +38,9 @@ def test_pipeline_single(tmp_path):
     #   --discard-untrimmed --info-file=info.txt -o ... small.fastq
     import json
     from cutadapt.pipeline import SingleEndPipeline
-    from cutadapt.utils import FileOpener
+    from cutadapt.files import FileOpener, OutputFiles, InputPaths
     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
     from cutadapt.adapters import BackAdapter
-    from cutadapt.pipeline import InputPaths, OutputFiles
 
     file_opener = FileOpener()
     adapter = BackAdapter(
@@ -76,10 +75,9 @@ def test_pipeline_paired(tmp_path):
     #   -o ... -p ...
     #   paired.1.fastq paired.2.fastq
     from cutadapt.pipeline import PairedEndPipeline
-    from cutadapt.utils import FileOpener
     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
     from cutadapt.adapters import BackAdapter
-    from cutadapt.pipeline import InputPaths, OutputFiles
+    from cutadapt.files import OutputFiles, InputPaths, FileOpener
 
     trimmer = QualityTrimmer(cutoff_front=0, cutoff_back=15)
     adapter = BackAdapter(

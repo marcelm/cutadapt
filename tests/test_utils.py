@@ -2,10 +2,10 @@ import time
 from itertools import islice
 
 from cutadapt.utils import (
-    raise_open_files_limit,
     Progress,
     DummyProgress,
 )
+from cutadapt.files import raise_open_files_limit
 
 
 def test_raise_open_files_limit():

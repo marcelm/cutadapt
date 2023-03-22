@@ -95,10 +95,9 @@ from cutadapt.pipeline import (
     Pipeline,
     SingleEndPipeline,
     PairedEndPipeline,
-    InputPaths,
-    OutputFiles,
 )
-from cutadapt.utils import available_cpu_count, Progress, DummyProgress, FileOpener
+from cutadapt.files import InputPaths, OutputFiles, FileOpener
+from cutadapt.utils import available_cpu_count, Progress, DummyProgress
 from cutadapt.log import setup_logging, REPORT
 from cutadapt.qualtrim import HasNoQualities
 

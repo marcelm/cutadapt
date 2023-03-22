@@ -24,11 +24,16 @@ import traceback
 
 import dnaio
 
+from .files import (
+    InputFiles,
+    InputPaths,
+    OutputFiles,
+    xopen_rb_raise_limit,
+    open_raise_limit,
+)
 from .utils import (
     Progress,
     DummyProgress,
-    open_raise_limit,
-    xopen_rb_raise_limit,
 )
 from .modifiers import (
     SingleEndModifier,
@@ -71,145 +76,6 @@ if TYPE_CHECKING:
     mpctx_Process = multiprocessing.Process
 else:
     mpctx_Process = mpctx.Process
-
-
-class InputFiles:
-    def __init__(
-        self,
-        *files: BinaryIO,
-        interleaved: bool = False,
-    ):
-        self._files = files
-        self.interleaved = interleaved
-        for f in self._files:
-            assert f is not None
-
-    def open(self):
-        return dnaio.open(*self._files, interleaved=self.interleaved, mode="r")
-
-    def close(self) -> None:
-        for file in self._files:
-            file.close()
-
-
-class InputPaths:
-    def __init__(self, *paths: str, interleaved: bool = False):
-        self.paths = paths
-        self.interleaved = interleaved
-
-    def open(self) -> InputFiles:
-        files = [xopen_rb_raise_limit(path) for path in self.paths]
-        return InputFiles(*files, interleaved=self.interleaved)
-
-
-class OutputFiles:
-    """
-    The attributes are either None or open file-like objects except for demultiplex_out
-    and demultiplex_out2, which are dictionaries that map an adapter name
-    to a file-like object.
-    """
-
-    def __init__(
-        self,
-        out: Optional[BinaryIO] = None,
-        out2: Optional[BinaryIO] = None,
-        untrimmed: Optional[BinaryIO] = None,
-        untrimmed2: Optional[BinaryIO] = None,
-        too_short: Optional[BinaryIO] = None,
-        too_short2: Optional[BinaryIO] = None,
-        too_long: Optional[BinaryIO] = None,
-        too_long2: Optional[BinaryIO] = None,
-        info: Optional[BinaryIO] = None,
-        rest: Optional[BinaryIO] = None,
-        wildcard: Optional[BinaryIO] = None,
-        demultiplex_out: Optional[Dict[str, BinaryIO]] = None,
-        demultiplex_out2: Optional[Dict[str, BinaryIO]] = None,
-        combinatorial_out: Optional[Dict[Tuple[str, str], BinaryIO]] = None,
-        combinatorial_out2: Optional[Dict[Tuple[str, str], BinaryIO]] = None,
-        force_fasta: Optional[bool] = None,
-    ):
-        self.out = out
-        self.out2 = out2
-        self.untrimmed = untrimmed
-        self.untrimmed2 = untrimmed2
-        self.too_short = too_short
-        self.too_short2 = too_short2
-        self.too_long = too_long
-        self.too_long2 = too_long2
-        self.info = info
-        self.rest = rest
-        self.wildcard = wildcard
-        self.demultiplex_out = demultiplex_out
-        self.demultiplex_out2 = demultiplex_out2
-        self.combinatorial_out = combinatorial_out
-        self.combinatorial_out2 = combinatorial_out2
-        self.force_fasta = force_fasta
-
-    def __iter__(self):
-        for f in [
-            self.out,
-            self.out2,
-            self.untrimmed,
-            self.untrimmed2,
-            self.too_short,
-            self.too_short2,
-            self.too_long,
-            self.too_long2,
-            self.info,
-            self.rest,
-            self.wildcard,
-        ]:
-            if f is not None:
-                yield f
-        for outs in (
-            self.demultiplex_out,
-            self.demultiplex_out2,
-            self.combinatorial_out,
-            self.combinatorial_out2,
-        ):
-            if outs is not None:
-                for f in outs.values():
-                    assert f is not None
-                    yield f
-
-    def as_bytesio(self) -> "OutputFiles":
-        """
-        Create a new OutputFiles instance that has BytesIO instances for each non-None output file
-        """
-        result = OutputFiles(force_fasta=self.force_fasta)
-        for attr in (
-            "out",
-            "out2",
-            "untrimmed",
-            "untrimmed2",
-            "too_short",
-            "too_short2",
-            "too_long",
-            "too_long2",
-            "info",
-            "rest",
-            "wildcard",
-        ):
-            if getattr(self, attr) is not None:
-                setattr(result, attr, io.BytesIO())
-        for attr in (
-            "demultiplex_out",
-            "demultiplex_out2",
-            "combinatorial_out",
-            "combinatorial_out2",
-        ):
-            if getattr(self, attr) is not None:
-                setattr(result, attr, dict())
-                for k, v in getattr(self, attr).items():
-                    getattr(result, attr)[k] = io.BytesIO()
-        return result
-
-    def close(self) -> None:
-        """Close all output files that are not stdout"""
-        for f in self:
-            if f is sys.stdout or f is sys.stdout.buffer:
-                continue
-            f.close()
 
 
 class Pipeline(ABC):
