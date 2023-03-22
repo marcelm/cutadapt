@@ -7,7 +7,17 @@ import traceback
 from abc import ABC, abstractmethod
 from contextlib import ExitStack
 from multiprocessing.connection import Connection
-from typing import Any, List, Optional, Tuple, Sequence, Iterator, TYPE_CHECKING, Union
+from typing import (
+    Any,
+    List,
+    Optional,
+    Tuple,
+    Sequence,
+    Iterator,
+    TYPE_CHECKING,
+    Union,
+    Callable,
+)
 
 import dnaio
 
@@ -424,7 +434,7 @@ class SerialPipelineRunner(PipelineRunner):
 
 
 def run_pipeline(
-    pipeline: Pipeline,
+    pipeline_maker: Callable[[], Pipeline],
     inpaths: InputPaths,
     outfiles: OutputFiles,
     cores: int,
@@ -455,7 +465,7 @@ def run_pipeline(
     runner: PipelineRunner
     if cores > 1:
         runner = ParallelPipelineRunner(
-            pipeline,
+            pipeline_maker(),
             inpaths,
             outfiles,
             progress,
@@ -463,7 +473,9 @@ def run_pipeline(
             buffer_size=buffer_size,
         )
     else:
-        runner = SerialPipelineRunner(pipeline, inpaths.open(), outfiles, progress)
+        runner = SerialPipelineRunner(
+            pipeline_maker(), inpaths.open(), outfiles, progress
+        )
 
     with runner:
         statistics = runner.run()

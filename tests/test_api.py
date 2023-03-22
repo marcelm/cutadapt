@@ -54,14 +54,18 @@ def test_pipeline_single(tmp_path):
         QualityTrimmer(cutoff_front=0, cutoff_back=15),
         AdapterCutter([adapter]),
     ]
-    pipeline = SingleEndPipeline(modifiers)
-    pipeline.minimum_length = (10,)
-    pipeline.discard_untrimmed = True
+
+    def make_pipeline():
+        pipeline = SingleEndPipeline(modifiers)
+        pipeline.minimum_length = (10,)
+        pipeline.discard_untrimmed = True
+        return pipeline
+
     inpaths = InputPaths(datapath("small.fastq"))
     info_file = file_opener.xopen_or_none(tmp_path / "info.txt", "wb")
     out = file_opener.xopen(tmp_path / "out.fastq", "wb")
     outfiles = OutputFiles(info=info_file, out=out)
-    stats = run_pipeline(pipeline, inpaths, outfiles, cores=1)
+    stats = run_pipeline(make_pipeline, inpaths, outfiles, cores=1)
     assert stats is not None
     json.dumps(stats.as_json())
     outfiles.close()
@@ -92,10 +96,11 @@ def test_pipeline_paired(tmp_path):
         (AdapterCutter([adapter]), None),
     ]
 
-    pipeline = PairedEndPipeline(modifiers, "any")
-
-    pipeline.minimum_length = (10, None)
-    pipeline.discard_untrimmed = True
+    def make_pipeline():
+        pipeline = PairedEndPipeline(modifiers, "any")
+        pipeline.minimum_length = (10, None)
+        pipeline.discard_untrimmed = True
+        return pipeline
 
     file_opener = FileOpener()
     inpaths = InputPaths(datapath("paired.1.fastq"), datapath("paired.2.fastq"))
@@ -108,7 +113,7 @@ def test_pipeline_paired(tmp_path):
         out=out,
         out2=out2,
     )
-    stats = run_pipeline(pipeline, inpaths, outfiles, cores=1, progress=True)
+    stats = run_pipeline(make_pipeline, inpaths, outfiles, cores=1, progress=True)
     assert stats is not None
     _ = stats.as_json()
     outfiles.close()

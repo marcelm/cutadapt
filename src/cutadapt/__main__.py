@@ -61,7 +61,17 @@ import platform
 import itertools
 import multiprocessing
 from pathlib import Path
-from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Dict, Iterable
+from typing import (
+    Tuple,
+    Optional,
+    Sequence,
+    List,
+    Any,
+    Iterator,
+    Union,
+    Dict,
+    Iterable,
+)
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
@@ -799,7 +809,7 @@ class PipelineMaker:
         self.adapters = adapters
         self.adapters2 = adapters2
 
-    def make(self) -> Pipeline:
+    def __call__(self) -> Pipeline:
         """
         Set up a processing pipeline from parsed command-line arguments.
 
@@ -1110,7 +1120,9 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         adapters, adapters2 = adapters_from_args(args)
         log_adapters(adapters, adapters2 if paired else None)
 
-        pipeline = PipelineMaker(args, paired, adapters, adapters2).make()
+        make_pipeline = PipelineMaker(args, paired, adapters, adapters2)
+        # Create the pipeline once without running it to get errors early
+        make_pipeline()
         adapter_names: List[Optional[str]] = [a.name for a in adapters]
         adapter_names2: List[Optional[str]] = [a.name for a in adapters2]
         outfiles = open_output_files(
@@ -1119,12 +1131,12 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         inpaths = InputPaths(*input_paths, interleaved=is_interleaved_input)
         logger.info(
             "Processing %s reads on %d core%s ...",
-            {False: "single-end", True: "paired-end"}[pipeline.paired],
+            {False: "single-end", True: "paired-end"}[paired],
             cores,
             "s" if cores > 1 else "",
         )
         stats = run_pipeline(
-            pipeline, inpaths, outfiles, cores, progress, args.buffer_size
+            make_pipeline, inpaths, outfiles, cores, progress, args.buffer_size
         )
 
     except KeyboardInterrupt:
