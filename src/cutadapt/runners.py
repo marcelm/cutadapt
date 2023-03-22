@@ -168,7 +168,11 @@ class WorkerProcess(mpctx_Process):
                     logger.error("%s", tb_str)
                     raise e
 
-                infiles = self._make_input_files()
+                files = [
+                    io.BytesIO(self._read_pipe.recv_bytes())
+                    for _ in range(self._n_input_files)
+                ]
+                infiles = InputFiles(*files, interleaved=self._interleaved_input)
                 outfiles = self._original_outfiles.as_bytesio()
                 (n, bp1, bp2) = self._pipeline.process_reads(infiles, outfiles)
                 self._pipeline.flush()
@@ -187,12 +191,6 @@ class WorkerProcess(mpctx_Process):
         except Exception as e:
             self._write_pipe.send(-2)
             self._write_pipe.send((e, traceback.format_exc()))
-
-    def _make_input_files(self) -> InputFiles:
-        files = [
-            io.BytesIO(self._read_pipe.recv_bytes()) for _ in range(self._n_input_files)
-        ]
-        return InputFiles(*files, interleaved=self._interleaved_input)
 
     def _send_outfiles(self, outfiles: OutputFiles, chunk_index: int, n_reads: int):
         self._write_pipe.send(chunk_index)
