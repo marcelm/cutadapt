@@ -196,11 +196,8 @@ class WorkerProcess(mpctx_Process):
         infiles = InputFiles(*files, interleaved=self._interleaved_input)
         outfiles = self._original_outfiles.as_bytesio()
         pipeline = self._make_pipeline()
-        (n, bp1, bp2) = pipeline.process_reads(infiles, outfiles)
+        stats = pipeline.process_reads(infiles, outfiles)
         pipeline.flush()
-        m = pipeline._modifiers  # type: ignore
-        stats = Statistics()
-        stats.collect(n, bp1, bp2, m, pipeline._steps)
         output_chunks = []
         for f in outfiles:
             f.flush()
@@ -422,17 +419,12 @@ class SerialPipelineRunner(PipelineRunner):
 
     def run(self) -> Statistics:
         with closing(self._make_pipeline()) as pipeline:
-            (n, total1_bp, total2_bp) = pipeline.process_reads(
+            stats = pipeline.process_reads(
                 self._infiles, self._outfiles, progress=self._progress
             )
             if self._progress is not None:
                 self._progress.close()
-            # TODO
-            modifiers = getattr(pipeline, "_modifiers", None)
-            assert modifiers is not None
-            stats = Statistics().collect(
-                n, total1_bp, total2_bp, modifiers, pipeline._steps
-            )
+
         return stats
 
     def close(self):
