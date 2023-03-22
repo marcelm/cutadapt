@@ -20,22 +20,22 @@ Steps are added to the pipeline in a certain order:
 from abc import ABC, abstractmethod
 from typing import Tuple, Dict, Optional, Any
 
+from dnaio import SequenceRecord
+
 from .predicates import Predicate
 from .modifiers import ModificationInfo
 from .statistics import ReadLengthStatistics
 
-# Constants used when returning from a step’s __call__ method to improve
-# readability (it is unintuitive that "return True" means "discard the read").
-DISCARD = True
-KEEP = False
+RecordPair = Tuple[SequenceRecord, SequenceRecord]
 
 
 class SingleEndStep(ABC):
     @abstractmethod
-    def __call__(self, read, info: ModificationInfo) -> bool:
+    def __call__(self, read, info: ModificationInfo) -> Optional[SequenceRecord]:
         """
-        Process a single read. Return True if the read has been consumed
-        (and should thus not be passed on to subsequent steps).
+        Process a single read. Return the processed read or None to indicate that
+        the read has been consumed and should thus not be passed on to subsequent
+        steps.
         """
 
 
@@ -43,10 +43,11 @@ class PairedEndStep(ABC):
     @abstractmethod
     def __call__(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
-    ) -> bool:
+    ) -> Optional[RecordPair]:
         """
-        Process read pair (read1, read2). Return True if the read pair
-        has been consumed (and should thus not be passed on to subsequent steps).
+        Process (read1, read2). Return the processed read pair or None if
+        the read pair has been "consumed" (filtered or written to an output file)
+        and should thus not be passed on to subsequent steps.
         """
 
 
@@ -91,13 +92,13 @@ class SingleEndFilter(SingleEndStep, HasFilterStatistics):
     def filtered(self) -> int:
         return self._filtered
 
-    def __call__(self, read, info: ModificationInfo) -> bool:
+    def __call__(self, read, info: ModificationInfo) -> Optional[SequenceRecord]:
         if self._predicate.test(read, info):
             self._filtered += 1
             if self._writer is not None:
                 self._writer.write(read)
-            return DISCARD
-        return KEEP
+            return None
+        return read
 
 
 class PairedEndFilter(PairedEndStep, HasFilterStatistics):
@@ -180,13 +181,13 @@ class PairedEndFilter(PairedEndStep, HasFilterStatistics):
 
     def __call__(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
-    ) -> bool:
+    ) -> Optional[RecordPair]:
         if self._is_filtered(read1, read2, info1, info2):
             self._filtered += 1
             if self.writer is not None:
                 self.writer.write(read1, read2)
-            return DISCARD
-        return KEEP
+            return None
+        return (read1, read2)
 
 
 class RestFileWriter(SingleEndStep):
@@ -196,13 +197,13 @@ class RestFileWriter(SingleEndStep):
     def __repr__(self):
         return f"RestFileWriter(file={self._file})"
 
-    def __call__(self, read, info):
+    def __call__(self, read, info) -> Optional[SequenceRecord]:
         # TODO this fails with linked adapters
         if info.matches:
             rest = info.matches[-1].rest()
             if len(rest) > 0:
                 print(rest, read.name, file=self._file)
-        return KEEP
+        return read
 
 
 class WildcardFileWriter(SingleEndStep):
@@ -212,11 +213,11 @@ class WildcardFileWriter(SingleEndStep):
     def __repr__(self):
         return f"WildcardFileWriter(file={self._file})"
 
-    def __call__(self, read, info) -> bool:
+    def __call__(self, read, info) -> Optional[SequenceRecord]:
         # TODO this fails with linked adapters
         if info.matches:
             print(info.matches[-1].wildcards(), read.name, file=self._file)
-        return KEEP
+        return read
 
 
 class InfoFileWriter(SingleEndStep):
@@ -228,7 +229,7 @@ class InfoFileWriter(SingleEndStep):
     def __repr__(self):
         return f"InfoFileWriter(file={self._file})"
 
-    def __call__(self, read, info: ModificationInfo):
+    def __call__(self, read, info: ModificationInfo) -> Optional[SequenceRecord]:
         current_read = info.original_read
         if info.is_rc:
             current_read = current_read.reverse_complement()
@@ -249,7 +250,7 @@ class InfoFileWriter(SingleEndStep):
             qualities = read.qualities if read.qualities is not None else ""
             print(read.name, -1, seq, qualities, sep="\t", file=self._file)
 
-        return KEEP
+        return read
 
 
 class PairedSingleEndStep(PairedEndStep):
@@ -265,10 +266,13 @@ class PairedSingleEndStep(PairedEndStep):
     def __repr__(self):
         return f"PairedSingleEndStep(step={self._step})"
 
-    def __call__(self, read1, read2, info1, info2):
+    def __call__(self, read1, read2, info1, info2) -> Optional[RecordPair]:
         _ = read2  # intentionally ignored
         _ = info2
-        return self._step(read1, info1)
+        result = self._step(read1, info1)
+        if result is None:
+            return None
+        return (result, read2)
 
 
 # The following steps are used as final step in a pipeline.
@@ -290,10 +294,10 @@ class SingleEndSink(SingleEndStep, HasStatistics):
     def __repr__(self):
         return f"NoFilter({self.writer})"
 
-    def __call__(self, read, info: ModificationInfo) -> bool:
+    def __call__(self, read, info: ModificationInfo) -> Optional[SequenceRecord]:
         self.writer.write(read)
         self._statistics.update(read)
-        return DISCARD
+        return None
 
     def get_statistics(self) -> ReadLengthStatistics:
         return self._statistics
@@ -315,10 +319,10 @@ class PairedEndSink(PairedEndStep, HasStatistics):
 
     def __call__(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
-    ) -> bool:
+    ) -> Optional[RecordPair]:
         self.writer.write(read1, read2)
         self._statistics.update2(read1, read2)
-        return DISCARD
+        return None
 
     def get_statistics(self) -> ReadLengthStatistics:
         return self._statistics
@@ -345,7 +349,7 @@ class Demultiplexer(SingleEndStep, HasStatistics, HasFilterStatistics):
     def __repr__(self):
         return f"<Demultiplexer len(writers)={len(self._writers)}>"
 
-    def __call__(self, read, info):
+    def __call__(self, read, info) -> Optional[SequenceRecord]:
         """
         Write the read to the proper output file according to the most recent match
         """
@@ -358,7 +362,7 @@ class Demultiplexer(SingleEndStep, HasStatistics, HasFilterStatistics):
             self._untrimmed_writer.write(read)
         else:
             self._filtered += 1
-        return DISCARD
+        return None
 
     def descriptive_identifier(self) -> str:
         return "discard_untrimmed"
@@ -385,7 +389,7 @@ class PairedDemultiplexer(PairedEndStep, HasStatistics, HasFilterStatistics):
 
     def __call__(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
-    ) -> bool:
+    ) -> Optional[RecordPair]:
         assert read2 is not None
         if info1.matches:
             name = info1.matches[-1].adapter.name  # type: ignore
@@ -396,7 +400,7 @@ class PairedDemultiplexer(PairedEndStep, HasStatistics, HasFilterStatistics):
             self._untrimmed_writer.write(read1, read2)
         else:
             self._filtered += 1
-        return DISCARD
+        return None
 
     def descriptive_identifier(self) -> str:
         return "discard_untrimmed"
@@ -425,7 +429,7 @@ class CombinatorialDemultiplexer(PairedEndStep, HasStatistics):
         self._writers = writers
         self._statistics = ReadLengthStatistics()
 
-    def __call__(self, read1, read2, info1, info2) -> bool:
+    def __call__(self, read1, read2, info1, info2) -> Optional[RecordPair]:
         """
         Write the read to the proper output file according to the most recent matches both on
         R1 and R2
@@ -437,7 +441,7 @@ class CombinatorialDemultiplexer(PairedEndStep, HasStatistics):
         if key in self._writers:
             self._statistics.update2(read1, read2)
             self._writers[key].write(read1, read2)
-        return DISCARD
+        return None
 
     def get_statistics(self) -> ReadLengthStatistics:
         return self._statistics

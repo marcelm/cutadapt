@@ -44,9 +44,9 @@ def test_too_many_n_paired(seq1, seq2, count, expected):
     filter_any = PairedEndFilter(predicate, predicate, None, pair_filter_mode="any")
     read1 = Sequence("read1", seq1, qualities="#" * len(seq1))
     read2 = Sequence("read1", seq2, qualities="#" * len(seq2))
-    assert filter_legacy(read1, read2, [], []) == predicate.test(read1, [])
+    assert (filter_legacy(read1, read2, [], []) is None) == predicate.test(read1, [])
     # True entire pair if one of the reads fulfills criteria
-    assert filter_any(read1, read2, [], []) == expected
+    assert (filter_any(read1, read2, [], []) is None) == expected
 
 
 def test_invalid_pair_filter_mode():

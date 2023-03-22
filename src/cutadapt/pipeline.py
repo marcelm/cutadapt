@@ -371,7 +371,8 @@ class SingleEndPipeline(Pipeline):
             for modifier in self._modifiers:
                 read = modifier(read, info)
             for filter_ in self._steps:
-                if filter_(read, info):
+                read = filter_(read, info)
+                if read is None:
                     break
         if progress is not None:
             progress.update(n % 10000)
@@ -488,19 +489,20 @@ class PairedEndPipeline(Pipeline):
         total1_bp = 0
         total2_bp = 0
         assert self._reader is not None
-        for read1, read2 in self._reader:
+        for reads in self._reader:
             n += 1
             if n % 10000 == 0 and progress is not None:
                 progress.update(10000)
+            read1, read2 = reads
             total1_bp += len(read1)
             total2_bp += len(read2)
             info1 = ModificationInfo(read1)
             info2 = ModificationInfo(read2)
             for modifier in self._modifiers:
-                read1, read2 = modifier(read1, read2, info1, info2)
+                reads = modifier(*reads, info1, info2)  # type: ignore
             for filter_ in self._steps:
-                # Stop writing as soon as one of the filters was successful.
-                if filter_(read1, read2, info1, info2):
+                reads = filter_(*reads, info1, info2)
+                if reads is None:
                     break
         if progress is not None:
             progress.update(n % 10000)
