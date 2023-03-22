@@ -92,10 +92,10 @@ from cutadapt.modifiers import (
 )
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import (
-    Pipeline,
     SingleEndPipeline,
     PairedEndPipeline,
 )
+from cutadapt.runners import Pipeline, run_pipeline
 from cutadapt.files import InputPaths, OutputFiles, FileOpener
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress
 from cutadapt.log import setup_logging, REPORT
@@ -1105,7 +1105,9 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
             cores,
             "s" if cores > 1 else "",
         )
-        stats = pipeline.run(inpaths, outfiles, cores, progress, args.buffer_size)
+        stats = run_pipeline(
+            pipeline, inpaths, outfiles, cores, progress, args.buffer_size
+        )
 
     except KeyboardInterrupt:
         if args.debug:
