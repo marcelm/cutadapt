@@ -18,7 +18,7 @@ Steps are added to the pipeline in a certain order:
 """
 
 from abc import ABC, abstractmethod
-from typing import Tuple, Dict, Optional, Any
+from typing import Tuple, Dict, Optional, Any, TextIO
 
 from dnaio import SequenceRecord
 
@@ -191,7 +191,7 @@ class PairedEndFilter(PairedEndStep, HasFilterStatistics):
 
 
 class RestFileWriter(SingleEndStep):
-    def __init__(self, file):
+    def __init__(self, file: TextIO):
         self._file = file
 
     def __repr__(self):
@@ -207,7 +207,7 @@ class RestFileWriter(SingleEndStep):
 
 
 class WildcardFileWriter(SingleEndStep):
-    def __init__(self, file):
+    def __init__(self, file: TextIO):
         self._file = file
 
     def __repr__(self):
@@ -223,7 +223,7 @@ class WildcardFileWriter(SingleEndStep):
 class InfoFileWriter(SingleEndStep):
     RC_MAP = {None: "", True: "1", False: "0"}
 
-    def __init__(self, file):
+    def __init__(self, file: TextIO):
         self._file = file
 
     def __repr__(self):
