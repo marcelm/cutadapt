@@ -101,12 +101,9 @@ from cutadapt.modifiers import (
     InvalidTemplate,
 )
 from cutadapt.report import full_report, minimal_report, Statistics
-from cutadapt.pipeline import (
-    SingleEndPipeline,
-    PairedEndPipeline,
-)
+from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
 from cutadapt.runners import Pipeline, run_pipeline
-from cutadapt.files import InputPaths, OutputFiles, FileOpener
+from cutadapt.files import InputPaths, OutputFiles, FileOpener, OutputPaths
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress
 from cutadapt.log import setup_logging, REPORT
 from cutadapt.qualtrim import HasNoQualities
@@ -469,9 +466,13 @@ def open_output_files(
             args.paired_output,
         ]
     )
-    rest_file = file_opener.xopen_or_none(args.rest_file, "wb")
-    info_file = file_opener.xopen_or_none(args.info_file, "wb")
-    wildcard = file_opener.xopen_or_none(args.wildcard_file, "wb")
+    paths = OutputPaths(opener=file_opener.xopen)
+    if args.info_file:
+        paths.register(args.info_file)
+    if args.rest_file:
+        paths.register(args.rest_file)
+    if args.wildcard_file:
+        paths.register(args.wildcard_file)
 
     too_short = too_short2 = None
     if args.minimum_length is not None:
@@ -550,10 +551,11 @@ def open_output_files(
         if out is None:
             out = default_outfile
 
+    outputs = paths.open()
     return OutputFiles(
-        rest=rest_file,
-        info=info_file,
-        wildcard=wildcard,
+        rest=outputs.get(args.rest_file),
+        info=outputs.get(args.info_file),
+        wildcard=outputs.get(args.wildcard_file),
         too_short=too_short,
         too_short2=too_short2,
         too_long=too_long,

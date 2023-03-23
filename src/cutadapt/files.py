@@ -1,7 +1,8 @@
+import contextlib
 import errno
 import io
 import sys
-from typing import BinaryIO, Optional, Dict, Tuple
+from typing import BinaryIO, Optional, Dict, Tuple, List, Callable
 
 import dnaio
 from xopen import xopen
@@ -248,3 +249,41 @@ class OutputFiles:
             if f is sys.stdout or f is sys.stdout.buffer:
                 continue
             f.close()
+
+
+class OpenedOutputs:
+    def __init__(self, files: Dict[str, BinaryIO], closefunc):
+        self._close = closefunc
+        self._files = files
+
+    def get(self, path: str) -> Optional[BinaryIO]:
+        return self._files.get(path)
+
+    def __close__(self):
+        self._close()
+
+
+class OutputPaths:
+    """
+    The paths of all the output files a pipeline produces.
+    """
+
+    def __init__(self, opener: Callable[[str, str], BinaryIO]):
+        self._paths: List[str] = []
+        self._opener = opener
+
+    def register(self, path: str):
+        self._paths.append(path)
+
+    def open(self) -> OpenedOutputs:
+        return self._open(opener=self._opener)
+
+    def open_bytesio(self) -> OpenedOutputs:
+        return self._open(opener=lambda path, mode: io.BytesIO())
+
+    def _open(self, opener: Callable[[str, str], BinaryIO]) -> OpenedOutputs:
+        with contextlib.ExitStack() as stack:
+            files = {
+                path: stack.enter_context(opener(path, "wb")) for path in self._paths
+            }
+            return OpenedOutputs(files, stack.pop_all().close)
