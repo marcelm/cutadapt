@@ -47,6 +47,7 @@ from .steps import (
     RestFileWriter,
     InfoFileWriter,
     WildcardFileWriter,
+    PairedEndStep,
 )
 
 logger = logging.getLogger()
@@ -99,7 +100,6 @@ class Pipeline(ABC):
         filter_settings: FilterSettings,
     ) -> None:
         self._reader: Any = None
-        self._steps: List[Any] = []
         self._infiles = infiles
         self._outfiles = outfiles
         self._demultiplexer = None
@@ -129,8 +129,10 @@ class Pipeline(ABC):
             interleaved=interleaved,
         )
 
-    def _set_output(self, outfiles: OutputFiles) -> None:  # noqa: C901
-        self._steps = []
+    def _get_steps(  # noqa: C901
+        self, outfiles: OutputFiles
+    ) -> List[Union[SingleEndStep, PairedEndStep]]:
+        steps = []
         self._textiowrappers = []
         settings = self._filter_settings
 
@@ -142,9 +144,7 @@ class Pipeline(ABC):
             if outfile:
                 textiowrapper = io.TextIOWrapper(outfile)
                 self._textiowrappers.append(textiowrapper)
-                self._steps.append(
-                    self._wrap_single_end_step(step_class(textiowrapper))
-                )
+                steps.append(self._wrap_single_end_step(step_class(textiowrapper)))
 
         files: List[Optional[BinaryIO]]
 
@@ -167,13 +167,11 @@ class Pipeline(ABC):
                 f2 = predicate_class(lengths[1])
             else:
                 f2 = None
-            self._steps.append(
-                self._make_filter(predicate1=f1, predicate2=f2, writer=writer)
-            )
+            steps.append(self._make_filter(predicate1=f1, predicate2=f2, writer=writer))
 
         if settings.max_n is not None:
             f1 = f2 = TooManyN(settings.max_n)
-            self._steps.append(self._make_filter(f1, f2, None))
+            steps.append(self._make_filter(f1, f2, None))
 
         if settings.max_expected_errors is not None:
             if not self._reader.delivers_qualities:
@@ -182,11 +180,11 @@ class Pipeline(ABC):
                 )
             else:
                 f1 = f2 = TooManyExpectedErrors(settings.max_expected_errors)
-                self._steps.append(self._make_filter(f1, f2, None))
+                steps.append(self._make_filter(f1, f2, None))
 
         if settings.discard_casava:
             f1 = f2 = CasavaFiltered()
-            self._steps.append(self._make_filter(f1, f2, None))
+            steps.append(self._make_filter(f1, f2, None))
 
         if (
             int(settings.discard_trimmed)
@@ -204,7 +202,7 @@ class Pipeline(ABC):
             or outfiles.combinatorial_out is not None
         ):
             self._demultiplexer = self._create_demultiplexer(outfiles)
-            self._steps.append(self._demultiplexer)
+            steps.append(self._demultiplexer)
         else:
             # Some special handling to allow overriding the wrapper for
             # --discard-untrimmed/--untrimmed-(paired-)output
@@ -213,21 +211,22 @@ class Pipeline(ABC):
             # --discard-untrimmed and --untrimmed-output. These options
             # are mutually exclusive in order to avoid brain damage.
             if settings.discard_trimmed:
-                self._steps.append(
+                steps.append(
                     self._make_filter(DiscardTrimmed(), DiscardTrimmed(), None)
                 )
             elif settings.discard_untrimmed:
-                self._steps.append(self._make_untrimmed_filter(None))
+                steps.append(self._make_untrimmed_filter(None))
             elif outfiles.untrimmed:
                 files = [outfiles.untrimmed]
                 if self.paired:
                     files += [outfiles.untrimmed2]
                 untrimmed_writer = self._open_writer(*files)
-                self._steps.append(self._make_untrimmed_filter(untrimmed_writer))
+                steps.append(self._make_untrimmed_filter(untrimmed_writer))
 
-            self._steps.append(self._final_filter(outfiles))
-        for i, step in enumerate(self._steps, 1):
+            steps.append(self._final_filter(outfiles))
+        for i, step in enumerate(steps, 1):
             logger.debug("Pipeline step %d: %s", i, step)
+        return steps
 
     def flush(self) -> None:
         for f in self._textiowrappers:
@@ -307,7 +306,7 @@ class SingleEndPipeline(Pipeline):
         super().__init__(infiles, outfiles, filter_settings)
         self._modifiers: List[SingleEndModifier] = modifiers
         self._reader = self._infiles.open()
-        self._set_output(self._outfiles)
+        self._steps = self._get_steps(self._outfiles)
 
     def process_reads(self, progress: Optional[Progress] = None) -> Statistics:
         """Run the pipeline. Return statistics"""
@@ -386,7 +385,7 @@ class PairedEndPipeline(Pipeline):
         self._pair_filter_mode = pair_filter_mode
         self._add_modifiers(modifiers)
         self._reader = self._infiles.open()
-        self._set_output(self._outfiles)
+        self._steps = self._get_steps(self._outfiles)
 
     def _add_modifiers(self, modifiers):
         for modifier in modifiers:
