@@ -52,22 +52,8 @@ from .steps import (
 logger = logging.getLogger()
 
 
-class Pipeline(ABC):
-    """
-    Processing pipeline that loops over reads and applies modifiers and filters
-    """
-
-    n_adapters = 0
-    paired = False
-
-    def __init__(self) -> None:
-        self._reader: Any = None
-        self._steps: List[Any] = []
-        self._infiles: Optional[InputFiles] = None
-        self._outfiles: Optional[OutputFiles] = None
-        self._demultiplexer = None
-        self._textiowrappers: List[TextIO] = []
-
+class FilterSettings:
+    def __init__(self):
         # Filter settings
         self._minimum_length = None
         self._maximum_length = None
@@ -76,6 +62,49 @@ class Pipeline(ABC):
         self.discard_casava = False
         self.discard_trimmed = False
         self.discard_untrimmed = False
+        # Whether to ignore pair_filter mode for discard-untrimmed filter
+        self.override_untrimmed_pair_filter = False
+
+    @property
+    def minimum_length(self):
+        return self._minimum_length
+
+    @minimum_length.setter
+    def minimum_length(self, value):
+        assert value is None or len(value) in {1, 2}
+        self._minimum_length = value
+
+    @property
+    def maximum_length(self):
+        return self._maximum_length
+
+    @maximum_length.setter
+    def maximum_length(self, value):
+        assert value is None or len(value) in {1, 2}
+        self._maximum_length = value
+
+
+class Pipeline(ABC):
+    """
+    Processing pipeline that loops over reads and applies modifiers and filters
+    """
+
+    n_adapters = 0
+    paired = False
+
+    def __init__(
+        self,
+        infiles: InputFiles,
+        outfiles: OutputFiles,
+        filter_settings: FilterSettings,
+    ) -> None:
+        self._reader: Any = None
+        self._steps: List[Any] = []
+        self._infiles = infiles
+        self._outfiles = outfiles
+        self._demultiplexer = None
+        self._textiowrappers: List[TextIO] = []
+        self._filter_settings = filter_settings
 
     def _open_writer(
         self,
@@ -103,7 +132,7 @@ class Pipeline(ABC):
     def _set_output(self, outfiles: OutputFiles) -> None:  # noqa: C901
         self._steps = []
         self._textiowrappers = []
-        self._outfiles = outfiles
+        settings = self._filter_settings
 
         for step_class, outfile in (
             (RestFileWriter, outfiles.rest),
@@ -121,8 +150,13 @@ class Pipeline(ABC):
 
         # minimum length and maximum length
         for lengths, file1, file2, predicate_class in (
-            (self._minimum_length, outfiles.too_short, outfiles.too_short2, TooShort),
-            (self._maximum_length, outfiles.too_long, outfiles.too_long2, TooLong),
+            (
+                settings.minimum_length,
+                outfiles.too_short,
+                outfiles.too_short2,
+                TooShort,
+            ),
+            (settings.maximum_length, outfiles.too_long, outfiles.too_long2, TooLong),
         ):
             if lengths is None:
                 continue
@@ -137,26 +171,26 @@ class Pipeline(ABC):
                 self._make_filter(predicate1=f1, predicate2=f2, writer=writer)
             )
 
-        if self.max_n is not None:
-            f1 = f2 = TooManyN(self.max_n)
+        if settings.max_n is not None:
+            f1 = f2 = TooManyN(settings.max_n)
             self._steps.append(self._make_filter(f1, f2, None))
 
-        if self.max_expected_errors is not None:
+        if settings.max_expected_errors is not None:
             if not self._reader.delivers_qualities:
                 logger.warning(
                     "Ignoring option --max-ee because input does not contain quality values"
                 )
             else:
-                f1 = f2 = TooManyExpectedErrors(self.max_expected_errors)
+                f1 = f2 = TooManyExpectedErrors(settings.max_expected_errors)
                 self._steps.append(self._make_filter(f1, f2, None))
 
-        if self.discard_casava:
+        if settings.discard_casava:
             f1 = f2 = CasavaFiltered()
             self._steps.append(self._make_filter(f1, f2, None))
 
         if (
-            int(self.discard_trimmed)
-            + int(self.discard_untrimmed)
+            int(settings.discard_trimmed)
+            + int(settings.discard_untrimmed)
             + int(outfiles.untrimmed is not None)
             > 1
         ):
@@ -178,11 +212,11 @@ class Pipeline(ABC):
             # Set up the remaining filters to deal with --discard-trimmed,
             # --discard-untrimmed and --untrimmed-output. These options
             # are mutually exclusive in order to avoid brain damage.
-            if self.discard_trimmed:
+            if settings.discard_trimmed:
                 self._steps.append(
                     self._make_filter(DiscardTrimmed(), DiscardTrimmed(), None)
                 )
-            elif self.discard_untrimmed:
+            elif settings.discard_untrimmed:
                 self._steps.append(self._make_untrimmed_filter(None))
             elif outfiles.untrimmed:
                 files = [outfiles.untrimmed]
@@ -209,9 +243,6 @@ class Pipeline(ABC):
         self.close()
 
     def close(self) -> None:
-        # TODO
-        # closing is not symmetric, should only be done after a connect_io
-        # introduce a ConnectedPipeline?
         self._close_input()
         self._close_output()
 
@@ -235,12 +266,7 @@ class Pipeline(ABC):
         return self._reader.delivers_qualities
 
     @abstractmethod
-    def process_reads(
-        self,
-        infiles: InputFiles,
-        outfiles: OutputFiles,
-        progress: Optional[Progress] = None,
-    ) -> Statistics:
+    def process_reads(self, progress: Optional[Progress] = None) -> Statistics:
         pass
 
     @abstractmethod
@@ -271,20 +297,20 @@ class SingleEndPipeline(Pipeline):
     Processing pipeline for single-end reads
     """
 
-    def __init__(self, modifiers: List[SingleEndModifier]):
-        super().__init__()
-        self._modifiers: List[SingleEndModifier] = modifiers
-
-    def process_reads(
+    def __init__(
         self,
         infiles: InputFiles,
         outfiles: OutputFiles,
-        progress: Optional[Progress] = None,
-    ) -> Statistics:
+        modifiers: List[SingleEndModifier],
+        filter_settings: FilterSettings,
+    ):
+        super().__init__(infiles, outfiles, filter_settings)
+        self._modifiers: List[SingleEndModifier] = modifiers
+        self._reader = self._infiles.open()
+        self._set_output(self._outfiles)
+
+    def process_reads(self, progress: Optional[Progress] = None) -> Statistics:
         """Run the pipeline. Return statistics"""
-        self._infiles = infiles
-        self._reader = infiles.open()
-        self._set_output(outfiles)
         n = 0  # no. of processed reads
         total_bp = 0
         for read in self._reader:
@@ -334,24 +360,6 @@ class SingleEndPipeline(Pipeline):
     def _wrap_single_end_step(self, step: SingleEndStep):
         return step
 
-    @property
-    def minimum_length(self):
-        return self._minimum_length
-
-    @minimum_length.setter
-    def minimum_length(self, value):
-        assert value is None or len(value) == 1
-        self._minimum_length = value
-
-    @property
-    def maximum_length(self):
-        return self._maximum_length
-
-    @maximum_length.setter
-    def maximum_length(self, value):
-        assert value is None or len(value) == 1
-        self._maximum_length = value
-
 
 class PairedEndPipeline(Pipeline):
     """
@@ -362,21 +370,23 @@ class PairedEndPipeline(Pipeline):
 
     def __init__(
         self,
+        infiles: InputFiles,
+        outfiles: OutputFiles,
         modifiers: List[
             Union[
                 PairedEndModifier,
                 Tuple[Optional[SingleEndModifier], Optional[SingleEndModifier]],
             ]
         ],
+        filter_settings: FilterSettings,
         pair_filter_mode: str,
     ):
-        super().__init__()
+        super().__init__(infiles, outfiles, filter_settings)
         self._modifiers: List[PairedEndModifier] = []
         self._pair_filter_mode = pair_filter_mode
-        self._reader = None
-        # Whether to ignore pair_filter mode for discard-untrimmed filter
-        self.override_untrimmed_pair_filter = False
         self._add_modifiers(modifiers)
+        self._reader = self._infiles.open()
+        self._set_output(self._outfiles)
 
     def _add_modifiers(self, modifiers):
         for modifier in modifiers:
@@ -403,15 +413,7 @@ class PairedEndPipeline(Pipeline):
         """Add a Modifier (without wrapping it in a PairedEndModifierWrapper)"""
         self._modifiers.append(modifier)
 
-    def process_reads(
-        self,
-        infiles: InputFiles,
-        outfiles: OutputFiles,
-        progress: Optional[Progress] = None,
-    ) -> Statistics:
-        self._infiles = infiles
-        self._reader = infiles.open()
-        self._set_output(outfiles)
+    def process_reads(self, progress: Optional[Progress] = None) -> Statistics:
         n = 0  # no. of processed reads
         total1_bp = 0
         total2_bp = 0
@@ -462,7 +464,9 @@ class PairedEndPipeline(Pipeline):
             DiscardUntrimmed(),
             DiscardUntrimmed(),
             writer,
-            pair_filter_mode="both" if self.override_untrimmed_pair_filter else None,
+            pair_filter_mode="both"
+            if self._filter_settings.override_untrimmed_pair_filter
+            else None,
         )
 
     def _final_filter(self, outfiles):
@@ -493,21 +497,3 @@ class PairedEndPipeline(Pipeline):
 
     def _wrap_single_end_step(self, step: SingleEndStep):
         return PairedSingleEndStep(step)
-
-    @property
-    def minimum_length(self):
-        return self._minimum_length
-
-    @minimum_length.setter
-    def minimum_length(self, value):
-        assert value is None or len(value) == 2
-        self._minimum_length = value
-
-    @property
-    def maximum_length(self):
-        return self._maximum_length
-
-    @maximum_length.setter
-    def maximum_length(self, value):
-        assert value is None or len(value) == 2
-        self._maximum_length = value

@@ -10,6 +10,7 @@ import copy
 import json
 import os
 
+from cutadapt.files import InputFiles
 from cutadapt.runners import run_pipeline
 from utils import datapath
 
@@ -55,11 +56,13 @@ def test_pipeline_single(tmp_path):
         AdapterCutter([adapter]),
     ]
 
-    def make_pipeline(outfiles: OutputFiles):
-        pipeline = SingleEndPipeline(modifiers)
-        pipeline.minimum_length = (10,)
-        pipeline.discard_untrimmed = True
-        return pipeline
+    def make_pipeline(infiles: InputFiles, outfiles: OutputFiles):
+        from cutadapt.pipeline import FilterSettings
+
+        filter_settings = FilterSettings()
+        filter_settings.minimum_length = (10,)
+        filter_settings.discard_untrimmed = True
+        return SingleEndPipeline(infiles, outfiles, modifiers, filter_settings)
 
     inpaths = InputPaths(datapath("small.fastq"))
     info_file = file_opener.xopen_or_none(tmp_path / "info.txt", "wb")
@@ -78,7 +81,7 @@ def test_pipeline_paired(tmp_path):
     #   --discard-untrimmed --info-file=info.txt
     #   -o ... -p ...
     #   paired.1.fastq paired.2.fastq
-    from cutadapt.pipeline import PairedEndPipeline
+    from cutadapt.pipeline import PairedEndPipeline, FilterSettings
     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
     from cutadapt.adapters import BackAdapter
     from cutadapt.files import OutputFiles, InputPaths, FileOpener
@@ -95,11 +98,11 @@ def test_pipeline_paired(tmp_path):
         (AdapterCutter([adapter]), None),
     ]
 
-    def make_pipeline(outfiles: OutputFiles):
-        pipeline = PairedEndPipeline(modifiers, "any")
-        pipeline.minimum_length = (10, None)
-        pipeline.discard_untrimmed = True
-        return pipeline
+    def make_pipeline(infiles: InputFiles, outfiles: OutputFiles):
+        filter_settings = FilterSettings()
+        filter_settings.minimum_length = (10, None)
+        filter_settings.discard_untrimmed = True
+        return PairedEndPipeline(infiles, outfiles, modifiers, filter_settings, "any")
 
     file_opener = FileOpener()
     inpaths = InputPaths(datapath("paired.1.fastq"), datapath("paired.2.fastq"))

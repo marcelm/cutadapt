@@ -101,9 +101,9 @@ from cutadapt.modifiers import (
     InvalidTemplate,
 )
 from cutadapt.report import full_report, minimal_report, Statistics
-from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
+from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline, FilterSettings
 from cutadapt.runners import Pipeline, run_pipeline
-from cutadapt.files import InputPaths, OutputFiles, FileOpener, OutputPaths
+from cutadapt.files import InputPaths, OutputFiles, FileOpener, OutputPaths, InputFiles
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress
 from cutadapt.log import setup_logging, REPORT
 from cutadapt.qualtrim import HasNoQualities
@@ -814,13 +814,13 @@ class PipelineMaker:
         self.adapters = adapters
         self.adapters2 = adapters2
 
-    def __call__(self, outfiles: OutputFiles) -> Pipeline:
+    def __call__(self, infiles: InputFiles, outfiles: OutputFiles) -> Pipeline:
         """
         Set up a processing pipeline from parsed command-line arguments.
 
         If there are any problems parsing the arguments, a CommandLineError is raised.
 
-        Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
+        Return a SingleEndPipeline or PairedEndPipeline
         """
         modifiers = []
         modifiers.extend(
@@ -880,18 +880,12 @@ class PipelineMaker:
                 raise CommandLineError(e)
 
         # Create the processing pipeline
-        if self.paired:
-            pair_filter_mode = (
-                "any" if self.args.pair_filter is None else self.args.pair_filter
-            )
-            pipeline = PairedEndPipeline(modifiers, pair_filter_mode)  # type: Any
-        else:
-            pipeline = SingleEndPipeline(modifiers)
+        filter_settings = FilterSettings()
 
         # When adapters are being trimmed only in R1 or R2, override the pair filter mode
         # as using the default of 'any' would regard all read pairs as untrimmed.
         if (
-            isinstance(pipeline, PairedEndPipeline)
+            self.paired
             and (not self.adapters2 or not self.adapters)
             and (
                 self.args.discard_untrimmed
@@ -899,7 +893,7 @@ class PipelineMaker:
                 or self.args.untrimmed_paired_output
             )
         ):
-            pipeline.override_untrimmed_pair_filter = True
+            filter_settings.override_untrimmed_pair_filter = True
 
         # Set filtering parameters
         # Minimum/maximum length
@@ -913,12 +907,22 @@ class PipelineMaker:
                     )
                 if self.paired and len(lengths) == 1:
                     lengths = (lengths[0], lengths[0])
-                setattr(pipeline, attr, lengths)
-        pipeline.max_n = self.args.max_n
-        pipeline.max_expected_errors = self.args.max_expected_errors
-        pipeline.discard_casava = self.args.discard_casava
-        pipeline.discard_trimmed = self.args.discard_trimmed
-        pipeline.discard_untrimmed = self.args.discard_untrimmed
+                setattr(filter_settings, attr, lengths)
+        filter_settings.max_n = self.args.max_n
+        filter_settings.max_expected_errors = self.args.max_expected_errors
+        filter_settings.discard_casava = self.args.discard_casava
+        filter_settings.discard_trimmed = self.args.discard_trimmed
+        filter_settings.discard_untrimmed = self.args.discard_untrimmed
+
+        if self.paired:
+            pair_filter_mode = (
+                "any" if self.args.pair_filter is None else self.args.pair_filter
+            )
+            pipeline = PairedEndPipeline(
+                infiles, outfiles, modifiers, filter_settings, pair_filter_mode
+            )  # type: Any
+        else:
+            pipeline = SingleEndPipeline(infiles, outfiles, modifiers, filter_settings)
 
         return pipeline
 
@@ -1132,10 +1136,11 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         with open_output_files(
             args, default_outfile, file_opener, adapter_names, adapter_names2
         ) as outfiles:
+            # TODO
             # Create the pipeline once without running it to get errors early
-            with outfiles.as_bytesio() as bytesio_outfiles:
-                with make_pipeline(bytesio_outfiles):
-                    pass
+            # with outfiles.as_bytesio() as bytesio_outfiles:
+            #     with make_pipeline(bytesio_outfiles):
+            #         pass
 
             logger.info(
                 "Processing %s reads on %d core%s ...",

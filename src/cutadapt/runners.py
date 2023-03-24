@@ -195,8 +195,8 @@ class WorkerProcess(mpctx_Process):
         files = [io.BytesIO(chunk) for chunk in input_chunks]
         infiles = InputFiles(*files, interleaved=self._interleaved_input)
         outfiles = self._original_outfiles.as_bytesio()
-        pipeline = self._make_pipeline(outfiles)
-        stats = pipeline.process_reads(infiles, outfiles)
+        pipeline = self._make_pipeline(infiles, outfiles)
+        stats = pipeline.process_reads()
         pipeline.flush()
         output_chunks = []
         for f in outfiles:
@@ -244,7 +244,9 @@ class PipelineRunner(ABC):
     """
 
     def __init__(
-        self, make_pipeline: Callable[[OutputFiles], Pipeline], progress: Progress
+        self,
+        make_pipeline: Callable[[InputFiles, OutputFiles], Pipeline],
+        progress: Progress,
     ):
         self._make_pipeline = make_pipeline
         self._progress = progress
@@ -289,7 +291,7 @@ class ParallelPipelineRunner(PipelineRunner):
 
     def __init__(
         self,
-        make_pipeline: Callable[[OutputFiles], Pipeline],
+        make_pipeline: Callable[[InputFiles, OutputFiles], Pipeline],
         inpaths: InputPaths,
         outfiles: OutputFiles,
         progress: Progress,
@@ -410,7 +412,7 @@ class SerialPipelineRunner(PipelineRunner):
 
     def __init__(
         self,
-        make_pipeline: Callable[[OutputFiles], Pipeline],
+        make_pipeline: Callable[[InputFiles, OutputFiles], Pipeline],
         inpaths: InputPaths,
         outfiles: OutputFiles,
         progress: Progress,
@@ -420,10 +422,8 @@ class SerialPipelineRunner(PipelineRunner):
         self._outfiles = outfiles
 
     def run(self) -> Statistics:
-        with self._make_pipeline(self._outfiles) as pipeline:
-            stats = pipeline.process_reads(
-                self._infiles, self._outfiles, progress=self._progress
-            )
+        with self._make_pipeline(self._infiles, self._outfiles) as pipeline:
+            stats = pipeline.process_reads(progress=self._progress)
         if self._progress is not None:
             self._progress.close()
 
@@ -434,7 +434,7 @@ class SerialPipelineRunner(PipelineRunner):
 
 
 def run_pipeline(
-    make_pipeline: Callable[[OutputFiles], Pipeline],
+    make_pipeline: Callable[[InputFiles, OutputFiles], Pipeline],
     inpaths: InputPaths,
     outfiles: OutputFiles,
     cores: int,
