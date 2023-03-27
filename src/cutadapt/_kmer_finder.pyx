@@ -97,6 +97,9 @@ cdef class KmerFinder:
         KmerSearchEntry *search_entries
         bitmask_t *search_masks
         size_t number_of_searches
+        size_t evaluated_reads
+        size_t reads_that_are_true
+        bint adapters_always_present
         readonly object positions_and_kmers
         readonly bint ref_wildcards
         readonly bint query_wildcards
@@ -120,6 +123,9 @@ cdef class KmerFinder:
         # The maximum length of a word. Since word_length + 1 bits are needed to search.
         cdef ssize_t max_word_length = max_total_length - 1
         match_lookup = matches_lookup(ref_wildcards, query_wildcards)
+        self.evaluated_reads = 0
+        self.reads_that_are_true = 0
+        self.adapters_always_present = False
         for (start, stop, kmers) in positions_and_kmers:
             index = 0 
             while index < len(kmers):
@@ -183,6 +189,14 @@ cdef class KmerFinder:
             ssize_t search_length
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
             raise ValueError("Only ASCII strings are supported")
+
+        # Logic to prevent running the search in the case of amplicon data
+        if self.evaluated_reads == 100_000:
+            if self.reads_that_are_true == 100_000:
+                self.adapters_always_present = True
+        if self.adapters_always_present:
+            return True
+
         cdef const char *seq = <char *>PyUnicode_DATA(sequence)
         cdef Py_ssize_t seq_length = PyUnicode_GET_LENGTH(sequence)
         for i in range(self.number_of_searches):
@@ -211,7 +225,10 @@ cdef class KmerFinder:
             search_result = shift_or_multiple_is_present(
                 search_ptr, search_length, mask_ptr, zero_mask, found_mask)
             if search_result:
+                self.evaluated_reads += 1
+                self.reads_that_are_true += 1
                 return True
+        self.evaluated_reads += 1
         return False
 
     def __dealloc__(self):
