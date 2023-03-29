@@ -1089,8 +1089,11 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         stats = pipeline.run(inpaths, outfiles, cores, progress, args.buffer_size)
 
     except KeyboardInterrupt:
-        print("Interrupted", file=sys.stderr)
-        sys.exit(130)
+        if args.debug:
+            raise
+        else:
+            print("Interrupted", file=sys.stderr)
+            sys.exit(130)
     except BrokenPipeError:
         sys.exit(1)
     except (
