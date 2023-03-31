@@ -398,6 +398,8 @@ cdef class Aligner:
             int cur_effective_length
             int last_filled_i = 0
             int best_length
+            int origin_increment = 1 if self.start_in_query else 0
+            int insertion_cost_increment = self._insertion_cost if not self.start_in_query else 0
             bint characters_equal
             bint is_acceptable
             # We keep only a single column of the DP matrix in memory.
@@ -412,10 +414,8 @@ cdef class Aligner:
                 diag_entry = column[0]
 
                 # fill in first entry in this column
-                if self.start_in_query:
-                    column[0].origin = j
-                else:
-                    column[0].cost = j * self._insertion_cost
+                column[0].origin += origin_increment
+                column[0].cost += insertion_cost_increment
                 for i in range(1, last + 1):
                     if compare_ascii:
                         characters_equal = (s1[i-1] == s2[j-1])
