@@ -9,6 +9,7 @@ from enum import IntFlag
 from collections import defaultdict
 from typing import Optional, Tuple, Sequence, Dict, Any, List, Union
 from abc import ABC, abstractmethod
+import time
 
 from ._kmer_finder import KmerFinder
 from .align import (
@@ -1293,6 +1294,7 @@ class IndexedAdapters(Matchable, ABC):
         return True
 
     def _make_index(self) -> Tuple[List[int], "AdapterIndex"]:
+        start_time = time.time()
         logger.info("Building index of %s adapters ...", len(self._adapters))
         index: Dict[str, Tuple[SingleAdapter, int, int]] = dict()
         lengths = set()
@@ -1330,7 +1332,10 @@ class IndexedAdapters(Matchable, ABC):
                         else:
                             index[s] = (adapter, errors, matches)
                 lengths.add(n)
-        logger.info("Built an index containing %s strings.", len(index))
+        elapsed = time.time() - start_time
+        logger.info(
+            "Built an index containing %s strings in %.1f s.", len(index), elapsed
+        )
 
         return sorted(lengths, reverse=True), index
 
