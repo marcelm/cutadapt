@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Iterable
 
 class DPMatrix:
     m: int
@@ -40,3 +40,5 @@ class PrefixComparer:
     def locate(self, query: str) -> Optional[Tuple[int, int, int, int, int, int]]: ...
 
 class SuffixComparer(PrefixComparer): ...
+
+def hamming_sphere(s: str, k: int) -> Iterable[str]: ...

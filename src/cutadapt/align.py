@@ -12,7 +12,7 @@ __all__ = [
 from enum import IntFlag
 from typing import Iterator, Tuple
 
-from cutadapt._align import Aligner, PrefixComparer, SuffixComparer
+from cutadapt._align import Aligner, PrefixComparer, SuffixComparer, hamming_sphere
 
 
 class EndSkip(IntFlag):
@@ -52,59 +52,6 @@ def edit_distance(s: str, t: str) -> int:
             prev = costs[i]
             costs[i] = c
     return costs[-1]
-
-
-def hamming_sphere(s: str, k: int) -> Iterator[str]:
-    """
-    Yield all strings t for which the hamming distance between s and t is exactly k,
-    assuming the alphabet is A, C, G, T.
-    """
-    if k == 0:
-        yield s
-        return
-
-    n = len(s)
-
-    if k == 1:
-        for i in range(n):
-            prefix = s[:i]
-            c = s[i]
-            for ch in "ACGT":
-                if c == ch:
-                    continue
-                yield prefix + ch + s[i + 1 :]
-        return
-
-    if k == 2:
-        for i in range(n):
-            s_i = s[i]
-            for ch1 in "ACGT":
-                if ch1 == s_i:
-                    continue
-                prefix = s[:i] + ch1
-
-                for j in range(i + 1, n):
-                    s_j = s[j]
-                    prefix2 = prefix + s[i + 1 : j]
-                    for ch2 in "ACGT":
-                        if ch2 == s_j:
-                            continue
-                        yield prefix2 + ch2 + s[j + 1 :]
-        return
-
-    # Recursive solution for k > 2
-    # i is the first position that is varied
-    for i in range(n - k + 1):
-        prefix = s[:i]
-        c = s[i]
-        suffix = s[i + 1 :]
-        for ch in "ACGT":
-            if ch == c:
-                continue
-            for t in hamming_sphere(suffix, k - 1):
-                y = prefix + ch + t
-                assert len(y) == n
-                yield y
 
 
 def hamming_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:

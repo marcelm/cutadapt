@@ -1,13 +1,17 @@
 # cython: profile=False, emit_code_comments=False, language_level=3
+from cpython.ref cimport PyObject
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_GET_LENGTH
+from libc.string cimport memcpy
 
 from ._match_tables import _upper_table, _acgt_table, _iupac_table
 
 cdef extern from "Python.h":
+    unsigned char * PyUnicode_1BYTE_DATA(object o)
     void * PyUnicode_DATA(object o)
     bint PyUnicode_IS_COMPACT_ASCII(object o)
+    object PyUnicode_New(Py_ssize_t size, Py_UCS4 maxchar)
 
 DEF MATCH_SCORE = +1
 DEF MISMATCH_SCORE = -1
@@ -689,3 +693,71 @@ cdef class SuffixComparer(PrefixComparer):
             return None
         _, length, _, _, score, errors = result
         return (self.m - length, self.m, n - length, n, score, errors)
+
+
+def hamming_sphere(str s, int k):
+    """
+    Yield all strings t for which the hamming distance between s and t is exactly k,
+    assuming the alphabet is A, C, G, T.
+    """
+    if k == 0:
+        yield s
+        return
+
+    if not PyUnicode_IS_COMPACT_ASCII(s):
+        raise ValueError("String must contain only ASCII characters")
+
+    cdef:
+        Py_ssize_t n = PyUnicode_GET_LENGTH(s)
+        unsigned char* s_ptr = <unsigned char*>PyUnicode_DATA(s)
+        Py_ssize_t i, j
+        #str prefix, prefix2
+        unsigned char ch, ch1, ch2
+        unsigned char* result_ptr
+
+    if k == 1:
+        for i in range(n):
+            for ch in "ACGT":
+                if s_ptr[i] == ch:
+                    continue
+                result = PyUnicode_New(n, 255)
+                if <PyObject*>result == NULL:
+                    raise MemoryError()
+                result_ptr = <unsigned char*>PyUnicode_1BYTE_DATA(result)
+                memcpy(result_ptr, s_ptr, n)
+                result_ptr[i] = ch
+                yield result
+        return
+
+    if k == 2:
+        for i in range(n):
+            for ch1 in "ACGT":
+                if s_ptr[i] == ch1:
+                    continue
+
+                for j in range(i + 1, n):
+                    for ch2 in "ACGT":
+                        if s[j] == ch2:
+                            continue
+
+                        result = PyUnicode_New(n, 255)
+                        if <PyObject*>result == NULL:
+                            raise MemoryError()
+                        result_ptr = <unsigned char*>PyUnicode_1BYTE_DATA(result)
+                        memcpy(result_ptr, s_ptr, n)
+                        result_ptr[i] = ch1
+                        result_ptr[j] = ch2
+                        yield result
+        return
+
+    # Recursive solution for k > 2
+    # i is the first position that is varied
+    for i in range(n - k + 1):
+        prefix = s[:i]
+        c = s[i]
+        suffix = s[i + 1 :]
+        for pch in "ACGT":
+            if pch == c:
+                continue
+            for t in hamming_sphere(suffix, k - 1):
+                yield prefix + pch + t
