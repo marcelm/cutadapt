@@ -59,12 +59,40 @@ def hamming_sphere(s: str, k: int) -> Iterator[str]:
     Yield all strings t for which the hamming distance between s and t is exactly k,
     assuming the alphabet is A, C, G, T.
     """
-    assert k >= 0
     if k == 0:
         yield s
         return
+
     n = len(s)
 
+    if k == 1:
+        for i in range(n):
+            prefix = s[:i]
+            c = s[i]
+            for ch in "ACGT":
+                if c == ch:
+                    continue
+                yield prefix + ch + s[i + 1 :]
+        return
+
+    if k == 2:
+        for i in range(n):
+            s_i = s[i]
+            for ch1 in "ACGT":
+                if ch1 == s_i:
+                    continue
+                prefix = s[:i] + ch1
+
+                for j in range(i + 1, n):
+                    s_j = s[j]
+                    prefix2 = prefix + s[i + 1 : j]
+                    for ch2 in "ACGT":
+                        if ch2 == s_j:
+                            continue
+                        yield prefix2 + ch2 + s[j + 1 :]
+        return
+
+    # Recursive solution for k > 2
     # i is the first position that is varied
     for i in range(n - k + 1):
         prefix = s[:i]
