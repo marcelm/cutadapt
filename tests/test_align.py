@@ -12,6 +12,7 @@ from cutadapt.align import (
     edit_distance,
     naive_edit_environment,
     slow_edit_environment,
+    matrix_edit_environment,
 )
 from cutadapt.adapters import Where
 
@@ -468,7 +469,10 @@ def test_hamming_sphere(sk):
         (3, "TCATTA"),
     ],
 )
-@pytest.mark.parametrize("environment_func", [edit_environment, slow_edit_environment])
+@pytest.mark.parametrize(
+    "environment_func",
+    [edit_environment, slow_edit_environment, matrix_edit_environment],
+)
 def test_edit_environment(k, s, environment_func):
     result = list(environment_func(s, k))
     strings, distances, matches = zip(*result)

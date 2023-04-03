@@ -10,7 +10,7 @@ __all__ = [
 ]
 
 from enum import IntFlag
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple, List
 
 from cutadapt._align import Aligner, PrefixComparer, SuffixComparer, hamming_sphere
 
@@ -174,3 +174,61 @@ def slow_edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
                 next_costs[j] = c
                 next_matches[j] = m
             work_stack.append((t + ch, next_costs, next_matches))
+
+
+def matrix_edit_environment(t: str, k: int) -> Iterator[Tuple[str, int, int]]:
+    """
+    Find all strings s for which the edit distance between s and t is at most k,
+    assuming the alphabet is A, C, G, T.
+
+    Yield tuples (s, e, m), where e is the edit distance between s and t and
+    m is the number of matches in the optimal alignment.
+    """
+    # len(s) = m, indexed by i
+    # len(t) = n, indexed by j
+    n = len(t)
+
+    costs: List[List[int]] = [list(range(n + 1))] + [
+        [0] * (n + 1) for _ in range(n + k)
+    ]
+    matches: List[List[int]] = [[0] * (n + 1) for _ in range(n + k + 1)]
+
+    for x in range(n + k + 1):
+        costs[x][0] = x
+
+    def visit(s: str):
+        i = len(s)
+
+        assert 0 <= i < (len(s) + 1)
+
+        # Fill in row i (unless it is row 0, which is already filled in)
+        if i > 0:
+            ch = s[-1]
+            for j in range(1, n + 1):
+                match = 0 if t[j - 1] == ch else 1
+                diag = costs[i - 1][j - 1] + match
+                left = costs[i][j - 1] + 1
+                up = costs[i - 1][j] + 1
+                if diag <= left and diag <= up:
+                    c, m = diag, matches[i - 1][j - 1] + (1 - match)
+                elif left <= up:
+                    c, m = left, matches[i][j - 1]
+                else:
+                    c, m = up, matches[i - 1][j]
+                costs[i][j] = c
+                matches[i][j] = m
+
+            # Stop when all entries are greater than k since entries in the matrix cannot get lower
+            if min(costs[i]) > k:
+                return
+
+        if costs[i][-1] <= k:
+            # The costs of an optimal alignment of t against s are at most k,
+            # so t is within the edit environment.
+            yield s, costs[i][-1], matches[i][-1]
+
+        if i < n + k:
+            for ch in "ACGT":
+                yield from visit(s + ch)
+
+    yield from visit("")
