@@ -3,6 +3,13 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* Speed up index generation somewhat for the the ``--no-indels`` case.
+  This is most noticable when demultiplexing using thousands or more
+  adapters.
+
 v4.3 (2023-03-17)
 -----------------
 

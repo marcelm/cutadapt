@@ -17,7 +17,7 @@ from .align import (
     PrefixComparer,
     SuffixComparer,
     edit_environment,
-    hamming_environment,
+    hamming_sphere,
 )
 from .kmer_heuristic import create_positions_and_kmers, kmer_probability_analysis
 
@@ -1300,32 +1300,54 @@ class IndexedAdapters(Matchable, ABC):
         for adapter in self._adapters:
             sequence = adapter.sequence
             k = int(adapter.max_error_rate * len(sequence))
-            environment = edit_environment if adapter.indels else hamming_environment
-            for s, errors, matches in environment(sequence, k):
-                if s in index:
-                    other_adapter, other_errors, other_matches = index[s]
-                    if matches < other_matches:
-                        continue
-                    if other_matches == matches and not has_warned:
-                        logger.warning(
-                            "Adapters %s %r and %s %r are very similar. At %s allowed errors, "
-                            "the sequence %r cannot be assigned uniquely because the number of "
-                            "matches is %s compared to both adapters.",
-                            other_adapter.name,
-                            other_adapter.sequence,
-                            adapter.name,
-                            adapter.sequence,
-                            k,
-                            s,
-                            matches,
-                        )
-                        has_warned = True
-                else:
-                    index[s] = (adapter, errors, matches)
-                lengths.add(len(s))
+
+            if adapter.indels:
+                for s, errors, matches in edit_environment(sequence, k):
+                    if s in index:
+                        other_adapter, other_errors, other_matches = index[s]
+                        if matches < other_matches:
+                            continue
+                        if other_matches == matches and not has_warned:
+                            self._warn_similar(adapter, other_adapter, k, s, matches)
+                            has_warned = True
+                    else:
+                        index[s] = (adapter, errors, matches)
+                    lengths.add(len(s))
+            else:
+                n = len(sequence)
+                for errors in range(k + 1):
+                    for s in hamming_sphere(sequence, errors):
+                        matches = n - errors
+                        if s in index:
+                            other_adapter, other_errors, other_matches = index[s]
+                            if matches < other_matches:
+                                continue
+                            if other_matches == matches and not has_warned:
+                                self._warn_similar(
+                                    adapter, other_adapter, k, s, matches
+                                )
+                                has_warned = True
+                        else:
+                            index[s] = (adapter, errors, matches)
+                lengths.add(n)
         logger.info("Built an index containing %s strings.", len(index))
 
         return sorted(lengths, reverse=True), index
+
+    @staticmethod
+    def _warn_similar(adapter, other_adapter, k, s, matches):
+        logger.warning(
+            "Adapters %s %r and %s %r are very similar. At %s allowed errors, "
+            "the sequence %r cannot be assigned uniquely because the number of "
+            "matches is %s compared to both adapters.",
+            other_adapter.name,
+            other_adapter.sequence,
+            adapter.name,
+            adapter.sequence,
+            k,
+            s,
+            matches,
+        )
 
     def _match_to_one_length(self, sequence: str):
         """
