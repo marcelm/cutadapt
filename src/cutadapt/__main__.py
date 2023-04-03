@@ -1145,12 +1145,16 @@ def log_system_info():
 def log_adapters(adapters, adapters2):
     paired = adapters2 is not None
     logger.debug("R1 adapters (%d):" if paired else "Adapters (%d):", len(adapters))
-    for a in adapters:
+    for a in itertools.islice(adapters, 20):
         logger.debug("- %s", a)
+    if len(adapters) > 20:
+        logger.debug("- (%d more)", len(adapters) - 20)
     if paired:
         logger.debug("R2 adapters (%d):", len(adapters2))
-        for a in adapters2:
+        for a in itertools.islice(adapters2, 20):
             logger.debug("- %s", a)
+        if len(adapters2) > 20:
+            logger.debug("- (%d more)", len(adapters2) - 20)
 
 
 def setup_profiler_if_requested(requested):
