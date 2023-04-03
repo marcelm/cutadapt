@@ -189,7 +189,7 @@ def matrix_edit_environment(t: str, k: int) -> Iterator[Tuple[str, int, int]]:
     n = len(t)
 
     costs: List[List[int]] = [list(range(n + 1))] + [
-        [0] * (n + 1) for _ in range(n + k)
+        [k + 1] * (n + 1) for _ in range(n + k)
     ]
     matches: List[List[int]] = [[0] * (n + 1) for _ in range(n + k + 1)]
 
@@ -198,34 +198,38 @@ def matrix_edit_environment(t: str, k: int) -> Iterator[Tuple[str, int, int]]:
 
     def visit(s: str):
         i = len(s)
-
-        assert 0 <= i < (len(s) + 1)
+        costs_i = costs[i]
+        matches_i = matches[i]
 
         # Fill in row i (unless it is row 0, which is already filled in)
         if i > 0:
             ch = s[-1]
-            for j in range(1, n + 1):
+            costs_i_m_1 = costs[i - 1]
+            for j in range(max(1, i - k), min(n + 1, i + k + 1)):
                 match = 0 if t[j - 1] == ch else 1
-                diag = costs[i - 1][j - 1] + match
-                left = costs[i][j - 1] + 1
-                up = costs[i - 1][j] + 1
+                diag = costs_i_m_1[j - 1] + match
+                left = costs_i[j - 1] + 1
+                up = costs_i_m_1[j] + 1
                 if diag <= left and diag <= up:
-                    c, m = diag, matches[i - 1][j - 1] + (1 - match)
+                    c = diag
+                    m = matches[i - 1][j - 1] + (1 - match)
                 elif left <= up:
-                    c, m = left, matches[i][j - 1]
+                    c = left
+                    m = matches_i[j - 1]
                 else:
-                    c, m = up, matches[i - 1][j]
-                costs[i][j] = c
-                matches[i][j] = m
+                    c = up
+                    m = matches[i - 1][j]
+                costs_i[j] = c
+                matches_i[j] = m
 
             # Stop when all entries are greater than k since entries in the matrix cannot get lower
-            if min(costs[i]) > k:
+            if min(costs_i) > k:
                 return
 
-        if costs[i][-1] <= k:
+        if costs_i[-1] <= k:
             # The costs of an optimal alignment of t against s are at most k,
             # so t is within the edit environment.
-            yield s, costs[i][-1], matches[i][-1]
+            yield s, costs_i[-1], matches_i[-1]
 
         if i < n + k:
             for ch in "ACGT":
