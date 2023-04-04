@@ -184,6 +184,9 @@ def matrix_edit_environment(t: str, k: int) -> Iterator[Tuple[str, int, int]]:
     Yield tuples (s, e, m), where e is the edit distance between s and t and
     m is the number of matches in the optimal alignment.
     """
+
+    t = t.encode().translate(bytes.maketrans(b"ACGTacgt", b"\0\1\2\3\0\1\2\3"))
+
     # len(s) = m, indexed by i
     # len(t) = n, indexed by j
     n = len(t)
@@ -196,43 +199,54 @@ def matrix_edit_environment(t: str, k: int) -> Iterator[Tuple[str, int, int]]:
     for x in range(n + k + 1):
         costs[x][0] = x
 
-    def visit(s: str):
+    trans = bytes.maketrans(b"\0\1\2\3", b"ACGT")
+
+    s = bytearray()
+
+    while True:
         i = len(s)
-        costs_i = costs[i]
-        matches_i = matches[i]
 
         # Fill in row i (unless it is row 0, which is already filled in)
         if i > 0:
             ch = s[-1]
-            costs_i_m_1 = costs[i - 1]
+            min_cost = 999999999
             for j in range(max(1, i - k), min(n + 1, i + k + 1)):
                 match = 0 if t[j - 1] == ch else 1
-                diag = costs_i_m_1[j - 1] + match
-                left = costs_i[j - 1] + 1
-                up = costs_i_m_1[j] + 1
+                diag = costs[i - 1][j - 1] + match
+                left = costs[i][j - 1] + 1
+                up = costs[i - 1][j] + 1
                 if diag <= left and diag <= up:
                     c = diag
                     m = matches[i - 1][j - 1] + (1 - match)
                 elif left <= up:
                     c = left
-                    m = matches_i[j - 1]
+                    m = matches[i][j - 1]
                 else:
                     c = up
                     m = matches[i - 1][j]
-                costs_i[j] = c
-                matches_i[j] = m
+                costs[i][j] = c
+                matches[i][j] = m
+                min_cost = min(min_cost, c)
+        else:
+            min_cost = 0
 
-            # Stop when all entries are greater than k since entries in the matrix cannot get lower
-            if min(costs_i) > k:
-                return
-
-        if costs_i[-1] <= k:
+        if costs[i][-1] <= k:
             # The costs of an optimal alignment of t against s are at most k,
             # so t is within the edit environment.
-            yield s, costs_i[-1], matches_i[-1]
+            yield s.translate(trans).decode(), costs[i][-1], matches[i][-1]
 
-        if i < n + k:
-            for ch in "ACGT":
-                yield from visit(s + ch)
+        # Next string
+        if min_cost <= k and i < n + k:
+            # When all entries are greater than k, we can skip remaining prefixes since costs in
+            # subsequent rows can not get lower
+            s.append(0)
+        else:
+            while True:
+                if not s:
+                    return
+                c = s.pop()
+                if c < 3:
+                    break
+            s.append(c + 1)
 
-    yield from visit("")
+        assert len(s) > 0 and s[-1] <= 3
