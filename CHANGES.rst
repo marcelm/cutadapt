@@ -6,9 +6,10 @@ Changelog
 development version
 -------------------
 
-* Speed up index generation somewhat for the the ``--no-indels`` case.
-  This is most noticable when demultiplexing using thousands or more
-  adapters.
+* Speed up index generation somewhat. This is most noticable when
+  demultiplexing using thousands or more adapters. The speedup is
+  different depending on whether indels are allowed or not because
+  different algorithms are used.
 
 v4.3 (2023-03-17)
 -----------------

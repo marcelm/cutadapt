@@ -12,7 +12,7 @@ from cutadapt.align import (
     edit_distance,
     naive_edit_environment,
     slow_edit_environment,
-    matrix_edit_environment,
+    py_edit_environment,
 )
 from cutadapt.adapters import Where
 
@@ -471,7 +471,7 @@ def test_hamming_sphere(sk):
 )
 @pytest.mark.parametrize(
     "environment_func",
-    [edit_environment, slow_edit_environment, matrix_edit_environment],
+    [edit_environment, slow_edit_environment, py_edit_environment],
 )
 def test_edit_environment(k, s, environment_func):
     result = list(environment_func(s, k))
@@ -491,7 +491,7 @@ def test_edit_environment(k, s, environment_func):
         assert start2 == 0
         assert stop2 == len(t)
         assert edit_distance(s, t) == dist
-        if environment_func is edit_environment:
+        if environment_func is py_edit_environment:
             assert m == score
             assert m <= len(s), (s, t, dist)
             assert m <= len(t), (s, t, dist)

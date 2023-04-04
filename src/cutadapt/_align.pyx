@@ -3,7 +3,7 @@ from cpython.ref cimport PyObject
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_GET_LENGTH
-from libc.string cimport memcpy
+from libc.string cimport memcpy, memset
 
 from ._match_tables import _upper_table, _acgt_table, _iupac_table
 
@@ -761,3 +761,103 @@ def hamming_sphere(str s, int k):
                 continue
             for t in hamming_sphere(suffix, k - 1):
                 yield prefix + pch + t
+
+
+def edit_environment(str t_str, int k):
+    """
+    Find all strings s for which the edit distance between s and t is at most k,
+    assuming the alphabet is A, C, G, T.
+
+    Yield tuples (s, e, m), where e is the edit distance between s and t and
+    m is the number of matches in the optimal alignment.
+    """
+
+    cdef bytes t = t_str.encode().translate(bytes.maketrans(b"ACGTacgt", b"\0\1\2\3\0\1\2\3"))
+    cdef unsigned char* t_ptr = t
+
+    # len(s) = m, indexed by i
+    # len(t) = n, indexed by j
+    cdef:
+        int j, match, diag, left, up, c, m
+        int i = 0
+        int n = len(t)
+        char ch
+        int min_cost
+
+    cdef int* costs = <int*> PyMem_Malloc((n + 1) * (n + k + 1) * sizeof(int))
+
+    if not costs:
+        raise MemoryError()
+    memset(costs, k+1, (n+1) * (n+k+1) * sizeof(int))
+    for i in range(n + k + 1):
+        costs[i*(n+1)] = i
+    for j in range(n + 1):
+        costs[j] = j
+
+    cdef int* matches = <int*> PyMem_Malloc((n + 1) * (n + k + 1) * sizeof(int))
+    if not matches:
+        raise MemoryError()
+    memset(matches, 0, (n+1) * (n+k+1) * sizeof(int))
+
+    trans = bytes.maketrans(b"\0\1\2\3", b"ACGT")
+
+    cdef char* s = <char*>PyMem_Malloc((n + k + 1) * sizeof(char))
+    i = 0
+    if not s:
+        raise MemoryError()
+    while True:
+        # Fill in row i (unless it is row 0, which is already filled in)
+        if i > 0:
+            ch = s[i - 1]
+            min_cost = 999999999
+            for j in range(max(1, i - k), min(n + 1, i + k + 1)):
+                match = 0 if t_ptr[j - 1] == ch else 1
+
+                diag = costs[(i - 1) * (n+1) + j - 1] + match
+                left = costs[i * (n+1) + j - 1] + 1
+                up = costs[(i - 1) * (n+1) + j] + 1
+                if diag <= left and diag <= up:
+                    c = diag
+                    m = matches[(i - 1) * (n+1) + j - 1] + (1 - match)
+                elif left <= up:
+                    c = left
+                    m = matches[i * (n+1) + j - 1]
+                else:
+                    c = up
+                    m = matches[(i - 1) * (n+1) + j]
+                costs[i*(n+1) + j] = c
+                matches[i*(n+1) + j] = m
+                min_cost = min(min_cost, c)
+        else:
+            min_cost = 0
+
+        if costs[i * (n+1) + n] <= k:
+            # The costs of an optimal alignment of t against s are at most k,
+            # so s is within the edit environment.
+            result = PyBytes_FromStringAndSize(s, i)
+            if <PyObject*>result == NULL:
+                raise MemoryError()
+
+            yield result.translate(trans).decode(), costs[i * (n+1) + n], matches[i * (n+1) + n]
+
+        # Next string
+        if min_cost <= k and i < n + k:
+            # When all entries are greater than k, we can skip remaining prefixes since costs in
+            # subsequent rows cannot get lower
+            s[i] = 0
+            i += 1
+        else:
+            while True:
+                if i == 0:
+                    PyMem_Free(costs)
+                    PyMem_Free(matches)
+                    return
+                i -= 1
+                ch = s[i]
+                if ch < 3:
+                    break
+
+            s[i] = ch + 1
+            i += 1
+
+    assert False
