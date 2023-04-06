@@ -19,7 +19,7 @@ def test_command_line():
     # the same way we would in the shell. The difference is that this is
     # not in a separate process, errors cause a CommandLineError instead
     # of SystemExit, and we get back a Statistics object.
-    from cutadapt.__main__ import main
+    from cutadapt.cli import main
 
     stats = main(["-q", "10", "-o", os.devnull, datapath("small.fastq")])
     assert stats is not None

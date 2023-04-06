@@ -2,7 +2,7 @@ import os
 
 import pytest
 from utils import assert_files_equal, datapath, cutpath
-from cutadapt.__main__ import main
+from cutadapt.cli import main
 from cutadapt.report import Statistics
 
 

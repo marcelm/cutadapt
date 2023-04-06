@@ -1,6 +1,6 @@
 import pytest
 
-from cutadapt.__main__ import (
+from cutadapt.cli import (
     main,
     parse_cutoffs,
     parse_lengths,

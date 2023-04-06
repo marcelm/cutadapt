@@ -31,7 +31,7 @@ dependencies = [
 "Changelog" = "https://cutadapt.readthedocs.io/en/stable/changes.html"
 
 [project.scripts]
-cutadapt = "cutadapt.__main__:main_cli"
+cutadapt = "cutadapt.cli:main_cli"
 
 [project.optional-dependencies]
 dev = [

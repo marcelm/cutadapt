@@ -6,7 +6,7 @@ from io import StringIO, BytesIO
 import dnaio
 import pytest
 
-from cutadapt.__main__ import main
+from cutadapt.cli import main
 from utils import assert_files_equal, datapath, cutpath
 
 # pytest.mark.timeout will not fail even if pytest-timeout is not installed

@@ -5,7 +5,7 @@ from itertools import product
 
 import pytest
 
-from cutadapt.__main__ import main
+from cutadapt.cli import main
 from utils import assert_files_equal, datapath, cutpath
 
 
