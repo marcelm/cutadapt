@@ -61,3 +61,6 @@ warn_unused_configs = true
 environment = "CFLAGS=-g0"
 test-extras = ["dev"]
 test-command = ["pytest {project}"]
+
+[tool.ruff]
+line-length = 130
