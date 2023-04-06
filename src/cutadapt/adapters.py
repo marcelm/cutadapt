@@ -1356,17 +1356,20 @@ class IndexedAdapters(Matchable, ABC):
 
     def _match_to_one_length(self, sequence: str):
         """
-        Match the adapters against a string and return a Match that represents
+        Match a query string against all adapters and return a Match that represents
         the best match or None if no match was found
         """
         affix = self._make_affix(sequence.upper(), self._length)
         if "N" in affix:
-            # Fall back to non-indexed matching
-            return self._multiple_adapters.match_to(sequence)
-        try:
-            adapter, e, m = self._index[affix]
-        except KeyError:
-            return None
+            result = self._lookup_with_n(affix)
+            if result is None:
+                return None
+            adapter, e, m = result
+        else:
+            try:
+                adapter, e, m = self._index[affix]
+            except KeyError:
+                return None
         return self._make_match(adapter, self._length, m, e, sequence)
 
     def _match_to_multiple_lengths(self, sequence: str):
@@ -1381,20 +1384,24 @@ class IndexedAdapters(Matchable, ABC):
         best_length = 0
         best_m = -1
         best_e = 1000
-        check_n = True
+
+        # Check successively shorter affixes
         for length in self._lengths:
             if length < best_m:
                 # No chance of getting the same or a higher number of matches, so we can stop early
                 break
             affix = self._make_affix(affix, length)
-            if check_n:
-                if "N" in affix:
-                    return self._multiple_adapters.match_to(sequence)
-                check_n = False
-            try:
-                adapter, e, m = self._index[affix]
-            except KeyError:
-                continue
+            if "N" in affix:
+                result = self._lookup_with_n(affix)
+                if result is None:
+                    continue
+                adapter, e, m = result
+            else:
+                try:
+                    adapter, e, m = self._index[affix]
+                except KeyError:
+                    continue
+
             if m > best_m or (m == best_m and e < best_e):
                 # TODO this could be made to work:
                 # assert best_m == -1
@@ -1407,6 +1414,24 @@ class IndexedAdapters(Matchable, ABC):
             return None
         else:
             return self._make_match(best_adapter, best_length, best_m, best_e, sequence)
+
+    def _lookup_with_n(self, affix):
+        # N wildcards need to be counted as mismatches (read wildcards aren’t allowed).
+        # We can thus look up an affix where we replace N with an arbitrary nucleotide.
+        affix_without_n = affix.replace("N", "A")
+        try:
+            result = self._index[affix_without_n]
+        except KeyError:
+            return None
+
+        # The looked up number of matches and errors is too low if
+        # the adapter actually has an A where the N is in the query.
+        # Fix this by re-doing the alignment.
+        adapter = result[0]
+        match = adapter.match_to(affix)
+        if match is None:
+            return None
+        return adapter, match.errors, match.score
 
     def enable_debug(self):
         pass

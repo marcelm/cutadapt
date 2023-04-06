@@ -6,10 +6,15 @@ Changelog
 development version
 -------------------
 
-* Speed up index generation somewhat. This is most noticable when
+* :issue:`685`: Speed up index generation somewhat. This is most noticable when
   demultiplexing using thousands or more adapters. The speedup is
   different depending on whether indels are allowed or not because
   different algorithms are used.
+* :issue:`685`: Speed up demultiplexing (when using an index) for the case when
+  the read contains ``N`` bases within the region where the adapter matches.
+  Previously, any ``N`` would disable the index for that read and trigger a
+  fallback to the slow method of matching each adapter one-by-one. Now the index
+  is used even in those cases.
 
 v4.3 (2023-03-17)
 -----------------
