@@ -9,34 +9,33 @@ from libc.stdint cimport uint8_t
 from ._match_tables import matches_lookup
 
 """
-Kmer finder that works using an enhanced shift-or algorithm. 
+Kmer finder that works using an enhanced shift-and algorithm. 
 
-Shift-or works by using a bitmatrix to determine matches in words. For the
+Shift-and works by using a bitmatrix to determine matches in words. For the
 four-letter alphabet we can make the following bitmatrix for the word ACGTA
 
                                                                     ATGCA
-0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11101110  A
-0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111101  C
-0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111011  G
-0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11110111  T
+0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010001  A
+0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000010  C
+0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000100  G
+0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001000  T
 
 However, this leaves a lot of bits unused in the machine word. It is also
 possible to use as many bits in a bitmask as possible simply concatening
 all the words together. For example here, with appended GATTACA.
 
-                                                             ACA_TTAGATGCA
-0b11111111_11111111_11111111_11111111_11111111_11111111_11110101_110101110  A
-0b11111111_11111111_11111111_11111111_11111111_11111111_11111011_111111101  C
-0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_111011011  G
-0b11111111_11111111_11111111_11111111_11111111_11111111_11111110_001110111  T
+                                                            ACAT_TAGATGCA
+0b00000000_00000000_00000000_00000000_00000000_00000000_00001010_01010001  A
+0b00000000_00000000_00000000_00000000_00000000_00000000_00000100_00000010  C
+0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100100  G
+0b00000000_00000000_00000000_00000000_00000000_00000000_00000001_10001000  T
 
-Normal shift-or starts with pushing in 0s from the right. The same can be 
-achieved for multiword by multiplying with a zero-mask with a zero at each
+Normal shift-and starts with initializing a 1 in bit 1. The same can be 
+achieved for multiword by multiplying with a initmask with a one at each
 word start position.
-Normal shift-or only checks a single bit. The bit that is at exactly the
+Normal shift-and only checks a single bit. The bit that is at exactly the
 length of the word. We can check multiple bits simultaneously by using a
-mask that checks for each bit that is at the end of a word (noted by $ in
-the example).
+mask that checks for each bit that is at the end of a word.
 
 This way we can check for multiple words simultaneously. It does not scale
 if the combined length of the words exceeds a machine integer, but for 
@@ -60,7 +59,7 @@ ctypedef struct KmerSearchEntry:
     size_t mask_offset
     ssize_t search_start
     ssize_t search_stop  # 0 if going to end of sequence.
-    bitmask_t zero_mask
+    bitmask_t init_mask
     bitmask_t found_mask
 
 
@@ -115,7 +114,7 @@ cdef class KmerFinder:
         cdef size_t mask_offset = 0
         cdef char *kmer_ptr
         cdef size_t offset
-        cdef bitmask_t zero_mask, found_mask
+        cdef bitmask_t init_mask, found_mask
         cdef Py_ssize_t kmer_length
 
         match_lookup = matches_lookup(ref_wildcards, query_wildcards)
@@ -124,7 +123,7 @@ cdef class KmerFinder:
             while index < len(kmers):
                 memset(search_word, 0, 64)
                 offset = 0
-                zero_mask = ~0
+                init_mask = 0
                 found_mask = 0
                 # Run an inner loop in case all words combined are larger than
                 # the maximum bitmask size. In that case we create multiple
@@ -141,7 +140,7 @@ cdef class KmerFinder:
                                          f"than the maximum of {MAX_WORD_SIZE}.")
                     if (offset + kmer_length) > MAX_WORD_SIZE:
                         break
-                    zero_mask ^= <bitmask_t>1ULL << offset
+                    init_mask |= <bitmask_t>1ULL << offset
                     kmer_ptr = <char *> PyUnicode_DATA(kmer)
                     memcpy(search_word + offset, kmer_ptr, kmer_length)
                     # Set the found bit at the last character.
@@ -158,7 +157,7 @@ cdef class KmerFinder:
                     stop = 0
                 self.search_entries[i].search_stop = stop
                 self.search_entries[i].mask_offset = mask_offset
-                self.search_entries[i].zero_mask = zero_mask
+                self.search_entries[i].init_mask = init_mask
                 self.search_entries[i].found_mask = found_mask
                 # Offset -1 because we don't count the last NULL byte
                 populate_needle_mask(self.search_masks + mask_offset, search_word, offset,
@@ -173,7 +172,7 @@ cdef class KmerFinder:
             KmerSearchEntry entry
             size_t i
             size_t kmer_offset
-            bitmask_t zero_mask
+            bitmask_t init_mask
             bitmask_t found_mask
             ssize_t start, stop
             const bitmask_t *mask_ptr
@@ -204,11 +203,11 @@ cdef class KmerFinder:
             if search_length <= 0:
                 continue
             search_ptr = seq + start
-            zero_mask = entry.zero_mask
+            init_mask = entry.init_mask
             found_mask = entry.found_mask
             mask_ptr = self.search_masks + entry.mask_offset
-            search_result = shift_or_multiple_is_present(
-                search_ptr, search_length, mask_ptr, zero_mask, found_mask)
+            search_result = shift_and_multiple_is_present(
+                search_ptr, search_length, mask_ptr, init_mask, found_mask)
             if search_result:
                 return True
         return False
@@ -222,16 +221,16 @@ cdef void set_masks(bitmask_t *needle_mask, size_t pos, const char *chars):
     cdef char c
     cdef size_t i
     for i in range(strlen(chars)):
-        needle_mask[<uint8_t>chars[i]] &= ~(<bitmask_t>1ULL << pos)
+        needle_mask[<uint8_t>chars[i]] |= <bitmask_t>1ULL << pos
 
 cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t needle_length,
                           match_lookup):
     cdef size_t i
     cdef char c
     cdef uint8_t j
-    if needle_length > (sizeof(bitmask_t) * 8):
+    if needle_length > MAX_WORD_SIZE:
         raise ValueError("The pattern is too long!")
-    memset(needle_mask, 0xff, sizeof(bitmask_t) * BITMASK_INDEX_SIZE)
+    memset(needle_mask, 0, sizeof(bitmask_t) * BITMASK_INDEX_SIZE)
     for i in range(needle_length):
         c = needle[i]
         if c == 0:
@@ -239,21 +238,21 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
         set_masks(needle_mask, i, match_lookup[c])
 
 
-cdef bint shift_or_multiple_is_present(
+cdef bint shift_and_multiple_is_present(
     const char *haystack,
     size_t haystack_length,
     const bitmask_t *needle_mask,
-    bitmask_t zero_mask,
+    bitmask_t init_mask,
     bitmask_t found_mask):
     cdef:
-        bitmask_t R = zero_mask
+        bitmask_t R = init_mask
         size_t i
 
     for i in range(haystack_length):
         # Update the bit array
-        R |= needle_mask[<uint8_t>haystack[i]]
-        if (R & found_mask) != found_mask:
+        R &= needle_mask[<uint8_t>haystack[i]]
+        if (R & found_mask):
             return True
         R <<= 1
-        R &= zero_mask
+        R |= init_mask
     return False
