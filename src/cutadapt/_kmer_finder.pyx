@@ -21,14 +21,14 @@ four-letter alphabet we can make the following bitmatrix for the word ACGTA
 0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11110111  T
 
 However, this leaves a lot of bits unused in the machine word. It is also
-possible to use as many bits in a bitmask as possible, leaving a barrier 
-of 1's inbetween as in the following example with two words.
+possible to use as many bits in a bitmask as possible simply concatening
+all the words together. For example here, with appended GATTACA.
 
-                                                          $ACATT_AG$ATGCA
-0b11111111_11111111_11111111_11111111_11111111_11111111_11101011_01101110  A
-0b11111111_11111111_11111111_11111111_11111111_11111111_11110111_11111101  C
-0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_10111011  G
-0b11111111_11111111_11111111_11111111_11111111_11111111_11111100_11110111  T
+                                                             ACA_TTAGATGCA
+0b11111111_11111111_11111111_11111111_11111111_11111111_11110101_110101110  A
+0b11111111_11111111_11111111_11111111_11111111_11111111_11111011_111111101  C
+0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_111011011  G
+0b11111111_11111111_11111111_11111111_11111111_11111111_11111110_001110111  T
 
 Normal shift-or starts with pushing in 0s from the right. The same can be 
 achieved for multiword by multiplying with a zero-mask with a zero at each
@@ -48,6 +48,9 @@ is 33 bases for example).
 DEF BITMASK_INDEX_SIZE = 128
 
 ctypedef size_t bitmask_t
+
+DEF MAX_WORD_SIZE = 64  # sizeof does not work for some reason
+MAXIMUM_WORD_SIZE = MAX_WORD_SIZE
 
 cdef extern from "Python.h":
     void *PyUnicode_DATA(object o)
@@ -114,11 +117,7 @@ cdef class KmerFinder:
         cdef size_t offset
         cdef bitmask_t zero_mask, found_mask
         cdef Py_ssize_t kmer_length
-        # The maximum length of words + null bytes that we can store in
-        # the bitmask array
-        cdef size_t max_total_length = sizeof(bitmask_t) * 8
-        # The maximum length of a word. Since word_length + 1 bits are needed to search.
-        cdef ssize_t max_word_length = max_total_length - 1
+
         match_lookup = matches_lookup(ref_wildcards, query_wildcards)
         for (start, stop, kmers) in positions_and_kmers:
             index = 0 
@@ -137,17 +136,17 @@ cdef class KmerFinder:
                     if not PyUnicode_IS_COMPACT_ASCII(kmer):
                         raise ValueError("Only ASCII strings are supported")
                     kmer_length = PyUnicode_GET_LENGTH(kmer)
-                    if kmer_length > max_word_length:
+                    if kmer_length > MAX_WORD_SIZE:
                         raise ValueError(f"{kmer} of length {kmer_length} is longer "
-                                         f"than the maximum of {max_word_length}.")
-                    if (offset + kmer_length + 1) > max_total_length:
+                                         f"than the maximum of {MAX_WORD_SIZE}.")
+                    if (offset + kmer_length) > MAX_WORD_SIZE:
                         break
                     zero_mask ^= <bitmask_t>1ULL << offset
                     kmer_ptr = <char *> PyUnicode_DATA(kmer)
                     memcpy(search_word + offset, kmer_ptr, kmer_length)
-                    search_word[offset + kmer_length] = 0
-                    found_mask |= <bitmask_t>1ULL << (offset + kmer_length)
-                    offset = offset + kmer_length + 1
+                    # Set the found bit at the last character.
+                    found_mask |= <bitmask_t>1ULL << (offset + kmer_length - 1)
+                    offset = offset + kmer_length
                     index += 1
                 i = self.number_of_searches  # Save the index position for the mask and entry
                 self.number_of_searches += 1
@@ -162,7 +161,7 @@ cdef class KmerFinder:
                 self.search_entries[i].zero_mask = zero_mask
                 self.search_entries[i].found_mask = found_mask
                 # Offset -1 because we don't count the last NULL byte
-                populate_needle_mask(self.search_masks + mask_offset, search_word, offset - 1,
+                populate_needle_mask(self.search_masks + mask_offset, search_word, offset,
                                      match_lookup)
         self.positions_and_kmers = positions_and_kmers
 
@@ -230,7 +229,7 @@ cdef populate_needle_mask(bitmask_t *needle_mask, const char *needle, size_t nee
     cdef size_t i
     cdef char c
     cdef uint8_t j
-    if needle_length > (sizeof(bitmask_t) * 8 - 1):
+    if needle_length > (sizeof(bitmask_t) * 8):
         raise ValueError("The pattern is too long!")
     memset(needle_mask, 0xff, sizeof(bitmask_t) * BITMASK_INDEX_SIZE)
     for i in range(needle_length):
@@ -253,9 +252,8 @@ cdef bint shift_or_multiple_is_present(
     for i in range(haystack_length):
         # Update the bit array
         R |= needle_mask[<uint8_t>haystack[i]]
-        R <<= 1
-        R &= zero_mask
         if (R & found_mask) != found_mask:
             return True
-
+        R <<= 1
+        R &= zero_mask
     return False
