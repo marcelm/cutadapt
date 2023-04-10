@@ -21,7 +21,7 @@ four-letter alphabet we can make the following bitmatrix for the word ACGTA
 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001000  T
 
 However, this leaves a lot of bits unused in the machine word. It is also
-possible to use as many bits in a bitmask as possible simply concatening
+possible to use as many bits in a bitmask as possible simply concatenating
 all the words together. For example here, with appended GATTACA.
 
                                                             ACAT_TAGATGCA
@@ -48,7 +48,7 @@ DEF BITMASK_INDEX_SIZE = 128
 
 ctypedef size_t bitmask_t
 
-DEF MAX_WORD_SIZE = 64  # sizeof does not work for some reason
+DEF MAX_WORD_SIZE = 64  # "sizeof(bitmask_t) * 8" does not work for some reason
 MAXIMUM_WORD_SIZE = MAX_WORD_SIZE
 
 cdef extern from "Python.h":
