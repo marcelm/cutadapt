@@ -5,7 +5,7 @@ import os
 import sys
 import traceback
 from abc import ABC, abstractmethod
-from contextlib import ExitStack, closing
+from contextlib import ExitStack
 from multiprocessing.connection import Connection
 from typing import (
     Any,
@@ -142,7 +142,7 @@ class WorkerProcess(mpctx_Process):
     def __init__(
         self,
         id_: int,
-        make_pipeline: Callable[[], Pipeline],
+        pipeline: Pipeline,
         n_input_files: int,
         interleaved_input: bool,
         orig_outfiles: OutputFiles,
@@ -152,7 +152,7 @@ class WorkerProcess(mpctx_Process):
     ):
         super().__init__()
         self._id = id_
-        self._make_pipeline = make_pipeline
+        self._pipeline = pipeline
         self._n_input_files = n_input_files
         self._interleaved_input = interleaved_input
         self._read_pipe = read_pipe
@@ -178,43 +178,39 @@ class WorkerProcess(mpctx_Process):
                     logger.error("%s", tb_str)
                     raise e
 
-                input_chunks = [
-                    self._read_pipe.recv_bytes() for _ in range(self._n_input_files)
+                files = [
+                    io.BytesIO(self._read_pipe.recv_bytes())
+                    for _ in range(self._n_input_files)
                 ]
-                chunk_stats, output_chunks = self._run_pipeline_once(input_chunks)
-                stats += chunk_stats
-                self._send_outfiles(output_chunks, chunk_index, chunk_stats.n)
+                infiles = InputFiles(*files, interleaved=self._interleaved_input)
+                outfiles = self._original_outfiles.as_bytesio()
+                (n, bp1, bp2) = self._pipeline.process_reads(infiles, outfiles)
+                self._pipeline.flush()
+                cur_stats = Statistics().collect(n, bp1, bp2, [], self._pipeline._steps)
+                stats += cur_stats
+                self._send_outfiles(outfiles, chunk_index, n)
+                self._pipeline.close()
 
+            m = self._pipeline._modifiers
+            modifier_stats = Statistics().collect(
+                0, 0, 0 if self._pipeline.paired else None, m, []
+            )
+            stats += modifier_stats
             self._write_pipe.send(-1)
             self._write_pipe.send(stats)
         except Exception as e:
             self._write_pipe.send(-2)
             self._write_pipe.send((e, traceback.format_exc()))
 
-    def _run_pipeline_once(self, input_chunks: Sequence[bytes]):
-        files = [io.BytesIO(chunk) for chunk in input_chunks]
-        infiles = InputFiles(*files, interleaved=self._interleaved_input)
-        outfiles = self._original_outfiles.as_bytesio()
-        pipeline = self._make_pipeline()
-        (n, bp1, bp2) = pipeline.process_reads(infiles, outfiles)
-        pipeline.flush()
-        m = pipeline._modifiers  # type: ignore
-        stats = Statistics()
-        stats.collect(n, bp1, bp2, m, pipeline._steps)
-        output_chunks = []
+    def _send_outfiles(self, outfiles: OutputFiles, chunk_index: int, n_reads: int):
+        self._write_pipe.send(chunk_index)
+        self._write_pipe.send(n_reads)
+
         for f in outfiles:
             f.flush()
             assert isinstance(f, io.BytesIO)
-            output_chunks.append(f.getvalue())
-        pipeline.close()
-
-        return stats, output_chunks
-
-    def _send_outfiles(self, output_chunks, chunk_index: int, n_reads: int):
-        self._write_pipe.send(chunk_index)
-        self._write_pipe.send(n_reads)
-        for chunk in output_chunks:
-            self._write_pipe.send_bytes(chunk)
+            processed_chunk = f.getvalue()
+            self._write_pipe.send_bytes(processed_chunk)
 
 
 class OrderedChunkWriter:
@@ -246,8 +242,8 @@ class PipelineRunner(ABC):
     A read processing pipeline
     """
 
-    def __init__(self, make_pipeline: Callable[[], Pipeline], progress: Progress):
-        self._make_pipeline = make_pipeline
+    def __init__(self, pipeline: Pipeline, progress: Progress):
+        self._pipeline = pipeline
         self._progress = progress
 
     @abstractmethod
@@ -290,14 +286,14 @@ class ParallelPipelineRunner(PipelineRunner):
 
     def __init__(
         self,
-        make_pipeline: Callable[[], Pipeline],
+        pipeline: Pipeline,
         inpaths: InputPaths,
         outfiles: OutputFiles,
         progress: Progress,
         n_workers: int,
         buffer_size: Optional[int] = None,
     ):
-        super().__init__(make_pipeline, progress)
+        super().__init__(pipeline, progress)
         self._n_workers = n_workers
         self._need_work_queue: multiprocessing.Queue = mpctx.Queue()
         self._buffer_size = 4 * 1024**2 if buffer_size is None else buffer_size
@@ -339,7 +335,7 @@ class ParallelPipelineRunner(PipelineRunner):
             connections.append(conn_r)
             worker = WorkerProcess(
                 index,
-                self._make_pipeline,
+                self._pipeline,
                 self._n_input_files,
                 self._interleaved_input,
                 self._outfiles,
@@ -411,32 +407,30 @@ class SerialPipelineRunner(PipelineRunner):
 
     def __init__(
         self,
-        make_pipeline: Callable[[], Pipeline],
+        pipeline: Pipeline,
         infiles: InputFiles,
         outfiles: OutputFiles,
         progress: Progress,
     ):
-        super().__init__(make_pipeline, progress)
+        super().__init__(pipeline, progress)
         self._infiles = infiles
         self._outfiles = outfiles
 
     def run(self) -> Statistics:
-        with closing(self._make_pipeline()) as pipeline:
-            (n, total1_bp, total2_bp) = pipeline.process_reads(
-                self._infiles, self._outfiles, progress=self._progress
-            )
-            if self._progress is not None:
-                self._progress.close()
-            # TODO
-            modifiers = getattr(pipeline, "_modifiers", None)
-            assert modifiers is not None
-            stats = Statistics().collect(
-                n, total1_bp, total2_bp, modifiers, pipeline._steps
-            )
-        return stats
+        (n, total1_bp, total2_bp) = self._pipeline.process_reads(
+            self._infiles, self._outfiles, progress=self._progress
+        )
+        if self._progress is not None:
+            self._progress.close()
+        # TODO
+        modifiers = getattr(self._pipeline, "_modifiers", None)
+        assert modifiers is not None
+        return Statistics().collect(
+            n, total1_bp, total2_bp, modifiers, self._pipeline._steps
+        )
 
-    def close(self):
-        pass
+    def close(self) -> None:
+        self._pipeline.close()
 
 
 def run_pipeline(
@@ -471,7 +465,7 @@ def run_pipeline(
     runner: PipelineRunner
     if cores > 1:
         runner = ParallelPipelineRunner(
-            pipeline_maker,
+            pipeline_maker(),
             inpaths,
             outfiles,
             progress,
@@ -480,7 +474,7 @@ def run_pipeline(
         )
     else:
         runner = SerialPipelineRunner(
-            pipeline_maker, inpaths.open(), outfiles, progress
+            pipeline_maker(), inpaths.open(), outfiles, progress
         )
 
     with runner:
