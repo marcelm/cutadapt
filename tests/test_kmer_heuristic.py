@@ -42,11 +42,11 @@ def test_create_back_overlap_searchsets():
     adapter = "ABCDEFGHIJ0123456789"
     searchsets = create_back_overlap_searchsets(adapter, 3, 0.1)
     assert len(searchsets) == 5
-    assert (-3, None, [{"ABC"}]) in searchsets
-    assert (-4, None, [{"ABCD"}]) in searchsets
-    assert (-9, None, [{"ABCDE"}]) in searchsets
-    assert (-19, None, kmer_possibilities(adapter[:10], 2)) in searchsets
-    assert (-20, None, kmer_possibilities(adapter, 3)) in searchsets
+    assert (-3, None, {"ABC"}) in searchsets
+    assert (-4, None, {"ABCD"}) in searchsets
+    assert (-9, None, {"ABCDE"}) in searchsets
+    assert (-19, None, kmer_chunks(adapter[:10], 2)) in searchsets
+    assert (-20, None, kmer_chunks(adapter, 3)) in searchsets
 
 
 @pytest.mark.parametrize(
