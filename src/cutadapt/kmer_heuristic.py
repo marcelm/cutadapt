@@ -221,7 +221,7 @@ if __name__ == "__main__":
     )
     kmer_finder = KmerFinder(kmers_and_offsets)
     print(kmer_probability_analysis(kmers_and_offsets))
-    with (dnaio.open(args.fastq, mode="r", open_threads=0) as reader,):
+    with dnaio.open(args.fastq, mode="r", open_threads=0) as reader:
         number_of_records = 0
         possible_adapters_found = 0
         for number_of_records, record in enumerate(reader, start=1):
