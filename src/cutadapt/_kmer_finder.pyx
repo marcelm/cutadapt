@@ -245,14 +245,13 @@ cdef bint shift_and_multiple_is_present(
     bitmask_t init_mask,
     bitmask_t found_mask):
     cdef:
-        bitmask_t R = init_mask
+        bitmask_t R = 0
         size_t i
 
     for i in range(haystack_length):
-        # Update the bit array
+        R <<= 1
+        R |= init_mask
         R &= needle_mask[<uint8_t>haystack[i]]
         if (R & found_mask):
             return True
-        R <<= 1
-        R |= init_mask
     return False
