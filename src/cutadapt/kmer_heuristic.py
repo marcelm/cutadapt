@@ -5,12 +5,10 @@ from typing import List, Optional, Set, Tuple
 from collections import defaultdict
 
 
-def kmer_possibilities(sequence: str, chunks: int) -> List[Set[str]]:
+def kmer_chunks(sequence: str, chunks: int) -> Set[str]:
     """
-    Partition a sequence in almost equal sized chunks. Return all possibilities.
-
-    Example sequence ABCDEFGH with 3 chunks. Possibilities:
-    ["ABC", "DEF", "GH"]; ["ABC", "DE", "FGH"]; ["AB", "CDE", "FGH"]
+    Partition a sequence in almost equal sized chunks. Returns the shortest
+    possibility. AABCABCABC, 3 returns {"AABC", "ABC"}
     """
     chunk_size = len(sequence) // (chunks)
     remainder = len(sequence) % (chunks)
@@ -26,14 +24,15 @@ def kmer_possibilities(sequence: str, chunks: int) -> List[Set[str]]:
             chunk_set.add(sequence[offset : offset + size])
             offset += size
         kmer_sets.append(chunk_set)
-    return kmer_sets
+    sorted_by_length = sorted((len(chunk_set), chunk_set) for chunk_set in kmer_sets)
+    # Sometimes there are repeated sequences which make a set shorter
+    shortest_length, shortest_set = sorted_by_length[0]
+    return shortest_set
 
 
-# A SearchSet is a start and stop combined with a list of possible kmer sets
-# which should appear between this start and stop. Start and stop follow python
-# indexing rules. (Negative start is a position relative to the end. None end
-# is to the end of the sequence)
-SearchSet = Tuple[int, Optional[int], List[Set[str]]]
+# A SearchSet is a start and stop combined with a set of strings to search
+# for at that position
+SearchSet = Tuple[int, Optional[int], Set[str]]
 
 
 def minimize_kmer_search_list(
@@ -77,21 +76,14 @@ def minimize_kmer_search_list(
 def find_optimal_kmers(
     search_sets: List[SearchSet],
 ) -> List[Tuple[int, Optional[int], List[str]]]:
-    minimal_score = sys.maxsize
-    best_combination = []
-    positions = [(start, stop) for start, stop, kmer_set_list in search_sets]
-    kmer_set_lists = [kmer_set_list for start, stop, kmer_set_list in search_sets]
-    for kmer_sets in itertools.product(*kmer_set_lists):
-        kmer_search_list = []
-        for kmer_set, (start, stop) in zip(kmer_sets, positions):
-            for kmer in kmer_set:
-                kmer_search_list.append((kmer, start, stop))
-        minimized_search_list = minimize_kmer_search_list(kmer_search_list)
-        if len(minimized_search_list) < minimal_score:
-            best_combination = minimized_search_list
-            minimal_score = len(minimized_search_list)
+
+    kmer_search_list = []
+    for start, stop, kmer_set in search_sets:
+        for kmer in kmer_set:
+            kmer_search_list.append((kmer, start, stop))
+    minimized_search_list = minimize_kmer_search_list(kmer_search_list)
     result_dict = defaultdict(list)
-    for kmer, start, stop in best_combination:
+    for kmer, start, stop in minimized_search_list:
         result_dict[(start, stop)].append(kmer)
     return [(start, stop, kmers) for (start, stop), kmers in result_dict.items()]
 
@@ -120,10 +112,10 @@ def create_back_overlap_searchsets(
             min_overlap_kmer_length = 5
             if minimum_length < min_overlap_kmer_length:
                 for i in range(minimum_length, min_overlap_kmer_length):
-                    search_set = (-i, None, [{adapter[:i]}])
+                    search_set = (-i, None, {adapter[:i]})
                     search_sets.append(search_set)
                 minimum_length = min_overlap_kmer_length
-        kmer_sets = kmer_possibilities(adapter[:minimum_length], max_errors + 1)
+        kmer_sets = kmer_chunks(adapter[:minimum_length], max_errors + 1)
         search_sets.append((-length, None, kmer_sets))
         minimum_length = length + 1
     return search_sets
@@ -166,14 +158,12 @@ def create_positions_and_kmers(
             adapter[::-1], min_overlap, error_rate
         )
         front_search_sets = []
-        for start, stop, kmer_sets in reversed_back_search_sets:
-            new_kmer_sets = [
-                {kmer[::-1] for kmer in kmer_set} for kmer_set in kmer_sets
-            ]
-            front_search_sets.append((0, -start, new_kmer_sets))
+        for start, stop, kmer_set in reversed_back_search_sets:
+            new_kmer_set = {kmer[::-1] for kmer in kmer_set}
+            front_search_sets.append((0, -start, new_kmer_set))
         search_sets.extend(front_search_sets)
     if internal:
-        kmer_sets = kmer_possibilities(adapter, max_errors + 1)
+        kmer_sets = kmer_chunks(adapter, max_errors + 1)
         search_sets.append((0, None, kmer_sets))
     return find_optimal_kmers(search_sets)
 
