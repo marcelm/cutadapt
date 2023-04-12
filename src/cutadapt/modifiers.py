@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 
 from dnaio import record_names_match, SequenceRecord
 
-from .qualtrim import quality_trim_index, nextseq_trim_index
+from .qualtrim import quality_trim_index, nextseq_trim_index, poly_a_trim_index
 from .adapters import (
     MultipleAdapters,
     SingleAdapter,
@@ -750,6 +750,19 @@ class QualityTrimmer(SingleEndModifier):
         )
         self.trimmed_bases += len(read) - (stop - start)
         return read[start:stop]
+
+
+class PolyATrimmer(SingleEndModifier):
+    def __init__(self):
+        self.trimmed_bases = 0
+
+    def __repr__(self):
+        return "PolyATrimmer()"
+
+    def __call__(self, record: SequenceRecord, info: ModificationInfo):
+        index = poly_a_trim_index(record.sequence)
+        self.trimmed_bases += len(record) - index
+        return record[:index]
 
 
 class Shortener(SingleEndModifier):

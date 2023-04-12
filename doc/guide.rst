@@ -978,9 +978,7 @@ the curly braces specifies how often the character that preceeds it will be
 repeated. This works also for IUPAC wildcard characters, as in ``N{5}``.
 
 It is recommended that you use quotation marks around your adapter sequence if
-you use this feature. For poly-A trimming, for example, you would write::
-
-    cutadapt -a "A{100}" -o output.fastq input.fastq
+you use this feature, as in ``-a "N{5}ACGT"``.
 
 
 .. _modifying-reads:
@@ -1128,6 +1126,16 @@ This works like regular quality trimming (where one would use ``-q 20``
 instead), except that the qualities of ``G`` bases are ignored.
 
 .. versionadded:: 1.10
+
+
+.. _poly-a:
+
+Poly-A trimming
+~~~~~~~~~~~~~~~
+
+Use `--poly-a`` to trim poly-A tails. Poly-A trimming is done after adapter trimming.
+
+.. versionadded:: 4.4
 
 
 Shortening reads to a fixed length

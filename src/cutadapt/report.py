@@ -28,6 +28,7 @@ from .modifiers import (
     PairedAdapterCutter,
     ReverseComplementer,
     PairedEndModifierWrapper,
+    PolyATrimmer,
 )
 from .statistics import ReadLengthStatistics
 from .steps import HasStatistics, HasFilterStatistics
@@ -70,6 +71,7 @@ class Statistics:
         self.read_length_statistics = ReadLengthStatistics()
         self.with_adapters: List[Optional[int]] = [None, None]
         self.quality_trimmed_bp: List[Optional[int]] = [None, None]
+        self.poly_a_trimmed_bp: List[Optional[int]] = [None, None]
         self.adapter_stats: List[List[AdapterStatistics]] = [[], []]
         self._collected: bool = False
 
@@ -160,6 +162,10 @@ class Statistics:
                 self.quality_trimmed_bp[i] = add_if_not_none(
                     self.quality_trimmed_bp[i], modifier.trimmed_bases
                 )
+            if isinstance(modifier, PolyATrimmer):
+                self.poly_a_trimmed_bp[i] = add_if_not_none(
+                    self.poly_a_trimmed_bp[i], modifier.trimmed_bases
+                )
             elif isinstance(modifier, AdapterCutter):
                 assert self.with_adapters[i] is None
                 self.with_adapters[i] = modifier.with_adapters
@@ -201,6 +207,9 @@ class Statistics:
                 "quality_trimmed": self.quality_trimmed,
                 "quality_trimmed_read1": self.quality_trimmed_bp[0],
                 "quality_trimmed_read2": self.quality_trimmed_bp[1],
+                "poly_a_trimmed": self.poly_a_trimmed,
+                "poly_a_trimmed_read1": self.poly_a_trimmed_bp[0],
+                "poly_a_trimmed_read2": self.poly_a_trimmed_bp[1],
                 "output": self.total_written_bp,
                 "output_read1": written_bp[0],
                 "output_read2": written_bp[1] if self.paired else None,
@@ -293,6 +302,10 @@ class Statistics:
         return add_if_not_none(*self.quality_trimmed_bp)
 
     @property
+    def poly_a_trimmed(self) -> Optional[int]:
+        return add_if_not_none(*self.poly_a_trimmed_bp)
+
+    @property
     def total_written_bp(self) -> int:
         return sum(self.read_length_statistics.written_bp())
 
@@ -326,6 +339,10 @@ class Statistics:
 
     def filtered_fraction(self, filter_name: str) -> float:
         return safe_divide(self.filtered.get(filter_name), self.n)
+
+    @property
+    def poly_a_trimmed_fraction(self) -> float:
+        return safe_divide(self.poly_a_trimmed, self.total)
 
 
 class ErrorRanges:
@@ -607,6 +624,16 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
             for i in (0, 1):
                 if stats.quality_trimmed_bp[i] is not None:
                     report += f"  Read {i + 1}: {stats.quality_trimmed_bp[i]:13,d} bp\n"
+
+    if stats.poly_a_trimmed is not None:
+        report += (
+            "Poly-A-trimmed:            "
+            f"{stats.poly_a_trimmed:13,d} bp ({stats.poly_a_trimmed_fraction:.1%})\n"
+        )
+        if stats.paired:
+            for i in (0, 1):
+                if stats.poly_a_trimmed_bp[i] is not None:
+                    report += f"  Read {i + 1}: {stats.poly_a_trimmed_bp[i]:13,d} bp\n"
 
     report += (
         "Total written (filtered):  "

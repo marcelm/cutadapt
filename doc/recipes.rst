@@ -56,34 +56,11 @@ For paired-end data, use also the ``--untrimmed-paired-output`` option::
 Trim poly-A tails
 -----------------
 
-If you want to trim a poly-A tail from the 3' end of your reads, use the 3'
-adapter type (``-a``) with an adapter sequence of many repeated ``A``
-nucleotides. Use the
-following notation to specify a sequence that consists of 100 ``A``::
+Use ``--poly-a``, see :ref:`poly-A trimming <poly-a>`.
 
-    cutadapt -a "A{100}" -o output.fastq input.fastq
-
-This also works when there are sequencing errors in the poly-A tail. So this
-read ::
-
-    TACGTACGTACGTACGAAATAAAAAAAAAAA
-
-will be trimmed to::
-
-    TACGTACGTACGTACG
-
-If for some reason you would like to use a shorter sequence of ``A``, you can
-do so: The matching algorithm always picks the leftmost match that it can find,
-so Cutadapt will do the right thing even when the tail has more ``A`` than you
-used in the adapter sequence. However, sequencing errors may result in shorter
-matches than desired. For example, using ``-a "A{10}"``, the read above (where
-the ``AAAT`` is followed by eleven ``A``) would be trimmed to::
-
-    TACGTACGTACGTACGAAAT
-
-Depending on your application, perhaps a variant of ``-a A{10}N{90}`` is an
-alternative, forcing the match to be located as much to the left as possible,
-while still allowing for non-``A`` bases towards the end of the read.
+In versions of Cutadapt earlier than 4.4, the recommendation was to use
+``-a "A{100}"`` for poly-A-trimming, but the ``--poly-a`` option is more
+accurate and much faster.
 
 
 Trim a fixed number of bases preceding each adapter

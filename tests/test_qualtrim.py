@@ -1,7 +1,7 @@
 import pytest
 
 from dnaio import SequenceRecord
-from cutadapt.qualtrim import nextseq_trim_index, expected_errors
+from cutadapt.qualtrim import nextseq_trim_index, expected_errors, poly_a_trim_index
 
 
 def test_nextseq_trim():
@@ -13,6 +13,22 @@ def test_nextseq_trim():
         "AA//EAEE//A6///E//A//EA/EEEEEEAEA//EEEEEEEEEEEEEEE###########EE#EA",
     )
     assert nextseq_trim_index(s, cutoff=22) == 33
+
+
+@pytest.mark.parametrize(
+    "sequence,tail",
+    [
+        ("", ""),
+        ("TCAAGAAGTCCTTTACCAGCTTTC", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+        ("TCAAGAAGTCCTTTACCAGCTTTC", "AAATAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+        ("GCAGATCACCTT", "AAAAAAAAAAAAAAAAAAAAAAAAAAAATAAA"),
+        ("GCAGATCACCTT", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAT"),
+        ("GCAGATCACCTT", "AAAAAAAAAAAAAAAAAAAAAAAAAAAATCG"),
+        ("GCAGATCACCTAT", "AAAACAAAAAAACAAAAAAAACAAAAAA"),
+    ],
+)
+def test_poly_a_trim_index(sequence, tail):
+    assert poly_a_trim_index(sequence + tail) == len(sequence)
 
 
 def test_expected_errors():

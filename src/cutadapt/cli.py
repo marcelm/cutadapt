@@ -89,6 +89,7 @@ from cutadapt.modifiers import (
     PairedEndRenamer,
     Renamer,
     InvalidTemplate,
+    PolyATrimmer,
 )
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import (
@@ -254,6 +255,8 @@ def get_argument_parser() -> ArgumentParser:
         help="Assume that quality values in FASTQ are encoded as ascii(quality "
             "+ N). This needs to be set to 64 for some old Illumina "
             "FASTQ files. Default: %(default)s")
+    group.add_argument("--poly-a", action="store_true", default=False,
+        help="Trim poly-A tails")
     group.add_argument("--length", "-l", type=int, default=None, metavar="LENGTH",
             help="Shorten reads to LENGTH. Positive values remove bases at the end "
             "while negative ones remove bases at the beginning. This and the "
@@ -1022,6 +1025,8 @@ def make_adapter_cutter(
 
 
 def modifiers_applying_to_both_ends_if_paired(args) -> Iterator[SingleEndModifier]:
+    if args.poly_a:
+        yield PolyATrimmer()
     if args.length is not None:
         yield Shortener(args.length)
     if args.trim_n:
@@ -1252,7 +1257,7 @@ def json_report(
 ) -> Dict:
     d = {
         "tag": "Cutadapt report",
-        "schema_version": OneLine([0, 1]),
+        "schema_version": OneLine([0, 2]),
         "cutadapt_version": __version__,
         "python_version": platform.python_version(),
         "command_line_arguments": cmdlineargs,

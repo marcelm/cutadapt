@@ -118,6 +118,9 @@ Additional read modifications
     Assume that quality values in the FASTQ file are encoded as ascii(quality + N).
     This needs to be set to 64 for some very old Illumina FASTQ files.
 
+``--poly-a``
+    :ref:`Trim poly-A tails <poly-A>`.
+
 ``--length LENGTH``, ``-l LENGTH``
     Shorten reads to LENGTH, where LENGTH is an integer. Positive values remove bases at
     the end while negative ones remove bases at the beginning.
@@ -310,6 +313,9 @@ This example was reformatted to use less vertical space::
         "quality_trimmed": 842048,
         "quality_trimmed_read1": 842048,
         "quality_trimmed_read2": null,
+        "poly_a_trimmed": null,
+        "poly_a_trimmed_read1": null,
+        "poly_a_trimmed_read2": null,
         "output": 9038081,
         "output_read1": 9038081,
         "output_read2": null
@@ -385,12 +391,12 @@ schema_version : list of two integers
 cutadapt_version : str
    The version of Cutadapt that generated the report.
 
-   Example: ``"3.5"``
+   Example: ``"4.4"``
 
 python_version : str
    The Python version used to run Cutadapt.
 
-   Example: ``"3.9"``
+   Example: ``"3.10"``
 
 command_line_arguments : list of strings
    The command-line arguments for this invocation. Only for information, do not parse this.
@@ -475,14 +481,25 @@ basepair_counts.input_read2 : int | null
    If paired-end, number of basepairs in the input counting read 2 only, null otherwise.
 
 basepair_counts.quality_trimmed : int | null
-   Total number of basepairs removed due to quality trimming, null if no quality trimming was done.
+   Total number of basepairs removed due to quality trimming or null if no quality trimming was done.
 
 basepair_counts.quality_trimmed_read1 : int | null
-   Number of basepairs removed from read 1 due to quality trimming, null if no quality trimming
+   Number of basepairs removed from read 1 due to quality trimming or null if no quality trimming
    was done.
 
 basepair_counts.quality_trimmed_read2 : int
-   Number of basepairs removed from read 2 due to quality trimming, null if no quality trimming was
+   Number of basepairs removed from read 2 due to quality trimming or null if no quality trimming was
+   done or if input was single end.
+
+basepair_counts.poly_a_trimmed : int | null
+   Total number of basepairs removed due to poly-A trimming or null if no poly-A trimming was done.
+
+basepair_counts.poly_a_trimmed_read1 : int | null
+   Number of basepairs removed from read 1 due to poly-A trimming or null if no poly-A trimming was
+   done.
+
+basepair_counts.poly_a_trimmed_read2 : int
+   Number of basepairs removed from read 2 due to poly-A trimming or null if no poly-A trimming was
    done or if input was single end.
 
 basepair_counts.output : int
@@ -757,10 +774,11 @@ Steps not requested on the command-line are skipped.
 1. Unconditional base removal with ``--cut``
 2. Quality trimming (``-q``)
 3. Adapter trimming (``-a``, ``-b``, ``-g`` and uppercase versions)
-4. Read shortening (``--length``)
-5. N-end trimming (``--trim-n``)
-6. Length tag modification (``--length-tag``)
-7. Read name suffix removal (``--strip-suffix``)
-8. Addition of prefix and suffix to read name (``-x``/``--prefix`` and ``-y``/``--suffix``)
-9. Read renaming according to ``--rename``
-10. Replacing of negative quality values with zero (zero capping)
+4. Poly-A trimming (``--poly-a``)
+5. Read shortening (``--length``)
+6. N-end trimming (``--trim-n``)
+7. Length tag modification (``--length-tag``)
+8. Read name suffix removal (``--strip-suffix``)
+9. Addition of prefix and suffix to read name (``-x``/``--prefix`` and ``-y``/``--suffix``)
+10. Read renaming according to ``--rename``
+11. Replacing of negative quality values with zero (zero capping)

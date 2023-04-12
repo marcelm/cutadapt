@@ -6,11 +6,18 @@ Changelog
 development version
 -------------------
 
-* :issue:`685`: Speed up index generation somewhat. This is most noticable when
+* :issue:`695`: Fixed very slow k-mer heuristic initialization (hours instead
+  of seconds) for degenerate adapter sequences such as ``A{100}`` as used
+  when doing poly-A trimming.
+* :issue:`696`: Added option ``--poly-a`` for trimming poly-A tails. This is
+  more accurate and multiple times faster than using ``-a A{100}`` as previously
+  recommended. This is currently experimental (that is, the algorithm may change
+  in the next one or two releases).
+* :issue:`685`: Sped up index generation somewhat. This is most noticable when
   demultiplexing using thousands or more adapters. The speedup is
   different depending on whether indels are allowed or not because
   different algorithms are used.
-* :issue:`685`: Speed up demultiplexing (when using an index) for the case when
+* :issue:`685`: Sped up demultiplexing (when using an index) for the case when
   the read contains ``N`` bases within the region where the adapter matches.
   Previously, any ``N`` would disable the index for that read and trigger a
   fallback to the slow method of matching each adapter one-by-one. Now the index
