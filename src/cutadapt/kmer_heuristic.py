@@ -215,3 +215,30 @@ def kmer_probability_analysis(
         f"Chance for profile hit by random sequence: {(1 - accumulated_not_hit_chance) * 100:.2f}%\n"
     )
     return out.getvalue()
+
+
+if __name__ == "__main__":
+    # This allows for easy debugging and benchmarking of the kmer heuristic code.
+    import argparse
+    from ._kmer_finder import KmerFinder
+    import dnaio
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--adapter")
+    parser.add_argument("--anywhere", action="store_true")
+    parser.add_argument("fastq")
+    args = parser.parse_args()
+    kmers_and_offsets = create_positions_and_kmers(
+        args.adapter, 3, 0.1, back_adapter=True, front_adapter=args.anywhere
+    )
+    kmer_finder = KmerFinder(kmers_and_offsets)
+    print(kmer_probability_analysis(kmers_and_offsets))
+    with (dnaio.open(args.fastq, mode="r", open_threads=0) as reader,):
+        number_of_records = 0
+        possible_adapters_found = 0
+        for number_of_records, record in enumerate(reader, start=1):
+            if kmer_finder.kmers_present(record.sequence):
+                possible_adapters_found += 1
+    print(
+        f"Percentage possible adapters: {possible_adapters_found / number_of_records}"
+    )
