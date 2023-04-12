@@ -73,9 +73,14 @@ def minimize_kmer_search_list(
     return kmers_and_positions
 
 
-def find_optimal_kmers(
+def remove_redundant_kmers(
     search_sets: List[SearchSet],
 ) -> List[Tuple[int, Optional[int], List[str]]]:
+    """
+    This removes kmers that are searched in multiple search sets and makes
+    sure they are only searched in the larger search set. This reduces the
+    amount of searched patterns and therefore the number of false positives.
+    """
 
     kmer_search_list = []
     for start, stop, kmer_set in search_sets:
@@ -165,7 +170,7 @@ def create_positions_and_kmers(
     if internal:
         kmer_sets = kmer_chunks(adapter, max_errors + 1)
         search_sets.append((0, None, kmer_sets))
-    return find_optimal_kmers(search_sets)
+    return remove_redundant_kmers(search_sets)
 
 
 def kmer_probability_analysis(
