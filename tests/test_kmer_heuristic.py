@@ -108,7 +108,9 @@ def test_create_kmers_and_positions(kwargs, expected):
 @pytest.mark.timeout(0.5)
 def test_create_positions_and_kmers_slow():
     create_positions_and_kmers(
-        "A" * 100,
+        # Ridiculous size to check if there aren't any quadratic or exponential
+        # algorithms in the code.
+        "A" * 1000,
         min_overlap=3,
         error_rate=0.1,
         back_adapter=True,
