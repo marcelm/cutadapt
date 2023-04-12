@@ -25,6 +25,8 @@ def test_nextseq_trim():
         ("GCAGATCACCTT", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAT"),
         ("GCAGATCACCTT", "AAAAAAAAAAAAAAAAAAAAAAAAAAAATCG"),
         ("GCAGATCACCTAT", "AAAACAAAAAAACAAAAAAAACAAAAAA"),
+        ("TTTT", "AAATAAAA"),
+        ("GGGGGGGGAAAGAAGAAGAAGAAGAAGAAG", "AAA"),
     ],
 )
 def test_poly_a_trim_index(sequence, tail):

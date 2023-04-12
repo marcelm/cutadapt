@@ -123,13 +123,16 @@ def poly_a_trim_index(str s):
         int score = 0
         int i
         char c
+        int errors = 0
 
     for i in reversed(range(n)):
         if s_ptr[i] == b"A":
             score += 1
         else:
             score -= 2
-        if score > best_score:
+            errors += 1
+
+        if score > best_score and errors * 5 <= n - i:  # max error rate 0.2
             best_score = score
             best_index = i
 
