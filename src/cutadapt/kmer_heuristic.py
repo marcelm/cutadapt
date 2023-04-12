@@ -15,19 +15,12 @@ def kmer_chunks(sequence: str, chunks: int) -> Set[str]:
     chunk_sizes: List[int] = remainder * [chunk_size + 1] + (chunks - remainder) * [
         chunk_size
     ]
-    possible_orderings = set(itertools.permutations(chunk_sizes))
-    kmer_sets = []
-    for chunk_list in possible_orderings:
-        offset = 0
-        chunk_set = set()
-        for size in chunk_list:
-            chunk_set.add(sequence[offset : offset + size])
-            offset += size
-        kmer_sets.append(chunk_set)
-    sorted_by_length = sorted((len(chunk_set), chunk_set) for chunk_set in kmer_sets)
-    # Sometimes there are repeated sequences which make a set shorter
-    shortest_length, shortest_set = sorted_by_length[0]
-    return shortest_set
+    offset = 0
+    chunk_set = set()
+    for size in chunk_sizes:
+        chunk_set.add(sequence[offset : offset + size])
+        offset += size
+    return chunk_set
 
 
 # A SearchSet is a start and stop combined with a set of strings to search

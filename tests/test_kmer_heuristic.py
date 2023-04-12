@@ -1,7 +1,7 @@
 import pytest
 
 from cutadapt.kmer_heuristic import (
-    kmer_possibilities,
+    kmer_chunks,
     minimize_kmer_search_list,
     create_back_overlap_searchsets,
     create_positions_and_kmers,
@@ -11,15 +11,12 @@ from cutadapt.kmer_heuristic import (
 @pytest.mark.parametrize(
     ["sequence", "chunks", "expected"],
     [
-        ("ABC", 3, [{"A", "B", "C"}]),
-        ("ABCD", 3, [{"A", "B", "CD"}, {"A", "BC", "D"}, {"AB", "C", "D"}]),
+        ("ABC", 3, {"A", "B", "C"}),
+        ("ABCD", 3, {"AB", "C", "D"}),
     ],
 )
-def test_kmer_possibilities(sequence, chunks, expected):
-    frozen_expected = set(frozenset(s) for s in expected)
-    result = kmer_possibilities(sequence, chunks)
-    frozen_result = set(frozenset(s) for s in result)
-    assert frozen_expected == frozen_result
+def test_kmer_chunks(sequence, chunks, expected):
+    assert kmer_chunks(sequence, chunks) == expected
 
 
 @pytest.mark.parametrize(
@@ -106,3 +103,15 @@ def test_create_kmers_and_positions(kwargs, expected):
     assert {(start, stop): frozenset(kmers) for start, stop, kmers in result} == {
         (start, stop): frozenset(kmers) for start, stop, kmers in expected
     }
+
+
+@pytest.mark.timeout(0.5)
+def test_create_positions_and_kmers_slow():
+    create_positions_and_kmers(
+        "A" * 100,
+        min_overlap=3,
+        error_rate=0.1,
+        back_adapter=True,
+        front_adapter=False,
+        internal=True,
+    )
