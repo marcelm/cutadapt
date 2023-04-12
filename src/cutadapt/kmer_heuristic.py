@@ -226,5 +226,6 @@ if __name__ == "__main__":
             if kmer_finder.kmers_present(record.sequence):
                 possible_adapters_found += 1
     print(
-        f"Percentage possible adapters: {possible_adapters_found / number_of_records}"
+        f"Percentage possible adapters: "
+        f"{possible_adapters_found * 100 / number_of_records:.2f}%"
     )
