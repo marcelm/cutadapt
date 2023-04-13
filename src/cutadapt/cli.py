@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2010-2022 Marcel Martin <marcel.martin@scilifelab.se>
+# Copyright (c) 2010 Marcel Martin <marcel.martin@scilifelab.se> and contributors
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +23,9 @@
 """
 cutadapt version {version}
 
-Copyright (C) 2010-2022 Marcel Martin <marcel.martin@scilifelab.se>
+Copyright (C) 2010 Marcel Martin <marcel.martin@scilifelab.se> and contributors
 
-cutadapt removes adapter sequences from high-throughput sequencing reads.
+Cutadapt removes adapter sequences from high-throughput sequencing reads.
 
 Usage:
     cutadapt -a ADAPTER [options] [-o output.fastq] input.fastq
