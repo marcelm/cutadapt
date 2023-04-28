@@ -188,3 +188,22 @@ The numbers in parentheses are not computed (because 8 is greater than zero),
 but shown here for completeness. The position of the minimum (-25) is used as
 the trimming position. Therefore, the read is trimmed to the first four bases,
 which have quality values 42, 40, 26, 27.
+
+
+.. _expected-errors:
+
+Expected errors
+===============
+
+The ``--max-expected-errors`` (short version: ``--max-ee``) option discards a
+read if its number of expected errors exceeds the specified threshold.
+
+This emulates a filtering option originally implemented in
+`USEARCH <https://www.drive5.com/usearch/>`_. The number of expected errors is
+computed from the quality scores as described in the USEARCH paper by
+`Edgar et al. (2015) <https://academic.oup.com/bioinformatics/article/31/21/3476/194979>`_,
+(Section 2.2). That is, it is the sum of the error probabilities.
+
+The USEARCH manual page `has a lot more background on expected
+errors <https://www.drive5.com/usearch/manual/exp_errs.html>`_ and how to choose
+a threshold.

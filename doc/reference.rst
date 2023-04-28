@@ -168,9 +168,8 @@ always discarded pairwise (see also ``--pair-filter``). The default is to not ap
     If COUNT is a number between 0 and 1,
     it is interpreted as a fraction of the read length. See :ref:`Dealing with N bases <n-bases>`.
 
-``--max-expected-errors ERRORS``, ``--max-ee ERRORS``
-    Discard reads whose expected number of errors (computed
-    from quality values) exceeds ERRORS.
+``--max-expected-errors E``, ``--max-ee E``
+    Discard reads whose :ref:`expected number of errors <expected-errors>` exceeds the value *E*.
 
 ``--discard-trimmed``, ``--discard``
     Discard reads in which an adapter match was found.

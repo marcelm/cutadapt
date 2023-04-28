@@ -236,7 +236,7 @@ v2.9 (2020-03-18)
   for filtering reads whose number of expected errors exceeds the given
   threshold. The idea comes from
   `Edgar et al. (2015) <https://academic.oup.com/bioinformatics/article/31/21/3476/194979>`_.
-* :issue:`438`: The info file now contains the `` rc`` suffix that is added to
+* :issue:`438`: The info file now contains the ``rc`` suffix that is added to
   the names of reverse-complemented reads (with ``--revcomp``).
 * :issue:`448`: ``.bz2`` and ``.xz`` output wasn’t possible in multi-core mode.
 

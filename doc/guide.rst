@@ -1411,10 +1411,7 @@ reads. They always discard those reads for which the filtering criterion applies
     a number between 0 and 1, it is interpreted as a fraction of the read length
 
 ``--max-expected-errors ERRORS`` or ``--max-ee ERRORS``
-    Discard reads with more than ERRORS expected errors. The number of expected
-    errors is computed as described in
-    `Edgar et al. (2015) <https://academic.oup.com/bioinformatics/article/31/21/3476/194979>`_,
-    (Section 2.2).
+    Discard reads with more than ERRORS :ref:`expected errors <expected-errors>`.
 
 ``--discard-casava``
     Discard reads that did not pass CASAVA filtering. Illumina’s CASAVA pipeline in
