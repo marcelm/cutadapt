@@ -22,6 +22,7 @@ development version
   Previously, any ``N`` would disable the index for that read and trigger a
   fallback to the slow method of matching each adapter one-by-one. Now the index
   is used even in those cases.
+* :pr:`700`: Sped up ``--max-expected-errors``. Thanks @rhpvorderman.
 
 v4.3 (2023-03-17)
 -----------------
