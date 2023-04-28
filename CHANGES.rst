@@ -3,8 +3,8 @@
 Changelog
 =========
 
-development version
--------------------
+v4.4 (2023-04-28)
+-----------------
 
 * :issue:`695`: Fixed very slow k-mer heuristic initialization (hours instead
   of seconds) for degenerate adapter sequences such as ``A{100}`` as used
