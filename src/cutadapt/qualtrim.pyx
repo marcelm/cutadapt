@@ -2,9 +2,13 @@
 """
 Quality trimming.
 """
+from cpython.unicode cimport PyUnicode_GET_LENGTH
+from libc.stdint cimport uint8_t
 
 cdef extern from *:
     unsigned char * PyUnicode_1BYTE_DATA(object o)
+    void *PyUnicode_DATA(object o)
+    bint PyUnicode_IS_COMPACT_ASCII(object o)
     int PyUnicode_KIND(object o)
     int PyUnicode_1BYTE_KIND
 
@@ -139,6 +143,10 @@ def poly_a_trim_index(str s):
     return best_index
 
 
+# A lookup table is faster than recalculating the very expensive exponent
+# calculation every time.
+cdef double[94]  QUAL_TO_ERROR_RATE = [10 ** (-q / 10) for q in range(94)]
+
 def expected_errors(str qualities, int base=33):
     """
     Return the number of expected errors (as double) from a read’s
@@ -149,13 +157,17 @@ def expected_errors(str qualities, int base=33):
 
     qualities -- ASCII-encoded qualities (chr(qual + base))
     """
+    if not PyUnicode_IS_COMPACT_ASCII(qualities):
+        raise ValueError(f"Quality string contains non-ASCII values: {qualities}")
     cdef:
-        int i, q
-        bytes quals = qualities.encode()
-        char* cq = quals
+        size_t i
+        uint8_t *quals = <uint8_t *>PyUnicode_DATA(qualities)
+        size_t qual_length = PyUnicode_GET_LENGTH(qualities)
         double e = 0.0
 
-    for i in range(len(qualities)):
-        q = cq[i] - base
-        e += 10 ** (-q / 10)
+    for i in range(qual_length):
+        q = quals[i] - base
+        if q > 93:
+            raise ValueError(f"Not a valid phred value {q} for character {ord(q)}")
+        e += QUAL_TO_ERROR_RATE[q]
     return e
