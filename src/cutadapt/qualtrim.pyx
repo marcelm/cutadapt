@@ -147,7 +147,7 @@ def poly_a_trim_index(str s):
 # calculation every time.
 cdef double[94]  QUAL_TO_ERROR_RATE = [10 ** (-q / 10) for q in range(94)]
 
-def expected_errors(str qualities, int base=33):
+def expected_errors(str qualities, uint8_t base=33):
     """
     Return the number of expected errors (as double) from a read’s
     qualities.
@@ -161,12 +161,14 @@ def expected_errors(str qualities, int base=33):
         raise ValueError(f"Quality string contains non-ASCII values: {qualities}")
     cdef:
         size_t i
+        uint8_t phred, q
         uint8_t *quals = <uint8_t *>PyUnicode_DATA(qualities)
         size_t qual_length = PyUnicode_GET_LENGTH(qualities)
         double e = 0.0
 
     for i in range(qual_length):
-        q = quals[i] - base
+        phred = quals[i]
+        q = phred - base
         if q > 93:
             raise ValueError(f"Not a valid phred value {q} for character {ord(q)}")
         e += QUAL_TO_ERROR_RATE[q]
