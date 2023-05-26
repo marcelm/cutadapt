@@ -21,7 +21,7 @@ General options
     it is recommended to use this only for a single read.
 
 ``-j CORES``, ``--cores CORES`` (default: 1)
-    Run on the given number of CPU cores.
+    Run on the :ref:`given number of CPU cores <multicore>`.
     Use 0 to auto-detect the number of available cores.
 
 
@@ -184,6 +184,19 @@ always discarded pairwise (see also ``--pair-filter``). The default is to not ap
 Output
 ------
 
+``-o FILE``, ``--output FILE``
+    Write processed output to FILE (FASTA or FASTQ).
+    :ref:`Compressed file formats are supported <compressed-files>`.
+    Including the special placeholder string ``{name}`` in the file name activates
+    :ref:`demultiplexing`.
+    Including ``{name1}`` and ``{name2}`` activates
+    :ref:`combinatorial demultiplexing <combinatorial-demultiplexing>`.
+
+    For paired-end data, this option is typically combined with ``-p``.
+
+    If this option is omitted, :ref:`processed reads are written to
+    standard output <standard-input-output>`.
+
 ``--quiet``
     Print only error messages.
 
@@ -193,44 +206,70 @@ Output
 ``--json FILE``
     Write :ref:`a report in JSON format <json-report-format>` to FILE.
 
+``--fasta``
+    :ref:`Force writing FASTA to standard output <force-fasta>`.
+    This option is usually not needed as FASTA output can be selected by
+    using an appropriate output file name (``.fasta``, ``.fasta.gz`` etc.) with the ``-o``
+    option. However, when processing FASTQ files *and* when not using ``-o``,
+    FASTQ format is written to standard output by default.
+    Use this option to force FASTA even in such a case.
+
+``-Z``
+    Use compression level 1 for gzipped output files.
+    This is a shorthand for ``--compression-level=1``.
+
+    See: :ref:`speed-up tricks <speedup>`
+
+``--info-file FILE``
+    Write information about each read and its adapter matches to FILE.
+    See: :ref:`Info file format <info-file-format>`.
+
+``-r FILE``, ``--rest-file FILE``
+    When the adapter matches in the middle of a read, write the "rest" to FILE.
+    For 3' adapters, the "rest" is the part of the read after the adapter match.
+    For 5' adapters, the "rest" is the part of the read before the adapter match.
+
+``--wildcard-file FILE``
+    When the adapter has N wildcard bases, write adapter bases matching wildcard positions to FILE.
+    This is unreliable unless you also use ``--noindels``.
+    Does not work with linked adapters.
+
+``--too-short-output FILE``
+    Write reads that are too short (according to the length specified by ``-m``) to FILE.
+    Default: discard too short reads
+
+``--too-long-output FILE``
+    Write reads that are too long (according to length specified by -M) to FILE.
+    Default: discard too long reads
+
+``--untrimmed-output FILE``
+    Write reads that do not contain any adapter to FILE.
+    Default: output to the same file as trimmed reads.
+
+Paired-end options
+------------------
+
+.. seealso:: :ref:`Trimming paired-end reads <paired-end>`
+
+The ``-A``, ``-G``, ``-B``, ``-U``, ``-Q`` options work like their lowercase counterparts,
+but are applied to the second read in each pair (R2).
+
+``-A ADAPTER``
+    3' adapter to be removed from R2
+
+``-G ADAPTER``
+    5' adapter to be removed from R2
+
+``-B ADAPTER``
+    5'/3 adapter to be removed from R2
+
+``-U LENGTH``
+    Remove LENGTH bases from R2
+
+``-Q [5'CUTOFF,]3'CUTOFF``
+    Quality-trimming cutoff for R2. Default: same as for R1
+
 ..
-      -o FILE, --output FILE
-                            Write trimmed reads to FILE. FASTQ or FASTA format is
-                            chosen depending on input. Summary report is sent to
-                            standard output. Use '{name}' for demultiplexing (see
-                            docs). Default: write to standard output
-      --fasta               Output FASTA to standard output even on FASTQ input.
-      -Z                    Use compression level 1 for gzipped output files
-                            (faster, but uses more space)
-      --info-file FILE      Write information about each read and its adapter
-                            matches into FILE. See the documentation for the file
-                            format.
-      -r FILE, --rest-file FILE
-                            When the adapter matches in the middle of a read, write
-                            the rest (after the adapter) to FILE.
-      --wildcard-file FILE  When the adapter has N wildcard bases, write adapter
-                            bases matching wildcard positions to FILE. (Inaccurate
-                            with indels.)
-      --too-short-output FILE
-                            Write reads that are too short (according to length
-                            specified by -m) to FILE. Default: discard reads
-      --too-long-output FILE
-                            Write reads that are too long (according to length
-                            specified by -M) to FILE. Default: discard reads
-      --untrimmed-output FILE
-                            Write reads that do not contain any adapter to FILE.
-                            Default: output to same file as trimmed reads
-
-    Paired-end options:
-      The -A/-G/-B/-U/-Q options work like their lowercase counterparts, but are
-      applied to R2 (second read in pair)
-
-      -A ADAPTER            3' adapter to be removed from R2
-      -G ADAPTER            5' adapter to be removed from R2
-      -B ADAPTER            5'/3 adapter to be removed from R2
-      -U LENGTH             Remove LENGTH bases from R2
-      -Q [5'CUTOFF,]3'CUTOFF
-                            Quality-trimming cutoff for R2. Default: same as for R1
       -p FILE, --paired-output FILE
                             Write R2 to FILE.
       --pair-adapters       Treat adapters given with -a/-A etc. as pairs. Either
@@ -253,9 +292,6 @@ Output
 
 
 (To Do: needs to be finished, see ``cutadapt --help`` for now)
-
-
-
 
 .. _json-report-format:
 

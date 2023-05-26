@@ -71,6 +71,8 @@ If available, Cutadapt uses `pigz <https://zlib.net/pigz/>`_ to speed up
 writing and reading of gzipped files.
 
 
+.. _standard-input-output:
+
 Standard input and output
 -------------------------
 
@@ -148,16 +150,17 @@ the output will be done in a single thread and therefore be a bottleneck.
 .. versionadded:: 3.0
     Multicore support for demultiplexing added.
 
+.. _speedup:
 
 Speed-up tricks
 ---------------
 
 There are several tricks for limiting wall-clock time while using Cutadapt.
 
-``-Z`` (equivalent to ``--compression-level=1``) can be used to limit the
+Option ``-Z`` (equivalent to ``--compression-level=1``) can be used to limit the
 amount of CPU time which is spent on the compression of output files.
 Alternatively, choosing filenames not ending with ``.gz``, ``.bz2`` or ``.xz``
-will make sure no CPU time is spent on compression at all.  On systems
+will make sure no CPU time is spent on compression at all. On systems
 with slow I/O, it can actually be faster to set a higher compression-level
 than 1.
 

@@ -288,6 +288,8 @@ Convert FASTQ to FASTA format::
 
 Cutadapt detects FASTA output and omits the qualities.
 
+.. _force-fasta:
+
 If output is written to standard output, no output file name is available,
 so the same format as the input is used.
 
