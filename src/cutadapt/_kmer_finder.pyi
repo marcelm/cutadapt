@@ -1,5 +1,7 @@
 from typing import List, Optional, Tuple
 
+MAXIMUM_WORD_SIZE: int
+
 class KmerFinder:
     def __init__(
         self,

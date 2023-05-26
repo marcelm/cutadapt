@@ -4,6 +4,8 @@ import pytest
 
 from cutadapt._match_tables import matches_lookup
 from cutadapt.adapters import KmerFinder
+from cutadapt._kmer_finder import MAXIMUM_WORD_SIZE
+
 
 KMER_FINDER_TESTS = [
     # kmer, start, stop, ref_wildcards, query_wildcards, sequence, expected
@@ -76,16 +78,16 @@ def test_kmer_finder_per_char_matching(ref_wildcards, query_wildcards):
 
 def test_kmer_finder_initialize_bigword():
     with pytest.raises(ValueError) as error:
-        KmerFinder([(0, None, ["A" * 64])])
-    error.match("A" * 64)
-    error.match("64")
+        KmerFinder([(0, None, ["A" * (MAXIMUM_WORD_SIZE + 1)])])
+    error.match("A" * (MAXIMUM_WORD_SIZE + 1))
+    error.match(str(MAXIMUM_WORD_SIZE))
 
 
 def test_kmer_finder_initialize_total_greater_than_max():
-    kmer_finder = KmerFinder([(0, None, ["A" * 31, "B" * 31, "C" * 31, "D" * 43])])
-    assert kmer_finder.kmers_present("X" * 100 + "A" * 31)
-    assert kmer_finder.kmers_present("X" * 100 + "B" * 31)
-    assert kmer_finder.kmers_present("X" * 100 + "C" * 31)
+    kmer_finder = KmerFinder([(0, None, ["A" * 32, "B" * 32, "C" * 32, "D" * 43])])
+    assert kmer_finder.kmers_present("X" * 100 + "A" * 32)
+    assert kmer_finder.kmers_present("X" * 100 + "B" * 32)
+    assert kmer_finder.kmers_present("X" * 100 + "C" * 32)
     assert kmer_finder.kmers_present("X" * 100 + "D" * 43)
     assert not kmer_finder.kmers_present(string.ascii_letters)
 
