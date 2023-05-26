@@ -1,2 +1,3 @@
 sphinx_issues
 sphinx_better_subsection
+setuptools_scm

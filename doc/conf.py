@@ -1,12 +1,12 @@
-import sys
 import os
 import time
-from pkg_resources import get_distribution
+
+from setuptools_scm import get_version
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath(os.path.join(os.pardir, "src")))
+# sys.path.insert(0, os.path.abspath(os.path.join(os.pardir, "src")))
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -19,13 +19,12 @@ master_doc = "index"
 project = "Cutadapt"
 copyright = "2010-{}, Marcel Martin".format(time.gmtime().tm_year)
 
-release = get_distribution("cutadapt").version
+version = get_version(root="..", relative_to=__file__)
+
 # Read The Docs modifies the conf.py script and we therefore get
 # version numbers like 0.12+0.g27d0d31
 if os.environ.get("READTHEDOCS") == "True":
-    version = ".".join(release.split(".")[:2])
-else:
-    version = release
+    version = ".".join(version.split(".")[:2])
 
 # The full version, including alpha/beta/rc tags.
 release = version
