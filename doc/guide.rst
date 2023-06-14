@@ -1615,7 +1615,7 @@ error if the number of provided adapters is not identical for the R1 and R2 sets
 
 Example::
 
-    cutadapt --pair-adapters -a AAAAA -a GGGG -A CCCCC -a TTTT -o out.1.fastq -p out.2.fastq in.1.fastq in.2.fastq
+    cutadapt --pair-adapters -a AAAAA -a GGGG -A CCCCC -A TTTT -o out.1.fastq -p out.2.fastq in.1.fastq in.2.fastq
 
 Here, the adapter pairs are (``AAAAA``, ``CCCCC``) and (``GGGG``, ``TTTT``). That is, paired-end
 reads will only be trimmed if either
