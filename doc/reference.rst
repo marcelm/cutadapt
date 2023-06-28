@@ -774,10 +774,14 @@ a match of the 3' adapter, the string ``;2`` is added. If there are two rows, th
 Properly paired reads
 =====================
 
-When reading paired-end files, Cutadapt checks whether the read names match.
-Only the part of the read name before the first space is considered. If the
-read name ends with ``1`` or ``2`` or ``3``, then that is also ignored. For example,
-two FASTQ headers that would be considered to denote properly paired reads are::
+When reading paired-end reads, Cutadapt compares the read IDs of R1 and R2
+and prints an error message and aborts if they do not match.
+
+Comments in the FASTQ or FASTA header are ignored when doing the comparison.
+Also, if the read ID ends with ``1`` or ``2`` or ``3``, then that is also
+ignored.
+
+For example, two FASTQ headers that would be considered to denote properly paired reads are::
 
     @my_read/1 a comment
 
@@ -785,7 +789,7 @@ and::
 
     @my_read/2 another comment
 
-This is an example for *improperly paired* read names::
+This is an example for *improperly paired* reads::
 
     @my_read/1;1
 
@@ -793,9 +797,9 @@ and::
 
     @my_read/2;1
 
-Since the ``1`` and ``2`` (and ``3``) are ignored only if the occur at the end of the read
+Since the ``1`` and ``2`` are ignored only if they occur at the end of the read
 name, and since the ``;1`` is considered to be part of the read name, these
-reads will not be considered to be propely paired.
+reads will not be considered to be properly paired.
 
 
 .. _read-modification-order:
