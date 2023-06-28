@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7]
+        python-version: ["3.10"]
         toxenv: [flake8, mypy, docs, black]
     steps:
     - uses: actions/checkout@v3
