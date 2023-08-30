@@ -71,6 +71,27 @@ class TooManyExpectedErrors(Predicate):
         return expected_errors(read.qualities) > self.max_errors
 
 
+class TooHighAverageErrorRate(Predicate):
+    """
+    Select reads that have an average error rate above the threshold.
+    This works better than TooManyExpectedErrors for reads that are expected to
+    have varying lengths, such as for long read sequencing technologies.
+    """
+
+    def __init__(self, max_error_rate: float):
+        if not 0.0 < max_error_rate < 1.0:
+            raise ValueError(
+                f"max_error_rate must be between 0.0 and 1.0, " f"got {max_error_rate}."
+            )
+        self.max_error_rate = max_error_rate
+
+    def __repr__(self):
+        return f"TooHighAverageErrorRate(max_error_rate={self.max_error_rate}"
+
+    def test(self, read, info: ModificationInfo):
+        return (expected_errors(read.qualities) / len(read)) > self.max_error_rate
+
+
 class TooManyN(Predicate):
     """
     Select reads that have too many 'N' bases.

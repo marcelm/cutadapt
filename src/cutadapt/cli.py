@@ -296,6 +296,10 @@ def get_argument_parser() -> ArgumentParser:
         metavar="ERRORS",
         help="Discard reads whose expected number of errors (computed "
             "from quality values) exceeds ERRORS.")
+    group.add_argument("--max-average-error-rate", "--max-er", type=float, default=None,
+        metavar="ERROR_RATE",
+        help="Discard reads whose expected average error rate (computed "
+             "from quality values divided by length) exceeds ERROR_RATE")
     group.add_argument("--discard-trimmed", "--discard", action='store_true', default=False,
         help="Discard reads that contain an adapter. Use also -O to avoid "
             "discarding too many randomly matching reads.")
@@ -904,6 +908,7 @@ class PipelineMaker:
                 setattr(pipeline, attr, lengths)
         pipeline.max_n = self.args.max_n
         pipeline.max_expected_errors = self.args.max_expected_errors
+        pipeline.max_average_error_rate = self.args.max_average_error_rate
         pipeline.discard_casava = self.args.discard_casava
         pipeline.discard_trimmed = self.args.discard_trimmed
         pipeline.discard_untrimmed = self.args.discard_untrimmed
