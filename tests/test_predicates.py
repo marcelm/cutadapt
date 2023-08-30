@@ -4,7 +4,7 @@ Tests write output (should it return True or False or write)
 import pytest
 from dnaio import SequenceRecord
 
-from cutadapt.predicates import TooManyN
+from cutadapt.predicates import TooManyN, TooHighAverageErrorRate
 from cutadapt.steps import PairedEndFilter
 
 
@@ -53,3 +53,21 @@ def test_invalid_pair_filter_mode():
     with pytest.raises(ValueError) as e:
         PairedEndFilter(None, None, None, "invalidmode")
     assert "pair_filter_mode must be" in e.value.args[0]
+
+
+@pytest.mark.parametrize(
+    "quals,rate,expected",
+    [
+        # 3 * 0.1 is larger than 0.3 due to floating point rounding.
+        (chr(43) * 3, 0.1, True),
+        (chr(43) * 3 + chr(33), 0.1, True),  # 3 * 0.1 + 1
+        (chr(43) * 3 + chr(33), 0.33, False),  # 3 * 0.1 + 1
+        (chr(43) * 3 + chr(33), 0.32, True),  # 3 * 0.1 + 1
+        (chr(126) * 9 + chr(33), 0.1, True),
+    ],
+)
+def test_too_high_average_error_rate(quals, rate, expected):
+    # third parameter is True if read should be Trueed
+    predicate = TooHighAverageErrorRate(rate)
+    _seq = SequenceRecord("read1", "A" * len(quals), qualities=quals)
+    assert predicate.test(_seq, []) == expected
