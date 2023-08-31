@@ -44,6 +44,9 @@ dev = [
     "sphinx_better_subsection"
 ]
 
+[tool.setuptools.exclude-package-data]
+cutadapt = ["*.pyx"]
+
 [tool.pytest.ini_options]
 filterwarnings = [
     "error",
