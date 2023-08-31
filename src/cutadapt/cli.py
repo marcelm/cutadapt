@@ -296,10 +296,10 @@ def get_argument_parser() -> ArgumentParser:
         metavar="ERRORS",
         help="Discard reads whose expected number of errors (computed "
             "from quality values) exceeds ERRORS.")
-    group.add_argument("--max-average-error-rate", "--max-er", type=float, default=None,
+    group.add_argument("--max-average-error-rate", "--max-aer", type=float, default=None,
         metavar="ERROR_RATE",
-        help="Discard reads whose expected average error rate (computed "
-             "from quality values divided by length) exceeds ERROR_RATE")
+        help="as --max-expected-errors (see above), but divided by length to "
+             "account for reads of varying length.")
     group.add_argument("--discard-trimmed", "--discard", action='store_true', default=False,
         help="Discard reads that contain an adapter. Use also -O to avoid "
             "discarding too many randomly matching reads.")

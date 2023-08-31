@@ -21,7 +21,6 @@ from cutadapt.steps import PairedEndFilter
     ],
 )
 def test_too_many_n(seq, count, expected):
-    # third parameter is True if read should be Trueed
     predicate = TooManyN(count=count)
     _seq = SequenceRecord("read1", seq, qualities="#" * len(seq))
     assert predicate.test(_seq, []) == expected
@@ -67,7 +66,6 @@ def test_invalid_pair_filter_mode():
     ],
 )
 def test_too_high_average_error_rate(quals, rate, expected):
-    # third parameter is True if read should be Trueed
     predicate = TooHighAverageErrorRate(rate)
     _seq = SequenceRecord("read1", "A" * len(quals), qualities=quals)
     assert predicate.test(_seq, []) == expected

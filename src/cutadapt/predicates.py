@@ -81,7 +81,7 @@ class TooHighAverageErrorRate(Predicate):
     def __init__(self, max_error_rate: float):
         if not 0.0 < max_error_rate < 1.0:
             raise ValueError(
-                f"max_error_rate must be between 0.0 and 1.0, " f"got {max_error_rate}."
+                f"max_error_rate must be between 0.0 and 1.0, got {max_error_rate}."
             )
         self.max_error_rate = max_error_rate
 
