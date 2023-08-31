@@ -1416,6 +1416,12 @@ reads. They always discard those reads for which the filtering criterion applies
 ``--max-expected-errors ERRORS`` or ``--max-ee ERRORS``
     Discard reads with more than ERRORS :ref:`expected errors <expected-errors>`.
 
+
+``--max-average-error-rate ERROR_RATE`` or ``--max-aer``
+    Similar to ``--max-expected-errors`` except that the number of expected
+    errors is divided by the read length and the expected input is a fraction
+    between 0.0 and 1.0.
+
 ``--discard-casava``
     Discard reads that did not pass CASAVA filtering. Illumina’s CASAVA pipeline in
     version 1.8 adds an *is_filtered* header field to each read. Specifying this
