@@ -1,4 +1,7 @@
 #include <stdint.h>
+#ifdef __SSE2__
+#include "emmintrin.h"
+#endif
 
 static const float SCORE_TO_ERROR_RATE[94] = {
     1.0L,                     // 0
@@ -103,6 +106,57 @@ expected_errors_from_phreds(const uint8_t *phreds, size_t phreds_length, uint8_t
     const uint8_t *cursor = phreds;
     float expected_errors = 0.0;
     uint8_t max_phred = 126 - base;
+    #ifdef __SSE2__ 
+    const uint8_t *vec_end_ptr = end_ptr - sizeof(__m128i);
+    __m128i phred_array;
+    __m128i illegal_phreds;
+    uint8_t phred_store[16];
+    __m128 accumulator = _mm_set1_ps(0.0);
+    __m128 loader;
+    while (cursor < vec_end_ptr) {
+        phred_array = _mm_loadu_si128((__m128i *)cursor);
+        illegal_phreds = _mm_cmpgt_epi8(phred_array, _mm_set1_epi8(max_phred));
+        illegal_phreds = _mm_or_si128(
+            illegal_phreds, _mm_cmplt_epi8(phred_array, _mm_set1_epi8(base)));
+        if (_mm_movemask_epi8(illegal_phreds)) {
+            return -1.0;
+        }
+        phred_array = _mm_sub_epi8(phred_array, _mm_set1_epi8(base));
+        _mm_store_si128((__m128i *)phred_store, phred_array);
+        loader = _mm_set_ps(
+            SCORE_TO_ERROR_RATE[phred_store[0]],
+            SCORE_TO_ERROR_RATE[phred_store[1]],
+            SCORE_TO_ERROR_RATE[phred_store[2]],
+            SCORE_TO_ERROR_RATE[phred_store[3]]
+        );
+        accumulator = _mm_add_ps(accumulator, loader);
+        loader = _mm_set_ps(
+            SCORE_TO_ERROR_RATE[phred_store[4]],
+            SCORE_TO_ERROR_RATE[phred_store[5]],
+            SCORE_TO_ERROR_RATE[phred_store[6]],
+            SCORE_TO_ERROR_RATE[phred_store[7]]
+        );
+        accumulator = _mm_add_ps(accumulator, loader);
+        loader = _mm_set_ps(
+            SCORE_TO_ERROR_RATE[phred_store[8]],
+            SCORE_TO_ERROR_RATE[phred_store[9]],
+            SCORE_TO_ERROR_RATE[phred_store[10]],
+            SCORE_TO_ERROR_RATE[phred_store[11]]
+        );
+        accumulator = _mm_add_ps(accumulator, loader);
+        loader = _mm_set_ps(
+            SCORE_TO_ERROR_RATE[phred_store[12]],
+            SCORE_TO_ERROR_RATE[phred_store[13]],
+            SCORE_TO_ERROR_RATE[phred_store[14]],
+            SCORE_TO_ERROR_RATE[phred_store[15]]
+        );
+        accumulator = _mm_add_ps(accumulator, loader);
+        cursor += sizeof(__m128i);
+    }
+    float float_store[4];
+    _mm_store_ps(float_store, accumulator);
+    expected_errors = float_store[0] + float_store[1] + float_store[2] + float_store[3];
+    #endif
     while (cursor < end_ptr) {
         uint8_t phred = *cursor - base;
         if (phred > max_phred) {
