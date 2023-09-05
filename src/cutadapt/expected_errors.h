@@ -111,7 +111,7 @@ expected_errors_from_phreds(const uint8_t *phreds, size_t phreds_length, uint8_t
     __m128 accumulator = _mm_set1_ps(0.0);
     while (cursor < vec_end_ptr) {
         __m128i phred_array = _mm_loadu_si128((__m128i *)cursor);
-        __m128i illegal_phreds = _mm_cmpgt_epi8(phred_array, _mm_set1_epi8(max_phred));
+        __m128i illegal_phreds = _mm_cmpgt_epi8(phred_array, _mm_set1_epi8(126));
         illegal_phreds = _mm_or_si128(
             illegal_phreds, _mm_cmplt_epi8(phred_array, _mm_set1_epi8(base)));
         if (_mm_movemask_epi8(illegal_phreds)) {
