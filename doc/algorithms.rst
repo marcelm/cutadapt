@@ -207,3 +207,9 @@ computed from the quality scores as described in the USEARCH paper by
 The USEARCH manual page `has a lot more background on expected
 errors <https://www.drive5.com/usearch/manual/exp_errs.html>`_ and how to choose
 a threshold.
+
+The ``--max-average-error-rate`` (short version: ``--max-aer``) option works
+similarly but divides the expected errors by the length of the read.
+The resulting fraction is then used to filter the read. This is especially
+helpful on reads that have highly varying read length, such as those coming
+from nanopore sequencing.

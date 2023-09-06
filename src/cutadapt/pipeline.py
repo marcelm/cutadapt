@@ -30,6 +30,7 @@ from .predicates import (
     TooLong,
     TooManyN,
     TooManyExpectedErrors,
+    TooHighAverageErrorRate,
     CasavaFiltered,
     DiscardTrimmed,
 )
@@ -72,6 +73,7 @@ class Pipeline(ABC):
         self._maximum_length = None
         self.max_n = None
         self.max_expected_errors = None
+        self.max_average_error_rate = None
         self.discard_casava = False
         self.discard_trimmed = False
         self.discard_untrimmed = False
@@ -147,6 +149,15 @@ class Pipeline(ABC):
                 )
             else:
                 f1 = f2 = TooManyExpectedErrors(self.max_expected_errors)
+                self._steps.append(self._make_filter(f1, f2, None))
+
+        if self.max_average_error_rate is not None:
+            if not self._reader.delivers_qualities:
+                logger.warning(
+                    "Ignoring option --max-er because input does not contain quality values"
+                )
+            else:
+                f1 = f2 = TooHighAverageErrorRate(self.max_average_error_rate)
                 self._steps.append(self._make_filter(f1, f2, None))
 
         if self.discard_casava:
