@@ -12,6 +12,8 @@ cdef extern from *:
     int PyUnicode_KIND(object o)
     int PyUnicode_1BYTE_KIND
 
+cdef extern from "expected_errors.h":
+    float expected_errors_from_phreds(const uint8_t *phreds, size_t phreds_length, uint8_t base)
 
 cdef class HasNoQualities(Exception):
     pass
@@ -142,11 +144,6 @@ def poly_a_trim_index(str s):
 
     return best_index
 
-
-# A lookup table is faster than recalculating the very expensive exponent
-# calculation every time.
-cdef double[94]  QUAL_TO_ERROR_RATE = [10 ** (-q / 10) for q in range(94)]
-
 def expected_errors(str qualities, uint8_t base=33):
     """
     Return the number of expected errors (as double) from a read’s
@@ -160,16 +157,12 @@ def expected_errors(str qualities, uint8_t base=33):
     if not PyUnicode_IS_COMPACT_ASCII(qualities):
         raise ValueError(f"Quality string contains non-ASCII values: {qualities}")
     cdef:
-        size_t i
-        uint8_t phred, q
         uint8_t *quals = <uint8_t *>PyUnicode_DATA(qualities)
         size_t qual_length = PyUnicode_GET_LENGTH(qualities)
-        double e = 0.0
+        float e = expected_errors_from_phreds(quals, qual_length, base)
 
-    for i in range(qual_length):
-        phred = quals[i]
-        q = phred - base
-        if q > 93:
-            raise ValueError(f"Not a valid phred value {q} for character {ord(q)}")
-        e += QUAL_TO_ERROR_RATE[q]
+    if e < 0.0:
+        for q in qualities:
+            if ord(q) < base or ord(q) > 126:
+                raise ValueError(f"Not a valid phred value {ord(q)} for character {q}")
     return e
