@@ -144,7 +144,6 @@ def poly_a_trim_index(str s):
 
     return best_index
 
-
 def expected_errors(str qualities, uint8_t base=33):
     """
     Return the number of expected errors (as double) from a read’s
@@ -163,5 +162,7 @@ def expected_errors(str qualities, uint8_t base=33):
         float e = expected_errors_from_phreds(quals, qual_length, base)
 
     if e < 0.0:
-        raise ValueError(f"Invalid phred value found in {qualities}")
+        for q in qualities:
+            if ord(q) < base or ord(q) > 126:
+                raise ValueError(f"Not a valid phred value {ord(q)} for character {q}")
     return e
