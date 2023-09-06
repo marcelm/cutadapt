@@ -1418,9 +1418,9 @@ reads. They always discard those reads for which the filtering criterion applies
 
 
 ``--max-average-error-rate ERROR_RATE`` or ``--max-aer``
-    Similar to ``--max-expected-errors`` except that the number of expected
-    errors is divided by the read length and the expected input is a fraction
-    between 0.0 and 1.0.
+    Discard reads with more than ERROR_RATE average expected errors
+    (total expected errors divided by the read length). ERROR_RATE must
+    be between 0.0 and 1.0.
 
 ``--discard-casava``
     Discard reads that did not pass CASAVA filtering. Illumina’s CASAVA pipeline in
