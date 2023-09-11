@@ -62,7 +62,7 @@ def test_invalid_pair_filter_mode():
         (chr(43) * 3 + chr(33), 0.1, True),  # 3 * 0.1 + 1
         (chr(43) * 3 + chr(33), 0.33, False),  # 3 * 0.1 + 1
         (chr(43) * 3 + chr(33), 0.32, True),  # 3 * 0.1 + 1
-        (chr(103) * 9 + chr(33), 0.1, True),  # 9 * 10^-7 + 1
+        (chr(126) * 9 + chr(33), 0.1, True),  # 9 * 10^-9.3 + 1
     ],
 )
 def test_too_high_average_error_rate(quals, rate, expected):

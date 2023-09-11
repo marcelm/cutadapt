@@ -3,7 +3,7 @@
 #include "emmintrin.h"
 #endif
 
-static const float SCORE_TO_ERROR_RATE[94] = {
+static const double SCORE_TO_ERROR_RATE[94] = {
     1.0L,                     // 0
     0.7943282347242815L,      // 1
     0.6309573444801932L,      // 2
@@ -100,15 +100,15 @@ static const float SCORE_TO_ERROR_RATE[94] = {
     5.011872336272714E-10L,   // 93
 };
 
-static inline float 
+static inline double
 expected_errors_from_phreds(const uint8_t *phreds, size_t phreds_length, uint8_t base) {
     const uint8_t *end_ptr = phreds + phreds_length;
     const uint8_t *cursor = phreds;
-    float expected_errors = 0.0;
+    double expected_errors = 0.0;
     uint8_t max_phred = 126 - base;
     #ifdef __SSE2__ 
     const uint8_t *vec_end_ptr = end_ptr - sizeof(__m128i);
-    __m128 accumulator = _mm_set1_ps(0.0);
+    __m128d accumulator = _mm_set1_pd(0.0);
     while (cursor < vec_end_ptr) {
         __m128i phred_array = _mm_loadu_si128((__m128i *)cursor);
         __m128i illegal_phreds = _mm_cmpgt_epi8(phred_array, _mm_set1_epi8(126));
@@ -117,39 +117,51 @@ expected_errors_from_phreds(const uint8_t *phreds, size_t phreds_length, uint8_t
         if (_mm_movemask_epi8(illegal_phreds)) {
             return -1.0;
         }
-        __m128 loader = _mm_set_ps(
+        __m128d loader = _mm_set_pd(
             SCORE_TO_ERROR_RATE[cursor[0] - base],
-            SCORE_TO_ERROR_RATE[cursor[1] - base],
+            SCORE_TO_ERROR_RATE[cursor[1] - base]
+        );
+        accumulator = _mm_add_pd(accumulator, loader);
+        loader = _mm_set_pd(
             SCORE_TO_ERROR_RATE[cursor[2] - base],
             SCORE_TO_ERROR_RATE[cursor[3] - base]
         );
-        accumulator = _mm_add_ps(accumulator, loader);
-        loader = _mm_set_ps(
+        accumulator = _mm_add_pd(accumulator, loader);
+        loader = _mm_set_pd(
             SCORE_TO_ERROR_RATE[cursor[4] - base],
-            SCORE_TO_ERROR_RATE[cursor[5] - base],
+            SCORE_TO_ERROR_RATE[cursor[5] - base]
+        );
+        accumulator = _mm_add_pd(accumulator, loader);
+        loader = _mm_set_pd(
             SCORE_TO_ERROR_RATE[cursor[6] - base],
             SCORE_TO_ERROR_RATE[cursor[7] - base]
         );
-        accumulator = _mm_add_ps(accumulator, loader);
-        loader = _mm_set_ps(
+        accumulator = _mm_add_pd(accumulator, loader);
+        loader = _mm_set_pd(
             SCORE_TO_ERROR_RATE[cursor[8] - base],
-            SCORE_TO_ERROR_RATE[cursor[9] - base],
+            SCORE_TO_ERROR_RATE[cursor[9] - base]
+        );
+        accumulator = _mm_add_pd(accumulator, loader);
+        loader = _mm_set_pd(
             SCORE_TO_ERROR_RATE[cursor[10] - base],
             SCORE_TO_ERROR_RATE[cursor[11] - base]
         );
-        accumulator = _mm_add_ps(accumulator, loader);
-        loader = _mm_set_ps(
+        accumulator = _mm_add_pd(accumulator, loader);
+        loader = _mm_set_pd(
             SCORE_TO_ERROR_RATE[cursor[12] - base],
-            SCORE_TO_ERROR_RATE[cursor[13] - base],
+            SCORE_TO_ERROR_RATE[cursor[13] - base]
+        );
+        accumulator = _mm_add_pd(accumulator, loader);
+        loader = _mm_set_pd(
             SCORE_TO_ERROR_RATE[cursor[14] - base],
             SCORE_TO_ERROR_RATE[cursor[15] - base]
         );
-        accumulator = _mm_add_ps(accumulator, loader);
+        accumulator = _mm_add_pd(accumulator, loader);
         cursor += sizeof(__m128i);
     }
-    float float_store[4];
-    _mm_store_ps(float_store, accumulator);
-    expected_errors = float_store[0] + float_store[1] + float_store[2] + float_store[3];
+    double double_store[2];
+    _mm_store_pd(double_store, accumulator);
+    expected_errors = double_store[0] + double_store[1];
     #endif
     while (cursor < end_ptr) {
         uint8_t phred = *cursor - base;

@@ -159,7 +159,7 @@ def expected_errors(str qualities, uint8_t base=33):
     cdef:
         uint8_t *quals = <uint8_t *>PyUnicode_DATA(qualities)
         size_t qual_length = PyUnicode_GET_LENGTH(qualities)
-        float e = expected_errors_from_phreds(quals, qual_length, base)
+        double e = expected_errors_from_phreds(quals, qual_length, base)
 
     if e < 0.0:
         for q in qualities:
