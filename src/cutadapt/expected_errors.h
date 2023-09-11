@@ -117,46 +117,54 @@ expected_errors_from_phreds(const uint8_t *phreds, size_t phreds_length, uint8_t
         if (_mm_movemask_epi8(illegal_phreds)) {
             return -1.0;
         }
-        __m128d loader = _mm_set_pd(
-            SCORE_TO_ERROR_RATE[cursor[0] - base],
-            SCORE_TO_ERROR_RATE[cursor[1] - base]
+        /* By explicitly setting multiple accumulators, the processor 
+           can perform out of order execution for increased speed 
+            See also: https://stackoverflow.com/a/36591776/16437839   
+        */
+        __m128d accumulator1 = _mm_add_pd(
+            _mm_set_pd(
+                SCORE_TO_ERROR_RATE[cursor[0] - base],
+                SCORE_TO_ERROR_RATE[cursor[1] - base]
+            ),
+            _mm_set_pd(
+                SCORE_TO_ERROR_RATE[cursor[2] - base],
+                SCORE_TO_ERROR_RATE[cursor[3] - base]
+            )
         );
-        accumulator = _mm_add_pd(accumulator, loader);
-        loader = _mm_set_pd(
-            SCORE_TO_ERROR_RATE[cursor[2] - base],
-            SCORE_TO_ERROR_RATE[cursor[3] - base]
+        __m128d accumulator2 = _mm_add_pd(
+            _mm_set_pd(
+                SCORE_TO_ERROR_RATE[cursor[4] - base],
+                SCORE_TO_ERROR_RATE[cursor[5] - base]
+            ),
+            _mm_set_pd(
+                SCORE_TO_ERROR_RATE[cursor[6] - base],
+                SCORE_TO_ERROR_RATE[cursor[7] - base]
+            )
         );
-        accumulator = _mm_add_pd(accumulator, loader);
-        loader = _mm_set_pd(
-            SCORE_TO_ERROR_RATE[cursor[4] - base],
-            SCORE_TO_ERROR_RATE[cursor[5] - base]
+        __m128d accumulator3 = _mm_add_pd(
+            _mm_set_pd(
+                SCORE_TO_ERROR_RATE[cursor[8] - base],
+                SCORE_TO_ERROR_RATE[cursor[9] - base]
+            ),
+            _mm_set_pd(
+                SCORE_TO_ERROR_RATE[cursor[10] - base],
+                SCORE_TO_ERROR_RATE[cursor[11] - base]
+            )
         );
-        accumulator = _mm_add_pd(accumulator, loader);
-        loader = _mm_set_pd(
-            SCORE_TO_ERROR_RATE[cursor[6] - base],
-            SCORE_TO_ERROR_RATE[cursor[7] - base]
-        );
-        accumulator = _mm_add_pd(accumulator, loader);
-        loader = _mm_set_pd(
-            SCORE_TO_ERROR_RATE[cursor[8] - base],
-            SCORE_TO_ERROR_RATE[cursor[9] - base]
-        );
-        accumulator = _mm_add_pd(accumulator, loader);
-        loader = _mm_set_pd(
-            SCORE_TO_ERROR_RATE[cursor[10] - base],
-            SCORE_TO_ERROR_RATE[cursor[11] - base]
-        );
-        accumulator = _mm_add_pd(accumulator, loader);
-        loader = _mm_set_pd(
-            SCORE_TO_ERROR_RATE[cursor[12] - base],
-            SCORE_TO_ERROR_RATE[cursor[13] - base]
-        );
-        accumulator = _mm_add_pd(accumulator, loader);
-        loader = _mm_set_pd(
-            SCORE_TO_ERROR_RATE[cursor[14] - base],
-            SCORE_TO_ERROR_RATE[cursor[15] - base]
-        );
-        accumulator = _mm_add_pd(accumulator, loader);
+        __m128d accumulator4 = _mm_add_pd(
+            _mm_set_pd(
+                SCORE_TO_ERROR_RATE[cursor[12] - base],
+                SCORE_TO_ERROR_RATE[cursor[13] - base]
+            ),
+            _mm_set_pd(
+                SCORE_TO_ERROR_RATE[cursor[14] - base],
+                SCORE_TO_ERROR_RATE[cursor[15] - base]
+            )
+        ); 
+        accumulator = _mm_add_pd(accumulator, accumulator1);
+        accumulator = _mm_add_pd(accumulator, accumulator2);
+        accumulator = _mm_add_pd(accumulator, accumulator3);
+        accumulator = _mm_add_pd(accumulator, accumulator4);
         cursor += sizeof(__m128i);
     }
     double double_store[2];
