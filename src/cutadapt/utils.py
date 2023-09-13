@@ -3,9 +3,16 @@ import sys
 import time
 import multiprocessing
 import logging
+import locale
 
 
 logger = logging.getLogger(__name__)
+
+try:
+    "µ".encode(locale.getpreferredencoding())
+    MICRO = "µ"
+except UnicodeEncodeError:
+    MICRO = "u"
 
 
 def available_cpu_count():
@@ -101,13 +108,14 @@ class Progress:
         print(
             "\r"
             "{animation} {hours:02d}:{minutes:02d}:{seconds:02d} "
-            "{total:13,d} reads @ {per_item:5.1F} µs/read; {per_minute:6.2F} M reads/minute"
+            "{total:13,d} reads @ {per_item:5.1F} {micro}s/read; {per_minute:6.2F} M reads/minute"
             "".format(
                 hours=hours,
                 minutes=minutes,
                 seconds=seconds,
                 total=self._n,
                 per_item=per_item * 1e6,
+                micro=MICRO,
                 per_minute=per_second * 60 / 1e6,
                 animation=animation,
             ),
