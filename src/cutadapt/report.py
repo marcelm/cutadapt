@@ -1,7 +1,6 @@
 """
 Routines for printing a report.
 """
-import sys
 from dataclasses import dataclass
 from io import StringIO
 import textwrap
