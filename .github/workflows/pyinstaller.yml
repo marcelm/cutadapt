@@ -23,7 +23,7 @@ jobs:
         run: |
           echo "from cutadapt.__main__ import main_cli" > script.py
           echo "sys.exit(main_cli())" >> script.py
-          venv/Scripts/pyinstaller -F -n cutadapt script.py
+          venv/Scripts/pyinstaller -F --hidden-import=cutadapt._match_tables -n cutadapt script.py
       - name: Run it
         run: dist/cutadapt.exe --version
       - name: Test multicore
