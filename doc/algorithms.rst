@@ -189,6 +189,38 @@ but shown here for completeness. The position of the minimum (-25) is used as
 the trimming position. Therefore, the read is trimmed to the first four bases,
 which have quality values 42, 40, 26, 27.
 
+.. _poly-a-algorithm:
+
+Poly-A trimming algorithm
+=========================
+
+The aim of the ``--poly-A`` trimming algorithm is to find a suffix of the read that contains a high
+number of ``A`` nucleotides.
+Conceptually, we consider all possible suffixes of the read. For each suffix, we count how many
+``A`` and non-``A`` nucleotides it contains. We then exclude all suffixes from consideration that
+have more than 20% non-``A`` because we assume these are not actually poly-A tails.
+For each remaining suffix, we compute a score: Non-``A`` nucleotides get -2 and
+``A`` nucleotides get +1, which we add up to get the score for the suffix.
+Finally, we choose the suffix that maximizes that score and remove it from the read.
+Shorter suffixes win if there is a tie.
+
+An implementation in Python (input string is ``s``)::
+
+    n = len(s)
+    best_index = n
+    best_score = score = errors = 0
+    for i, nuc in reversed(list(enumerate(range(n)))):
+        if nuc == "A":
+            score += 1
+        else:
+            score -= 2
+            errors += 1
+        if score > best_score and errors <= 0.2 * (n - i):
+            best_index = i
+            best_score = score
+
+    s = s[:best_index]
+
 
 .. _expected-errors:
 

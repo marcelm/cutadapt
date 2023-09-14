@@ -1138,6 +1138,10 @@ Poly-A trimming
 
 Use `--poly-a`` to trim poly-A tails. Poly-A trimming is done after adapter trimming.
 
+.. seealso::
+
+    :ref:`Description of the poly-A trimming algorithm <poly-a-algorithm>`.
+
 .. versionadded:: 4.4
 
 
