@@ -1262,7 +1262,7 @@ def json_report(
 ) -> Dict:
     d = {
         "tag": "Cutadapt report",
-        "schema_version": OneLine([0, 2]),
+        "schema_version": OneLine([0, 3]),
         "cutadapt_version": __version__,
         "python_version": platform.python_version(),
         "command_line_arguments": cmdlineargs,

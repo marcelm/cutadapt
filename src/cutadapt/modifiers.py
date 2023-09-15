@@ -5,6 +5,7 @@ __call__ method.
 """
 import re
 import logging
+from collections import defaultdict
 from types import SimpleNamespace
 from typing import Sequence, List, Tuple, Optional, Set
 from abc import ABC, abstractmethod
@@ -754,14 +755,14 @@ class QualityTrimmer(SingleEndModifier):
 
 class PolyATrimmer(SingleEndModifier):
     def __init__(self):
-        self.trimmed_bases = 0
+        self.trimmed_bases = defaultdict(int)
 
     def __repr__(self):
         return "PolyATrimmer()"
 
     def __call__(self, record: SequenceRecord, info: ModificationInfo):
         index = poly_a_trim_index(record.sequence)
-        self.trimmed_bases += len(record) - index
+        self.trimmed_bases[len(record) - index] += 1
         return record[:index]
 
 

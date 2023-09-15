@@ -312,11 +312,11 @@ This example was reformatted to use less vertical space::
 
     {
       "tag": "Cutadapt report",
-      "schema_version": [0, 1],
-      "cutadapt_version": "3.5",
+      "schema_version": [0, 3],
+      "cutadapt_version": "4.5",
       "python_version": "3.8.10",
       "command_line_arguments": [
-        "--json=out.cutadapt.json", "-m", "20", "-a", "AACCGGTTACGTTGCA",
+        "--json=out.cutadapt.json", "--poly-a", "-m", "20", "-a", "AACCGGTTACGTTGCA",
         "-q", "20", "--discard-trimmed", "-o", "out.fastq.gz", "reads.fastq"],
       "cores": 1,
       "input": {
@@ -348,11 +348,11 @@ This example was reformatted to use less vertical space::
         "quality_trimmed": 842048,
         "quality_trimmed_read1": 842048,
         "quality_trimmed_read2": null,
-        "poly_a_trimmed": null,
-        "poly_a_trimmed_read1": null,
+        "poly_a_trimmed": 1028,
+        "poly_a_trimmed_read1": 1028,
         "poly_a_trimmed_read2": null,
-        "output": 9038081,
-        "output_read1": 9038081,
+        "output": 9037053,
+        "output_read1": 9037053,
         "output_read2": null
       },
       "adapters_read1": [
@@ -396,7 +396,12 @@ This example was reformatted to use less vertical space::
           }
         }
       ],
-      "adapters_read2": null
+      "adapters_read2": null,
+      "poly_a_trimmed_read1": [
+        {"len": 23, "count": 10},
+        {"len": 42, "count": 19}
+      ],
+      "poly_a_trimmed_read2": null
     }
 
 
@@ -555,6 +560,14 @@ adapters_read2 : list of dictionaries | null
    A list with statistics about all adapters that were matched against read 2.
    The list is empty if no adapter trimming was done against R2. The value is set to null if
    the input was single end reads. The schema for the items in this list is described below.
+
+poly_a_trimmed_read1 : list of dictionaries | null
+   A histogram of the lengths of poly-A tails removed from read 1. Each item in the list is a
+   dictionary with keys ``len`` and ``count``. This value is null if no poly-A trimming was done.
+
+poly_a_trimmed_read2 : list of dictionaries | null
+   A histogram of the lengths of poly-A tails removed from read 2, see above. This value is null
+   if no poly-A trimming was done or the input was single-end reads.
 
 
 Adapter statistics

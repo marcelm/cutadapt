@@ -10,6 +10,8 @@ development version
   certain threshold. This expected errors are calculated the same as in
   ``--max-expected-errors`` and dividing by read length helps for reads that
   have varying lengths.
+* :issue:`696`: Added a histogram of the lengths of removed poly-A tails to
+  the report.
 
 v4.4 (2023-04-28)
 -----------------

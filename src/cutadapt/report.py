@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from io import StringIO
 import textwrap
 from collections import defaultdict
-from typing import Any, Optional, List, Dict, Iterator, Tuple
+from typing import Any, Optional, List, Dict, Iterator, Tuple, Mapping
 from .adapters import (
     EndStatistics,
     AdapterStatistics,
@@ -71,7 +71,10 @@ class Statistics:
         self.read_length_statistics = ReadLengthStatistics()
         self.with_adapters: List[Optional[int]] = [None, None]
         self.quality_trimmed_bp: List[Optional[int]] = [None, None]
-        self.poly_a_trimmed_bp: List[Optional[int]] = [None, None]
+        self.poly_a_trimmed_lengths: List[Optional[defaultdict[int, int]]] = [
+            None,
+            None,
+        ]
         self.adapter_stats: List[List[AdapterStatistics]] = [[], []]
         self._collected: bool = False
 
@@ -163,9 +166,7 @@ class Statistics:
                     self.quality_trimmed_bp[i], modifier.trimmed_bases
                 )
             if isinstance(modifier, PolyATrimmer):
-                self.poly_a_trimmed_bp[i] = add_if_not_none(
-                    self.poly_a_trimmed_bp[i], modifier.trimmed_bases
-                )
+                self.poly_a_trimmed_lengths[i] = modifier.trimmed_bases
             elif isinstance(modifier, AdapterCutter):
                 assert self.with_adapters[i] is None
                 self.with_adapters[i] = modifier.with_adapters
@@ -228,6 +229,12 @@ class Statistics:
             ]
             if self.paired
             else None,
+            "poly_a_trimmed_read1": self._poly_a_trimmed_as_json(
+                self.poly_a_trimmed_lengths[0]
+            ),
+            "poly_a_trimmed_read2": self._poly_a_trimmed_as_json(
+                self.poly_a_trimmed_lengths[1]
+            ),
         }
 
     def _adapter_statistics_as_json(
@@ -293,6 +300,15 @@ class Statistics:
             "three_prime_end": ends[1],
         }
 
+    @staticmethod
+    def _poly_a_trimmed_as_json(poly_a):
+        if poly_a is None:
+            return None
+        return [
+            OneLine({"len": length, "count": poly_a[length]})
+            for length in sorted(poly_a)
+        ]
+
     @property
     def total(self) -> int:
         return sum(self.total_bp)
@@ -300,6 +316,16 @@ class Statistics:
     @property
     def quality_trimmed(self) -> Optional[int]:
         return add_if_not_none(*self.quality_trimmed_bp)
+
+    @property
+    def poly_a_trimmed_bp(self) -> Tuple[Optional[int], Optional[int]]:
+        def trimmed(i: int) -> Optional[int]:
+            lengths = self.poly_a_trimmed_lengths[i]
+            if lengths is None:
+                return None
+            return sum(length * count for length, count in lengths.items())
+
+        return (trimmed(0), trimmed(1))
 
     @property
     def poly_a_trimmed(self) -> Optional[int]:
@@ -752,12 +778,35 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
                 print_s("Overview of removed sequences")
                 print_s(histogram(adapter_statistics.end, stats.n, gc_content))
 
+        poly_a = stats.poly_a_trimmed_lengths[which_in_pair]
+        if poly_a is not None:
+            print_s(poly_a_report(poly_a, which_in_pair if stats.paired else None))
+
     if warning:
         print_s("WARNING:")
         print_s("    One or more of your adapter sequences may be incomplete.")
         print_s("    Please see the detailed output above.")
 
     return sio.getvalue().rstrip()
+
+
+def poly_a_report(poly_a: Mapping[int, int], which_in_pair: Optional[int]) -> str:
+    sio = StringIO()
+    if which_in_pair is None:
+        title = "Poly-A"
+    elif which_in_pair == 1:
+        title = "R1 poly-A"
+    else:
+        title = "R2 poly-A"
+
+    print(f"=== {title} trimmed ===", file=sio)
+    print(file=sio)
+    print("length", "count", sep="\t", file=sio)
+    for length in sorted(poly_a):
+        count = poly_a[length]
+        print(length, count, sep="\t", file=sio)
+
+    return sio.getvalue() + "\n"
 
 
 def format_filter_report(stats):
