@@ -1,5 +1,4 @@
 import os
-import time
 
 from setuptools_scm import get_version
 
@@ -17,7 +16,7 @@ extensions = [
 source_suffix = ".rst"
 master_doc = "index"
 project = "Cutadapt"
-copyright = "2010-{}, Marcel Martin".format(time.gmtime().tm_year)
+copyright = "2010 Marcel Martin"
 
 version = get_version(root="..", relative_to=__file__)
 
@@ -25,6 +24,7 @@ version = get_version(root="..", relative_to=__file__)
 # version numbers like 0.12+0.g27d0d31
 if os.environ.get("READTHEDOCS") == "True":
     version = ".".join(version.split(".")[:2])
+    html_theme = "sphinx_rtd_theme"
 
 # The full version, including alpha/beta/rc tags.
 release = version
@@ -34,13 +34,5 @@ issues_pr_uri = "https://github.com/marcelm/cutadapt/pull/{pr}"
 suppress_warnings = ["image.nonlocal_uri"]
 exclude_patterns = ["_build"]
 pygments_style = "sphinx"
-
-try:
-    from better import better_theme_path
-
-    html_theme_path = [better_theme_path]
-    html_theme = "better"
-except ImportError:
-    html_theme = "default"
 
 html_static_path = ["_static"]
