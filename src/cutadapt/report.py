@@ -4,7 +4,7 @@ Routines for printing a report.
 from dataclasses import dataclass
 from io import StringIO
 import textwrap
-from collections import defaultdict
+from collections import defaultdict, Counter
 from typing import Any, Optional, List, Dict, Iterator, Tuple, Mapping
 from .adapters import (
     EndStatistics,
@@ -104,6 +104,15 @@ class Statistics:
             self.quality_trimmed_bp[i] = add_if_not_none(
                 self.quality_trimmed_bp[i], other.quality_trimmed_bp[i]
             )
+            if self.poly_a_trimmed_lengths[i] is None:
+                self.poly_a_trimmed_lengths[i] = other.poly_a_trimmed_lengths[i]
+            elif other.poly_a_trimmed_lengths[i] is not None:
+                self.poly_a_trimmed_lengths[i] = defaultdict(
+                    int,
+                    Counter(self.poly_a_trimmed_lengths[i])
+                    + Counter(other.poly_a_trimmed_lengths[i]),
+                )
+
             if self.adapter_stats[i] and other.adapter_stats[i]:
                 if len(self.adapter_stats[i]) != len(other.adapter_stats[i]):
                     raise ValueError(
