@@ -115,9 +115,11 @@ def nextseq_trim_index(sequence, int cutoff, int base=33):
     return max_i
 
 
-def poly_a_trim_index(str s):
+def poly_a_trim_index(str s, bint revcomp = False):
     """
     Return start index of poly-A tail
+
+    If revcomp is True, return end of poly-T head instead.
     """
     if not PyUnicode_KIND(s) == PyUnicode_1BYTE_KIND:
         raise ValueError("Sequence is not ASCII")
@@ -125,24 +127,39 @@ def poly_a_trim_index(str s):
         char* s_ptr = <char *>PyUnicode_1BYTE_DATA(s)
         int n = len(s)
         int best_score = 0
-        int best_index = n
         int score = 0
         int i
         char c
         int errors = 0
+        int best_index
 
-    for i in reversed(range(n)):
-        if s_ptr[i] == b"A":
-            score += 1
-        else:
-            score -= 2
-            errors += 1
+    if revcomp:
+        best_index = 0
+        for i in range(n):
+            if s_ptr[i] == b"T":
+                score += 1
+            else:
+                score -= 2
+                errors += 1
 
-        if score > best_score and errors * 5 <= n - i:  # max error rate 0.2
-            best_score = score
-            best_index = i
+            if score >= best_score and errors * 5 <= i + 1:  # max error rate 0.2
+                best_score = score
+                best_index = i + 1
+    else:
+        best_index = n
+        for i in reversed(range(n)):
+            if s_ptr[i] == b"A":
+                score += 1
+            else:
+                score -= 2
+                errors += 1
+
+            if score > best_score and errors * 5 <= n - i:  # max error rate 0.2
+                best_score = score
+                best_index = i
 
     return best_index
+
 
 def expected_errors(str qualities, uint8_t base=33):
     """

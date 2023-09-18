@@ -19,6 +19,7 @@ def test_nextseq_trim():
     "sequence,tail",
     [
         ("", ""),
+        ("GGGGGGGGAAAGAAGAAGAAGAAGAAGAAG", ""),
         ("TCAAGAAGTCCTTTACCAGCTTTC", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
         ("TCAAGAAGTCCTTTACCAGCTTTC", "AAATAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
         ("GCAGATCACCTT", "AAAAAAAAAAAAAAAAAAAAAAAAAAAATAAA"),
@@ -31,6 +32,28 @@ def test_nextseq_trim():
 )
 def test_poly_a_trim_index(sequence, tail):
     assert poly_a_trim_index(sequence + tail) == len(sequence)
+
+
+@pytest.mark.parametrize(
+    "head,sequence",
+    [
+        ("", ""),
+        ("", "GGGGGGGGAAAGAAGAAGAAGAAGAAGAAG"),
+        (
+            "TTTTTTTTTTTTTTTTTTTTTTTTT",
+            "CAAGAAGTCCTTTACCAGCTTTC",
+        ),
+        ("TTTATTTTTTTTTTTTTTTTTTTTTTTTTTTTT", "CAAGAAGTCCTTTACCAGCTTTC"),
+        ("TTTTTATTTTTTTTTTTTTTTTTTTTTTTTTT", "GCAGATCACCTT"),
+        ("ATTTTTTTTTTTTTTTTTTTTTTTTTTTT", "GCAGATCACCTT"),
+        ("AGCTTTTTTTTTTTTTTTTTTTTTTTTTTTT", "GCAGATCACCTT"),
+        ("TTTTGTTTTTTTGTTTTTTTTGTTTTTT", "GCAGATCACCTAT"),
+        ("TTTATTTT", "AAAA"),
+        ("TTT", "GGGGGGGGAAAGAAGAAGAAGAAGAAGAAG"),
+    ],
+)
+def test_poly_t_trim_index(head, sequence):
+    assert poly_a_trim_index(head + sequence, revcomp=True) == len(head)
 
 
 def test_expected_errors():
