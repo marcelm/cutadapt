@@ -267,19 +267,19 @@ def test_twoadapters(run):
 def test_poly_a_legacy(run):
     """poly-A tails"""
     run(
-        "-m 24 -O 10 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        "polya.fasta",
-        "polya.fasta",
+        "-O 10 -a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "polya.legacy.1.fasta",
+        "polya.1.fasta",
     )
 
 
 def test_poly_a_legacy_brace_notation(run):
     """poly-A tails"""
-    run("-m 24 -O 10 -a A{35}", "polya.fasta", "polya.fasta")
+    run("-O 10 -a A{35}", "polya.legacy.1.fasta", "polya.1.fasta")
 
 
 def test_poly_a(run):
-    run("--poly-a", "poly-a.fasta", "polya.fasta")
+    run("--poly-a", "polya.1.fasta", "polya.1.fasta")
 
 
 # the same as --action=none

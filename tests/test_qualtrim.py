@@ -20,6 +20,9 @@ def test_nextseq_trim():
     [
         ("", ""),
         ("GGGGGGGGAAAGAAGAAGAAGAAGAAGAAG", ""),
+        ("TTTAGA", ""),  # shorter than three nucleotides
+        ("TTTAGAA", ""),  # shorter than three nucleotides
+        ("TTTAG", "AAA"),
         ("TCAAGAAGTCCTTTACCAGCTTTC", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
         ("TCAAGAAGTCCTTTACCAGCTTTC", "AAATAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
         ("GCAGATCACCTT", "AAAAAAAAAAAAAAAAAAAAAAAAAAAATAAA"),
@@ -39,9 +42,12 @@ def test_poly_a_trim_index(sequence, tail):
     [
         ("", ""),
         ("", "GGGGGGGGAAAGAAGAAGAAGAAGAAGAAG"),
+        ("", "TGTCCC"),
+        ("", "TTGTCCC"),
+        ("TTT", "GTCCC"),
         (
-            "TTTTTTTTTTTTTTTTTTTTTTTTT",
-            "CAAGAAGTCCTTTACCAGCTTTC",
+            "TTTTTTTTTTTTTTTTTTTTT",
+            "CAAGAAGTCCCCAGCTTTC",
         ),
         ("TTTATTTTTTTTTTTTTTTTTTTTTTTTTTTTT", "CAAGAAGTCCTTTACCAGCTTTC"),
         ("TTTTTATTTTTTTTTTTTTTTTTTTTTTTTTT", "GCAGATCACCTT"),

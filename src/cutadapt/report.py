@@ -803,9 +803,10 @@ def poly_a_report(poly_a: Mapping[int, int], which_in_pair: Optional[int]) -> st
     sio = StringIO()
     if which_in_pair is None:
         title = "Poly-A"
-    elif which_in_pair == 1:
+    elif which_in_pair == 0:
         title = "R1 poly-A"
     else:
+        assert which_in_pair == 1
         title = "R2 poly-A"
 
     print(f"=== {title} trimmed ===", file=sio)

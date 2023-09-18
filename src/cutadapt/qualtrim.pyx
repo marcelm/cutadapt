@@ -120,6 +120,8 @@ def poly_a_trim_index(str s, bint revcomp = False):
     Return start index of poly-A tail
 
     If revcomp is True, return end of poly-T head instead.
+
+    Poly-A tails shorter than 3 are ignored.
     """
     if not PyUnicode_KIND(s) == PyUnicode_1BYTE_KIND:
         raise ValueError("Sequence is not ASCII")
@@ -142,9 +144,11 @@ def poly_a_trim_index(str s, bint revcomp = False):
                 score -= 2
                 errors += 1
 
-            if score >= best_score and errors * 5 <= i + 1:  # max error rate 0.2
+            if score > best_score and errors * 5 <= i + 1:  # max error rate 0.2
                 best_score = score
                 best_index = i + 1
+        if best_index < 3:
+            best_index = 0
     else:
         best_index = n
         for i in reversed(range(n)):
@@ -157,7 +161,8 @@ def poly_a_trim_index(str s, bint revcomp = False):
             if score > best_score and errors * 5 <= n - i:  # max error rate 0.2
                 best_score = score
                 best_index = i
-
+        if best_index > n - 3:
+            best_index = n
     return best_index
 
 

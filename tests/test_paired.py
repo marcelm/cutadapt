@@ -714,7 +714,7 @@ def test_combinatorial_demultiplexing(tmp_path, discarduntrimmed, cores):
     else:
         combinations.extend((a, b, True) for a, b in optional)
     main(params)
-    for (name1, name2, should_exist) in combinations:
+    for name1, name2, should_exist in combinations:
         for i in (1, 2):
             name = "combinatorial.{name1}_{name2}.{i}.fastq".format(
                 name1=name1, name2=name2, i=i
@@ -761,4 +761,15 @@ def test_rename(run_paired, cores):
         expected1="rename.1.fastq",
         expected2="rename.2.fastq",
         cores=cores,
+    )
+
+
+def test_poly_a_poly_t(run_paired):
+    run_paired(
+        "--poly-a",
+        in1="polya.1.fasta",
+        in2="polya.2.fasta",
+        expected1="polya.1.fasta",
+        expected2="polya.2.fasta",
+        cores=1,
     )

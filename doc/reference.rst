@@ -119,7 +119,7 @@ Additional read modifications
     This needs to be set to 64 for some very old Illumina FASTQ files.
 
 ``--poly-a``
-    :ref:`Trim poly-A tails <poly-A>`.
+    :ref:`Trim poly-A tails <poly-A>` from R1 and poly-T heads from R2.
 
 ``--length LENGTH``, ``-l LENGTH``
     Shorten reads to LENGTH, where LENGTH is an integer. Positive values remove bases at
@@ -539,7 +539,7 @@ basepair_counts.poly_a_trimmed_read1 : int | null
    done.
 
 basepair_counts.poly_a_trimmed_read2 : int
-   Number of basepairs removed from read 2 due to poly-A trimming or null if no poly-A trimming was
+   Number of basepairs removed from read 2 due to poly-T trimming or null if no poly-T trimming was
    done or if input was single end.
 
 basepair_counts.output : int
@@ -566,8 +566,8 @@ poly_a_trimmed_read1 : list of dictionaries | null
    dictionary with keys ``len`` and ``count``. This value is null if no poly-A trimming was done.
 
 poly_a_trimmed_read2 : list of dictionaries | null
-   A histogram of the lengths of poly-A tails removed from read 2, see above. This value is null
-   if no poly-A trimming was done or the input was single-end reads.
+   A histogram of the lengths of poly-T "heads" removed from read 2, see above. This value is null
+   if no poly-A/poly-T trimming was done or the input was single-end reads.
 
 
 Adapter statistics
@@ -826,7 +826,7 @@ Steps not requested on the command-line are skipped.
 1. Unconditional base removal with ``--cut``
 2. Quality trimming (``-q``)
 3. Adapter trimming (``-a``, ``-b``, ``-g`` and uppercase versions)
-4. Poly-A trimming (``--poly-a``)
+4. Poly-A/poly-T trimming (``--poly-a``)
 5. Read shortening (``--length``)
 6. N-end trimming (``--trim-n``)
 7. Length tag modification (``--length-tag``)

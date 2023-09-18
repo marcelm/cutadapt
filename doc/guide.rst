@@ -1133,16 +1133,21 @@ instead), except that the qualities of ``G`` bases are ignored.
 
 .. _poly-a:
 
-Poly-A trimming
-~~~~~~~~~~~~~~~
+Poly-A/poly-T trimming
+~~~~~~~~~~~~~~~~~~~~~~
 
 Use `--poly-a`` to trim poly-A tails. Poly-A trimming is done after adapter trimming.
+
+On paired-end reads, ``--poly-a`` removes poly-A tails from R1 and poly-T "heads" from R2.
 
 .. seealso::
 
     :ref:`Description of the poly-A trimming algorithm <poly-a-algorithm>`.
 
 .. versionadded:: 4.4
+
+.. versionchanged:: 4.5
+    Remove poly-T heads from R2. (Version 4.4 attempted to remove poly-A tails even from R2.)
 
 
 Shortening reads to a fixed length

@@ -5,13 +5,16 @@ Changelog
 
 development version
 -------------------
-* Add a ``--max-average-error-rate``/``--max-aer`` option to add a filter
+* Added a ``--max-average-error-rate``/``--max-aer`` option to add a filter
   that checks if the number of expected errors divided by  read length is above a
-  certain threshold. This expected errors are calculated the same as in
+  certain threshold. The expected errors are calculated the same as in
   ``--max-expected-errors`` and dividing by read length helps for reads that
   have varying lengths.
 * :issue:`696`: Added a histogram of the lengths of removed poly-A tails to
   the report.
+* :issue:`696`: For paired-end data, ``--poly-a`` was changed to trim poly-T
+  "heads" on R2.
+* A poly-A tail is only removed if it is at least three nucleotides long.
 
 v4.4 (2023-04-28)
 -----------------

@@ -627,7 +627,6 @@ class PairedEndRenamer(PairedEndModifier):
         info1: ModificationInfo,
         info2: ModificationInfo,
     ) -> Tuple[SequenceRecord, SequenceRecord]:
-
         if not record_names_match(read1.name, read2.name):
             id1 = Renamer.parse_name(read1.name)[0]
             id2 = Renamer.parse_name(read1.name)[1]
@@ -654,7 +653,6 @@ class PairedEndRenamer(PairedEndModifier):
         info1: ModificationInfo,
         info2: ModificationInfo,
     ) -> Tuple[str, str]:
-
         id1, comment1 = Renamer.parse_name(read1.name)
         id2, comment2 = Renamer.parse_name(read2.name)
         header1 = read1.name
@@ -754,16 +752,24 @@ class QualityTrimmer(SingleEndModifier):
 
 
 class PolyATrimmer(SingleEndModifier):
-    def __init__(self):
+    """Trim poly-A tails or poly-T heads"""
+
+    def __init__(self, revcomp=False):
         self.trimmed_bases = defaultdict(int)
+        self.revcomp = revcomp
 
     def __repr__(self):
         return "PolyATrimmer()"
 
     def __call__(self, record: SequenceRecord, info: ModificationInfo):
-        index = poly_a_trim_index(record.sequence)
-        self.trimmed_bases[len(record) - index] += 1
-        return record[:index]
+        if self.revcomp:
+            index = poly_a_trim_index(record.sequence, revcomp=True)
+            self.trimmed_bases[index] += 1
+            return record[index:]
+        else:
+            index = poly_a_trim_index(record.sequence)
+            self.trimmed_bases[len(record) - index] += 1
+            return record[:index]
 
 
 class Shortener(SingleEndModifier):

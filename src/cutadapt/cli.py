@@ -709,7 +709,6 @@ def determine_paired(args) -> bool:
 def setup_input_files(
     inputs: Sequence[str], paired: bool, interleaved: bool
 ) -> Tuple[str, ...]:
-
     if len(inputs) == 0:
         raise CommandLineError(
             "You did not provide any input file names. Please give me something to do!"
@@ -806,7 +805,7 @@ class PipelineMaker:
         self.adapters = adapters
         self.adapters2 = adapters2
 
-    def make(self) -> Pipeline:
+    def make(self) -> Pipeline:  # noqa: C901
         """
         Set up a processing pipeline from parsed command-line arguments.
 
@@ -849,6 +848,12 @@ class PipelineMaker:
                 self.args.index,
             )
         )
+
+        if self.args.poly_a:
+            if self.paired:
+                modifiers.append((PolyATrimmer(), PolyATrimmer(revcomp=True)))
+            else:
+                modifiers.append(PolyATrimmer())
 
         for modifier in modifiers_applying_to_both_ends_if_paired(self.args):
             if self.paired:
@@ -1030,8 +1035,6 @@ def make_adapter_cutter(
 
 
 def modifiers_applying_to_both_ends_if_paired(args) -> Iterator[SingleEndModifier]:
-    if args.poly_a:
-        yield PolyATrimmer()
     if args.length is not None:
         yield Shortener(args.length)
     if args.trim_n:

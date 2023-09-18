@@ -133,7 +133,6 @@ class EndStatistics:
 
 
 class AdapterStatistics(ABC):
-
     reverse_complemented: int = 0
     name: str
     adapter: "Adapter"
@@ -282,7 +281,6 @@ class AnywhereAdapterStatistics(AdapterStatistics):
 
 
 class Match(ABC):
-
     adapter: "Adapter"
 
     @abstractmethod
@@ -508,7 +506,6 @@ class Matchable(ABC):
 
 
 class Adapter(Matchable, ABC):
-
     description = "adapter with one component"  # this is overriden in subclasses
 
     @abstractmethod
