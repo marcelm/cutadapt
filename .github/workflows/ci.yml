@@ -18,8 +18,10 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install tox
+      run: pip install tox
     - name: Run tox ${{ matrix.toxenv }}
-      run: pipx run tox -e ${{ matrix.toxenv }}
+      run: tox -e ${{ matrix.toxenv }}
 
   build:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
@@ -54,8 +56,10 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install tox
+      run: pip install tox
     - name: Test
-      run: pipx run tox -e py
+      run: tox -e py$(echo ${{ matrix.python-version }} | tr -d .)
     - name: Upload coverage report
       uses: codecov/codecov-action@v3
 
