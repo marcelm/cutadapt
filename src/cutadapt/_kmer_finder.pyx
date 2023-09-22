@@ -4,7 +4,7 @@ from cpython.mem cimport PyMem_Realloc, PyMem_Free
 from libc.string cimport memcpy, memset, strlen
 
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
-from libc.stdint cimport uint8_t
+from libc.stdint cimport uint8_t, uint64_t
 
 from ._match_tables import matches_lookup
 
