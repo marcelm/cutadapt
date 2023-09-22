@@ -46,7 +46,7 @@ is 33 bases for example).
 # Dnaio conveniently ensures that all sequences are ASCII only.
 DEF BITMASK_INDEX_SIZE = 128
 
-ctypedef size_t bitmask_t
+ctypedef uint64_t bitmask_t
 
 DEF MAX_WORD_SIZE = 64  # "sizeof(bitmask_t) * 8" does not work for some reason
 MAXIMUM_WORD_SIZE = MAX_WORD_SIZE
