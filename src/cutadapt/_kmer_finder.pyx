@@ -4,7 +4,7 @@ from cpython.mem cimport PyMem_Realloc, PyMem_Free
 from libc.string cimport memcpy, memset, strlen
 
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
-from libc.stdint cimport uint8_t
+from libc.stdint cimport uint8_t, uint64_t
 
 from ._match_tables import matches_lookup
 
@@ -46,7 +46,7 @@ is 33 bases for example).
 # Dnaio conveniently ensures that all sequences are ASCII only.
 DEF BITMASK_INDEX_SIZE = 128
 
-ctypedef size_t bitmask_t
+ctypedef uint64_t bitmask_t
 
 DEF MAX_WORD_SIZE = 64  # "sizeof(bitmask_t) * 8" does not work for some reason
 MAXIMUM_WORD_SIZE = MAX_WORD_SIZE
