@@ -559,6 +559,18 @@ def test_indexed_prefix_adapters_with_n_wildcard():
         assert result.score == 6
 
 
+@pytest.mark.parametrize("sequence", ["ANGCATCATAAAAAAAAAA", "AAGCATCATAAAAAAAAAA"])
+def test_indexed_prefix_adapters_with_n_collision(sequence):
+    a1 = PrefixAdapter("AAGCGCCAT", max_errors=2, indels=False)
+    a2 = PrefixAdapter("AGGCATCAT", max_errors=2, indels=False)
+    ipa = IndexedPrefixAdapters([a1, a2])
+
+    result = ipa.match_to(sequence)
+
+    assert isinstance(result, RemoveBeforeMatch)
+    assert result.adapter is a2
+
+
 def test_inosine_wildcard():
     adapter = BackAdapter("CTGIAIT", max_errors=0, min_overlap=3)
     match = adapter.match_to("GGCTGAATTGGG")

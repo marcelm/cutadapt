@@ -8,13 +8,19 @@ development version
 * Added a ``--max-average-error-rate``/``--max-aer`` option to add a filter
   that checks if the number of expected errors divided by  read length is above a
   certain threshold. The expected errors are calculated the same as in
-  ``--max-expected-errors`` and dividing by read length helps for reads that
+  ``--max-expected-errors``, and dividing by read length helps for reads that
   have varying lengths.
 * :issue:`696`: Added a histogram of the lengths of removed poly-A tails to
   the report.
 * :issue:`696`: For paired-end data, ``--poly-a`` was changed to trim poly-T
-  "heads" on R2.
+  "heads" on R2 (this is still experimental as it is unclear whether that is
+  the desired behavior. Please give feedback!)
 * A poly-A tail is only removed if it is at least three nucleotides long.
+* :issue:`734`: Fixed misassignments during demultiplexing that would sometimes
+  happen when there are collisions between adapter sequences
+  (when the warning "sequence ... cannot be assigned uniquely" was printed).
+  Previously, sequences could incorrectly be assigned to an adapter that is not
+  actually the best match.
 
 v4.4 (2023-04-28)
 -----------------

@@ -1309,8 +1309,7 @@ class IndexedAdapters(Matchable, ABC):
                         if other_matches == matches and not has_warned:
                             self._warn_similar(adapter, other_adapter, k, s, matches)
                             has_warned = True
-                    else:
-                        index[s] = (adapter, errors, matches)
+                    index[s] = (adapter, errors, matches)
                     lengths.add(len(s))
             else:
                 n = len(sequence)
@@ -1326,8 +1325,7 @@ class IndexedAdapters(Matchable, ABC):
                                     adapter, other_adapter, k, s, matches
                                 )
                                 has_warned = True
-                        else:
-                            index[s] = (adapter, errors, matches)
+                        index[s] = (adapter, errors, matches)
                 lengths.add(n)
         elapsed = time.time() - start_time
         logger.info(
