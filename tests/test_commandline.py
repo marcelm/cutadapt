@@ -1084,7 +1084,7 @@ def test_duplicate_output_paths(tmp_path):
     # "specified more than once as an output file"
 
 
-def test_rename(run):
+def test_rename(run, cores):
     run(
         [
             "--rename={id}_{cut_suffix} {header} {adapter_name}",
@@ -1093,6 +1093,8 @@ def test_rename(run):
             "OnlyT=TTTTTT",
             "-a",
             "OnlyG=GGGGGG",
+            "--cores",
+            str(cores),
         ],
         "rename.fastq",
         "suffix.fastq",
