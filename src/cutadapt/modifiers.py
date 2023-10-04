@@ -533,6 +533,9 @@ class Renamer(SingleEndModifier):
     def __repr__(self):
         return f"{self.__class__.__name__}('{self._template}')"
 
+    def __reduce__(self):
+        return Renamer, (self._template,)
+
     def compile_rename_function(self):
         """
         Create the function that computes a new name
