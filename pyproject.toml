@@ -29,6 +29,7 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://cutadapt.readthedocs.io/"
 "Changelog" = "https://cutadapt.readthedocs.io/en/stable/changes.html"
+"Repository" = "https://github.com/marcelm/cutadapt/"
 
 [project.scripts]
 cutadapt = "cutadapt.cli:main_cli"
