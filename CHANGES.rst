@@ -3,10 +3,11 @@
 Changelog
 =========
 
-development version
--------------------
-* Added a ``--max-average-error-rate``/``--max-aer`` option to add a filter
-  that checks if the number of expected errors divided by  read length is above a
+v4.5 (2023-10-06)
+-----------------
+
+* :pr:`725`: Added a ``--max-average-error-rate``/``--max-aer`` option to add a filter
+  that checks if the number of expected errors divided by read length is above a
   certain threshold. The expected errors are calculated the same as in
   ``--max-expected-errors``, and dividing by read length helps for reads that
   have varying lengths.
