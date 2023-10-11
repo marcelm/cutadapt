@@ -1,11 +1,11 @@
 .. image:: https://github.com/marcelm/cutadapt/workflows/CI/badge.svg
     :alt:
 
-.. image:: https://img.shields.io/pypi/v/cutadapt.svg?branch=master
+.. image:: https://img.shields.io/pypi/v/cutadapt.svg
     :target: https://pypi.python.org/pypi/cutadapt
     :alt:
 
-.. image:: https://codecov.io/gh/marcelm/cutadapt/branch/master/graph/badge.svg
+.. image:: https://codecov.io/gh/marcelm/cutadapt/branch/main/graph/badge.svg
     :target: https://codecov.io/gh/marcelm/cutadapt
     :alt:
 
