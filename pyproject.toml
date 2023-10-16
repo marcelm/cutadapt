@@ -46,7 +46,7 @@ dev = [
 ]
 
 [tool.setuptools.exclude-package-data]
-cutadapt = ["*.pyx"]
+cutadapt = ["*.pyx", "*.c", "*.h"]
 
 [tool.pytest.ini_options]
 filterwarnings = [
