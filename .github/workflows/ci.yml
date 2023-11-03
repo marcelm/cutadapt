@@ -100,14 +100,14 @@ jobs:
         name: wheels
         path: dist/
     - name: Publish dev release to test PyPI
-      if: contains(github.ref, '.dev') || contains(github.ref, 'a')
+      if: contains(github.ref, 'a')
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
         password: ${{ secrets.test_pypi_password }}
         repository_url: https://test.pypi.org/legacy/
     - name: Publish to PyPI
-      if: "!contains(github.ref, '.dev')"
+      if: "!contains(github.ref, '.dev') && !contains(github.ref, 'a')"
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
