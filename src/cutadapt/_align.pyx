@@ -406,6 +406,12 @@ cdef class Aligner:
             int insertion_cost_increment = self._insertion_cost if not self.start_in_query else 0
             bint characters_equal
             bint is_acceptable
+            int insertion_cost = self._insertion_cost
+            int deletion_cost = self._deletion_cost
+            int match_score = self._match_score
+            int mismatch_score = self._mismatch_score
+            int insertion_score = self._insertion_score
+            int deletion_score = self._deletion_score
             # We keep only a single column of the DP matrix in memory.
             # To access the diagonal cell to the upper left,
             # we store it here before overwriting it.
@@ -432,30 +438,30 @@ cdef class Aligner:
                         origin = diag_entry.origin
                         # Among the optimal alignments whose edit distance is within the
                         # maximum allowed error rate, we prefer those with maximal score.
-                        score = diag_entry.score + self._match_score
+                        score = diag_entry.score + match_score
                     else:
                         # Characters do not match.
                         cost_diag = diag_entry.cost + 1
-                        cost_deletion = column[i].cost + self._deletion_cost
-                        cost_insertion = column[i-1].cost + self._insertion_cost
+                        cost_deletion = column[i].cost + deletion_cost
+                        cost_insertion = column[i-1].cost + insertion_cost
 
                         if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
                             # MISMATCH
                             cost = cost_diag
                             origin = diag_entry.origin
-                            score = diag_entry.score + self._mismatch_score
+                            score = diag_entry.score + mismatch_score
                         elif cost_insertion <= cost_deletion:
                             # INSERTION
                             cost = cost_insertion
                             origin = column[i-1].origin
                             # penalize insertions slightly
-                            score = column[i-1].score + self._insertion_score
+                            score = column[i-1].score + insertion_score
                         else:
                             # DELETION
                             cost = cost_deletion
                             origin = column[i].origin
                             # penalize deletions slightly
-                            score = column[i].score + self._deletion_score
+                            score = column[i].score + deletion_score
 
                     # Remember the current cell for next iteration
                     diag_entry = column[i]
