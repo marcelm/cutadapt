@@ -26,6 +26,7 @@ from cutadapt.modifiers import (
     ReverseComplementer,
     InvalidTemplate,
     PairedEndRenamer,
+    PairedReverseComplementer,
 )
 
 
@@ -447,3 +448,30 @@ class TestPairedEndRenamer:
         renamed1, renamed2 = renamer(r1[:], r2[:], info1, info2)
         assert renamed1.name == "theid first s=GT"
         assert renamed2.name == "theid second s=GT"
+
+
+def test_paired_reverse_complementer():
+    cutter1 = AdapterCutter([PrefixAdapter("AACC")], index=False)
+    cutter2 = AdapterCutter([PrefixAdapter("GGCC")], index=False)
+    revcomper = PairedReverseComplementer(cutter1, cutter2)
+
+    # Forward (normal)
+    r1 = SequenceRecord("a", "AACCAAAAA")
+    r2 = SequenceRecord("a", "GGCCTTTTT")
+    info1 = ModificationInfo(r1)
+    info2 = ModificationInfo(r2)
+    trimmed1, trimmed2 = revcomper(r1, r2, info1, info2)
+    assert trimmed1.sequence == "AAAAA"
+    assert trimmed2.sequence == "TTTTT"
+    assert trimmed1.name == "a"
+    assert trimmed2.name == "a"
+
+    # Reversed (R1/R2 swapped)
+    r1, r2 = r2, r1
+    info1 = ModificationInfo(r1)
+    info2 = ModificationInfo(r2)
+    trimmed1, trimmed2 = revcomper(r1, r2, info1, info2)
+    assert trimmed1.sequence == "AAAAA"
+    assert trimmed2.sequence == "TTTTT"
+    assert trimmed1.name == "a rc"
+    assert trimmed2.name == "a rc"

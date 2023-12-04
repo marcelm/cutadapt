@@ -773,3 +773,54 @@ def test_poly_a_poly_t(run_paired):
         expected2="polya.2.fasta",
         cores=1,
     )
+
+
+def test_revcomp_only_r1(run_paired):
+    run_paired(
+        [
+            "--revcomp",
+            "-g",
+            "^TTATTTGTCT",
+            "-g",
+            "^TCCGCACTGGC",
+        ],
+        in1="revcomp.1.fastq",
+        in2="revcomp.2.fastq",
+        expected1="revcomp.1.fastq",
+        expected2="revcomp.2.fastq",
+        cores=1,
+    )
+
+
+def test_revcomp_only_r2(run_paired):
+    run_paired(
+        [
+            "--revcomp",
+            "-G",
+            "^TTATTTGTCT",
+            "-G",
+            "^TCCGCACTGGC",
+        ],
+        in1="revcomp.2.fastq",
+        in2="revcomp.1.fastq",
+        expected1="revcomp.2.fastq",
+        expected2="revcomp.1.fastq",
+        cores=1,
+    )
+
+
+def test_revcomp_r1_and_r2(run_paired):
+    run_paired(
+        [
+            "--revcomp",
+            "-g",
+            "^TTATTTGTCT",
+            "-G",
+            "^TCCGCACTGGC",
+        ],
+        in1="revcomp.1.fastq",
+        in2="revcomp.2.fastq",
+        expected1="revcomp-r1r2.1.fastq",
+        expected2="revcomp-r1r2.2.fastq",
+        cores=1,
+    )

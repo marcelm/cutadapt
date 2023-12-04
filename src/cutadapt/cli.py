@@ -90,6 +90,7 @@ from cutadapt.modifiers import (
     Renamer,
     InvalidTemplate,
     PolyATrimmer,
+    PairedReverseComplementer,
 )
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import (
@@ -1020,10 +1021,15 @@ def make_adapter_cutter(
         except ValueError as e:
             raise CommandLineError(e)
         if paired:
-            if reverse_complement:
-                raise CommandLineError("--revcomp not implemented for paired-end reads")
             if adapter_cutter or adapter_cutter2:
-                yield (adapter_cutter, adapter_cutter2)
+                if reverse_complement:
+                    yield PairedReverseComplementer(
+                        adapter_cutter,
+                        adapter_cutter2,
+                        rc_suffix=" rc" if add_rc_suffix else None,
+                    )
+                else:
+                    yield (adapter_cutter, adapter_cutter2)
         elif adapter_cutter:
             if reverse_complement:
                 yield ReverseComplementer(

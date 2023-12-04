@@ -304,6 +304,103 @@ class ReverseComplementer(SingleEndModifier):
         return trimmed_read
 
 
+class PairedReverseComplementer(PairedEndModifier):
+    """Trim adapters from a read pair or its reverse complement (R1/R2 swapped)"""
+
+    def __init__(
+        self,
+        adapter_cutter1: Optional[AdapterCutter],
+        adapter_cutter2: Optional[AdapterCutter],
+        rc_suffix: Optional[str] = " rc",
+    ):
+        """
+        rc_suffix -- suffix to add to the read name if sequence was reverse-complemented
+        """
+        self.adapter_cutter1 = adapter_cutter1
+        self.adapter_cutter2 = adapter_cutter2
+        self.reverse_complemented = 0  # counter
+        self._suffix = rc_suffix
+
+    def __repr__(self):
+        return (
+            "PairedReverseComplementer("
+            f"adapter_cutter1={self.adapter_cutter1}, adapter_cutter2={self.adapter_cutter2})"
+        )
+
+    def __call__(
+        self,
+        r1: SequenceRecord,
+        r2: SequenceRecord,
+        info1: ModificationInfo,
+        info2: ModificationInfo,
+    ):
+        # Run normally
+        if self.adapter_cutter1 is not None:
+            r1_trimmed, r1_matches = self.adapter_cutter1.match_and_trim(r1)
+        else:
+            r1_trimmed, r1_matches = r1, []
+        if self.adapter_cutter2 is not None:
+            r2_trimmed, r2_matches = self.adapter_cutter2.match_and_trim(r2)
+        else:
+            r2_trimmed, r2_matches = r2, []
+        unswapped_score = sum(m.score for m in r1_matches) + sum(
+            m.score for m in r2_matches
+        )
+
+        # Run with R1 and R2 swapped (equivalent to reverse complementing)
+        if self.adapter_cutter1 is not None:
+            (
+                r1_trimmed_swapped,
+                r1_matches_swapped,
+            ) = self.adapter_cutter1.match_and_trim(r2)
+        else:
+            r1_trimmed_swapped, r1_matches_swapped = r2, []
+        if self.adapter_cutter2 is not None:
+            (
+                r2_trimmed_swapped,
+                r2_matches_swapped,
+            ) = self.adapter_cutter2.match_and_trim(r1)
+        else:
+            r2_trimmed_swapped, r2_matches_swapped = r1, []
+        swapped_score = sum(m.score for m in r1_matches_swapped) + sum(
+            m.score for m in r2_matches_swapped
+        )
+
+        # Compare and pick the variant that is better
+        use_reverse_complement = swapped_score > unswapped_score
+
+        if use_reverse_complement:
+            self.reverse_complemented += 1
+            r1_trimmed = r1_trimmed_swapped
+            r2_trimmed = r2_trimmed_swapped
+            r1_matches = r1_matches_swapped
+            r2_matches = r2_matches_swapped
+            info1.is_rc = info2.is_rc = True
+            if self._suffix:
+                r1_trimmed.name += self._suffix
+                r2_trimmed.name += self._suffix
+        else:
+            info1.is_rc = info2.is_rc = False
+
+        if r1_matches:
+            self.adapter_cutter1.with_adapters += 1  # type: ignore
+            for match in r1_matches:
+                stats = self.adapter_cutter1.adapter_statistics[match.adapter]  # type: ignore
+                stats.add_match(match)
+                stats.reverse_complemented += bool(use_reverse_complement)
+            info1.matches.extend(r1_matches)  # TODO extend or overwrite?
+
+        if r2_matches:
+            self.adapter_cutter2.with_adapters += 1  # type: ignore
+            for match in r2_matches:
+                stats = self.adapter_cutter2.adapter_statistics[match.adapter]  # type: ignore
+                stats.add_match(match)
+                stats.reverse_complemented += bool(use_reverse_complement)
+            info2.matches.extend(r2_matches)  # TODO extend or overwrite?
+
+        return r1_trimmed, r2_trimmed
+
+
 class PairedAdapterCutterError(Exception):
     pass
 

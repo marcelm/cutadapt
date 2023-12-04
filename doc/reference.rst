@@ -77,12 +77,17 @@ Adapter-finding options
 
     ``lowercase``: Convert the adapter and up- or downstream sequence to lowercase.
 
-    ``none``: Do not change the read. The information which adapter was found is still used
-    demultiplexing).
+    ``none``: Do not change the read. Found matches are still tracked and can be used for
+    renaming the read or demultiplexing.
 
 ``--rc``, ``--revcomp``
     :ref:`Check both the read and its reverse complement for adapter matches <reverse-complement>`.
     If the reverse-complemented version yields a better match, output that one.
+
+    For paired-end reads, the reverse complement is obtained by swapping R1 and R2.
+
+    If the reverse-complemented version was chosen,
+    the string `` rc`` is added to the read name.
 
 
 Additional read modifications
@@ -497,8 +502,8 @@ read_counts.output : int
    This plus the sum of all filtered reads/read will equal the number of input reads.
 
 read_counts.reverse_complemented : int | null
-   If ``--revcomp`` was used, the number of reads that were output reverse-complemented,
-   null otherwise.
+   If ``--revcomp`` was used, the number of reads or read pairs that were output
+   reverse-complemented, null otherwise.
 
 read_counts.read1_with_adapter : int | null
    Number of R1 reads (or single-end reads) with at least one adapter match,
