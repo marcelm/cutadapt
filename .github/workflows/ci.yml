@@ -105,7 +105,7 @@ jobs:
       with:
         user: __token__
         password: ${{ secrets.test_pypi_password }}
-        repository_url: https://test.pypi.org/legacy/
+        repository-url: https://test.pypi.org/legacy/
     - name: Publish to PyPI
       if: "!contains(github.ref, '.dev') && !contains(github.ref, 'a')"
       uses: pypa/gh-action-pypi-publish@release/v1
