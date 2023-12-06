@@ -3,7 +3,7 @@
 Changelog
 =========
 
-development version
+v4.6 (2023-12-06)
 -------------------
 
 * :issue:`744`, :issue:`561`: Make ``--revcomp`` work with paired-end data.
