@@ -80,7 +80,7 @@ jobs:
       env:
         CIBW_BUILD: "cp*-manylinux_x86_64 cp3*-win_amd64 cp3*-macosx_x86_64"
         CIBW_SKIP: "cp37-*"
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: wheels
         path: wheelhouse/*.whl
