@@ -255,7 +255,7 @@ class ParallelPipelineRunner(PipelineRunner):
     """
     Run a Pipeline in parallel
 
-    - When connect_io() is called, a reader process is spawned.
+    - At construction, a reader process is spawned.
     - When run() is called, as many worker processes as requested are spawned.
     - In the main process, results are written to the output files in the correct
       order, and statistics are aggregated.
