@@ -64,7 +64,7 @@ jobs:
       uses: codecov/codecov-action@v3
 
   wheels:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     needs: [lint, build, test]
     timeout-minutes: 20
     strategy:
@@ -86,7 +86,7 @@ jobs:
         path: wheelhouse/*.whl
 
   publish:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     needs: [build, wheels]
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -99,15 +99,15 @@ jobs:
       with:
         name: wheels
         path: dist/
-    - name: Publish dev release to test PyPI
-      if: contains(github.ref, 'a')
+    - name: Publish alpha release to test PyPI
+      if: contains(github.ref_name, 'a')
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
         password: ${{ secrets.test_pypi_password }}
         repository-url: https://test.pypi.org/legacy/
     - name: Publish to PyPI
-      if: "!contains(github.ref, '.dev') && !contains(github.ref, 'a')"
+      if: "!contains(github.ref_name, '.dev') && !contains(github.ref_name, 'a')"
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
