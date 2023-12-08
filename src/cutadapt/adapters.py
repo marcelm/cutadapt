@@ -1246,7 +1246,6 @@ class IndexedAdapters(Matchable, ABC):
         for adapter in adapters:
             self._accept(adapter)
         self._adapters = adapters
-        self._multiple_adapters = MultipleAdapters(adapters)
         self._lengths, self._index = self._make_index()
         logger.debug(
             "String lengths in the index: %s", sorted(self._lengths, reverse=True)
