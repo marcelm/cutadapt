@@ -497,10 +497,6 @@ class Matchable(ABC):
         self.name = name
 
     @abstractmethod
-    def enable_debug(self):
-        pass
-
-    @abstractmethod
     def match_to(self, sequence: str):
         pass
 
@@ -518,6 +514,10 @@ class Adapter(Matchable, ABC):
 
     @abstractmethod
     def descriptive_identifier(self) -> str:
+        pass
+
+    @abstractmethod
+    def enable_debug(self) -> None:
         pass
 
 
@@ -1222,11 +1222,12 @@ class MultipleAdapters(Matchable):
         return best_match
 
 
-class IndexedAdapters(Matchable, ABC):
+class AdapterIndex:
     """
+    Index of multiple adapters
+
     Represent multiple adapters of the same type at once and use an index data structure
-    to speed up matching. This acts like a "normal" Adapter as it provides a match_to
-    method, but is faster with lots of adapters.
+    to speed up matching. This is faster than iterating over multiple adapters.
 
     There are quite a few restrictions:
     - the error rate allows at most 2 mismatches
@@ -1236,15 +1237,14 @@ class IndexedAdapters(Matchable, ABC):
     Use the is_acceptable() method to check individual adapters.
     """
 
-    AdapterIndex = Dict[str, Tuple[SingleAdapter, int, int]]
+    AdapterIndexDict = Dict[str, Tuple[SingleAdapter, int, int]]
 
-    def __init__(self, adapters):
+    def __init__(self, adapters, prefix: bool):
         """All given adapters must be of the same type"""
-        super().__init__(name="indexed_adapters")
         if not adapters:
             raise ValueError("Adapter list is empty")
         for adapter in adapters:
-            self._accept(adapter)
+            self._accept(adapter, prefix)
         self._adapters = adapters
         self._lengths, self._index = self._make_index()
         logger.debug(
@@ -1255,25 +1255,57 @@ class IndexedAdapters(Matchable, ABC):
             self.match_to = self._match_to_one_length
         else:
             self.match_to = self._match_to_multiple_lengths
-        self._make_affix = self._get_make_affix()
+        if prefix:
+            self._make_affix = self._make_prefix
+            self._make_match = self._make_prefix_match
+        else:
+            self._make_affix = self._make_suffix
+            self._make_match = self._make_suffix_match
 
     def __repr__(self):
         return f"{self.__class__.__name__}(adapters={self._adapters!r})"
 
-    def match_to(self, sequence: str):
-        """Never called because it gets overwritten in __init__"""
+    @staticmethod
+    def _make_suffix(s, n):
+        return s[-n:]
 
-    @abstractmethod
-    def _get_make_affix(self):
-        pass
+    @staticmethod
+    def _make_prefix(s, n):
+        return s[:n]
 
-    @abstractmethod
-    def _make_match(self, adapter, length, matches, errors, sequence) -> SingleMatch:
-        pass
+    @staticmethod
+    def _make_prefix_match(adapter, length, score, errors, sequence):
+        return RemoveBeforeMatch(
+            astart=0,
+            astop=len(adapter.sequence),
+            rstart=0,
+            rstop=length,
+            score=score,
+            errors=errors,
+            adapter=adapter,
+            sequence=sequence,
+        )
+
+    @staticmethod
+    def _make_suffix_match(adapter, length, score, errors, sequence):
+        return RemoveAfterMatch(
+            astart=0,
+            astop=len(adapter.sequence),
+            rstart=len(sequence) - length,
+            rstop=len(sequence),
+            score=score,
+            errors=errors,
+            adapter=adapter,
+            sequence=sequence,
+        )
 
     @classmethod
-    def _accept(cls, adapter):
+    def _accept(cls, adapter: SingleAdapter, prefix: bool):
         """Raise a ValueError if the adapter is not acceptable"""
+        if prefix and not isinstance(adapter, PrefixAdapter):
+            raise ValueError("Only 5' anchored adapters are allowed")
+        elif not prefix and not isinstance(adapter, SuffixAdapter):
+            raise ValueError("Only 3' anchored adapters are allowed")
         if adapter.read_wildcards:
             raise ValueError("Wildcards in the read not supported")
         if adapter.adapter_wildcards:
@@ -1283,7 +1315,7 @@ class IndexedAdapters(Matchable, ABC):
             raise ValueError("Error rate too high")
 
     @classmethod
-    def is_acceptable(cls, adapter):
+    def is_acceptable(cls, adapter: SingleAdapter, prefix: bool):
         """
         Return whether this adapter is acceptable for being used in an index
 
@@ -1291,12 +1323,12 @@ class IndexedAdapters(Matchable, ABC):
         or would lead to a very large index.
         """
         try:
-            cls._accept(adapter)
+            cls._accept(adapter, prefix)
         except ValueError:
             return False
         return True
 
-    def _make_index(self) -> Tuple[List[int], "AdapterIndex"]:
+    def _make_index(self) -> Tuple[List[int], "AdapterIndexDict"]:
         start_time = time.time()
         logger.info("Building index of %s adapters ...", len(self._adapters))
         index: Dict[str, Tuple[SingleAdapter, int, int]] = dict()
@@ -1434,62 +1466,25 @@ class IndexedAdapters(Matchable, ABC):
             return None
         return adapter, match.errors, match.score
 
-    def enable_debug(self):
+
+class IndexedPrefixAdapters(Matchable):
+    def __init__(self, adapters):
+        super().__init__(name="indexed_prefix_adapters")
+        self._index = AdapterIndex(adapters, prefix=True)
+        self.match_to = self._index.match_to
+
+    def match_to(self, sequence: str):
         pass
 
 
-class IndexedPrefixAdapters(IndexedAdapters):
-    @classmethod
-    def _accept(cls, adapter):
-        if not isinstance(adapter, PrefixAdapter):
-            raise ValueError("Only 5' anchored adapters are allowed")
-        return super()._accept(adapter)
+class IndexedSuffixAdapters(Matchable):
+    def __init__(self, adapters):
+        super().__init__(name="indexed_suffix_adapters")
+        self._index = AdapterIndex(adapters, prefix=False)
+        self.match_to = self._index.match_to
 
-    def _make_match(self, adapter, length, score, errors, sequence):
-        return RemoveBeforeMatch(
-            astart=0,
-            astop=len(adapter.sequence),
-            rstart=0,
-            rstop=length,
-            score=score,
-            errors=errors,
-            adapter=adapter,
-            sequence=sequence,
-        )
-
-    def _get_make_affix(self):
-        return self._make_prefix
-
-    @staticmethod
-    def _make_prefix(s, n):
-        return s[:n]
-
-
-class IndexedSuffixAdapters(IndexedAdapters):
-    @classmethod
-    def _accept(cls, adapter):
-        if not isinstance(adapter, SuffixAdapter):
-            raise ValueError("Only anchored 3' adapters are allowed")
-        return super()._accept(adapter)
-
-    def _make_match(self, adapter, length, score, errors, sequence):
-        return RemoveAfterMatch(
-            astart=0,
-            astop=len(adapter.sequence),
-            rstart=len(sequence) - length,
-            rstop=len(sequence),
-            score=score,
-            errors=errors,
-            adapter=adapter,
-            sequence=sequence,
-        )
-
-    def _get_make_affix(self):
-        return self._make_suffix
-
-    @staticmethod
-    def _make_suffix(s, n):
-        return s[-n:]
+    def match_to(self, sequence: str):
+        pass
 
 
 def warn_duplicate_adapters(adapters):

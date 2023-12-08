@@ -21,6 +21,7 @@ from .adapters import (
     Match,
     remainder,
     Adapter,
+    AdapterIndex,
 )
 from .tokenizer import tokenize_braces, TokenizeError, Token, BraceToken
 from .info import ModificationInfo
@@ -162,9 +163,9 @@ class AdapterCutter(SingleEndModifier):
         suffix: List[SingleAdapter] = []
         other: List[SingleAdapter] = []
         for a in adapters:
-            if IndexedPrefixAdapters.is_acceptable(a):
+            if AdapterIndex.is_acceptable(a, prefix=True):
                 prefix.append(a)
-            elif IndexedSuffixAdapters.is_acceptable(a):
+            elif AdapterIndex.is_acceptable(a, prefix=False):
                 suffix.append(a)
             else:
                 other.append(a)
