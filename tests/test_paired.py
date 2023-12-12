@@ -764,14 +764,14 @@ def test_rename(run_paired, cores):
     )
 
 
-def test_poly_a_poly_t(run_paired):
+def test_poly_a_poly_t(run_paired, cores):
     run_paired(
         "--poly-a",
         in1="polya.1.fasta",
         in2="polya.2.fasta",
         expected1="polya.1.fasta",
         expected2="polya.2.fasta",
-        cores=1,
+        cores=cores,
     )
 
 

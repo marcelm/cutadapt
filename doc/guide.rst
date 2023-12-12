@@ -29,8 +29,10 @@ changed with command-line options, explained further down.
 Input and output file formats
 -----------------------------
 
-The supported input and output file formats are FASTA and FASTQ, with
-optional compression.
+Supported input formats are FASTA, FASTQ and unaligned BAM
+(uBAM, only for single-end data at the moment).
+Supported output formats are FASTA and FASTQ. Compression
+:ref:`is supported in multiple formats and detected automatically <compressed-files>`.
 
 The input file format is recognized from the file name extension. If the
 extension was not recognized or when Cutadapt reads from standard input,
@@ -60,15 +62,15 @@ then gzip compression is assumed ::
 
 All of Cutadapt's options that expect a file name support this.
 
-The supported compression formats are gzip (``.gz``), bzip2 (``.bz2``)
-and xz (``.xz``).
+The supported compression formats are gzip (``.gz``), bzip2 (``.bz2``),
+xz (``.xz``) and zstandard (``.zst``).
 
-The default compression level for gzip output is 6. Use option ``-Z`` to
+The default compression level for gzip output is 4. Use option ``-Z`` to
 change this to level 1. The files need more space, but it is faster and
 therefore a good choice for short-lived intermediate files.
 
-If available, Cutadapt uses `pigz <https://zlib.net/pigz/>`_ to speed up
-writing and reading of gzipped files.
+Cutadapt uses the `xopen library <https://github.com/pycompression/xopen>`_
+to speed up reading and writing compressed files.
 
 
 .. _standard-input-output:
