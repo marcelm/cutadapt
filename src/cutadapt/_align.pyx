@@ -416,6 +416,8 @@ cdef class Aligner:
             # To access the diagonal cell to the upper left,
             # we store it here before overwriting it.
             _Entry diag_entry
+            _Entry current_cell
+            _Entry previous_cell
 
         with nogil:
             # iterate over columns
@@ -441,9 +443,11 @@ cdef class Aligner:
                         score = diag_entry.score + match_score
                     else:
                         # Characters do not match.
+                        current_cell = column[i]
+                        previous_cell = column[i-1]
                         cost_diag = diag_entry.cost + 1
-                        cost_deletion = column[i].cost + deletion_cost
-                        cost_insertion = column[i-1].cost + insertion_cost
+                        cost_deletion = current_cell.cost + deletion_cost
+                        cost_insertion = previous_cell.cost + insertion_cost
 
                         if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
                             # MISMATCH
@@ -453,15 +457,15 @@ cdef class Aligner:
                         elif cost_insertion <= cost_deletion:
                             # INSERTION
                             cost = cost_insertion
-                            origin = column[i-1].origin
+                            origin = previous_cell.origin
                             # penalize insertions slightly
-                            score = column[i-1].score + insertion_score
+                            score = previous_cell.score + insertion_score
                         else:
                             # DELETION
                             cost = cost_deletion
-                            origin = column[i].origin
+                            origin = current_cell.origin
                             # penalize deletions slightly
-                            score = column[i].score + deletion_score
+                            score = current_cell.score + deletion_score
 
                     # Remember the current cell for next iteration
                     diag_entry = column[i]
