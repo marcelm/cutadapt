@@ -1,7 +1,11 @@
-
 =========
 Changelog
 =========
+
+development version
+-------------------
+
+* Dropped support for Python 3.7.
 
 v4.6 (2023-12-06)
 -------------------
