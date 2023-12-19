@@ -610,7 +610,7 @@ class SingleAdapter(Adapter, ABC):
         back_adapter: bool,
         front_adapter: bool,
         internal: bool = True,
-    ) -> KmerFinder:
+    ) -> Union[KmerFinder, MockKmerFinder]:
         positions_and_kmers = create_positions_and_kmers(
             sequence,
             self.min_overlap,
@@ -621,9 +621,13 @@ class SingleAdapter(Adapter, ABC):
         )
         if self._debug:
             print(kmer_probability_analysis(positions_and_kmers))
-        return KmerFinder(
-            positions_and_kmers, self.adapter_wildcards, self.read_wildcards
-        )
+        try:
+            return KmerFinder(
+                positions_and_kmers, self.adapter_wildcards, self.read_wildcards
+            )
+        except ValueError:
+            # Kmers too long.
+            return MockKmerFinder()
 
     def __repr__(self):
         return (
