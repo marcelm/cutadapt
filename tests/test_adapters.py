@@ -639,3 +639,14 @@ def test_noninternal_front_adapter_with_n_wildcards_issue_654():
     assert match.astart == 3
     assert match.astop == 6
     assert match.errors == 1
+
+
+def test_very_long_adapter_issue_749():
+    adapter = BackAdapter("A" * 70, max_errors=0)
+    match = adapter.match_to("GATTAC" + 20 * "A")
+    assert match is not None
+    assert match.rstart == 6
+    assert match.rstop == 26
+    assert match.astart == 0
+    assert match.astop == 20
+    assert match.errors == 0
