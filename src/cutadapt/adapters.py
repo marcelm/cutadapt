@@ -1134,6 +1134,9 @@ class LinkedAdapter(Adapter):
         self.front_adapter.name = self.name
         self.back_adapter = back_adapter
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(front_adapter={self.front_adapter}, back_adapter={self.back_adapter})"
+
     def descriptive_identifier(self) -> str:
         return "linked"
 
