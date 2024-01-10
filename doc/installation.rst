@@ -11,36 +11,46 @@ Installation with Conda
 
 Cutadapt is available as a Conda package from the
 `Bioconda channel <https://bioconda.github.io/>`_.
-`Install miniconda <http://conda.pydata.org/miniconda.html>`_ if
-you don’t have Conda. Then follow the `Bioconda installation
-instructions <https://bioconda.github.io/user/install.html>`_ (in particular,
-make sure you have both `bioconda` and `conda-forge` in your channels list).
 
-To then install Cutadapt into a new Conda environment, use this command::
+1. Install Conda. For example, by
+   `installing miniforge <https://github.com/conda-forge/miniforge#install>`_.
 
-    conda create -n cutadaptenv cutadapt
+2. Configure the Bioconda channel by following the
+   `Bioconda setup instructions <https://bioconda.github.io/#usage>`_.
+   In short::
 
-Here, ``cutadaptenv`` is the name of the Conda environment. You can
-choose a different name.
+     conda config --add channels bioconda
+     conda config --add channels conda-forge
+     conda config --set channel_priority strict
 
-If you are on macOS and your machine uses an M1/M2 processor (Apple Silicon),
-you may need to run this command instead::
+   (The Bioconda instructions mention the ``defaults`` channel,
+   but it is not needed.)
 
-       CONDA_SUBDIR=osx-64 conda create -n cutadaptenv cutadapt
+3. Install Cutadapt into a new Conda environment::
 
-(If you have problems, see `this issue for troubleshooting
-<https://github.com/marcelm/cutadapt/issues/672>`_.)
+     conda create -n cutadapt cutadapt
 
-Then activate the environment. This needs to be done every time you open a
-new shell before you can use Cutadapt::
+   The first ``cutadapt`` in this command is the name of the Conda environment.
+   You can choose a different name.
 
-    conda activate cutadaptenv
+   If you are on macOS and your machine uses an M1/M2 processor (Apple Silicon),
+   you may need to run this command instead::
 
-Finally, check whether it worked::
+     CONDA_SUBDIR=osx-64 conda create -n cutadapt cutadapt
 
-    cutadapt --version
+   (If you have problems, see `this issue for troubleshooting
+   <https://github.com/marcelm/cutadapt/issues/672>`_.)
 
-This should show the Cutadapt version number.
+4. Activate the Conda environment. This needs to be done every time you open a
+   new shell in order to be able to use Cutadapt::
+
+     conda activate cutadaptenv
+
+5. Finally, check whether the installation was successful::
+
+     cutadapt --version
+
+   This should show the Cutadapt version number.
 
 
 Installation with pipx
