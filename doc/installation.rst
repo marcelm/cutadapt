@@ -46,7 +46,7 @@ This should show the Cutadapt version number.
 Installation with pipx
 ----------------------
 
-This works on Ubuntu 20.04 and later:
+This works on Ubuntu 20.04 and later::
 
     sudo apt install pipx python3-venv
     pipx install cutadapt
