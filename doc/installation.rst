@@ -98,54 +98,6 @@ of the other installation methods to get an up-to-date version before
 reporting bugs.
 
 
-.. _dependencies:
-
-Dependencies
-------------
-
-Cutadapt installation requires this software to be installed:
-
-* Python 3.7 or newer
-* Possibly a C compiler. For Linux, Cutadapt packages are provided as
-  so-called “wheels” (``.whl`` files) which come pre-compiled.
-
-Under Ubuntu, you may need to install the packages ``build-essential`` and
-``python3-dev`` to get a C compiler.
-
-If you get an error message::
-
-    error: command 'gcc' failed with exit status 1
-
-Then check the entire error message. If it says something about a missing
-``Python.h`` file, then the problem is that you are missing Python development
-packages (``python3-dev`` in Ubuntu).
-
-
-System-wide installation (root required)
-----------------------------------------
-
-Generally, using ``sudo`` can be dangerous and the above methods that don’t
-require it are preferred. That said, if you have root access, you can install
-Cutadapt system-wide by running::
-
-    sudo python3 -m pip install cutadapt
-
-This installs cutadapt into ``/usr/local/bin``.
-
-If you want to upgrade from an older version, use this command instead::
-
-    sudo python3 -m pip install --upgrade cutadapt
-
-If the above does not work for you, then you can try to install Cutadapt
-into a virtual environment. This leads to fewer conflicts with
-system-installed packages::
-
-    sudo python3 -m venv /usr/local/cutadapt
-    sudo /usr/local/cutadapt/bin/pip install cutadapt
-    cd /usr/local/bin/
-    sudo ln -s ../cutadapt/bin/cutadapt
-
-
 Installation on Windows
 -----------------------
 
@@ -177,18 +129,6 @@ a compiler.
 
 When running Cutadapt this way, you will need to remember to write
 ``py -m cutadapt`` instead of just ``cutadapt``.
-
-
-Uninstalling
-------------
-
-Type ::
-
-    pip3 uninstall cutadapt
-
-and confirm with ``y`` to remove the package. Under some circumstances, multiple
-versions may be installed at the same time. Repeat the above command until you
-get an error message in order to make sure that all versions are removed.
 
 
 Shared installation (on a cluster)
@@ -229,12 +169,11 @@ Installing the development version
 We recommend that you install Cutadapt into a so-called virtual environment if
 you decide to use the development version. The virtual environment is a single
 directory that contains everything needed to run the software. Nothing else on
-your system is changed, so you can simply uninstall this particular version of
-Cutadapt by removing the directory with the virtual environment.
+your system is changed, so you can uninstall this particular version of
+Cutadapt by just removing the directory with the virtual environment.
 
 The following instructions work on Linux using Python 3. Make sure you have
-installed the :ref:`dependencies <dependencies>` (``python3-dev`` and
-``build-essential`` on Ubuntu)!
+installed the ``python3-dev`` and ``build-essential`` packages on Ubuntu.
 
 First, choose where you want to place the directory with the virtual
 environment and what you want to call it. Let us assume you chose the path
@@ -249,5 +188,5 @@ To run Cutadapt and see the version number, type ::
     ~/cutadapt-venv/bin/cutadapt --version
 
 The reported version number will be something like ``2.2.dev5+gf564208``. This
-means that you are now running the version of Cutadapt that will become 2.2, and that it contains
-5 changes (*commits*) since the previous release (2.1 in this case).
+means that you are now running the version of Cutadapt that will become 2.2,
+and that it contains 5 changes (*commits*) since the previous release (2.1 in this case).
