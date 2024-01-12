@@ -66,7 +66,13 @@ class FileOpener:
         f = open_raise_limit(
             xopen, path, mode, compresslevel=self.compression_level, threads=threads
         )
-        logger.debug("Opening '%s', mode '%s' with xopen resulted in %s", path, mode, f)
+        if "w" in mode:
+            extra = f" (compression level {self.compression_level}, {threads} threads)"
+        else:
+            extra = ""
+        logger.debug(
+            "Opening '%s', mode '%s'%s with xopen resulted in %s", path, mode, extra, f
+        )
         return f
 
     def xopen_or_none(self, path, mode):
