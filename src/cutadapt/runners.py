@@ -133,8 +133,7 @@ class WorkerProcess(mpctx_Process):
         self,
         id_: int,
         pipeline: Pipeline,
-        n_input_files: int,
-        interleaved_input: bool,
+        inpaths: InputPaths,
         orig_outfiles: OutputFiles,
         read_pipe: Connection,
         write_pipe: Connection,
@@ -143,8 +142,8 @@ class WorkerProcess(mpctx_Process):
         super().__init__()
         self._id = id_
         self._pipeline = pipeline
-        self._n_input_files = n_input_files
-        self._interleaved_input = interleaved_input
+        self._n_input_files = len(inpaths.paths)
+        self._interleaved_input = inpaths.interleaved
         self._read_pipe = read_pipe
         self._write_pipe = write_pipe
         self._need_work_queue = need_work_queue
@@ -288,8 +287,7 @@ class ParallelPipelineRunner(PipelineRunner):
         self._need_work_queue: multiprocessing.Queue = mpctx.Queue()
         self._buffer_size = 4 * 1024**2 if buffer_size is None else buffer_size
         self._outfiles = outfiles
-        self._n_input_files = len(inpaths.paths)
-        self._interleaved_input = inpaths.interleaved
+        self._inpaths = inpaths
         # the workers read from these connections
         connections = [mpctx.Pipe(duplex=False) for _ in range(self._n_workers)]
         self._connections, connw = zip(*connections)
@@ -318,8 +316,7 @@ class ParallelPipelineRunner(PipelineRunner):
             worker = WorkerProcess(
                 index,
                 self._pipeline,
-                self._n_input_files,
-                self._interleaved_input,
+                self._inpaths,
                 self._outfiles,
                 self._connections[index],
                 conn_w,
