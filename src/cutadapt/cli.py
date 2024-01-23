@@ -709,18 +709,19 @@ def determine_paired(args) -> bool:
     )
 
 
-def setup_input_files(
+def make_input_paths(
     inputs: Sequence[str], paired: bool, interleaved: bool
-) -> Tuple[str, ...]:
+) -> InputPaths:
+    """
+    Do some other error checking of the input file names and return InputPaths.
+    """
     if len(inputs) == 0:
         raise CommandLineError(
             "You did not provide any input file names. Please give me something to do!"
         )
     elif len(inputs) > 2:
         raise CommandLineError(
-            "You provided {} input file names, but either one or two are expected. ".format(
-                len(inputs)
-            )
+            f"You provided {len(inputs)} input file names, but either one or two are expected. "
             + "The file names were:\n - "
             + "\n - ".join(f"'{p}'" for p in inputs)
             + "\nHint: If your path contains spaces, you need to enclose it in quotes"
@@ -746,9 +747,11 @@ def setup_input_files(
         input_paired_filename = None
 
     if input_paired_filename:
-        return (input_filename, input_paired_filename)
+        return InputPaths(
+            input_filename, input_paired_filename, interleaved=interleaved
+        )
     else:
-        return (input_filename,)
+        return InputPaths(input_filename, interleaved=interleaved)
 
 
 def check_arguments(args, paired: bool) -> None:
@@ -1126,7 +1129,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
 
     try:
         is_interleaved_input = args.interleaved and len(args.inputs) == 1
-        input_paths = setup_input_files(args.inputs, paired, is_interleaved_input)
+        input_paths = make_input_paths(args.inputs, paired, is_interleaved_input)
         check_arguments(args, paired)
         adapters, adapters2 = adapters_from_args(args)
         log_adapters(adapters, adapters2 if paired else None)
@@ -1137,7 +1140,6 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         outfiles = open_output_files(
             args, default_outfile, file_opener, adapter_names, adapter_names2
         )
-        inpaths = InputPaths(*input_paths, interleaved=is_interleaved_input)
         logger.info(
             "Processing %s reads on %d core%s ...",
             {False: "single-end", True: "paired-end"}[pipeline.paired],
@@ -1145,9 +1147,8 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
             "s" if cores > 1 else "",
         )
         stats = run_pipeline(
-            pipeline, inpaths, outfiles, cores, progress, args.buffer_size
+            pipeline, input_paths, outfiles, cores, progress, args.buffer_size
         )
-
     except KeyboardInterrupt:
         if args.debug:
             raise
@@ -1180,8 +1181,8 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
             json_dict = json_report(
                 stats=stats,
                 cmdlineargs=cmdlineargs,
-                path1=inpaths.paths[0],
-                path2=inpaths.paths[1] if len(inpaths.paths) > 1 else None,
+                path1=input_paths.paths[0],
+                path2=input_paths.paths[1] if len(input_paths.paths) > 1 else None,
                 cores=cores,
                 paired=paired,
                 gc_content=args.gc_content / 100.0,
