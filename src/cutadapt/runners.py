@@ -288,16 +288,8 @@ class ParallelPipelineRunner(PipelineRunner):
         self._need_work_queue: multiprocessing.Queue = mpctx.Queue()
         self._buffer_size = 4 * 1024**2 if buffer_size is None else buffer_size
         self._outfiles = outfiles
-
-        self._assign_input(*inpaths.paths, interleaved=inpaths.interleaved)
-
-    def _assign_input(
-        self,
-        *paths: str,
-        interleaved: bool = False,
-    ) -> None:
-        self._n_input_files = len(paths)
-        self._interleaved_input = interleaved
+        self._n_input_files = len(inpaths.paths)
+        self._interleaved_input = inpaths.interleaved
         # the workers read from these connections
         connections = [mpctx.Pipe(duplex=False) for _ in range(self._n_workers)]
         self._connections, connw = zip(*connections)
@@ -308,7 +300,7 @@ class ParallelPipelineRunner(PipelineRunner):
             # that does not have a file descriptor.
             fileno = -1
         self._reader_process = ReaderProcess(
-            *paths,
+            *inpaths.paths,
             connections=connw,
             queue=self._need_work_queue,
             buffer_size=self._buffer_size,
