@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: Cutadapt
+message: "If you use this software, please cite DOI 10.14806/ej.17.1.200 as below"
+authors:
+  - given-names: Marcel
+    family-names: Martin
+    orcid: 'https://orcid.org/0000-0002-0680-200X'
+url: 'https://cutadapt.readthedocs.io/'
+repository-code: 'https://github.com/marcelm/cutadapt/'
+license: MIT
+preferred-citation:
+  type: article
+  authors:
+  - given-names: Marcel
+    family-names: Martin
+    orcid: 'https://orcid.org/0000-0002-0680-200X'
+  doi: 10.14806/ej.17.1.200
+  journal: EMBnet.journal
+  month: 5
+  year: 2011
+  start: 10
+  end: 12
+  title: 'Cutadapt removes adapter sequences from high-throughput sequencing reads'
+  volume: 17
+  issue: 1
