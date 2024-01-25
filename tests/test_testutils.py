@@ -1,11 +1,14 @@
 import pytest
 
-from utils import assert_files_equal, FilesDifferent, binomial
+from utils import assert_files_equal, FilesDifferent, binomial, datapath
 
 
 def test_files_different():
-    with pytest.raises(FilesDifferent):
+    with pytest.raises(FileNotFoundError):
         assert_files_equal("simple.fasta", "simple.fastq")
+
+    with pytest.raises(FilesDifferent):
+        assert_files_equal(datapath("simple.fasta"), datapath("simple.fastq"))
 
 
 def test_binomial():

@@ -1,6 +1,7 @@
 import sys
 import os.path
 import subprocess
+from pathlib import Path
 
 
 def datapath(path):
@@ -16,6 +17,10 @@ class FilesDifferent(Exception):
 
 
 def assert_files_equal(path1, path2, ignore_trailing_space: bool = False):
+    if not Path(path1).exists():
+        raise FileNotFoundError(path1)
+    if not Path(path2).exists():
+        raise FileNotFoundError(path2)
     cmd = ["diff", "-u"]
     if sys.platform == "win32":
         cmd.append("--strip-trailing-cr")
