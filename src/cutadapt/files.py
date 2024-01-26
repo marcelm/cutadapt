@@ -1,8 +1,7 @@
-import contextlib
 import errno
 import io
 import sys
-from typing import BinaryIO, Optional, Dict, Tuple, List, Callable, TextIO
+from typing import BinaryIO, Optional, Dict, Tuple, List, TextIO
 
 import dnaio
 from xopen import xopen
@@ -184,8 +183,6 @@ class OutputFiles:
         too_short2: Optional[BinaryIO] = None,
         too_long: Optional[BinaryIO] = None,
         too_long2: Optional[BinaryIO] = None,
-        rest: Optional[BinaryIO] = None,
-        wildcard: Optional[BinaryIO] = None,
         demultiplex_out: Optional[Dict[str, BinaryIO]] = None,
         demultiplex_out2: Optional[Dict[str, BinaryIO]] = None,
         combinatorial_out: Optional[Dict[Tuple[str, str], BinaryIO]] = None,
@@ -208,8 +205,6 @@ class OutputFiles:
         self.too_short2 = too_short2
         self.too_long = too_long
         self.too_long2 = too_long2
-        self.rest = rest
-        self.wildcard = wildcard
         self.demultiplex_out = demultiplex_out
         self.demultiplex_out2 = demultiplex_out2
         self.combinatorial_out = combinatorial_out
@@ -249,8 +244,6 @@ class OutputFiles:
             self.too_short2,
             self.too_long,
             self.too_long2,
-            self.rest,
-            self.wildcard,
         ]:
             if f is not None:
                 yield f
@@ -284,8 +277,6 @@ class OutputFiles:
             "too_short2",
             "too_long",
             "too_long2",
-            "rest",
-            "wildcard",
         ):
             if getattr(self, attr) is not None:
                 setattr(result, attr, io.BytesIO())
@@ -313,42 +304,3 @@ class OutputFiles:
         else:
             for f in self._text_files.values():
                 f.close()
-
-
-class OpenedOutputs:
-    def __init__(self, files: Dict[str, BinaryIO], closefunc):
-        self._close = closefunc
-        self._files = files
-
-    def get(self, path: str) -> Optional[BinaryIO]:
-        return self._files.get(path)
-
-    def __close__(self):
-        self._close()
-
-
-class OutputPaths:
-    """
-    The paths of all the output files a pipeline produces.
-    """
-
-    def __init__(self, opener: Callable[[str, str], BinaryIO]):
-        self._paths: List[str] = []
-        self._opener = opener
-
-    def register(self, path: str):
-        self._paths.append(path)
-
-    def open(self) -> OpenedOutputs:
-        return self._open(opener=self._opener)
-
-    def open_bytesio(self) -> OpenedOutputs:
-        return self._open(opener=lambda path, mode: io.BytesIO())
-
-    def _open(self, opener: Callable[[str, str], BinaryIO]) -> OpenedOutputs:
-        with contextlib.ExitStack() as stack:
-            files = {
-                path: stack.enter_context(opener(path, "wb")) for path in self._paths
-            }
-            return OpenedOutputs(files, stack.pop_all().close)
-        assert False  # Avoid complaint from Mypy

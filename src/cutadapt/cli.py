@@ -95,8 +95,13 @@ from cutadapt.modifiers import (
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
 from cutadapt.runners import Pipeline, run_pipeline
-from cutadapt.files import InputPaths, OutputFiles, FileOpener, OutputPaths
-from cutadapt.steps import InfoFileWriter, PairedSingleEndStep
+from cutadapt.files import InputPaths, OutputFiles, FileOpener
+from cutadapt.steps import (
+    InfoFileWriter,
+    PairedSingleEndStep,
+    RestFileWriter,
+    WildcardFileWriter,
+)
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress
 from cutadapt.log import setup_logging, REPORT
 from cutadapt.qualtrim import HasNoQualities
@@ -466,12 +471,6 @@ def open_output_files(
             args.paired_output,
         ]
     )
-    paths = OutputPaths(opener=file_opener.xopen)
-    if args.rest_file:
-        paths.register(args.rest_file)
-    if args.wildcard_file:
-        paths.register(args.wildcard_file)
-
     too_short = too_short2 = None
     if args.minimum_length is not None:
         too_short, too_short2 = file_opener.xopen_pair(
@@ -549,12 +548,9 @@ def open_output_files(
         if out is None:
             out = default_outfile
 
-    outputs = paths.open()
     return OutputFiles(
         file_opener=file_opener,
         proxied=proxied,
-        rest=outputs.get(args.rest_file),
-        wildcard=outputs.get(args.wildcard_file),
         too_short=too_short,
         too_short2=too_short2,
         too_long=too_long,
@@ -805,14 +801,28 @@ def check_arguments(args, paired: bool) -> None:
 
 
 class PipelineMaker:
-    def __init__(self, args, paired, adapters, adapters2):
+    def __init__(self, args, outfiles, paired, adapters, adapters2):
         self.args = args
         self.action = None if args.action == "none" else args.action
         self.paired = paired
         self.adapters = adapters
         self.adapters2 = adapters2
 
-    def make(self, steps) -> Pipeline:  # noqa: C901
+        steps = []
+        for step_class, path in (
+            (RestFileWriter, args.rest_file),
+            (InfoFileWriter, args.info_file),
+            (WildcardFileWriter, args.wildcard_file),
+        ):
+            if path is None:
+                continue
+            step: Any = step_class(outfiles.open_text(path))
+            if paired:
+                step = PairedSingleEndStep(step)
+            steps.append(step)
+        self._steps = steps
+
+    def make(self) -> Pipeline:  # noqa: C901
         """
         Set up a processing pipeline from parsed command-line arguments.
 
@@ -820,6 +830,7 @@ class PipelineMaker:
 
         Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
         """
+        steps = self._steps
         modifiers = []
         modifiers.extend(
             make_unconditional_cutters(self.args.cut, self.args.cut2, self.paired)
@@ -1147,13 +1158,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
             adapter_names2,
             proxied=cores > 1,
         )
-        steps = []
-        if args.info_file:
-            step: Any = InfoFileWriter(outfiles.open_text(args.info_file))
-            if paired:
-                step = PairedSingleEndStep(step)
-            steps.append(step)
-        pipeline = PipelineMaker(args, paired, adapters, adapters2).make(steps)
+        pipeline = PipelineMaker(args, outfiles, paired, adapters, adapters2).make()
 
         logger.info(
             "Processing %s reads on %d core%s ...",

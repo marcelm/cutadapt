@@ -1,4 +1,3 @@
-import io
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -44,8 +43,6 @@ from .steps import (
     CombinatorialDemultiplexer,
     SingleEndStep,
     PairedSingleEndStep,
-    RestFileWriter,
-    WildcardFileWriter,
 )
 
 logger = logging.getLogger()
@@ -105,15 +102,6 @@ class Pipeline(ABC):
         self._outfiles = outfiles
 
         steps = []
-        for step_class, outfile in (
-            (RestFileWriter, outfiles.rest),
-            (WildcardFileWriter, outfiles.wildcard),
-        ):
-            if outfile:
-                textiowrapper = io.TextIOWrapper(outfile)
-                self._textiowrappers.append(textiowrapper)
-                steps.append(self._wrap_single_end_step(step_class(textiowrapper)))
-
         files: List[Optional[BinaryIO]]
 
         # minimum length and maximum length
