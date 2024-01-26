@@ -120,7 +120,7 @@ Additional read modifications
     also trims dark cycles appearing as high-quality G bases.
 
 ``--quality-base N`` (default: 33)
-    Assume that quality values in the FASTQ file are encoded as ascii(quality + N).
+    Assume that quality values in FASTQ files are encoded as ascii(quality + N).
     This needs to be set to 64 for some very old Illumina FASTQ files.
 
 ``--poly-a``
@@ -796,8 +796,8 @@ a match of the 3' adapter, the string ``;2`` is added. If there are two rows, th
 Properly paired reads
 =====================
 
-When reading paired-end reads, Cutadapt compares the read IDs of R1 and R2
-and prints an error message and aborts if they do not match.
+When reading paired-end reads, Cutadapt compares the read IDs of R1 and R2.
+It prints an error message and aborts if they do not match.
 
 Comments in the FASTQ or FASTA header are ignored when doing the comparison.
 Also, if the read ID ends with ``1`` or ``2`` or ``3``, then that is also
