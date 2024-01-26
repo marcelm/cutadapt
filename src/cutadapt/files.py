@@ -2,7 +2,7 @@ import contextlib
 import errno
 import io
 import sys
-from typing import BinaryIO, Optional, Dict, Tuple, List, Callable
+from typing import BinaryIO, Optional, Dict, Tuple, List, Callable, TextIO
 
 import dnaio
 from xopen import xopen
@@ -141,6 +141,29 @@ class InputPaths:
         return InputFiles(*files, interleaved=self.interleaved)
 
 
+class ProxyTextFile:
+    def __init__(self):
+        self._buffer = io.BytesIO()
+        self._file = io.TextIOWrapper(self._buffer)
+
+    def write(self, text):
+        self._file.write(text)
+
+    def drain(self) -> bytes:
+        self._file.flush()
+        b = self._buffer.getvalue()
+        self._buffer.seek(0)
+        self._buffer.truncate()
+        return b
+
+    def __getstate__(self):
+        """TextIOWrapper cannot be pickled. Just don’t include our state."""
+        return True  # ensure __setstate__ is called
+
+    def __setstate__(self, state):
+        self.__init__()
+
+
 class OutputFiles:
     """
     The attributes are either None or open file-like objects except for demultiplex_out
@@ -150,6 +173,9 @@ class OutputFiles:
 
     def __init__(
         self,
+        *,
+        file_opener: FileOpener,
+        proxied: bool,
         out: Optional[BinaryIO] = None,
         out2: Optional[BinaryIO] = None,
         untrimmed: Optional[BinaryIO] = None,
@@ -158,7 +184,6 @@ class OutputFiles:
         too_short2: Optional[BinaryIO] = None,
         too_long: Optional[BinaryIO] = None,
         too_long2: Optional[BinaryIO] = None,
-        info: Optional[BinaryIO] = None,
         rest: Optional[BinaryIO] = None,
         wildcard: Optional[BinaryIO] = None,
         demultiplex_out: Optional[Dict[str, BinaryIO]] = None,
@@ -167,6 +192,14 @@ class OutputFiles:
         combinatorial_out2: Optional[Dict[Tuple[str, str], BinaryIO]] = None,
         force_fasta: Optional[bool] = None,
     ):
+        self._file_opener = file_opener
+        # TODO do these actually have to be dicts?
+        self._binary_files: Dict[str, BinaryIO] = {}
+        self._text_files: Dict[str, TextIO] = {}
+        self._proxy_files: Dict[str, ProxyTextFile] = {}
+        self._proxied = proxied
+        self.force_fasta = force_fasta
+
         self.out = out
         self.out2 = out2
         self.untrimmed = untrimmed
@@ -175,14 +208,36 @@ class OutputFiles:
         self.too_short2 = too_short2
         self.too_long = too_long
         self.too_long2 = too_long2
-        self.info = info
         self.rest = rest
         self.wildcard = wildcard
         self.demultiplex_out = demultiplex_out
         self.demultiplex_out2 = demultiplex_out2
         self.combinatorial_out = combinatorial_out
         self.combinatorial_out2 = combinatorial_out2
-        self.force_fasta = force_fasta
+
+    def open_text(self, path):
+        if path in self._binary_files:
+            raise "duplicate path"  # TODO
+        # TODO
+        # - serial runner needs only text_file
+        # - parallel runner needs binary_file and proxy_file
+        # split into SerialOutputFiles and ParallelOutputFiles?
+        if self._proxied:
+            binary_file = self._file_opener.xopen(path, "wb")
+            self._binary_files[path] = binary_file
+            proxy_file = ProxyTextFile()
+            self._proxy_files[path] = proxy_file
+            return proxy_file
+        else:
+            text_file = self._file_opener.xopen(path, "wt")
+            self._text_files[path] = text_file
+            return text_file
+
+    def binary_files(self):
+        return list(self._binary_files.values())
+
+    def proxy_files(self) -> List[ProxyTextFile]:
+        return list(self._proxy_files.values())
 
     def __iter__(self):
         for f in [
@@ -194,7 +249,6 @@ class OutputFiles:
             self.too_short2,
             self.too_long,
             self.too_long2,
-            self.info,
             self.rest,
             self.wildcard,
         ]:
@@ -210,12 +264,17 @@ class OutputFiles:
                 for f in outs.values():
                     assert f is not None
                     yield f
+        yield from self._binary_files.values()
 
     def as_bytesio(self) -> "OutputFiles":
         """
         Create a new OutputFiles instance that has BytesIO instances for each non-None output file
         """
-        result = OutputFiles(force_fasta=self.force_fasta)
+        result = OutputFiles(
+            file_opener=self._file_opener,
+            proxied=False,
+            force_fasta=self.force_fasta,
+        )
         for attr in (
             "out",
             "out2",
@@ -225,7 +284,6 @@ class OutputFiles:
             "too_short2",
             "too_long",
             "too_long2",
-            "info",
             "rest",
             "wildcard",
         ):
@@ -249,6 +307,12 @@ class OutputFiles:
             if f is sys.stdout or f is sys.stdout.buffer:
                 continue
             f.close()
+        if self._proxied:
+            for f in self._binary_files.values():
+                f.close()
+        else:
+            for f in self._text_files.values():
+                f.close()
 
 
 class OpenedOutputs:

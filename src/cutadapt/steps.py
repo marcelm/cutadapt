@@ -16,7 +16,6 @@ Steps are added to the pipeline in a certain order:
 3. The last pipeline step should be one of the "Sinks", which consume all reads.
    Demultiplexers are sinks, for example.
 """
-
 from abc import ABC, abstractmethod
 from typing import Tuple, Dict, Optional, Any, TextIO
 

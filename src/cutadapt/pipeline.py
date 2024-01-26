@@ -45,7 +45,6 @@ from .steps import (
     SingleEndStep,
     PairedSingleEndStep,
     RestFileWriter,
-    InfoFileWriter,
     WildcardFileWriter,
 )
 
@@ -102,21 +101,18 @@ class Pipeline(ABC):
         )
 
     def _set_output(self, outfiles: OutputFiles) -> None:  # noqa: C901
-        self._steps = []
         self._textiowrappers = []
         self._outfiles = outfiles
 
+        steps = []
         for step_class, outfile in (
             (RestFileWriter, outfiles.rest),
-            (InfoFileWriter, outfiles.info),
             (WildcardFileWriter, outfiles.wildcard),
         ):
             if outfile:
                 textiowrapper = io.TextIOWrapper(outfile)
                 self._textiowrappers.append(textiowrapper)
-                self._steps.append(
-                    self._wrap_single_end_step(step_class(textiowrapper))
-                )
+                steps.append(self._wrap_single_end_step(step_class(textiowrapper)))
 
         files: List[Optional[BinaryIO]]
 
@@ -134,13 +130,11 @@ class Pipeline(ABC):
                 f2 = predicate_class(lengths[1])
             else:
                 f2 = None
-            self._steps.append(
-                self._make_filter(predicate1=f1, predicate2=f2, writer=writer)
-            )
+            steps.append(self._make_filter(predicate1=f1, predicate2=f2, writer=writer))
 
         if self.max_n is not None:
             f1 = f2 = TooManyN(self.max_n)
-            self._steps.append(self._make_filter(f1, f2, None))
+            steps.append(self._make_filter(f1, f2, None))
 
         if self.max_expected_errors is not None:
             if not self._reader.delivers_qualities:
@@ -149,7 +143,7 @@ class Pipeline(ABC):
                 )
             else:
                 f1 = f2 = TooManyExpectedErrors(self.max_expected_errors)
-                self._steps.append(self._make_filter(f1, f2, None))
+                steps.append(self._make_filter(f1, f2, None))
 
         if self.max_average_error_rate is not None:
             if not self._reader.delivers_qualities:
@@ -158,11 +152,11 @@ class Pipeline(ABC):
                 )
             else:
                 f1 = f2 = TooHighAverageErrorRate(self.max_average_error_rate)
-                self._steps.append(self._make_filter(f1, f2, None))
+                steps.append(self._make_filter(f1, f2, None))
 
         if self.discard_casava:
             f1 = f2 = CasavaFiltered()
-            self._steps.append(self._make_filter(f1, f2, None))
+            steps.append(self._make_filter(f1, f2, None))
 
         if (
             int(self.discard_trimmed)
@@ -180,7 +174,7 @@ class Pipeline(ABC):
             or outfiles.combinatorial_out is not None
         ):
             self._demultiplexer = self._create_demultiplexer(outfiles)
-            self._steps.append(self._demultiplexer)
+            steps.append(self._demultiplexer)
         else:
             # Some special handling to allow overriding the wrapper for
             # --discard-untrimmed/--untrimmed-(paired-)output
@@ -189,21 +183,20 @@ class Pipeline(ABC):
             # --discard-untrimmed and --untrimmed-output. These options
             # are mutually exclusive in order to avoid brain damage.
             if self.discard_trimmed:
-                self._steps.append(
+                steps.append(
                     self._make_filter(DiscardTrimmed(), DiscardTrimmed(), None)
                 )
             elif self.discard_untrimmed:
-                self._steps.append(self._make_untrimmed_filter(None))
+                steps.append(self._make_untrimmed_filter(None))
             elif outfiles.untrimmed:
                 files = [outfiles.untrimmed]
                 if self.paired:
                     files += [outfiles.untrimmed2]
                 untrimmed_writer = self._open_writer(*files)
-                self._steps.append(self._make_untrimmed_filter(untrimmed_writer))
+                steps.append(self._make_untrimmed_filter(untrimmed_writer))
 
-            self._steps.append(self._final_filter(outfiles))
-        for i, step in enumerate(self._steps, 1):
-            logger.debug("Pipeline step %d: %s", i, step)
+            steps.append(self._final_filter(outfiles))
+        self._steps.extend(steps)
 
     def flush(self) -> None:
         for f in self._textiowrappers:
@@ -275,9 +268,10 @@ class SingleEndPipeline(Pipeline):
     Processing pipeline for single-end reads
     """
 
-    def __init__(self, modifiers: List[SingleEndModifier]):
+    def __init__(self, modifiers: List[SingleEndModifier], steps: List[SingleEndStep]):
         super().__init__()
         self._modifiers: List[SingleEndModifier] = modifiers
+        self._static_steps = steps
 
     def process_reads(
         self,
@@ -288,7 +282,11 @@ class SingleEndPipeline(Pipeline):
         """Run the pipeline. Return statistics"""
         self._infiles = infiles
         self._reader = infiles.open()
-        self._set_output(outfiles)
+        self._steps = self._static_steps[:]
+        self._set_output(outfiles)  # appends to self._steps
+        for i, step in enumerate(self._steps, 1):
+            logger.debug("Pipeline step %d: %s", i, step)
+
         n = 0  # no. of processed reads
         total_bp = 0
         for read in self._reader:
@@ -371,9 +369,11 @@ class PairedEndPipeline(Pipeline):
             ]
         ],
         pair_filter_mode: str,
+        steps,
     ):
         super().__init__()
         self._modifiers: List[PairedEndModifier] = []
+        self._static_steps = steps
         self._pair_filter_mode = pair_filter_mode
         self._reader = None
         # Whether to ignore pair_filter mode for discard-untrimmed filter
@@ -413,6 +413,7 @@ class PairedEndPipeline(Pipeline):
     ) -> Tuple[int, int, Optional[int]]:
         self._infiles = infiles
         self._reader = infiles.open()
+        self._steps = self._static_steps[:]
         self._set_output(outfiles)
         n = 0  # no. of processed reads
         total1_bp = 0

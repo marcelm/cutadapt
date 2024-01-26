@@ -96,6 +96,7 @@ from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
 from cutadapt.runners import Pipeline, run_pipeline
 from cutadapt.files import InputPaths, OutputFiles, FileOpener, OutputPaths
+from cutadapt.steps import InfoFileWriter, PairedSingleEndStep
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress
 from cutadapt.log import setup_logging, REPORT
 from cutadapt.qualtrim import HasNoQualities
@@ -444,6 +445,7 @@ def open_output_files(
     file_opener: FileOpener,
     adapter_names: Sequence[Optional[str]],
     adapter_names2: Sequence[Optional[str]],
+    proxied: bool,
 ) -> OutputFiles:
     """
     Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
@@ -465,8 +467,6 @@ def open_output_files(
         ]
     )
     paths = OutputPaths(opener=file_opener.xopen)
-    if args.info_file:
-        paths.register(args.info_file)
     if args.rest_file:
         paths.register(args.rest_file)
     if args.wildcard_file:
@@ -551,8 +551,9 @@ def open_output_files(
 
     outputs = paths.open()
     return OutputFiles(
+        file_opener=file_opener,
+        proxied=proxied,
         rest=outputs.get(args.rest_file),
-        info=outputs.get(args.info_file),
         wildcard=outputs.get(args.wildcard_file),
         too_short=too_short,
         too_short2=too_short2,
@@ -811,7 +812,7 @@ class PipelineMaker:
         self.adapters = adapters
         self.adapters2 = adapters2
 
-    def make(self) -> Pipeline:  # noqa: C901
+    def make(self, steps) -> Pipeline:  # noqa: C901
         """
         Set up a processing pipeline from parsed command-line arguments.
 
@@ -887,9 +888,11 @@ class PipelineMaker:
             pair_filter_mode = (
                 "any" if self.args.pair_filter is None else self.args.pair_filter
             )
-            pipeline = PairedEndPipeline(modifiers, pair_filter_mode)  # type: Any
+            pipeline = PairedEndPipeline(
+                modifiers, pair_filter_mode, steps
+            )  # type: Any
         else:
-            pipeline = SingleEndPipeline(modifiers)
+            pipeline = SingleEndPipeline(modifiers, steps)
 
         # When adapters are being trimmed only in R1 or R2, override the pair filter mode
         # as using the default of 'any' would regard all read pairs as untrimmed.
@@ -1134,12 +1137,24 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         adapters, adapters2 = adapters_from_args(args)
         log_adapters(adapters, adapters2 if paired else None)
 
-        pipeline = PipelineMaker(args, paired, adapters, adapters2).make()
         adapter_names: List[Optional[str]] = [a.name for a in adapters]
         adapter_names2: List[Optional[str]] = [a.name for a in adapters2]
         outfiles = open_output_files(
-            args, default_outfile, file_opener, adapter_names, adapter_names2
+            args,
+            default_outfile,
+            file_opener,
+            adapter_names,
+            adapter_names2,
+            proxied=cores > 1,
         )
+        steps = []
+        if args.info_file:
+            step: Any = InfoFileWriter(outfiles.open_text(args.info_file))
+            if paired:
+                step = PairedSingleEndStep(step)
+            steps.append(step)
+        pipeline = PipelineMaker(args, paired, adapters, adapters2).make(steps)
+
         logger.info(
             "Processing %s reads on %d core%s ...",
             {False: "single-end", True: "paired-end"}[pipeline.paired],
@@ -1169,6 +1184,12 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         logger.error("%s", e)
         exit_code = 2 if isinstance(e, CommandLineError) else 1
         sys.exit(exit_code)
+    finally:
+        # TODO ...
+        try:
+            outfiles.close()
+        except UnboundLocalError:
+            pass
 
     elapsed = time.time() - start_time
     if args.report == "minimal":

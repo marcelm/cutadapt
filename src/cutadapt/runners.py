@@ -150,6 +150,7 @@ class WorkerProcess(mpctx_Process):
         # Do not store orig_outfiles directly because it contains
         # _io.BufferedWriter attributes, which cannot be pickled.
         self._original_outfiles = orig_outfiles.as_bytesio()
+        self._proxy_files = orig_outfiles.proxy_files()
 
     def run(self):
         try:
@@ -200,6 +201,8 @@ class WorkerProcess(mpctx_Process):
             assert isinstance(f, io.BytesIO)
             processed_chunk = f.getvalue()
             self._write_pipe.send_bytes(processed_chunk)
+        for pf in self._proxy_files:
+            self._write_pipe.send_bytes(pf.drain())
 
 
 class OrderedChunkWriter:
@@ -214,7 +217,7 @@ class OrderedChunkWriter:
         self._current_index = 0
         self._outfile = outfile
 
-    def write(self, data, index):
+    def write(self, data: bytes, index: int):
         """ """
         self._chunks[index] = data
         while self._current_index in self._chunks:
@@ -336,7 +339,7 @@ class ParallelPipelineRunner(PipelineRunner):
         while connections:
             ready_connections: List[Any] = multiprocessing.connection.wait(connections)
             for connection in ready_connections:
-                chunk_index = self._try_receive(connection)
+                chunk_index: int = self._try_receive(connection)
                 if chunk_index == -1:
                     # the worker is done
                     cur_stats = self._try_receive(connection)
@@ -344,7 +347,7 @@ class ParallelPipelineRunner(PipelineRunner):
                     connections.remove(connection)
                     continue
 
-                number_of_reads = self._try_receive(connection)
+                number_of_reads: int = self._try_receive(connection)
                 self._progress.update(number_of_reads)
                 for writer in writers:
                     data = connection.recv_bytes()

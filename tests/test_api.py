@@ -11,6 +11,7 @@ import json
 import os
 
 from cutadapt.runners import run_pipeline
+from cutadapt.steps import InfoFileWriter, PairedSingleEndStep
 from utils import datapath
 
 
@@ -33,10 +34,12 @@ def test_command_line():
     # - Should the JSON stats be returned instead?
 
 
-def test_pipeline_single(tmp_path):
+def test_pipeline_single(tmp_path, cores):
     # The following is roughly equivalent to:
     # cutadapt -u 5 -a GATCGGAAGA -q 0,15 -m 10
     #   --discard-untrimmed --info-file=info.txt -o ... small.fastq
+
+    info_path = tmp_path / "info.txt"
     import json
     from cutadapt.pipeline import SingleEndPipeline
     from cutadapt.files import FileOpener, OutputFiles, InputPaths
@@ -54,15 +57,16 @@ def test_pipeline_single(tmp_path):
         QualityTrimmer(cutoff_front=0, cutoff_back=15),
         AdapterCutter([adapter]),
     ]
-    pipeline = SingleEndPipeline(modifiers)
+    out = file_opener.xopen(tmp_path / "out.fastq", "wb")
+    outfiles = OutputFiles(file_opener=file_opener, out=out, proxied=cores > 1)
+    steps = [InfoFileWriter(outfiles.open_text(info_path))]
+    pipeline = SingleEndPipeline(modifiers, steps)
     pipeline.minimum_length = (10,)
     pipeline.discard_untrimmed = True
     inpaths = InputPaths(datapath("small.fastq"))
-    info_file = file_opener.xopen_or_none(tmp_path / "info.txt", "wb")
-    out = file_opener.xopen(tmp_path / "out.fastq", "wb")
-    outfiles = OutputFiles(info=info_file, out=out)
-    stats = run_pipeline(pipeline, inpaths, outfiles, cores=1)
+    stats = run_pipeline(pipeline, inpaths, outfiles, cores=cores)
     assert stats is not None
+    assert info_path.exists()
     json.dumps(stats.as_json())
     outfiles.close()
     # TODO
@@ -75,6 +79,9 @@ def test_pipeline_paired(tmp_path):
     #   --discard-untrimmed --info-file=info.txt
     #   -o ... -p ...
     #   paired.1.fastq paired.2.fastq
+
+    info_path = tmp_path / "info.txt"
+
     from cutadapt.pipeline import PairedEndPipeline
     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
     from cutadapt.adapters import BackAdapter
@@ -92,24 +99,25 @@ def test_pipeline_paired(tmp_path):
         (AdapterCutter([adapter]), None),
     ]
 
-    pipeline = PairedEndPipeline(modifiers, "any")
-
-    pipeline.minimum_length = (10, None)
-    pipeline.discard_untrimmed = True
-
     file_opener = FileOpener()
     inpaths = InputPaths(datapath("paired.1.fastq"), datapath("paired.2.fastq"))
-    info_file = file_opener.xopen_or_none(tmp_path / "info.txt", "wb")
     out, out2 = file_opener.xopen_pair(
         tmp_path / "out.1.fastq", tmp_path / "out.2.fastq", "wb"
     )
     outfiles = OutputFiles(
-        info=info_file,
+        file_opener=file_opener,
+        proxied=False,
         out=out,
         out2=out2,
     )
+    steps = [PairedSingleEndStep(InfoFileWriter(outfiles.open_text(info_path)))]
+    pipeline = PairedEndPipeline(modifiers, "any", steps)
+    pipeline.minimum_length = (10, None)
+    pipeline.discard_untrimmed = True
+
     stats = run_pipeline(pipeline, inpaths, outfiles, cores=1, progress=True)
     assert stats is not None
+    assert info_path.exists()
     _ = stats.as_json()
     outfiles.close()
 
