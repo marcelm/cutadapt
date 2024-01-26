@@ -13,9 +13,9 @@ jobs:
         python-version: ["3.10"]
         toxenv: [flake8, mypy, docs, black]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install tox
@@ -27,7 +27,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # required for setuptools_scm
     - name: Build sdist and temporary wheel
@@ -51,9 +51,9 @@ jobs:
         - os: windows-latest
           python-version: "3.10"
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install tox
@@ -72,7 +72,7 @@ jobs:
         os: [ubuntu-20.04, windows-2019, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # required for setuptools_scm
     - name: Build wheels
