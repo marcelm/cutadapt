@@ -74,7 +74,7 @@ def test_pipeline_single(tmp_path, cores):
     # - see next function for more TODOs that also apply here
 
 
-def test_pipeline_paired(tmp_path):
+def test_pipeline_paired(tmp_path, cores):
     # cutadapt -u 5 -U 7 -a GATCGGAAGA -q 0,15 -m 10:0
     #   --discard-untrimmed --info-file=info.txt
     #   -o ... -p ...
@@ -106,7 +106,7 @@ def test_pipeline_paired(tmp_path):
     )
     outfiles = OutputFiles(
         file_opener=file_opener,
-        proxied=False,
+        proxied=cores > 1,
         out=out,
         out2=out2,
     )
@@ -115,7 +115,7 @@ def test_pipeline_paired(tmp_path):
     pipeline.minimum_length = (10, None)
     pipeline.discard_untrimmed = True
 
-    stats = run_pipeline(pipeline, inpaths, outfiles, cores=1, progress=True)
+    stats = run_pipeline(pipeline, inpaths, outfiles, cores=cores, progress=True)
     assert stats is not None
     assert info_path.exists()
     _ = stats.as_json()
