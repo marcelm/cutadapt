@@ -10,8 +10,9 @@ import copy
 import json
 import os
 
-from cutadapt.runners import run_pipeline
+from cutadapt.runners import make_runner
 from cutadapt.steps import InfoFileWriter, PairedSingleEndStep
+from cutadapt.utils import DummyProgress
 from utils import datapath
 
 
@@ -64,7 +65,9 @@ def test_pipeline_single(tmp_path, cores):
     pipeline.minimum_length = (10,)
     pipeline.discard_untrimmed = True
     inpaths = InputPaths(datapath("small.fastq"))
-    stats = run_pipeline(pipeline, inpaths, outfiles, cores=cores)
+    runner = make_runner(inpaths, cores)
+    with runner:
+        stats = runner.run(pipeline, outfiles, DummyProgress())
     assert stats is not None
     assert info_path.exists()
     json.dumps(stats.as_json())
@@ -115,7 +118,9 @@ def test_pipeline_paired(tmp_path, cores):
     pipeline.minimum_length = (10, None)
     pipeline.discard_untrimmed = True
 
-    stats = run_pipeline(pipeline, inpaths, outfiles, cores=cores, progress=True)
+    runner = make_runner(inpaths, cores=cores)
+    with runner:
+        stats = runner.run(pipeline, outfiles, DummyProgress())
     assert stats is not None
     assert info_path.exists()
     _ = stats.as_json()

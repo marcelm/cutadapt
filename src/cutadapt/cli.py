@@ -94,7 +94,7 @@ from cutadapt.modifiers import (
 )
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
-from cutadapt.runners import run_pipeline
+from cutadapt.runners import make_runner
 from cutadapt.files import InputPaths, OutputFiles, FileOpener
 from cutadapt.steps import (
     InfoFileWriter,
@@ -1128,26 +1128,27 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         adapters, adapters2 = adapters_from_args(args)
         log_adapters(adapters, adapters2 if paired else None)
 
-        adapter_names: List[Optional[str]] = [a.name for a in adapters]
-        adapter_names2: List[Optional[str]] = [a.name for a in adapters2]
-        outfiles = open_output_files(
-            args,
-            default_outfile,
-            file_opener,
-            adapter_names,
-            adapter_names2,
-            proxied=cores > 1,
-        )
-        pipeline = make_pipeline_from_args(args, outfiles, paired, adapters, adapters2)
-        logger.info(
-            "Processing %s reads on %d core%s ...",
-            {False: "single-end", True: "paired-end"}[pipeline.paired],
-            cores,
-            "s" if cores > 1 else "",
-        )
-        stats = run_pipeline(
-            pipeline, input_paths, outfiles, cores, progress, args.buffer_size
-        )
+        with make_runner(input_paths, cores, args.buffer_size) as runner:
+            adapter_names: List[Optional[str]] = [a.name for a in adapters]
+            adapter_names2: List[Optional[str]] = [a.name for a in adapters2]
+            outfiles = open_output_files(
+                args,
+                default_outfile,
+                file_opener,
+                adapter_names,
+                adapter_names2,
+                proxied=cores > 1,
+            )
+            pipeline = make_pipeline_from_args(
+                args, outfiles, paired, adapters, adapters2
+            )
+            logger.info(
+                "Processing %s reads on %d core%s ...",
+                {False: "single-end", True: "paired-end"}[pipeline.paired],
+                cores,
+                "s" if cores > 1 else "",
+            )
+            stats = runner.run(pipeline, outfiles, progress)
     except KeyboardInterrupt:
         if args.debug:
             raise

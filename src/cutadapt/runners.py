@@ -7,14 +7,14 @@ import traceback
 from abc import ABC, abstractmethod
 from contextlib import ExitStack
 from multiprocessing.connection import Connection
-from typing import Any, List, Optional, Tuple, Sequence, Iterator, TYPE_CHECKING, Union
+from typing import Any, List, Optional, Tuple, Sequence, Iterator, TYPE_CHECKING
 
 import dnaio
 
 from cutadapt.files import InputFiles, OutputFiles, InputPaths, xopen_rb_raise_limit
 from cutadapt.pipeline import Pipeline
 from cutadapt.report import Statistics
-from cutadapt.utils import Progress, DummyProgress
+from cutadapt.utils import Progress
 
 logger = logging.getLogger()
 
@@ -235,8 +235,11 @@ class PipelineRunner(ABC):
     """
 
     @abstractmethod
-    def run(self, pipeline, progress) -> Statistics:
-        pass
+    def run(self, pipeline, outfiles: OutputFiles, progress: Progress) -> Statistics:
+        """
+        progress: Use an object that supports .update() and .close() such
+        as DummyProgress, cutadapt.utils.Progress or a tqdm instance
+        """
 
     @abstractmethod
     def close(self):
@@ -275,14 +278,12 @@ class ParallelPipelineRunner(PipelineRunner):
     def __init__(
         self,
         inpaths: InputPaths,
-        outfiles: OutputFiles,
         n_workers: int,
         buffer_size: Optional[int] = None,
     ):
         self._n_workers = n_workers
         self._need_work_queue: multiprocessing.Queue = mpctx.Queue()
         self._buffer_size = 4 * 1024**2 if buffer_size is None else buffer_size
-        self._outfiles = outfiles
         self._inpaths = inpaths
         # the workers read from these connections
         connections = [mpctx.Pipe(duplex=False) for _ in range(self._n_workers)]
@@ -303,7 +304,9 @@ class ParallelPipelineRunner(PipelineRunner):
         self._reader_process.daemon = True
         self._reader_process.start()
 
-    def _start_workers(self, pipeline) -> Tuple[List[WorkerProcess], List[Connection]]:
+    def _start_workers(
+        self, pipeline, outfiles
+    ) -> Tuple[List[WorkerProcess], List[Connection]]:
         workers = []
         connections = []
         for index in range(self._n_workers):
@@ -313,7 +316,7 @@ class ParallelPipelineRunner(PipelineRunner):
                 index,
                 pipeline,
                 self._inpaths,
-                self._outfiles,
+                outfiles,
                 self._connections[index],
                 conn_w,
                 self._need_work_queue,
@@ -323,10 +326,10 @@ class ParallelPipelineRunner(PipelineRunner):
             workers.append(worker)
         return workers, connections
 
-    def run(self, pipeline, progress) -> Statistics:
-        workers, connections = self._start_workers(pipeline)
+    def run(self, pipeline, outfiles: OutputFiles, progress) -> Statistics:
+        workers, connections = self._start_workers(pipeline, outfiles)
         writers = []
-        for f in self._outfiles:
+        for f in outfiles:
             writers.append(OrderedChunkWriter(f))
         stats = Statistics()
         while connections:
@@ -351,6 +354,7 @@ class ParallelPipelineRunner(PipelineRunner):
             w.join()
         self._reader_process.join()
         progress.close()
+        outfiles.close()
         return stats
 
     @staticmethod
@@ -372,7 +376,7 @@ class ParallelPipelineRunner(PipelineRunner):
         return result
 
     def close(self) -> None:
-        self._outfiles.close()
+        pass
 
 
 class SerialPipelineRunner(PipelineRunner):
@@ -383,15 +387,15 @@ class SerialPipelineRunner(PipelineRunner):
     def __init__(
         self,
         infiles: InputFiles,
-        outfiles: OutputFiles,
     ):
         self._infiles = infiles
-        self._outfiles = outfiles
 
-    def run(self, pipeline: Pipeline, progress: Progress) -> Statistics:
+    def run(
+        self, pipeline: Pipeline, outfiles: OutputFiles, progress: Progress
+    ) -> Statistics:
         try:
             (n, total1_bp, total2_bp) = pipeline.process_reads(
-                self._infiles, self._outfiles, progress=progress
+                self._infiles, outfiles, progress=progress
             )
         finally:
             pipeline.close()
@@ -403,17 +407,14 @@ class SerialPipelineRunner(PipelineRunner):
         return Statistics().collect(n, total1_bp, total2_bp, modifiers, pipeline._steps)
 
     def close(self):
-        pass
+        self._infiles.close()
 
 
-def run_pipeline(
-    pipeline: Pipeline,
+def make_runner(
     inpaths: InputPaths,
-    outfiles: OutputFiles,
     cores: int,
-    progress: Union[bool, Progress, None] = None,
     buffer_size: Optional[int] = None,
-) -> Statistics:
+) -> PipelineRunner:
     """
     Run a pipeline.
 
@@ -421,31 +422,18 @@ def run_pipeline(
 
     Args:
         inpaths:
-        outfiles:
         cores: number of cores to run the pipeline on (this is actually the number of worker
             processes, there will be one extra process for reading the input file(s))
-        progress: Set to False for no progress bar, True for Cutadapt’s default progress bar,
-            or use an object that supports .update() and .close() (e.g. a tqdm instance)
         buffer_size: Forwarded to `ParallelPipelineRunner()`. Ignored if cores is 1.
-
-    Returns:
-        A Statistics object
     """
-    if progress is None or progress is False:
-        progress = DummyProgress()
-    elif progress is True:
-        progress = Progress()
     runner: PipelineRunner
     if cores > 1:
         runner = ParallelPipelineRunner(
             inpaths,
-            outfiles,
             n_workers=cores,
             buffer_size=buffer_size,
         )
     else:
-        runner = SerialPipelineRunner(inpaths.open(), outfiles)
+        runner = SerialPipelineRunner(inpaths.open())
 
-    with runner:
-        statistics = runner.run(pipeline, progress)
-    return statistics
+    return runner
