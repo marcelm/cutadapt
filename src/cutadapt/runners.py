@@ -11,7 +11,14 @@ from typing import Any, List, Optional, Tuple, Sequence, Iterator, TYPE_CHECKING
 
 import dnaio
 
-from cutadapt.files import InputFiles, OutputFiles, InputPaths, xopen_rb_raise_limit
+from cutadapt.files import (
+    InputFiles,
+    OutputFiles,
+    InputPaths,
+    xopen_rb_raise_limit,
+    detect_file_format,
+    FileFormat,
+)
 from cutadapt.pipeline import Pipeline
 from cutadapt.report import Statistics
 from cutadapt.utils import Progress
@@ -43,6 +50,7 @@ class ReaderProcess(mpctx_Process):
     def __init__(
         self,
         *paths: str,
+        file_format_connection: Connection,
         connections: Sequence[Connection],
         queue: multiprocessing.Queue,
         buffer_size: int,
@@ -69,6 +77,7 @@ class ReaderProcess(mpctx_Process):
         if not paths:
             raise ValueError("Must provide at least one file")
         self._paths = paths
+        self._file_format_connection = file_format_connection
         self.connections = connections
         self.queue = queue
         self.buffer_size = buffer_size
@@ -84,6 +93,8 @@ class ReaderProcess(mpctx_Process):
                     stack.enter_context(xopen_rb_raise_limit(path))
                     for path in self._paths
                 ]
+                file_format = detect_file_format(files[0])
+                self._file_format_connection.send(file_format)
                 for index, chunks in enumerate(self._read_chunks(*files)):
                     self.send_to_worker(index, *chunks)
             self.shutdown()
@@ -245,6 +256,10 @@ class PipelineRunner(ABC):
     def close(self):
         pass
 
+    @abstractmethod
+    def input_file_format(self) -> Optional[FileFormat]:
+        pass
+
     def __enter__(self):
         return self
 
@@ -294,8 +309,11 @@ class ParallelPipelineRunner(PipelineRunner):
             # This happens during tests: pytest sets sys.stdin to an object
             # that does not have a file descriptor.
             fileno = -1
+
+        file_format_connection_r, file_format_connection_w = mpctx.Pipe(duplex=False)
         self._reader_process = ReaderProcess(
             *inpaths.paths,
+            file_format_connection=file_format_connection_w,
             connections=connw,
             queue=self._need_work_queue,
             buffer_size=self._buffer_size,
@@ -303,6 +321,10 @@ class ParallelPipelineRunner(PipelineRunner):
         )
         self._reader_process.daemon = True
         self._reader_process.start()
+        file_format: Optional[FileFormat] = file_format_connection_r.recv()
+        if file_format is None:
+            raise dnaio.exceptions.UnknownFileFormat(self._inpaths.paths[0])
+        self._input_file_format = file_format
 
     def _start_workers(
         self, pipeline, outfiles
@@ -378,6 +400,9 @@ class ParallelPipelineRunner(PipelineRunner):
     def close(self) -> None:
         pass
 
+    def input_file_format(self) -> FileFormat:
+        return self._input_file_format
+
 
 class SerialPipelineRunner(PipelineRunner):
     """
@@ -389,6 +414,7 @@ class SerialPipelineRunner(PipelineRunner):
         infiles: InputFiles,
     ):
         self._infiles = infiles
+        self._input_file_format = infiles
 
     def run(
         self, pipeline: Pipeline, outfiles: OutputFiles, progress: Progress
@@ -408,6 +434,10 @@ class SerialPipelineRunner(PipelineRunner):
 
     def close(self):
         self._infiles.close()
+
+    def input_file_format(self) -> Optional[FileFormat]:
+        detected = detect_file_format(self._infiles._files[0])
+        return detected
 
 
 def make_runner(

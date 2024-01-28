@@ -800,7 +800,9 @@ def check_arguments(args, paired: bool) -> None:
         raise CommandLineError("--pair-adapters cannot be used with --times")
 
 
-def make_pipeline_from_args(args, outfiles, paired, adapters, adapters2):  # noqa: C901
+def make_pipeline_from_args(  # noqa: C901
+    args, input_file_format, outfiles, paired, adapters, adapters2
+):
     """
     Set up a processing pipeline from parsed command-line arguments.
 
@@ -881,9 +883,11 @@ def make_pipeline_from_args(args, outfiles, paired, adapters, adapters2):  # noq
     # Create the processing pipeline
     if paired:
         pair_filter_mode = "any" if args.pair_filter is None else args.pair_filter
-        pipeline = PairedEndPipeline(modifiers, pair_filter_mode, steps)  # type: Any
+        pipeline = PairedEndPipeline(
+            input_file_format, modifiers, pair_filter_mode, steps
+        )  # type: Any
     else:
-        pipeline = SingleEndPipeline(modifiers, steps)
+        pipeline = SingleEndPipeline(input_file_format, modifiers, steps)
 
     # When adapters are being trimmed only in R1 or R2, override the pair filter mode
     # as using the default of 'any' would regard all read pairs as untrimmed.
@@ -1140,7 +1144,7 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
                 proxied=cores > 1,
             )
             pipeline = make_pipeline_from_args(
-                args, outfiles, paired, adapters, adapters2
+                args, runner.input_file_format(), outfiles, paired, adapters, adapters2
             )
             logger.info(
                 "Processing %s reads on %d core%s ...",

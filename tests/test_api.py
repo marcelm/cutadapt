@@ -61,12 +61,11 @@ def test_pipeline_single(tmp_path, cores):
     out = file_opener.xopen(tmp_path / "out.fastq", "wb")
     outfiles = OutputFiles(file_opener=file_opener, out=out, proxied=cores > 1)
     steps = [InfoFileWriter(outfiles.open_text(info_path))]
-    pipeline = SingleEndPipeline(modifiers, steps)
-    pipeline.minimum_length = (10,)
-    pipeline.discard_untrimmed = True
     inpaths = InputPaths(datapath("small.fastq"))
-    runner = make_runner(inpaths, cores)
-    with runner:
+    with make_runner(inpaths, cores) as runner:
+        pipeline = SingleEndPipeline(runner.input_file_format(), modifiers, steps)
+        pipeline.minimum_length = (10,)
+        pipeline.discard_untrimmed = True
         stats = runner.run(pipeline, outfiles, DummyProgress())
     assert stats is not None
     assert info_path.exists()
@@ -114,12 +113,13 @@ def test_pipeline_paired(tmp_path, cores):
         out2=out2,
     )
     steps = [PairedSingleEndStep(InfoFileWriter(outfiles.open_text(info_path)))]
-    pipeline = PairedEndPipeline(modifiers, "any", steps)
-    pipeline.minimum_length = (10, None)
-    pipeline.discard_untrimmed = True
 
-    runner = make_runner(inpaths, cores=cores)
-    with runner:
+    with make_runner(inpaths, cores=cores) as runner:
+        pipeline = PairedEndPipeline(
+            runner.input_file_format(), modifiers, "any", steps
+        )
+        pipeline.minimum_length = (10, None)
+        pipeline.discard_untrimmed = True
         stats = runner.run(pipeline, outfiles, DummyProgress())
     assert stats is not None
     assert info_path.exists()

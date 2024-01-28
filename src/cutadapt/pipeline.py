@@ -14,7 +14,7 @@ from typing import (
 
 import dnaio
 
-from .files import InputFiles, OutputFiles, open_raise_limit
+from .files import InputFiles, OutputFiles, open_raise_limit, FileFormat
 from .utils import Progress
 from .modifiers import (
     SingleEndModifier,
@@ -57,8 +57,8 @@ class Pipeline(ABC):
     paired = False
 
     def __init__(self) -> None:
-        self._reader: Any = None
         self._steps: List[Any] = []
+        self._input_file_format: Optional[FileFormat] = None
         self._infiles: Optional[InputFiles] = None
         self._outfiles: Optional[OutputFiles] = None
         self._demultiplexer = None
@@ -88,11 +88,12 @@ class Pipeline(ABC):
             interleaved = True
         else:
             interleaved = False
+        assert self._input_file_format is not None
         return open_raise_limit(
             dnaio.open,
             *files,
             mode="w",
-            qualities=self.uses_qualities,
+            qualities=self._input_file_format.has_qualities(),
             fileformat="fasta" if force_fasta else None,
             interleaved=interleaved,
         )
@@ -100,7 +101,8 @@ class Pipeline(ABC):
     def _set_output(self, outfiles: OutputFiles) -> None:  # noqa: C901
         self._textiowrappers = []
         self._outfiles = outfiles
-
+        assert self._input_file_format is not None
+        qualities = self._input_file_format.has_qualities()
         steps = []
         files: List[Optional[BinaryIO]]
 
@@ -125,7 +127,7 @@ class Pipeline(ABC):
             steps.append(self._make_filter(f1, f2, None))
 
         if self.max_expected_errors is not None:
-            if not self._reader.delivers_qualities:
+            if not qualities:
                 logger.warning(
                     "Ignoring option --max-ee because input does not contain quality values"
                 )
@@ -134,7 +136,7 @@ class Pipeline(ABC):
                 steps.append(self._make_filter(f1, f2, None))
 
         if self.max_average_error_rate is not None:
-            if not self._reader.delivers_qualities:
+            if not qualities:
                 logger.warning(
                     "Ignoring option --max-er because input does not contain quality values"
                 )
@@ -201,8 +203,6 @@ class Pipeline(ABC):
         self._close_output()
 
     def _close_input(self) -> None:
-        if self._reader is not None:
-            self._reader.close()
         if self._infiles is not None:
             self._infiles.close()
 
@@ -213,11 +213,6 @@ class Pipeline(ABC):
         # this closes some files a second time.
         if self._outfiles is not None:
             self._outfiles.close()
-
-    @property
-    def uses_qualities(self) -> bool:
-        assert self._reader is not None
-        return self._reader.delivers_qualities
 
     @abstractmethod
     def process_reads(
@@ -256,10 +251,16 @@ class SingleEndPipeline(Pipeline):
     Processing pipeline for single-end reads
     """
 
-    def __init__(self, modifiers: List[SingleEndModifier], steps: List[SingleEndStep]):
+    def __init__(
+        self,
+        input_file_format: FileFormat,
+        modifiers: List[SingleEndModifier],
+        steps: List[SingleEndStep],
+    ):
         super().__init__()
         self._modifiers: List[SingleEndModifier] = modifiers
         self._static_steps = steps
+        self._input_file_format = input_file_format
 
     def process_reads(
         self,
@@ -350,6 +351,7 @@ class PairedEndPipeline(Pipeline):
 
     def __init__(
         self,
+        input_file_format: FileFormat,
         modifiers: List[
             Union[
                 PairedEndModifier,
@@ -360,6 +362,7 @@ class PairedEndPipeline(Pipeline):
         steps,
     ):
         super().__init__()
+        self._input_file_format = input_file_format
         self._modifiers: List[PairedEndModifier] = []
         self._static_steps = steps
         self._pair_filter_mode = pair_filter_mode

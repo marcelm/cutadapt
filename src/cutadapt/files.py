@@ -1,6 +1,7 @@
 import errno
 import io
 import sys
+from enum import Enum
 from typing import BinaryIO, Optional, Dict, Tuple, List, TextIO
 
 import dnaio
@@ -304,3 +305,32 @@ class OutputFiles:
         else:
             for f in self._text_files.values():
                 f.close()
+
+
+class FileFormat(Enum):
+    FASTA = 1
+    FASTQ = 2
+    BAM = 3
+
+    def has_qualities(self) -> bool:
+        return self is FileFormat.FASTQ or self is FileFormat.BAM  # TODO BAM?
+
+
+# TODO copied and adjusted from dnaio; upstream this
+def detect_file_format(file: BinaryIO) -> Optional[FileFormat]:
+    if file.seekable():
+        original_position = file.tell()
+        magic = file.read(4)
+        file.seek(original_position)
+    else:
+        # We cannot always use peek() because BytesIO objects do not suppert it
+        magic = file.peek(4)[0:4]  # type: ignore
+    if magic.startswith(b"@") or magic == b"":
+        # Pretend FASTQ for empty input
+        return FileFormat.FASTQ
+    elif magic.startswith(b">") or magic.startswith(b"#"):
+        # Some FASTA variants allow comments
+        return FileFormat.FASTA
+    elif magic == b"BAM\1":
+        return FileFormat.BAM
+    return None

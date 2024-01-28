@@ -28,11 +28,11 @@ def test_help():
     assert e.value.args[0] == 0
 
 
-def test_unknown_file_format(tmp_path):
+def test_unknown_file_format(tmp_path, cores):
     path = tmp_path / "unknown_format.txt"
     path.write_text("raw text")
     with pytest.raises(SystemExit):
-        main([str(path)])
+        main([f"--cores={cores}", str(path)])
 
 
 def test_cores_negative():
