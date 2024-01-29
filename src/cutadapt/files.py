@@ -2,7 +2,7 @@ import errno
 import io
 import sys
 from enum import Enum
-from typing import BinaryIO, Optional, Dict, Tuple, List, TextIO
+from typing import BinaryIO, Optional, Dict, Tuple, List, TextIO, Union
 
 import dnaio
 from xopen import xopen
@@ -149,12 +149,12 @@ class ProxyTextFile:
     def write(self, text):
         self._file.write(text)
 
-    def drain(self) -> bytes:
+    def drain(self) -> List[bytes]:
         self._file.flush()
-        b = self._buffer.getvalue()
+        chunk = self._buffer.getvalue()
         self._buffer.seek(0)
         self._buffer.truncate()
-        return b
+        return [chunk]
 
     def __getstate__(self):
         """TextIOWrapper cannot be pickled. Just don’t include our state."""
@@ -162,6 +162,32 @@ class ProxyTextFile:
 
     def __setstate__(self, state):
         self.__init__()
+
+
+class ProxyRecordWriter:
+    def __init__(self, n_files: int, **kwargs):
+        self._n_files = n_files
+        self._kwargs = kwargs
+        self._buffers = [io.BytesIO() for _ in range(n_files)]
+        self._writer = open_raise_limit(dnaio.open, *self._buffers, mode="w", **kwargs)
+
+    def write(self, *args, **kwargs):
+        self._writer.write(*args, **kwargs)
+
+    def drain(self) -> List[bytes]:
+        chunks = [buf.getvalue() for buf in self._buffers]
+        for buf in self._buffers:
+            buf.seek(0)
+            buf.truncate()
+        return chunks
+
+    def __getstate__(self):
+        """Exclude the dnaio Reader class from the state"""
+        return (self._n_files, self._kwargs)
+
+    def __setstate__(self, state):
+        n_files, kwargs = state
+        self.__init__(n_files, **kwargs)
 
 
 class OutputFiles:
@@ -180,8 +206,6 @@ class OutputFiles:
         out2: Optional[BinaryIO] = None,
         untrimmed: Optional[BinaryIO] = None,
         untrimmed2: Optional[BinaryIO] = None,
-        too_short: Optional[BinaryIO] = None,
-        too_short2: Optional[BinaryIO] = None,
         too_long: Optional[BinaryIO] = None,
         too_long2: Optional[BinaryIO] = None,
         demultiplex_out: Optional[Dict[str, BinaryIO]] = None,
@@ -194,7 +218,8 @@ class OutputFiles:
         # TODO do these actually have to be dicts?
         self._binary_files: Dict[str, BinaryIO] = {}
         self._text_files: Dict[str, TextIO] = {}
-        self._proxy_files: Dict[str, ProxyTextFile] = {}
+        self._writers: Dict = {}
+        self._proxy_files: List[Union[ProxyTextFile, ProxyRecordWriter]] = []
         self._proxied = proxied
         self.force_fasta = force_fasta
 
@@ -202,8 +227,6 @@ class OutputFiles:
         self.out2 = out2
         self.untrimmed = untrimmed
         self.untrimmed2 = untrimmed2
-        self.too_short = too_short
-        self.too_short2 = too_short2
         self.too_long = too_long
         self.too_long2 = too_long2
         self.demultiplex_out = demultiplex_out
@@ -212,8 +235,7 @@ class OutputFiles:
         self.combinatorial_out2 = combinatorial_out2
 
     def open_text(self, path):
-        if path in self._binary_files:
-            raise "duplicate path"  # TODO
+        assert path not in self._binary_files  # TODO
         # TODO
         # - serial runner needs only text_file
         # - parallel runner needs binary_file and proxy_file
@@ -222,18 +244,42 @@ class OutputFiles:
             binary_file = self._file_opener.xopen(path, "wb")
             self._binary_files[path] = binary_file
             proxy_file = ProxyTextFile()
-            self._proxy_files[path] = proxy_file
+            self._proxy_files.append(proxy_file)
             return proxy_file
         else:
             text_file = self._file_opener.xopen(path, "wt")
             self._text_files[path] = text_file
             return text_file
 
+    def open_record_writer(self, *paths, qualities: bool, interleaved: bool):
+        kwargs = dict(
+            qualities=qualities,
+            fileformat="fasta" if self.force_fasta else None,
+            interleaved=interleaved,
+        )
+        assert paths  # TODO
+        for path in paths:
+            assert path is not None
+            assert path not in self._binary_files  # TODO
+        binary_files = []
+        for path in paths:
+            binary_file = self._file_opener.xopen(path, "wb")
+            binary_files.append(binary_file)
+            self._binary_files[path] = binary_file
+        if self._proxied:
+            proxy_writer = ProxyRecordWriter(len(paths), **kwargs)
+            self._proxy_files.append(proxy_writer)
+            return proxy_writer
+        else:
+            writer = self._file_opener.dnaio_open(*binary_files, mode="w", **kwargs)
+            self._writers[paths] = writer
+            return writer
+
     def binary_files(self):
         return list(self._binary_files.values())
 
-    def proxy_files(self) -> List[ProxyTextFile]:
-        return list(self._proxy_files.values())
+    def proxy_files(self) -> List[Union[ProxyTextFile, ProxyRecordWriter]]:
+        return self._proxy_files
 
     def __iter__(self):
         for f in [
@@ -241,8 +287,6 @@ class OutputFiles:
             self.out2,
             self.untrimmed,
             self.untrimmed2,
-            self.too_short,
-            self.too_short2,
             self.too_long,
             self.too_long2,
         ]:
@@ -274,8 +318,6 @@ class OutputFiles:
             "out2",
             "untrimmed",
             "untrimmed2",
-            "too_short",
-            "too_short2",
             "too_long",
             "too_long2",
         ):
@@ -304,6 +346,8 @@ class OutputFiles:
                 f.close()
         else:
             for f in self._text_files.values():
+                f.close()
+            for f in self._writers.values():
                 f.close()
 
 

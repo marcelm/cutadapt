@@ -92,6 +92,7 @@ from cutadapt.modifiers import (
     PolyATrimmer,
     PairedReverseComplementer,
 )
+from cutadapt.predicates import TooShort
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
 from cutadapt.runners import make_runner
@@ -101,6 +102,8 @@ from cutadapt.steps import (
     PairedSingleEndStep,
     RestFileWriter,
     WildcardFileWriter,
+    SingleEndFilter,
+    PairedEndFilter,
 )
 from cutadapt.utils import available_cpu_count, Progress, DummyProgress
 from cutadapt.log import setup_logging, REPORT
@@ -471,11 +474,6 @@ def open_output_files(
             args.paired_output,
         ]
     )
-    too_short = too_short2 = None
-    if args.minimum_length is not None:
-        too_short, too_short2 = file_opener.xopen_pair(
-            args.too_short_output, args.too_short_paired_output, "wb"
-        )
 
     too_long = too_long2 = None
     if args.maximum_length is not None:
@@ -551,8 +549,6 @@ def open_output_files(
     return OutputFiles(
         file_opener=file_opener,
         proxied=proxied,
-        too_short=too_short,
-        too_short2=too_short2,
         too_long=too_long,
         too_long2=too_long2,
         untrimmed=untrimmed,
@@ -811,6 +807,9 @@ def make_pipeline_from_args(  # noqa: C901
     Return an instance of Pipeline (SingleEndPipeline or PairedEndPipeline)
     """
     action = None if args.action == "none" else args.action
+    pair_filter_mode = None
+    if paired:
+        pair_filter_mode = "any" if args.pair_filter is None else args.pair_filter
 
     steps = []
     for step_class, path in (
@@ -825,6 +824,61 @@ def make_pipeline_from_args(  # noqa: C901
             step = PairedSingleEndStep(step)
         steps.append(step)
 
+    # Add filtering steps
+
+    if args.minimum_length is not None:
+        lengths = parse_lengths(args.minimum_length)
+        if not paired and len(lengths) == 2:
+            raise CommandLineError(
+                "Two minimum or maximum lengths given for single-end data"
+            )
+        if paired and len(lengths) == 1:
+            lengths = (lengths[0], lengths[0])
+
+        predicate1 = TooShort(lengths[0]) if lengths[0] is not None else None
+        if len(lengths) == 2 and lengths[1] is not None:
+            predicate2 = TooShort(lengths[1])
+        else:
+            predicate2 = None
+
+        if not paired and args.too_short_paired_output:
+            raise CommandLineError(
+                "--too-short-paired-output cannot be used with single-end data"
+            )
+        if args.too_short_output or args.too_short_paired_output:
+            paths = (
+                [args.too_short_output, args.too_short_paired_output]
+                if paired
+                else [args.too_short_output]
+            )
+            if paired and args.too_short_paired_output is None:
+                interleaved = True
+                paths = paths[:1]
+            else:
+                interleaved = False
+
+            if args.too_short_output:
+                record_writer = outfiles.open_record_writer(
+                    *paths,
+                    qualities=input_file_format.has_qualities(),
+                    interleaved=interleaved,
+                )
+            else:
+                record_writer = None
+        else:
+            record_writer = None
+
+        if paired:
+            step = PairedEndFilter(
+                predicate1, predicate2, record_writer, pair_filter_mode=pair_filter_mode
+            )
+        else:
+            step = SingleEndFilter(predicate1, record_writer)
+        steps.append(step)
+
+    logger.debug("Pipeline steps:")
+    for step in steps:
+        logger.debug("- %s", step)
     modifiers = []
     modifiers.extend(make_unconditional_cutters(args.cut, args.cut2, paired))
 
@@ -903,8 +957,8 @@ def make_pipeline_from_args(  # noqa: C901
         pipeline.override_untrimmed_pair_filter = True
 
     # Set filtering parameters
-    # Minimum/maximum length
-    for attr in "minimum_length", "maximum_length":
+    # Maximum length
+    for attr in ("maximum_length",):
         param = getattr(args, attr)
         if param is not None:
             lengths = parse_lengths(param)

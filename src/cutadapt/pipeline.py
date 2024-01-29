@@ -25,7 +25,6 @@ from .modifiers import (
 from .predicates import (
     DiscardUntrimmed,
     Predicate,
-    TooShort,
     TooLong,
     TooManyN,
     TooManyExpectedErrors,
@@ -58,6 +57,7 @@ class Pipeline(ABC):
 
     def __init__(self) -> None:
         self._steps: List[Any] = []
+        self._static_steps: List[Any] = []
         self._input_file_format: Optional[FileFormat] = None
         self._infiles: Optional[InputFiles] = None
         self._outfiles: Optional[OutputFiles] = None
@@ -65,7 +65,6 @@ class Pipeline(ABC):
         self._textiowrappers: List[TextIO] = []
 
         # Filter settings
-        self._minimum_length = None
         self._maximum_length = None
         self.max_n = None
         self.max_expected_errors = None
@@ -108,7 +107,6 @@ class Pipeline(ABC):
 
         # minimum length and maximum length
         for lengths, file1, file2, predicate_class in (
-            (self._minimum_length, outfiles.too_short, outfiles.too_short2, TooShort),
             (self._maximum_length, outfiles.too_long, outfiles.too_long2, TooLong),
         ):
             if lengths is None:
@@ -271,9 +269,9 @@ class SingleEndPipeline(Pipeline):
         """Run the pipeline. Return statistics"""
         self._infiles = infiles
         self._reader = infiles.open()
-        self._steps = self._static_steps[:]
+        self._steps = []
         self._set_output(outfiles)  # appends to self._steps
-        for i, step in enumerate(self._steps, 1):
+        for i, step in enumerate(self._static_steps + self._steps, 1):
             logger.debug("Pipeline step %d: %s", i, step)
 
         n = 0  # no. of processed reads
@@ -286,7 +284,7 @@ class SingleEndPipeline(Pipeline):
             info = ModificationInfo(read)
             for modifier in self._modifiers:
                 read = modifier(read, info)
-            for filter_ in self._steps:
+            for filter_ in self._static_steps + self._steps:
                 read = filter_(read, info)
                 if read is None:
                     break
@@ -322,15 +320,6 @@ class SingleEndPipeline(Pipeline):
 
     def _wrap_single_end_step(self, step: SingleEndStep):
         return step
-
-    @property
-    def minimum_length(self):
-        return self._minimum_length
-
-    @minimum_length.setter
-    def minimum_length(self, value):
-        assert value is None or len(value) == 1
-        self._minimum_length = value
 
     @property
     def maximum_length(self):
@@ -404,7 +393,7 @@ class PairedEndPipeline(Pipeline):
     ) -> Tuple[int, int, Optional[int]]:
         self._infiles = infiles
         self._reader = infiles.open()
-        self._steps = self._static_steps[:]
+        self._steps = []
         self._set_output(outfiles)
         n = 0  # no. of processed reads
         total1_bp = 0
@@ -421,7 +410,7 @@ class PairedEndPipeline(Pipeline):
             info2 = ModificationInfo(read2)
             for modifier in self._modifiers:
                 reads = modifier(*reads, info1, info2)  # type: ignore
-            for filter_ in self._steps:
+            for filter_ in self._static_steps + self._steps:
                 reads = filter_(*reads, info1, info2)
                 if reads is None:
                     break

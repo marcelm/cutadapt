@@ -197,6 +197,13 @@ class WorkerProcess(mpctx_Process):
                 0, 0, 0 if self._pipeline.paired else None, m, []
             )
             stats += modifier_stats
+            stats += Statistics().collect(
+                0,
+                0,
+                0 if self._pipeline.paired else None,
+                [],
+                self._pipeline._static_steps,
+            )
             self._write_pipe.send(-1)
             self._write_pipe.send(stats)
         except Exception as e:
@@ -213,7 +220,8 @@ class WorkerProcess(mpctx_Process):
             processed_chunk = f.getvalue()
             self._write_pipe.send_bytes(processed_chunk)
         for pf in self._proxy_files:
-            self._write_pipe.send_bytes(pf.drain())
+            for chunk in pf.drain():
+                self._write_pipe.send_bytes(chunk)
 
 
 class OrderedChunkWriter:
@@ -430,7 +438,9 @@ class SerialPipelineRunner(PipelineRunner):
         # TODO
         modifiers = getattr(pipeline, "_modifiers", None)
         assert modifiers is not None
-        return Statistics().collect(n, total1_bp, total2_bp, modifiers, pipeline._steps)
+        return Statistics().collect(
+            n, total1_bp, total2_bp, modifiers, pipeline._static_steps + pipeline._steps
+        )
 
     def close(self):
         self._infiles.close()
