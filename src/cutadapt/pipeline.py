@@ -36,7 +36,6 @@ from .steps import (
     PairedDemultiplexer,
     CombinatorialDemultiplexer,
     SingleEndStep,
-    PairedSingleEndStep,
 )
 
 logger = logging.getLogger()
@@ -184,10 +183,6 @@ class Pipeline(ABC):
     def _create_demultiplexer(self, outfiles: OutputFiles):
         pass
 
-    @abstractmethod
-    def _wrap_single_end_step(self, step: SingleEndStep):
-        pass
-
 
 class SingleEndPipeline(Pipeline):
     """
@@ -262,9 +257,6 @@ class SingleEndPipeline(Pipeline):
         for name, file in outfiles.demultiplex_out.items():
             writers[name] = self._open_writer(file, force_fasta=outfiles.force_fasta)
         return Demultiplexer(writers)
-
-    def _wrap_single_end_step(self, step: SingleEndStep):
-        return step
 
 
 class PairedEndPipeline(Pipeline):
@@ -404,6 +396,3 @@ class PairedEndPipeline(Pipeline):
             for name, file in outfiles.demultiplex_out.items():
                 writers[name] = open_writer(file, outfiles.demultiplex_out2[name])
             return PairedDemultiplexer(writers)
-
-    def _wrap_single_end_step(self, step: SingleEndStep):
-        return PairedSingleEndStep(step)
