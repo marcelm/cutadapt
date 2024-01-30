@@ -206,8 +206,6 @@ class OutputFiles:
         out2: Optional[BinaryIO] = None,
         untrimmed: Optional[BinaryIO] = None,
         untrimmed2: Optional[BinaryIO] = None,
-        too_long: Optional[BinaryIO] = None,
-        too_long2: Optional[BinaryIO] = None,
         demultiplex_out: Optional[Dict[str, BinaryIO]] = None,
         demultiplex_out2: Optional[Dict[str, BinaryIO]] = None,
         combinatorial_out: Optional[Dict[Tuple[str, str], BinaryIO]] = None,
@@ -227,8 +225,6 @@ class OutputFiles:
         self.out2 = out2
         self.untrimmed = untrimmed
         self.untrimmed2 = untrimmed2
-        self.too_long = too_long
-        self.too_long2 = too_long2
         self.demultiplex_out = demultiplex_out
         self.demultiplex_out2 = demultiplex_out2
         self.combinatorial_out = combinatorial_out
@@ -287,8 +283,6 @@ class OutputFiles:
             self.out2,
             self.untrimmed,
             self.untrimmed2,
-            self.too_long,
-            self.too_long2,
         ]:
             if f is not None:
                 yield f
@@ -318,8 +312,6 @@ class OutputFiles:
             "out2",
             "untrimmed",
             "untrimmed2",
-            "too_long",
-            "too_long2",
         ):
             if getattr(self, attr) is not None:
                 setattr(result, attr, io.BytesIO())

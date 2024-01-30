@@ -92,7 +92,7 @@ from cutadapt.modifiers import (
     PolyATrimmer,
     PairedReverseComplementer,
 )
-from cutadapt.predicates import TooShort
+from cutadapt.predicates import TooShort, TooLong
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
 from cutadapt.runners import make_runner
@@ -475,12 +475,6 @@ def open_output_files(
         ]
     )
 
-    too_long = too_long2 = None
-    if args.maximum_length is not None:
-        too_long, too_long2 = file_opener.xopen_pair(
-            args.too_long_output, args.too_long_paired_output, "wb"
-        )
-
     if (
         int(args.discard_trimmed)
         + int(args.discard_untrimmed)
@@ -549,8 +543,6 @@ def open_output_files(
     return OutputFiles(
         file_opener=file_opener,
         proxied=proxied,
-        too_long=too_long,
-        too_long2=too_long2,
         untrimmed=untrimmed,
         untrimmed2=untrimmed2,
         out=out,
@@ -833,6 +825,12 @@ def make_pipeline_from_args(  # noqa: C901
             args.too_short_paired_output,
             TooShort,
         ),
+        (
+            args.maximum_length,
+            args.too_long_output,
+            args.too_long_paired_output,
+            TooLong,
+        ),
     ]:
         if length is None:
             if path1 or path2:
@@ -840,6 +838,11 @@ def make_pipeline_from_args(  # noqa: C901
                     raise CommandLineError(
                         "When --too-short-output or --too-short-paired-output are used, "
                         "a minimum length must be provided with -m/--minimum-length"
+                    )
+                if predicate_class is TooLong:
+                    raise CommandLineError(
+                        "When --too-long-output or --too-long-paired-output are used, "
+                        "a maximum length must be provided with -M/--maximum-length"
                     )
             continue
         if not paired and path2:
@@ -964,18 +967,6 @@ def make_pipeline_from_args(  # noqa: C901
         pipeline.override_untrimmed_pair_filter = True
 
     # Set filtering parameters
-    # Maximum length
-    for attr in ("maximum_length",):
-        param = getattr(args, attr)
-        if param is not None:
-            lengths = parse_lengths(param)
-            if not paired and len(lengths) == 2:
-                raise CommandLineError(
-                    "Two minimum or maximum lengths given for single-end data"
-                )
-            if paired and len(lengths) == 1:
-                lengths = (lengths[0], lengths[0])
-            setattr(pipeline, attr, lengths)
     pipeline.max_n = args.max_n
     pipeline.max_expected_errors = args.max_expected_errors
     pipeline.max_average_error_rate = args.max_average_error_rate

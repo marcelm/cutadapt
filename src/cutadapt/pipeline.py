@@ -25,7 +25,6 @@ from .modifiers import (
 from .predicates import (
     DiscardUntrimmed,
     Predicate,
-    TooLong,
     TooManyN,
     TooManyExpectedErrors,
     TooHighAverageErrorRate,
@@ -65,7 +64,6 @@ class Pipeline(ABC):
         self._textiowrappers: List[TextIO] = []
 
         # Filter settings
-        self._maximum_length = None
         self.max_n = None
         self.max_expected_errors = None
         self.max_average_error_rate = None
@@ -104,21 +102,6 @@ class Pipeline(ABC):
         qualities = self._input_file_format.has_qualities()
         steps = []
         files: List[Optional[BinaryIO]]
-
-        # minimum length and maximum length
-        for lengths, file1, file2, predicate_class in (
-            (self._maximum_length, outfiles.too_long, outfiles.too_long2, TooLong),
-        ):
-            if lengths is None:
-                continue
-            files = [file1, file2] if self.paired else [file1]
-            writer = self._open_writer(*files) if file1 else None
-            f1 = predicate_class(lengths[0]) if lengths[0] is not None else None
-            if len(lengths) == 2 and lengths[1] is not None:
-                f2 = predicate_class(lengths[1])
-            else:
-                f2 = None
-            steps.append(self._make_filter(predicate1=f1, predicate2=f2, writer=writer))
 
         if self.max_n is not None:
             f1 = f2 = TooManyN(self.max_n)
@@ -321,15 +304,6 @@ class SingleEndPipeline(Pipeline):
     def _wrap_single_end_step(self, step: SingleEndStep):
         return step
 
-    @property
-    def maximum_length(self):
-        return self._maximum_length
-
-    @maximum_length.setter
-    def maximum_length(self, value):
-        assert value is None or len(value) == 1
-        self._maximum_length = value
-
 
 class PairedEndPipeline(Pipeline):
     """
@@ -471,21 +445,3 @@ class PairedEndPipeline(Pipeline):
 
     def _wrap_single_end_step(self, step: SingleEndStep):
         return PairedSingleEndStep(step)
-
-    @property
-    def minimum_length(self):
-        return self._minimum_length
-
-    @minimum_length.setter
-    def minimum_length(self, value):
-        assert value is None or len(value) == 2
-        self._minimum_length = value
-
-    @property
-    def maximum_length(self):
-        return self._maximum_length
-
-    @maximum_length.setter
-    def maximum_length(self, value):
-        assert value is None or len(value) == 2
-        self._maximum_length = value
