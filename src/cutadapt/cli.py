@@ -92,7 +92,7 @@ from cutadapt.modifiers import (
     PolyATrimmer,
     PairedReverseComplementer,
 )
-from cutadapt.predicates import TooShort, TooLong, TooManyN
+from cutadapt.predicates import TooShort, TooLong, TooManyN, TooManyExpectedErrors
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
 from cutadapt.runners import make_runner
@@ -896,6 +896,21 @@ def make_pipeline_from_args(  # noqa: C901
             step = SingleEndFilter(predicate, None)
         steps.append(step)
 
+    if args.max_expected_errors is not None:
+        if not input_file_format.has_qualities():
+            logger.warning(
+                "Ignoring option --max-ee because input does not provide quality values"
+            )
+        else:
+            predicate = TooManyExpectedErrors(args.max_expected_errors)
+            if paired:
+                step = PairedEndFilter(
+                    predicate, predicate, writer=None, pair_filter_mode=pair_filter_mode
+                )
+            else:
+                step = SingleEndFilter(predicate, None)
+            steps.append(step)
+
     logger.debug("Pipeline steps:")
     for step in steps:
         logger.debug("- %s", step)
@@ -977,7 +992,6 @@ def make_pipeline_from_args(  # noqa: C901
         pipeline.override_untrimmed_pair_filter = True
 
     # Set filtering parameters
-    pipeline.max_expected_errors = args.max_expected_errors
     pipeline.max_average_error_rate = args.max_average_error_rate
     pipeline.discard_casava = args.discard_casava
     pipeline.discard_trimmed = args.discard_trimmed
