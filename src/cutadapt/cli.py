@@ -826,47 +826,54 @@ def make_pipeline_from_args(  # noqa: C901
 
     # Add filtering steps
 
-    if args.minimum_length is not None:
-        lengths = parse_lengths(args.minimum_length)
+    for length, path1, path2, predicate_class in [
+        (
+            args.minimum_length,
+            args.too_short_output,
+            args.too_short_paired_output,
+            TooShort,
+        ),
+    ]:
+        if length is None:
+            if path1 or path2:
+                if predicate_class is TooShort:
+                    raise CommandLineError(
+                        "When --too-short-output or --too-short-paired-output are used, "
+                        "a minimum length must be provided with -m/--minimum-length"
+                    )
+            continue
+        if not paired and path2:
+            raise CommandLineError(
+                "--too-short/long-paired-output cannot be used with single-end data"
+            )
+        lengths = parse_lengths(length)
         if not paired and len(lengths) == 2:
             raise CommandLineError(
                 "Two minimum or maximum lengths given for single-end data"
             )
         if paired and len(lengths) == 1:
             lengths = (lengths[0], lengths[0])
-
-        predicate1 = TooShort(lengths[0]) if lengths[0] is not None else None
+        predicate1 = predicate_class(lengths[0]) if lengths[0] is not None else None
         if len(lengths) == 2 and lengths[1] is not None:
-            predicate2 = TooShort(lengths[1])
+            predicate2 = predicate_class(lengths[1])
         else:
             predicate2 = None
 
-        if not paired and args.too_short_paired_output:
-            raise CommandLineError(
-                "--too-short-paired-output cannot be used with single-end data"
-            )
-        if args.too_short_output or args.too_short_paired_output:
-            paths = (
-                [args.too_short_output, args.too_short_paired_output]
-                if paired
-                else [args.too_short_output]
-            )
-            if paired and args.too_short_paired_output is None:
+        record_writer = None
+        if path1 or path2:
+            paths = [path1, path2] if paired else [path1]
+            if paired and path2 is None:
                 interleaved = True
                 paths = paths[:1]
             else:
                 interleaved = False
 
-            if args.too_short_output:
+            if path1:
                 record_writer = outfiles.open_record_writer(
                     *paths,
                     qualities=input_file_format.has_qualities(),
                     interleaved=interleaved,
                 )
-            else:
-                record_writer = None
-        else:
-            record_writer = None
 
         if paired:
             step = PairedEndFilter(
