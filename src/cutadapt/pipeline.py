@@ -25,7 +25,6 @@ from .modifiers import (
 from .predicates import (
     DiscardUntrimmed,
     Predicate,
-    CasavaFiltered,
     DiscardTrimmed,
 )
 from .steps import (
@@ -61,7 +60,6 @@ class Pipeline(ABC):
         self._textiowrappers: List[TextIO] = []
 
         # Filter settings
-        self.discard_casava = False
         self.discard_trimmed = False
         self.discard_untrimmed = False
 
@@ -93,12 +91,8 @@ class Pipeline(ABC):
         self._textiowrappers = []
         self._outfiles = outfiles
         assert self._input_file_format is not None
-        steps = []
+        steps: List[Any] = []
         files: List[Optional[BinaryIO]]
-
-        if self.discard_casava:
-            f1 = f2 = CasavaFiltered()
-            steps.append(self._make_filter(f1, f2, None))
 
         if (
             int(self.discard_trimmed)
