@@ -25,7 +25,6 @@ from .modifiers import (
 from .predicates import (
     DiscardUntrimmed,
     Predicate,
-    TooHighAverageErrorRate,
     CasavaFiltered,
     DiscardTrimmed,
 )
@@ -62,7 +61,6 @@ class Pipeline(ABC):
         self._textiowrappers: List[TextIO] = []
 
         # Filter settings
-        self.max_average_error_rate = None
         self.discard_casava = False
         self.discard_trimmed = False
         self.discard_untrimmed = False
@@ -95,18 +93,8 @@ class Pipeline(ABC):
         self._textiowrappers = []
         self._outfiles = outfiles
         assert self._input_file_format is not None
-        qualities = self._input_file_format.has_qualities()
         steps = []
         files: List[Optional[BinaryIO]]
-
-        if self.max_average_error_rate is not None:
-            if not qualities:
-                logger.warning(
-                    "Ignoring option --max-er because input does not contain quality values"
-                )
-            else:
-                f1 = f2 = TooHighAverageErrorRate(self.max_average_error_rate)
-                steps.append(self._make_filter(f1, f2, None))
 
         if self.discard_casava:
             f1 = f2 = CasavaFiltered()
@@ -160,9 +148,6 @@ class Pipeline(ABC):
             f.flush()
 
     def close(self) -> None:
-        # TODO
-        # closing is not symmetric, should only be done after a connect_io
-        # introduce a ConnectedPipeline?
         self._close_input()
         self._close_output()
 
