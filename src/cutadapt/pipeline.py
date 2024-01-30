@@ -25,7 +25,6 @@ from .modifiers import (
 from .predicates import (
     DiscardUntrimmed,
     Predicate,
-    TooManyN,
     TooManyExpectedErrors,
     TooHighAverageErrorRate,
     CasavaFiltered,
@@ -64,7 +63,6 @@ class Pipeline(ABC):
         self._textiowrappers: List[TextIO] = []
 
         # Filter settings
-        self.max_n = None
         self.max_expected_errors = None
         self.max_average_error_rate = None
         self.discard_casava = False
@@ -102,10 +100,6 @@ class Pipeline(ABC):
         qualities = self._input_file_format.has_qualities()
         steps = []
         files: List[Optional[BinaryIO]]
-
-        if self.max_n is not None:
-            f1 = f2 = TooManyN(self.max_n)
-            steps.append(self._make_filter(f1, f2, None))
 
         if self.max_expected_errors is not None:
             if not qualities:

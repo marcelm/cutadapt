@@ -92,7 +92,7 @@ from cutadapt.modifiers import (
     PolyATrimmer,
     PairedReverseComplementer,
 )
-from cutadapt.predicates import TooShort, TooLong
+from cutadapt.predicates import TooShort, TooLong, TooManyN
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
 from cutadapt.runners import make_runner
@@ -886,6 +886,16 @@ def make_pipeline_from_args(  # noqa: C901
             step = SingleEndFilter(predicate1, record_writer)
         steps.append(step)
 
+    if args.max_n is not None:
+        predicate = TooManyN(args.max_n)
+        if paired:
+            step = PairedEndFilter(
+                predicate, predicate, writer=None, pair_filter_mode=pair_filter_mode
+            )
+        else:
+            step = SingleEndFilter(predicate, None)
+        steps.append(step)
+
     logger.debug("Pipeline steps:")
     for step in steps:
         logger.debug("- %s", step)
@@ -967,7 +977,6 @@ def make_pipeline_from_args(  # noqa: C901
         pipeline.override_untrimmed_pair_filter = True
 
     # Set filtering parameters
-    pipeline.max_n = args.max_n
     pipeline.max_expected_errors = args.max_expected_errors
     pipeline.max_average_error_rate = args.max_average_error_rate
     pipeline.discard_casava = args.discard_casava
