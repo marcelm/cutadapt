@@ -1,11 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import List, Optional, Any, Tuple, Union, TextIO, BinaryIO
+from typing import List, Optional, Any, Tuple, Union, TextIO
 
-import dnaio
-
-from .files import InputFiles, OutputFiles, open_raise_limit, FileFormat
+from .files import InputFiles, OutputFiles, FileFormat
 from .utils import Progress
 from .modifiers import (
     SingleEndModifier,
@@ -13,8 +10,7 @@ from .modifiers import (
     PairedEndModifierWrapper,
     ModificationInfo,
 )
-from .predicates import DiscardUntrimmed, Predicate
-from .steps import PairedEndSink, PairedEndFilter, SingleEndStep
+from .steps import SingleEndStep
 
 logger = logging.getLogger()
 
@@ -39,30 +35,6 @@ class Pipeline(ABC):
         # Filter settings
         self.discard_trimmed = False
         self.discard_untrimmed = False
-
-    def _open_writer(
-        self,
-        *files: Optional[BinaryIO],
-        force_fasta: Optional[bool] = None,
-    ):
-        # The files must already be file-like objects because we don’t want to
-        # take care of threads and compression levels here.
-        for f in files:
-            assert not isinstance(f, (str, bytes, Path))
-        if len(files) == 2 and files[1] is None:
-            files = files[:1]
-            interleaved = True
-        else:
-            interleaved = False
-        assert self._input_file_format is not None
-        return open_raise_limit(
-            dnaio.open,
-            *files,
-            mode="w",
-            qualities=self._input_file_format.has_qualities(),
-            fileformat="fasta" if force_fasta else None,
-            interleaved=interleaved,
-        )
 
     def flush(self) -> None:
         for f in self._textiowrappers:
@@ -220,36 +192,3 @@ class PairedEndPipeline(Pipeline):
         if progress is not None:
             progress.update(n % 10000)
         return (n, total1_bp, total2_bp)
-
-    def _make_filter(
-        self,
-        predicate1: Optional[Predicate],
-        predicate2: Optional[Predicate],
-        writer,
-        pair_filter_mode=None,
-    ):
-        if pair_filter_mode is None:
-            pair_filter_mode = self._pair_filter_mode
-        return PairedEndFilter(
-            predicate1, predicate2, writer, pair_filter_mode=pair_filter_mode
-        )
-
-    def _make_untrimmed_filter(self, writer):
-        """
-        Return a different filter wrapper when adapters were given only for R1
-        or only for R2 (then override_untrimmed_pair_filter will be set)
-        """
-        return self._make_filter(
-            DiscardUntrimmed(),
-            DiscardUntrimmed(),
-            writer,
-            pair_filter_mode="both" if self.override_untrimmed_pair_filter else None,
-        )
-
-    def _final_filter(self, outfiles):
-        writer = self._open_writer(
-            outfiles.out,
-            outfiles.out2,
-            force_fasta=outfiles.force_fasta,
-        )
-        return PairedEndSink(writer)
