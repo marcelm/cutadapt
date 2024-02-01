@@ -125,14 +125,12 @@ class PairedEndPipeline(Pipeline):
                 Tuple[Optional[SingleEndModifier], Optional[SingleEndModifier]],
             ]
         ],
-        pair_filter_mode: str,
         steps,
     ):
         super().__init__()
         self._input_file_format = input_file_format
         self._modifiers: List[PairedEndModifier] = []
         self._steps = steps
-        self._pair_filter_mode = pair_filter_mode
         self._reader = None
         # Whether to ignore pair_filter mode for discard-untrimmed filter
         self.override_untrimmed_pair_filter = False

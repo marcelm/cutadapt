@@ -1009,10 +1009,7 @@ def make_pipeline_from_args(  # noqa: C901
 
     # Create the processing pipeline
     if paired:
-        pair_filter_mode = "any" if args.pair_filter is None else args.pair_filter
-        pipeline = PairedEndPipeline(
-            input_file_format, modifiers, pair_filter_mode, steps
-        )  # type: Any
+        pipeline = PairedEndPipeline(input_file_format, modifiers, steps)  # type: Any
     else:
         pipeline = SingleEndPipeline(modifiers, steps)
 
