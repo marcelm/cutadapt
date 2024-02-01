@@ -1,8 +1,9 @@
 import errno
 import io
 import sys
+from abc import ABC, abstractmethod
 from enum import Enum
-from typing import BinaryIO, Optional, Dict, Tuple, List, TextIO, Union
+from typing import BinaryIO, Optional, Dict, List, TextIO, Any
 
 import dnaio
 from xopen import xopen
@@ -141,7 +142,13 @@ class InputPaths:
         return InputFiles(*files, interleaved=self.interleaved)
 
 
-class ProxyTextFile:
+class ProxyWriter(ABC):
+    @abstractmethod
+    def drain(self) -> List[bytes]:
+        pass
+
+
+class ProxyTextFile(ProxyWriter):
     def __init__(self):
         self._buffer = io.BytesIO()
         self._file = io.TextIOWrapper(self._buffer)
@@ -164,7 +171,7 @@ class ProxyTextFile:
         self.__init__()
 
 
-class ProxyRecordWriter:
+class ProxyRecordWriter(ProxyWriter):
     def __init__(self, n_files: int, **kwargs):
         self._n_files = n_files
         self._kwargs = kwargs
@@ -191,54 +198,33 @@ class ProxyRecordWriter:
 
 
 class OutputFiles:
-    """
-    The attributes are either None or open file-like objects except for demultiplex_out
-    and demultiplex_out2, which are dictionaries that map an adapter name
-    to a file-like object.
-    """
-
     def __init__(
         self,
         *,
         file_opener: FileOpener,
         proxied: bool,
-        out: Optional[BinaryIO] = None,
-        out2: Optional[BinaryIO] = None,
-        untrimmed: Optional[BinaryIO] = None,
-        untrimmed2: Optional[BinaryIO] = None,
-        demultiplex_out: Optional[Dict[str, BinaryIO]] = None,
-        demultiplex_out2: Optional[Dict[str, BinaryIO]] = None,
-        combinatorial_out: Optional[Dict[Tuple[str, str], BinaryIO]] = None,
-        combinatorial_out2: Optional[Dict[Tuple[str, str], BinaryIO]] = None,
-        force_fasta: Optional[bool] = None,
+        qualities: bool,
+        interleaved: bool,
     ):
         self._file_opener = file_opener
+        self._binary_files: List[BinaryIO] = []
         # TODO do these actually have to be dicts?
-        self._binary_files: Dict[str, BinaryIO] = {}
         self._text_files: Dict[str, TextIO] = {}
         self._writers: Dict = {}
-        self._proxy_files: List[Union[ProxyTextFile, ProxyRecordWriter]] = []
+        self._proxy_files: List[ProxyWriter] = []
         self._proxied = proxied
-        self.force_fasta = force_fasta
-
-        self.out = out
-        self.out2 = out2
-        self.untrimmed = untrimmed
-        self.untrimmed2 = untrimmed2
-        self.demultiplex_out = demultiplex_out
-        self.demultiplex_out2 = demultiplex_out2
-        self.combinatorial_out = combinatorial_out
-        self.combinatorial_out2 = combinatorial_out2
+        self._to_close: List[BinaryIO] = []
+        self._qualities = qualities
+        self._interleaved = interleaved
 
     def open_text(self, path):
-        assert path not in self._binary_files  # TODO
         # TODO
         # - serial runner needs only text_file
         # - parallel runner needs binary_file and proxy_file
         # split into SerialOutputFiles and ParallelOutputFiles?
         if self._proxied:
             binary_file = self._file_opener.xopen(path, "wb")
-            self._binary_files[path] = binary_file
+            self._binary_files.append(binary_file)
             proxy_file = ProxyTextFile()
             self._proxy_files.append(proxy_file)
             return proxy_file
@@ -247,21 +233,28 @@ class OutputFiles:
             self._text_files[path] = text_file
             return text_file
 
-    def open_record_writer(self, *paths, qualities: bool, interleaved: bool):
-        kwargs = dict(
-            qualities=qualities,
-            fileformat="fasta" if self.force_fasta else None,
-            interleaved=interleaved,
+    def open_record_writer(
+        self, *paths, interleaved: bool = False, force_fasta: bool = False
+    ):
+        kwargs: Dict[str, Any] = dict(
+            qualities=self._qualities, interleaved=interleaved
         )
-        assert paths  # TODO
+        if len(paths) not in (1, 2):
+            raise ValueError("Expected one or two paths")
+        if interleaved and len(paths) != 1:
+            raise ValueError("Cannot write to two files when interleaved is True")
+        # if len(paths) == 2 and paths[1] is None:
+        #     paths = paths[:1]
+        #     kwargs["interleaved"] = True
+        if len(paths) == 1 and paths[0] == "-" and force_fasta:
+            kwargs["fileformat"] = "fasta"
         for path in paths:
             assert path is not None
-            assert path not in self._binary_files  # TODO
         binary_files = []
         for path in paths:
             binary_file = self._file_opener.xopen(path, "wb")
             binary_files.append(binary_file)
-            self._binary_files[path] = binary_file
+            self._binary_files.append(binary_file)
         if self._proxied:
             proxy_writer = ProxyRecordWriter(len(paths), **kwargs)
             self._proxy_files.append(proxy_writer)
@@ -271,76 +264,40 @@ class OutputFiles:
             self._writers[paths] = writer
             return writer
 
-    def binary_files(self):
-        return list(self._binary_files.values())
-
-    def proxy_files(self) -> List[Union[ProxyTextFile, ProxyRecordWriter]]:
-        return self._proxy_files
-
-    def __iter__(self):
-        for f in [
-            self.out,
-            self.out2,
-            self.untrimmed,
-            self.untrimmed2,
-        ]:
-            if f is not None:
-                yield f
-        for outs in (
-            self.demultiplex_out,
-            self.demultiplex_out2,
-            self.combinatorial_out,
-            self.combinatorial_out2,
-        ):
-            if outs is not None:
-                for f in outs.values():
-                    assert f is not None
-                    yield f
-        yield from self._binary_files.values()
-
-    def as_bytesio(self) -> "OutputFiles":
-        """
-        Create a new OutputFiles instance that has BytesIO instances for each non-None output file
-        """
-        result = OutputFiles(
-            file_opener=self._file_opener,
-            proxied=False,
-            force_fasta=self.force_fasta,
+    def open_record_writer_from_binary_io(
+        self, file: BinaryIO, interleaved: bool = False, force_fasta: bool = False
+    ):
+        self._binary_files.append(file)
+        kwargs: Dict[str, Any] = dict(
+            qualities=self._qualities, interleaved=interleaved
         )
-        for attr in (
-            "out",
-            "out2",
-            "untrimmed",
-            "untrimmed2",
-        ):
-            if getattr(self, attr) is not None:
-                setattr(result, attr, io.BytesIO())
-        for attr in (
-            "demultiplex_out",
-            "demultiplex_out2",
-            "combinatorial_out",
-            "combinatorial_out2",
-        ):
-            if getattr(self, attr) is not None:
-                setattr(result, attr, dict())
-                for k, v in getattr(self, attr).items():
-                    getattr(result, attr)[k] = io.BytesIO()
-        return result
+        if force_fasta and file is sys.stdout.buffer:
+            kwargs["fileformat"] = "fasta"
+        if self._proxied:
+            proxy_writer = ProxyRecordWriter(1, **kwargs)
+            self._proxy_files.append(proxy_writer)
+            return proxy_writer
+        else:
+            writer = self._file_opener.dnaio_open(file, mode="w", **kwargs)
+            self._writers["fake\0path"] = writer
+            return writer
+
+    def binary_files(self):
+        return self._binary_files[:]
+
+    def proxy_files(self) -> List[ProxyWriter]:
+        return self._proxy_files
 
     def close(self) -> None:
         """Close all output files that are not stdout"""
-        for f in self:
-            if f is sys.stdout or f is sys.stdout.buffer:
-                continue
-            f.close()
-        if self._proxied:
-            for f in self._binary_files.values():
-                f.close()
-        else:
+        if not self._proxied:
             for f in self._text_files.values():
                 f.close()
             for f in self._writers.values():
                 f.close()
+        for bf in self._binary_files:
+            if bf is not sys.stdout.buffer:
+                bf.close()
 
 
 class FileFormat(Enum):

@@ -16,11 +16,13 @@ Steps are added to the pipeline in a certain order:
 3. The last pipeline step should be one of the "Sinks", which consume all reads.
    Demultiplexers are sinks, for example.
 """
+import itertools
 from abc import ABC, abstractmethod
-from typing import Tuple, Dict, Optional, Any, TextIO
+from typing import Tuple, Optional, Any, TextIO, Sequence, List
 
 from dnaio import SequenceRecord
 
+from .files import OutputFiles
 from .predicates import Predicate
 from .modifiers import ModificationInfo
 from .statistics import ReadLengthStatistics
@@ -122,7 +124,6 @@ class PairedEndFilter(PairedEndStep, HasFilterStatistics):
             'both': The pair is discarded if both reads match.
             'first': The pair is discarded if the first read matches.
         """
-        super().__init__()
         if pair_filter_mode not in ("any", "both", "first"):
             raise ValueError("pair_filter_mode must be 'any', 'both' or 'first'")
         self._pair_filter_mode = pair_filter_mode
@@ -331,22 +332,51 @@ class Demultiplexer(SingleEndStep, HasStatistics, HasFilterStatistics):
     """
     Demultiplex trimmed reads. Reads are written to different output files
     depending on which adapter matches.
-
-    Untrimmed reads are sent to writers[None] if that key exists.
     """
 
-    def __init__(self, writers: Dict[Optional[str], Any]):
+    def __init__(
+        self,
+        adapter_names: Sequence[str],
+        template: str,
+        untrimmed_output: Optional[str],
+        discard_untrimmed: bool,
+        outfiles: OutputFiles,
+    ):
         """
         writers maps an adapter name to a writer
         """
-        super().__init__()
-        self._writers = writers
-        self._untrimmed_writer = self._writers.get(None, None)
+        self._writers, self._untrimmed_writer = self._open_writers(
+            adapter_names, template, untrimmed_output, discard_untrimmed, outfiles
+        )
         self._statistics = ReadLengthStatistics()
         self._filtered = 0
 
     def __repr__(self):
         return f"<Demultiplexer len(writers)={len(self._writers)}>"
+
+    @staticmethod
+    def _open_writers(
+        adapter_names: Sequence[str],
+        template: str,
+        untrimmed_output: Optional[str],
+        discard_untrimmed: bool,
+        outfiles: OutputFiles,
+    ):
+        writers = dict()
+        for name in adapter_names:
+            path = template.replace("{name}", name)
+            writers[name] = outfiles.open_record_writer(path)
+        if discard_untrimmed:
+            untrimmed = None
+        else:
+            untrimmed_path: Optional[str]
+            if untrimmed_output:
+                untrimmed_path = untrimmed_output
+            else:
+                untrimmed_path = template.replace("{name}", "unknown")
+            untrimmed = outfiles.open_record_writer(untrimmed_path)
+
+        return writers, untrimmed
 
     def __call__(self, read, info) -> Optional[SequenceRecord]:
         """
@@ -379,12 +409,58 @@ class PairedDemultiplexer(PairedEndStep, HasStatistics, HasFilterStatistics):
     depending on which adapter (in read 1) matches.
     """
 
-    def __init__(self, writers: Dict[Optional[str], Any]):
-        super().__init__()
-        self._writers = writers
-        self._untrimmed_writer = self._writers.get(None, None)
+    def __init__(
+        self,
+        adapter_names: Sequence[str],
+        template1: str,
+        template2: str,
+        untrimmed_output: Optional[str],
+        untrimmed_paired_output: Optional[str],
+        discard_untrimmed: bool,
+        outfiles: OutputFiles,
+    ):
+        self._writers, self._untrimmed_writer = self._open_writers(
+            adapter_names,
+            template1,
+            template2,
+            untrimmed_output,
+            untrimmed_paired_output,
+            discard_untrimmed,
+            outfiles,
+        )
         self._statistics = ReadLengthStatistics()
         self._filtered = 0
+
+    @staticmethod
+    def _open_writers(
+        adapter_names: Sequence[str],
+        template1: str,
+        template2: str,
+        untrimmed_output: Optional[str],
+        untrimmed_paired_output: Optional[str],
+        discard_untrimmed: bool,
+        outfiles: OutputFiles,
+    ):
+        demultiplex_out = dict()
+        for name in adapter_names:
+            path1 = template1.replace("{name}", name)
+            path2 = template2.replace("{name}", name)
+            demultiplex_out[name] = outfiles.open_record_writer(path1, path2)
+
+        if discard_untrimmed:
+            untrimmed = None
+        else:
+            if untrimmed_output is not None:
+                untrimmed_path1 = untrimmed_output
+            else:
+                untrimmed_path1 = template1.replace("{name}", "unknown")
+            if untrimmed_paired_output is not None:
+                untrimmed_path2 = untrimmed_paired_output
+            else:
+                untrimmed_path2 = template2.replace("{name}", "unknown")
+            untrimmed = outfiles.open_record_writer(untrimmed_path1, untrimmed_path2)
+
+        return demultiplex_out, untrimmed
 
     def __call__(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
@@ -417,16 +493,59 @@ class CombinatorialDemultiplexer(PairedEndStep, HasStatistics):
     matches on R1 and R2.
     """
 
-    def __init__(self, writers: Dict[Tuple[Optional[str], Optional[str]], Any]):
+    # TODO rename template1, template2 (or template_r1, template_r2)
+    def __init__(
+        self,
+        adapter_names,
+        adapter_names2,
+        template1: str,
+        template2: str,
+        discard_untrimmed: bool,
+        outfiles: OutputFiles,
+    ):
         """
         Adapter names of the matches on R1 and R2 will be used to look up the writer in the
         writers dict. If there is no match on a read, None is used in the lookup instead
         of the name. Missing dictionary keys are ignored and can be used to discard
         read pairs.
         """
-        super().__init__()
-        self._writers = writers
+        self._writers = self._open_writers(
+            adapter_names,
+            adapter_names2,
+            template1,
+            template2,
+            discard_untrimmed,
+            outfiles,
+        )
         self._statistics = ReadLengthStatistics()
+
+    @staticmethod
+    def _open_writers(
+        adapter_names: Sequence[str],
+        adapter_names2: Sequence[str],
+        template1: str,
+        template2: str,
+        discard_untrimmed: bool,
+        outfiles: OutputFiles,
+    ):
+        writers = dict()
+        extra: List[Tuple[Optional[str], Optional[str]]]
+        if discard_untrimmed:
+            extra = []
+        else:
+            extra = [(None, None)]
+            extra += [(None, name2) for name2 in adapter_names2]
+            extra += [(name1, None) for name1 in adapter_names]
+        for name1, name2 in (
+            list(itertools.product(adapter_names, adapter_names2)) + extra
+        ):  # type: ignore
+            fname1 = name1 if name1 is not None else "unknown"
+            fname2 = name2 if name2 is not None else "unknown"
+            path1 = template1.replace("{name1}", fname1).replace("{name2}", fname2)
+            path2 = template2.replace("{name1}", fname1).replace("{name2}", fname2)
+            writers[(name1, name2)] = outfiles.open_record_writer(path1, path2)
+
+        return writers
 
     def __call__(self, read1, read2, info1, info2) -> Optional[RecordPair]:
         """
