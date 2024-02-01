@@ -949,13 +949,6 @@ def make_pipeline_from_args(  # noqa: C901
                 out = outfiles.open_record_writer(args.output, force_fasta=args.fasta)
             steps.append(SingleEndSink(out))
 
-            # untrimmed, untrimmed2 = file_opener.xopen_pair(
-            #     args.untrimmed_output, args.untrimmed_paired_output, "wb"
-            # )
-            # out, out2 = file_opener.xopen_pair(args.output, args.paired_output, "wb")
-            # if out is None:
-            #     out = default_outfile
-
     logger.debug("Pipeline steps:")
     for step in steps:
         logger.debug("- %s", step)
