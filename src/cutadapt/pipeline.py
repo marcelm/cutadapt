@@ -25,7 +25,6 @@ class Pipeline(ABC):
 
     def __init__(self) -> None:
         self._steps: List[Any] = []
-        self._static_steps: List[Any] = []
         self._input_file_format: Optional[FileFormat] = None
         self._infiles: Optional[InputFiles] = None
         self._outfiles: Optional[OutputFiles] = None
@@ -100,7 +99,7 @@ class SingleEndPipeline(Pipeline):
             info = ModificationInfo(read)
             for modifier in self._modifiers:
                 read = modifier(read, info)
-            for filter_ in self._static_steps + self._steps:
+            for filter_ in self._steps:
                 read = filter_(read, info)
                 if read is None:
                     break
@@ -183,7 +182,7 @@ class PairedEndPipeline(Pipeline):
             info2 = ModificationInfo(read2)
             for modifier in self._modifiers:
                 reads = modifier(*reads, info1, info2)  # type: ignore
-            for filter_ in self._static_steps + self._steps:
+            for filter_ in self._steps:
                 reads = filter_(*reads, info1, info2)
                 if reads is None:
                     break
