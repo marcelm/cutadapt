@@ -721,9 +721,9 @@ input read, but in the following cases, multiple rows may be output:
 A row is written for *all* input reads, even those that are discarded
 from the final FASTA/FASTQ output due to filtering options.
 
-.. note:: Paired-end reads not supported.
-   The info file currently does not contain any info about read 2, when
-   cutadapt is run in paired-end mode.
+.. note:: Paired-end reads are not supported.
+   The info file currently does not contain any info about read 2 when
+   Cutadapt is run in paired-end mode.
 
 Which fields are output in each row depends on whether an adapter match was
 found in the read or not.
