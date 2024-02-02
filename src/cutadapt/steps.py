@@ -292,7 +292,7 @@ class SingleEndSink(SingleEndStep, HasStatistics):
         self._statistics = ReadLengthStatistics()
 
     def __repr__(self):
-        return f"NoFilter({self.writer})"
+        return f"SingleEndSink({self.writer})"
 
     def __call__(self, read, info: ModificationInfo) -> Optional[SequenceRecord]:
         self.writer.write(read)
@@ -315,7 +315,7 @@ class PairedEndSink(PairedEndStep, HasStatistics):
         self._statistics = ReadLengthStatistics()
 
     def __repr__(self):
-        return f"PairedNoFilter({self.writer})"
+        return f"PairedEndSink({self.writer})"
 
     def __call__(
         self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
@@ -493,7 +493,6 @@ class CombinatorialDemultiplexer(PairedEndStep, HasStatistics):
     matches on R1 and R2.
     """
 
-    # TODO rename template1, template2 (or template_r1, template_r2)
     def __init__(
         self,
         adapter_names,
