@@ -61,7 +61,7 @@ jobs:
     - name: Test
       run: tox -e py$(echo ${{ matrix.python-version }} | tr -d .)
     - name: Upload coverage report
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
 
   wheels:
     if: github.event_name == 'push' && github.ref_type == 'tag'
@@ -80,7 +80,7 @@ jobs:
       env:
         CIBW_BUILD: "cp*-manylinux_x86_64 cp3*-win_amd64 cp3*-macosx_x86_64"
         CIBW_SKIP: "cp37-*"
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: wheels
         path: wheelhouse/*.whl
