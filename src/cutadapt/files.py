@@ -208,9 +208,8 @@ class OutputFiles:
     ):
         self._file_opener = file_opener
         self._binary_files: List[BinaryIO] = []
-        # TODO do these actually have to be dicts?
-        self._text_files: Dict[str, TextIO] = {}
-        self._writers: Dict = {}
+        self._text_files: List[TextIO] = []
+        self._writers: List[Any] = []
         self._proxy_files: List[ProxyWriter] = []
         self._proxied = proxied
         self._to_close: List[BinaryIO] = []
@@ -230,7 +229,7 @@ class OutputFiles:
             return proxy_file
         else:
             text_file = self._file_opener.xopen(path, "wt")
-            self._text_files[path] = text_file
+            self._text_files.append(text_file)
             return text_file
 
     def open_record_writer(
@@ -243,9 +242,6 @@ class OutputFiles:
             raise ValueError("Expected one or two paths")
         if interleaved and len(paths) != 1:
             raise ValueError("Cannot write to two files when interleaved is True")
-        # if len(paths) == 2 and paths[1] is None:
-        #     paths = paths[:1]
-        #     kwargs["interleaved"] = True
         if len(paths) == 1 and paths[0] == "-" and force_fasta:
             kwargs["fileformat"] = "fasta"
         for path in paths:
@@ -261,7 +257,7 @@ class OutputFiles:
             return proxy_writer
         else:
             writer = self._file_opener.dnaio_open(*binary_files, mode="w", **kwargs)
-            self._writers[paths] = writer
+            self._writers.append(writer)
             return writer
 
     def open_record_writer_from_binary_io(
@@ -279,10 +275,10 @@ class OutputFiles:
             return proxy_writer
         else:
             writer = self._file_opener.dnaio_open(file, mode="w", **kwargs)
-            self._writers["fake\0path"] = writer
+            self._writers.append(writer)
             return writer
 
-    def binary_files(self):
+    def binary_files(self) -> List[BinaryIO]:
         return self._binary_files[:]
 
     def proxy_files(self) -> List[ProxyWriter]:
@@ -291,9 +287,9 @@ class OutputFiles:
     def close(self) -> None:
         """Close all output files that are not stdout"""
         if not self._proxied:
-            for f in self._text_files.values():
+            for f in self._text_files:
                 f.close()
-            for f in self._writers.values():
+            for f in self._writers:
                 f.close()
         for bf in self._binary_files:
             if bf is not sys.stdout.buffer:
