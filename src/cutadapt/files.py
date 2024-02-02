@@ -54,7 +54,7 @@ def raise_open_files_limit(n):
 
 
 class FileOpener:
-    def __init__(self, compression_level: int = 6, threads: Optional[int] = None):
+    def __init__(self, compression_level: int = 1, threads: Optional[int] = None):
         """
         threads -- no. of external compression threads.
             0: write in-process
