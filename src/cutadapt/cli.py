@@ -99,8 +99,8 @@ from cutadapt.predicates import (
     TooManyExpectedErrors,
     TooHighAverageErrorRate,
     CasavaFiltered,
-    DiscardTrimmed,
-    DiscardUntrimmed,
+    IsTrimmed,
+    IsUntrimmed,
 )
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
@@ -888,7 +888,7 @@ def make_pipeline_from_args(  # noqa: C901
         # --discard-untrimmed and --untrimmed-output. These options
         # are mutually exclusive to help prevent brain damage.
         if args.discard_trimmed:
-            predicate = DiscardTrimmed()
+            predicate = IsTrimmed()
             if paired:
                 step = PairedEndFilter(
                     predicate, predicate, writer=None, pair_filter_mode=pair_filter_mode
@@ -898,7 +898,7 @@ def make_pipeline_from_args(  # noqa: C901
 
             steps.append(step)
         elif args.discard_untrimmed:
-            predicate = DiscardUntrimmed()
+            predicate = IsUntrimmed()
             if paired:
                 step = PairedEndFilter(
                     predicate,
@@ -912,8 +912,8 @@ def make_pipeline_from_args(  # noqa: C901
                 step = SingleEndFilter(predicate, None)
             steps.append(step)
         elif args.untrimmed_output or args.untrimmed_paired_output:
-            predicate1 = DiscardUntrimmed()
-            predicate2 = DiscardUntrimmed()
+            predicate1 = IsUntrimmed()
+            predicate2 = IsUntrimmed()
             steps.append(
                 make_filter(
                     predicate1,

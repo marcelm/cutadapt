@@ -138,7 +138,7 @@ class CasavaFiltered(Predicate):
         return right[1:4] == ":Y:"  # discard if :Y: found
 
 
-class DiscardUntrimmed(Predicate):
+class IsUntrimmed(Predicate):
     """
     Select reads for which no adapter match was found
     """
@@ -150,7 +150,7 @@ class DiscardUntrimmed(Predicate):
         return not info.matches
 
 
-class DiscardTrimmed(Predicate):
+class IsTrimmed(Predicate):
     """
     Select reads for which at least one adapter match was found
     """

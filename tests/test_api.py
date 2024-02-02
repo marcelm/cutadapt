@@ -10,7 +10,7 @@ import copy
 import json
 import os
 
-from cutadapt.predicates import TooShort, DiscardUntrimmed
+from cutadapt.predicates import TooShort, IsUntrimmed
 from cutadapt.runners import make_runner
 from cutadapt.steps import (
     InfoFileWriter,
@@ -77,7 +77,7 @@ def test_pipeline_single(tmp_path, cores):
         steps = [
             InfoFileWriter(outfiles.open_text(info_path)),
             SingleEndFilter(TooShort(10), writer=None),
-            SingleEndFilter(DiscardUntrimmed(), writer=None),
+            SingleEndFilter(IsUntrimmed(), writer=None),
             SingleEndSink(outfiles.open_record_writer(tmp_path / "out.fastq")),
         ]
         pipeline = SingleEndPipeline(modifiers, steps)
@@ -126,8 +126,8 @@ def test_pipeline_paired(tmp_path, cores):
             PairedSingleEndStep(InfoFileWriter(outfiles.open_text(info_path))),
             PairedEndFilter(TooShort(10), None, writer=None),
             PairedEndFilter(
-                DiscardUntrimmed(),
-                DiscardUntrimmed(),
+                IsUntrimmed(),
+                IsUntrimmed(),
                 writer=None,
                 pair_filter_mode="any",
             ),
