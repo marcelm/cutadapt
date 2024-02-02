@@ -153,39 +153,3 @@ def test_pipeline_paired(tmp_path, cores):
     # - info file isn’t written, what is missing?
     # - use xopen directly instead of file_opener;
     #   possibly with myxopen = functools.partial(xopen, ...)
-
-
-# How this could look in the future:
-# def test_pipeline_single_new(tmp_path):
-#     import json
-#     from cutadapt.pipeline import SingleEndPipeline
-#     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
-#     from cutadapt.adapters import BackAdapter
-#     from cutadapt.steps import InfoFileWriter, SingleEndFilter, SingleEndSink
-#     from cutadapt.filters import TooShort, DiscardUntrimmed
-#     from contextlib import ExitStack
-#     from xopen import xopen
-#
-#     with ExitStack() as stack:
-#         # Input files
-#         infile = stack.enter_context(xopen(datapath("small.fastq"), "rb"))
-#
-#         # Output files
-#         info_file = stack.enter_context(xopen(tmp_path / "info.txt", "wb"))
-#         out = stack.enter_context(xopen(tmp_path / "out.fastq", "wb"))
-#         too_short = stack.enter_context(xopen(tmp_path / "tooshort.fastq", "wb"))
-#         pipeline = SingleEndPipeline(
-#             modifiers=[
-#                 UnconditionalCutter(5),
-#                 QualityTrimmer(cutoff_front=0, cutoff_back=15),
-#                 AdapterCutter([BackAdapter(sequence="GATCGGAAGA", max_errors=1, min_overlap=3)]),
-#             ],
-#             filters=[
-#                 InfoFileWriter(info_file),
-#                 SingleEndFilter(TooShort(minimum_length=10), too_short),
-#                 SingleEndFilter(DiscardUntrimmed()),
-#             ],
-#             sink=SingleEndSink(out),
-#         )
-#         stats = pipeline.run(infile, workers=1, progress=True)
-#     json.dumps(stats.as_json())
