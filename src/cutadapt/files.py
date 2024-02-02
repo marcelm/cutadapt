@@ -201,12 +201,14 @@ class OutputFiles:
     def __init__(
         self,
         *,
-        file_opener: FileOpener,
         proxied: bool,
         qualities: bool,
         interleaved: bool,
+        file_opener: Optional[FileOpener] = None,
     ):
-        self._file_opener = file_opener
+        self._file_opener: FileOpener = (
+            file_opener if file_opener is not None else FileOpener()
+        )
         self._binary_files: List[BinaryIO] = []
         self._text_files: List[TextIO] = []
         self._writers: List[Any] = []

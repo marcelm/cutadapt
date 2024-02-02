@@ -1,7 +1,7 @@
 import os
 import pickle
 
-from cutadapt.files import ProxyTextFile, ProxyRecordWriter, FileOpener, OutputFiles
+from cutadapt.files import ProxyTextFile, ProxyRecordWriter, OutputFiles
 from dnaio import SequenceRecord
 
 
@@ -71,12 +71,8 @@ def test_proxy_record_writer_picklable():
 
 
 class TestOutputFiles:
-    def setup_method(self):
-        self.file_opener = FileOpener()
-
     def test_open_text(self, tmp_path):
         o = OutputFiles(
-            file_opener=self.file_opener,
             proxied=False,
             qualities=False,
             interleaved=False,
@@ -89,7 +85,6 @@ class TestOutputFiles:
 
     def test_open_record_writer(self, tmp_path):
         o = OutputFiles(
-            file_opener=self.file_opener,
             proxied=False,
             qualities=True,
             interleaved=False,
@@ -102,7 +97,6 @@ class TestOutputFiles:
 
     def test_paired_record_writer(self, tmp_path):
         o = OutputFiles(
-            file_opener=self.file_opener,
             proxied=False,
             qualities=True,
             interleaved=False,
@@ -119,7 +113,6 @@ class TestOutputFiles:
 
     def test_interleaved_record_writer(self, tmp_path):
         o = OutputFiles(
-            file_opener=self.file_opener,
             proxied=False,
             qualities=True,
             interleaved=True,

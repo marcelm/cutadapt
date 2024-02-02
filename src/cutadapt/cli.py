@@ -489,10 +489,10 @@ def open_output_files(
     )
 
     return OutputFiles(
-        file_opener=file_opener,
         proxied=proxied,
         qualities=input_file_format.has_qualities(),
         interleaved=interleaved,
+        file_opener=file_opener,
     )
 
 

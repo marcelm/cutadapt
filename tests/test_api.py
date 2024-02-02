@@ -51,11 +51,10 @@ def test_pipeline_single(tmp_path, cores):
     info_path = tmp_path / "info.txt"
     import json
     from cutadapt.pipeline import SingleEndPipeline
-    from cutadapt.files import FileOpener, OutputFiles, InputPaths
+    from cutadapt.files import OutputFiles, InputPaths
     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
     from cutadapt.adapters import BackAdapter
 
-    file_opener = FileOpener()
     adapter = BackAdapter(
         sequence="GATCGGAAGA",
         max_errors=1,
@@ -69,7 +68,6 @@ def test_pipeline_single(tmp_path, cores):
     inpaths = InputPaths(datapath("small.fastq"))
     with make_runner(inpaths, cores) as runner:
         outfiles = OutputFiles(
-            file_opener=file_opener,
             proxied=cores > 1,
             qualities=runner.input_file_format().has_qualities(),
             interleaved=False,
@@ -99,7 +97,7 @@ def test_pipeline_paired(tmp_path, cores):
     from cutadapt.pipeline import PairedEndPipeline
     from cutadapt.modifiers import UnconditionalCutter, QualityTrimmer, AdapterCutter
     from cutadapt.adapters import BackAdapter
-    from cutadapt.files import OutputFiles, InputPaths, FileOpener
+    from cutadapt.files import OutputFiles, InputPaths
 
     trimmer = QualityTrimmer(cutoff_front=0, cutoff_back=15)
     adapter = BackAdapter(
@@ -113,11 +111,9 @@ def test_pipeline_paired(tmp_path, cores):
         (AdapterCutter([adapter]), None),
     ]
 
-    file_opener = FileOpener()
     inpaths = InputPaths(datapath("paired.1.fastq"), datapath("paired.2.fastq"))
     with make_runner(inpaths, cores=cores) as runner:
         outfiles = OutputFiles(
-            file_opener=file_opener,
             proxied=cores > 1,
             qualities=runner.input_file_format().has_qualities(),
             interleaved=False,
