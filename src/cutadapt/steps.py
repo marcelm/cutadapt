@@ -78,8 +78,7 @@ class SingleEndFilter(SingleEndStep, HasFilterStatistics):
     counts how many were filtered.
     """
 
-    def __init__(self, predicate: Predicate, writer):
-        super().__init__()
+    def __init__(self, predicate: Predicate, writer=None):
         self._filtered = 0
         self._predicate = predicate
         self._writer = writer
@@ -115,7 +114,7 @@ class PairedEndFilter(PairedEndStep, HasFilterStatistics):
         self,
         predicate1: Optional[Predicate],
         predicate2: Optional[Predicate],
-        writer,
+        writer=None,
         pair_filter_mode="any",
     ):
         """

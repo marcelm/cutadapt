@@ -74,8 +74,8 @@ def test_pipeline_single(tmp_path, cores):
         )
         steps = [
             InfoFileWriter(outfiles.open_text(info_path)),
-            SingleEndFilter(TooShort(10), writer=None),
-            SingleEndFilter(IsUntrimmed(), writer=None),
+            SingleEndFilter(TooShort(10)),
+            SingleEndFilter(IsUntrimmed()),
             SingleEndSink(outfiles.open_record_writer(tmp_path / "out.fastq")),
         ]
         pipeline = SingleEndPipeline(modifiers, steps)
@@ -120,11 +120,10 @@ def test_pipeline_paired(tmp_path, cores):
         )
         steps = [
             PairedSingleEndStep(InfoFileWriter(outfiles.open_text(info_path))),
-            PairedEndFilter(TooShort(10), None, writer=None),
+            PairedEndFilter(TooShort(10), None),
             PairedEndFilter(
                 IsUntrimmed(),
                 IsUntrimmed(),
-                writer=None,
                 pair_filter_mode="any",
             ),
             PairedEndSink(

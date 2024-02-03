@@ -763,10 +763,10 @@ def make_pipeline_from_args(  # noqa: C901
         predicate = TooManyN(args.max_n)
         if paired:
             step = PairedEndFilter(
-                predicate, predicate, writer=None, pair_filter_mode=pair_filter_mode
+                predicate, predicate, pair_filter_mode=pair_filter_mode
             )
         else:
-            step = SingleEndFilter(predicate, None)
+            step = SingleEndFilter(predicate)
         steps.append(step)
 
     if args.max_expected_errors is not None:
@@ -778,10 +778,10 @@ def make_pipeline_from_args(  # noqa: C901
             predicate = TooManyExpectedErrors(args.max_expected_errors)
             if paired:
                 step = PairedEndFilter(
-                    predicate, predicate, writer=None, pair_filter_mode=pair_filter_mode
+                    predicate, predicate, pair_filter_mode=pair_filter_mode
                 )
             else:
-                step = SingleEndFilter(predicate, None)
+                step = SingleEndFilter(predicate)
             steps.append(step)
 
     if args.max_average_error_rate is not None:
@@ -793,20 +793,20 @@ def make_pipeline_from_args(  # noqa: C901
             predicate = TooHighAverageErrorRate(args.max_average_error_rate)
             if paired:
                 step = PairedEndFilter(
-                    predicate, predicate, writer=None, pair_filter_mode=pair_filter_mode
+                    predicate, predicate, pair_filter_mode=pair_filter_mode
                 )
             else:
-                step = SingleEndFilter(predicate, None)
+                step = SingleEndFilter(predicate)
             steps.append(step)
 
     if args.discard_casava:
         predicate = CasavaFiltered()
         if paired:
             step = PairedEndFilter(
-                predicate, predicate, writer=None, pair_filter_mode=pair_filter_mode
+                predicate, predicate, pair_filter_mode=pair_filter_mode
             )
         else:
-            step = SingleEndFilter(predicate, None)
+            step = SingleEndFilter(predicate)
         steps.append(step)
 
     # Add the last step that writes the records that made it through the pipeline
@@ -891,10 +891,10 @@ def make_pipeline_from_args(  # noqa: C901
             predicate = IsTrimmed()
             if paired:
                 step = PairedEndFilter(
-                    predicate, predicate, writer=None, pair_filter_mode=pair_filter_mode
+                    predicate, predicate, pair_filter_mode=pair_filter_mode
                 )
             else:
-                step = SingleEndFilter(predicate, None)
+                step = SingleEndFilter(predicate)
 
             steps.append(step)
         elif args.discard_untrimmed:
@@ -903,13 +903,12 @@ def make_pipeline_from_args(  # noqa: C901
                 step = PairedEndFilter(
                     predicate,
                     predicate,
-                    writer=None,
                     pair_filter_mode="both"
                     if override_pair_filter_mode
                     else pair_filter_mode,
                 )
             else:
-                step = SingleEndFilter(predicate, None)
+                step = SingleEndFilter(predicate)
             steps.append(step)
         elif args.untrimmed_output or args.untrimmed_paired_output:
             predicate1 = IsUntrimmed()
