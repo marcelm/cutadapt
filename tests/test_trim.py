@@ -1,4 +1,4 @@
-import typing
+from typing import Sequence
 
 from dnaio import SequenceRecord
 from cutadapt.adapters import (
@@ -12,7 +12,7 @@ from cutadapt.modifiers import AdapterCutter, ModificationInfo
 
 def test_statistics() -> None:
     read = SequenceRecord("name", "AAAACCCCAAAA")
-    adapters: typing.SequenceRecord[Adapter] = [BackAdapter("CCCC", max_errors=0.1)]
+    adapters: Sequence[Adapter] = [BackAdapter("CCCC", max_errors=0.1)]
     cutter = AdapterCutter(adapters, times=3)
     cutter(read, ModificationInfo(read))
     assert isinstance(cutter.adapter_statistics[adapters[0]], BackAdapterStatistics)
