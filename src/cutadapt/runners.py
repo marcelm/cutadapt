@@ -351,9 +351,9 @@ class ParallelPipelineRunner(PipelineRunner):
 
     def run(self, pipeline, progress, outfiles: OutputFiles) -> Statistics:
         workers, connections = self._start_workers(pipeline, outfiles.proxy_files())
-        writers = []
+        chunk_writers = []
         for f in outfiles.binary_files():
-            writers.append(OrderedChunkWriter(f))
+            chunk_writers.append(OrderedChunkWriter(f))
         stats = Statistics()
         while connections:
             ready_connections: List[Any] = multiprocessing.connection.wait(connections)
@@ -368,10 +368,10 @@ class ParallelPipelineRunner(PipelineRunner):
 
                 number_of_reads: int = self._try_receive(connection)
                 progress.update(number_of_reads)
-                for writer in writers:
+                for writer in chunk_writers:
                     data = connection.recv_bytes()
                     writer.write(data, chunk_index)
-        for writer in writers:
+        for writer in chunk_writers:
             assert writer.wrote_everything()
         for w in workers:
             w.join()
