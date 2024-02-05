@@ -429,7 +429,7 @@ class SerialPipelineRunner(PipelineRunner):
         # TODO
         modifiers = getattr(pipeline, "_modifiers", None)
         assert modifiers is not None
-        return Statistics().collect(n, total1_bp, total2_bp, modifiers, pipeline._steps)
+        return Statistics().collect(n, total1_bp, total2_bp, modifiers, pipeline._steps)  # type: ignore[attr-defined]
 
     def close(self):
         self._infiles.close()

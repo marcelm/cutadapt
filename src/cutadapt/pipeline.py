@@ -1,8 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Optional, Any, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
-from .files import InputFiles, OutputFiles, FileFormat
+from .files import InputFiles, FileFormat
 from .utils import Progress
 from .modifiers import (
     SingleEndModifier,
@@ -20,29 +20,12 @@ class Pipeline(ABC):
     Processing pipeline that loops over reads and applies modifiers and filters
     """
 
-    n_adapters = 0
-    paired = False
-
     def __init__(self) -> None:
-        self._steps: List[Any] = []
-        self._input_file_format: Optional[FileFormat] = None
         self._infiles: Optional[InputFiles] = None
-        self._outfiles: Optional[OutputFiles] = None
-        self._demultiplexer = None
 
     def close(self) -> None:
-        self._close_input()
-        self._close_output()
-
-    def _close_input(self) -> None:
         if self._infiles is not None:
             self._infiles.close()
-
-    def _close_output(self) -> None:
-        # Closing a TextIOWrapper also closes the underlying file, so
-        # this closes some files a second time.
-        if self._outfiles is not None:
-            self._outfiles.close()
 
     @abstractmethod
     def process_reads(
@@ -57,6 +40,8 @@ class SingleEndPipeline(Pipeline):
     """
     Processing pipeline for single-end reads
     """
+
+    paired = False
 
     def __init__(
         self,
@@ -87,7 +72,7 @@ class SingleEndPipeline(Pipeline):
                 progress.update(10000)
             total_bp += len(read)
             info = ModificationInfo(read)
-            for step in modifiers_and_steps:
+            for step in modifiers_and_steps:  # type: ignore[assignment]
                 read = step(read, info)
                 if read is None:
                     break
