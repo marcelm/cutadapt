@@ -31,10 +31,6 @@ class Pipeline(ABC):
         self._demultiplexer = None
         self._textiowrappers: List[TextIO] = []
 
-        # Filter settings
-        self.discard_trimmed = False
-        self.discard_untrimmed = False
-
     def flush(self) -> None:
         for f in self._textiowrappers:
             f.flush()
