@@ -28,10 +28,6 @@ class Pipeline(ABC):
     ) -> Tuple[int, int, Optional[int]]:
         pass
 
-    @abstractmethod
-    def close(self) -> None:
-        pass
-
 
 class SingleEndPipeline(Pipeline):
     """
@@ -54,15 +50,14 @@ class SingleEndPipeline(Pipeline):
         progress: Optional[Progress] = None,
     ) -> Tuple[int, int, Optional[int]]:
         """Run the pipeline. Return statistics"""
-        self._infiles = infiles
-        self._reader = infiles.open()
+        reader = infiles.open()
         for i, step in enumerate(self._steps, 1):
             logger.debug("Pipeline step %d: %s", i, step)
 
         n = 0  # no. of processed reads
         total_bp = 0
         modifiers_and_steps = self._modifiers + self._steps
-        for read in self._reader:
+        for read in reader:
             n += 1
             if n % 10000 == 0 and progress is not None:
                 progress.update(10000)
@@ -74,11 +69,8 @@ class SingleEndPipeline(Pipeline):
                     break
         if progress is not None:
             progress.update(n % 10000)
+        infiles.close()
         return (n, total_bp, None)
-
-    def close(self) -> None:
-        if self._infiles is not None:
-            self._infiles.close()
 
 
 class PairedEndPipeline(Pipeline):
@@ -159,8 +151,5 @@ class PairedEndPipeline(Pipeline):
                     break
         if progress is not None:
             progress.update(n % 10000)
+        infiles.close()
         return (n, total1_bp, total2_bp)
-
-    def close(self) -> None:
-        if self._infiles is not None:
-            self._infiles.close()
