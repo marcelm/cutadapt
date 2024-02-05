@@ -23,16 +23,16 @@ class Pipeline(ABC):
     def __init__(self) -> None:
         self._infiles: Optional[InputFiles] = None
 
-    def close(self) -> None:
-        if self._infiles is not None:
-            self._infiles.close()
-
     @abstractmethod
     def process_reads(
         self,
         infiles: InputFiles,
         progress: Optional[Progress] = None,
     ) -> Tuple[int, int, Optional[int]]:
+        pass
+
+    @abstractmethod
+    def close(self) -> None:
         pass
 
 
@@ -79,6 +79,10 @@ class SingleEndPipeline(Pipeline):
         if progress is not None:
             progress.update(n % 10000)
         return (n, total_bp, None)
+
+    def close(self) -> None:
+        if self._infiles is not None:
+            self._infiles.close()
 
 
 class PairedEndPipeline(Pipeline):
@@ -161,3 +165,7 @@ class PairedEndPipeline(Pipeline):
         if progress is not None:
             progress.update(n % 10000)
         return (n, total1_bp, total2_bp)
+
+    def close(self) -> None:
+        if self._infiles is not None:
+            self._infiles.close()
