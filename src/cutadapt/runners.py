@@ -184,7 +184,6 @@ class WorkerProcess(mpctx_Process):
                 ]
                 infiles = InputFiles(*files, interleaved=self._interleaved_input)
                 (n, bp1, bp2) = self._pipeline.process_reads(infiles)
-                self._pipeline.flush()
                 stats += Statistics().collect(n, bp1, bp2, [], [])
                 self._send_outfiles(chunk_index, n)
                 self._pipeline.close()

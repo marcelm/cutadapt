@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Optional, Any, Tuple, Union, TextIO
+from typing import List, Optional, Any, Tuple, Union
 
 from .files import InputFiles, OutputFiles, FileFormat
 from .utils import Progress
@@ -29,11 +29,6 @@ class Pipeline(ABC):
         self._infiles: Optional[InputFiles] = None
         self._outfiles: Optional[OutputFiles] = None
         self._demultiplexer = None
-        self._textiowrappers: List[TextIO] = []
-
-    def flush(self) -> None:
-        for f in self._textiowrappers:
-            f.flush()
 
     def close(self) -> None:
         self._close_input()
@@ -44,8 +39,6 @@ class Pipeline(ABC):
             self._infiles.close()
 
     def _close_output(self) -> None:
-        for f in self._textiowrappers:
-            f.close()
         # Closing a TextIOWrapper also closes the underlying file, so
         # this closes some files a second time.
         if self._outfiles is not None:
