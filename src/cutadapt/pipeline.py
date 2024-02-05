@@ -20,9 +20,6 @@ class Pipeline(ABC):
     Processing pipeline that loops over reads and applies modifiers and filters
     """
 
-    def __init__(self) -> None:
-        self._infiles: Optional[InputFiles] = None
-
     @abstractmethod
     def process_reads(
         self,
@@ -48,7 +45,6 @@ class SingleEndPipeline(Pipeline):
         modifiers: List[SingleEndModifier],
         steps: List[SingleEndStep],
     ):
-        super().__init__()
         self._modifiers: List[SingleEndModifier] = modifiers
         self._steps = steps
 
@@ -103,7 +99,6 @@ class PairedEndPipeline(Pipeline):
         ],
         steps,
     ):
-        super().__init__()
         self._input_file_format = input_file_format
         self._modifiers: List[PairedEndModifier] = []
         self._steps = steps
