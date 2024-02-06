@@ -187,16 +187,11 @@ class WorkerProcess(mpctx_Process):
                 stats += Statistics().collect(n, bp1, bp2, [], [])
                 self._send_outfiles(chunk_index, n)
 
-            m = self._pipeline._modifiers
-            modifier_stats = Statistics().collect(
-                0, 0, 0 if self._pipeline.paired else None, m, []
-            )
-            stats += modifier_stats
             stats += Statistics().collect(
                 0,
                 0,
                 0 if self._pipeline.paired else None,
-                [],
+                self._pipeline._modifiers,
                 self._pipeline._steps,
             )
             self._write_pipe.send(-1)

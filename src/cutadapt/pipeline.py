@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, Union
 
-from .files import InputFiles, FileFormat
+from .files import InputFiles
 from .utils import Progress
 from .modifiers import (
     SingleEndModifier,
@@ -82,7 +82,6 @@ class PairedEndPipeline(Pipeline):
 
     def __init__(
         self,
-        input_file_format: FileFormat,
         modifiers: List[
             Union[
                 PairedEndModifier,
@@ -91,7 +90,6 @@ class PairedEndPipeline(Pipeline):
         ],
         steps,
     ):
-        self._input_file_format = input_file_format
         self._modifiers: List[PairedEndModifier] = []
         self._steps = steps
         self._reader = None

@@ -132,7 +132,7 @@ def test_pipeline_paired(tmp_path, cores):
                 )
             ),
         ]
-        pipeline = PairedEndPipeline(runner.input_file_format(), modifiers, steps)
+        pipeline = PairedEndPipeline(modifiers, steps)
         stats = runner.run(pipeline, DummyProgress(), outfiles)
     assert stats is not None
     assert info_path.exists()
@@ -142,9 +142,6 @@ def test_pipeline_paired(tmp_path, cores):
     # TODO
     # - could use += for adding modifiers
     # - allow using adapter specification strings?
-    # - filters as attributes on Pipeline is awkward
     # - too many submodules (flatter namespace)
-    # - more default arguments
-    # - info file isn’t written, what is missing?
     # - use xopen directly instead of file_opener;
     #   possibly with myxopen = functools.partial(xopen, ...)

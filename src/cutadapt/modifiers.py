@@ -421,7 +421,6 @@ class PairedAdapterCutter(PairedEndModifier):
 
         action -- What to do with a found adapter: None, 'trim', 'lowercase' or 'mask'
         """
-        super().__init__()
         if len(adapters1) != len(adapters2):
             raise PairedAdapterCutterError(
                 "The number of adapters to trim from R1 and R2 must be the same. "
