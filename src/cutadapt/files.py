@@ -17,41 +17,44 @@ except ImportError:
     # Windows
     resource = None  # type: ignore
 
+
 def open_rb(path: str):
     """
     Open a (possibly compressed) file for reading in binary mode.
     Determines if the file is local or remote and opens it accordingly.
     """
-    # stdin:
-    #if path == "-":
-    #    return sys.stdin.buffer
     # local file: open with xopen routines
     if os.path.exists(path):
         return xopen_rb_raise_limit(path)
-    # assume remote file 
+    # assume remote file
     else:
         return smart_open_rb(path)
 
+
 def smart_open_rb(path: str):
-        
-        # use smart_open library
-        try:
-            import smart_open
-            
-        except ImportError:
-            raise ImportError(
-                "The smart_open package is required to read from remote files"
-            )
-        # for xz : load additional library
-        if path.endswith(".xz"):
-            def _handle_xz(file_obj,mode='rb'):
-                return lzma.LZMAFile(file_obj,mode,format=lzma.FORMAT_XZ)
-            smart_open.register_compressor(".xz", _handle_xz)
-        try:
-            return smart_open.open(path, "rb")
-        except Exception as e:
-            logger.error("Error opening '%s': %s", path, e)
-            raise
+    """
+    Open a (possibly compressed) remote file for reading in binary mode.
+    see smart_open documentation for details
+    """
+    try:
+        import smart_open
+
+    except ImportError:
+        raise ImportError(
+            "The smart_open package is required to read from remote files"
+        )
+    # for xz : load additional library
+    if path.endswith(".xz"):
+
+        def _handle_xz(file_obj, mode="rb"):
+            return lzma.LZMAFile(file_obj, mode, format=lzma.FORMAT_XZ)
+
+        smart_open.register_compressor(".xz", _handle_xz)
+    try:
+        return smart_open.open(path, "rb")
+    except Exception as e:
+        logger.error("Error opening '%s': %s", path, e)
+        raise
 
 
 def xopen_rb_raise_limit(path: str):
