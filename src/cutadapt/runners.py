@@ -15,7 +15,7 @@ from cutadapt.files import (
     InputFiles,
     OutputFiles,
     InputPaths,
-    xopen_rb_raise_limit,
+    open_rb,
     detect_file_format,
     FileFormat,
     ProxyWriter,
@@ -91,7 +91,7 @@ class ReaderProcess(mpctx_Process):
         try:
             with ExitStack() as stack:
                 files = [
-                    stack.enter_context(xopen_rb_raise_limit(path))
+                    stack.enter_context(open_rb(path))
                     for path in self._paths
                 ]
                 file_format = detect_file_format(files[0])

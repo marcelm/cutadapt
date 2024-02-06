@@ -24,6 +24,7 @@ dynamic = ["version"]
 dependencies = [
     "dnaio >= 1.2.0",
     "xopen >= 1.6.0",
+    "smart_open >= 6.4.0",
 ]
 
 [project.urls]

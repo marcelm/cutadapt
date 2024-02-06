@@ -1,10 +1,11 @@
 import errno
 import io
 import sys
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import BinaryIO, Optional, Dict, List, TextIO, Any
-
+import lzma
 import dnaio
 from xopen import xopen
 
@@ -15,6 +16,42 @@ try:
 except ImportError:
     # Windows
     resource = None  # type: ignore
+
+def open_rb(path: str):
+    """
+    Open a (possibly compressed) file for reading in binary mode.
+    Determines if the file is local or remote and opens it accordingly.
+    """
+    # stdin:
+    #if path == "-":
+    #    return sys.stdin.buffer
+    # local file: open with xopen routines
+    if os.path.exists(path):
+        return xopen_rb_raise_limit(path)
+    # assume remote file 
+    else:
+        return smart_open_rb(path)
+
+def smart_open_rb(path: str):
+        
+        # use smart_open library
+        try:
+            import smart_open
+            
+        except ImportError:
+            raise ImportError(
+                "The smart_open package is required to read from remote files"
+            )
+        # for xz : load additional library
+        if path.endswith(".xz"):
+            def _handle_xz(file_obj,mode='rb'):
+                return lzma.LZMAFile(file_obj,mode,format=lzma.FORMAT_XZ)
+            smart_open.register_compressor(".xz", _handle_xz)
+        try:
+            return smart_open.open(path, "rb")
+        except Exception as e:
+            logger.error("Error opening '%s': %s", path, e)
+            raise
 
 
 def xopen_rb_raise_limit(path: str):
@@ -138,7 +175,7 @@ class InputPaths:
         self.interleaved = interleaved
 
     def open(self) -> InputFiles:
-        files = [xopen_rb_raise_limit(path) for path in self.paths]
+        files = [open_rb(path) for path in self.paths]
         return InputFiles(*files, interleaved=self.interleaved)
 
 
