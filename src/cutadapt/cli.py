@@ -189,6 +189,8 @@ def get_argument_parser() -> ArgumentParser:
     # Compression level for gzipped output files. Not exposed since we have -Z
     group.add_argument("--compression-level", type=int, default=5,
         help=SUPPRESS)
+    # transport_params passed to smart_open, see smart_open documentation. can be a json file or a json string
+    group.add_argument("--transport-params", type=str, default="",help=SUPPRESS)
     # Disable adapter index creation
     group.add_argument("--no-index", dest="index", default=True, action="store_false", help=SUPPRESS)
 
@@ -567,7 +569,7 @@ def determine_paired(args) -> bool:
 
 
 def make_input_paths(
-    inputs: Sequence[str], paired: bool, interleaved: bool
+    inputs: Sequence[str], paired: bool, interleaved: bool, transport_params: str
 ) -> InputPaths:
     """
     Do some other error checking of the input file names and return InputPaths.
@@ -605,10 +607,15 @@ def make_input_paths(
 
     if input_paired_filename:
         return InputPaths(
-            input_filename, input_paired_filename, interleaved=interleaved
+            input_filename,
+            input_paired_filename,
+            interleaved=interleaved,
+            transport_params=transport_params,
         )
     else:
-        return InputPaths(input_filename, interleaved=interleaved)
+        return InputPaths(
+            input_filename, interleaved=interleaved, transport_params=transport_params
+        )
 
 
 def check_arguments(args, paired: bool) -> None:
@@ -1208,16 +1215,18 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     file_opener = FileOpener(
         compression_level=args.compression_level,
         threads=estimate_compression_threads(cores),
+        transport_params=args.transport_params,
     )
     if sys.stderr.isatty() and not args.quiet and not args.debug:
         progress = Progress()
     else:
         progress = DummyProgress()
     paired = determine_paired(args)
-
     try:
         is_interleaved_input = args.interleaved and len(args.inputs) == 1
-        input_paths = make_input_paths(args.inputs, paired, is_interleaved_input)
+        input_paths = make_input_paths(
+            args.inputs, paired, is_interleaved_input, args.transport_params
+        )
         check_arguments(args, paired)
         adapters, adapters2 = adapters_from_args(args)
         log_adapters(adapters, adapters2 if paired else None)
