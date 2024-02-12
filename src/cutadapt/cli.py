@@ -1144,6 +1144,10 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
     """
     start_time = time.time()
     parser = get_argument_parser()
+    if not cmdlineargs:
+        parser.print_usage()
+        sys.exit(2)
+
     args, leftover_args = parser.parse_known_args(args=cmdlineargs)
     # Setup logging only if there are not already any handlers (can happen when
     # this function is being called externally such as from unit tests)
