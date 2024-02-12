@@ -105,7 +105,7 @@ from cutadapt.predicates import (
 from cutadapt.report import full_report, minimal_report, Statistics
 from cutadapt.pipeline import SingleEndPipeline, PairedEndPipeline
 from cutadapt.runners import make_runner
-from cutadapt.files import InputPaths, OutputFiles, FileOpener, FileFormat
+from cutadapt.files import InputPaths, OutputFiles, FileOpener
 from cutadapt.steps import (
     InfoFileWriter,
     PairedSingleEndStep,
@@ -459,41 +459,6 @@ def parse_lengths(s: str) -> Tuple[Optional[int], ...]:
             f"Cannot parse '{s}': At least one length needs to be given"
         )
     return tuple(values)
-
-
-def open_output_files(
-    args,
-    file_opener: FileOpener,
-    proxied: bool,
-    input_file_format: FileFormat,
-    interleaved: bool,
-) -> OutputFiles:
-    """
-    Return an OutputFiles instance. If demultiplex is True, the untrimmed, untrimmed2, out and out2
-    attributes are not opened files, but paths (out and out2 with the '{name}' template).
-    """
-    complain_about_duplicate_paths(
-        [
-            args.rest_file,
-            args.info_file,
-            args.wildcard_file,
-            args.too_short_output,
-            args.too_short_paired_output,
-            args.too_long_output,
-            args.too_long_paired_output,
-            args.untrimmed_output,
-            args.untrimmed_paired_output,
-            args.output,
-            args.paired_output,
-        ]
-    )
-
-    return OutputFiles(
-        proxied=proxied,
-        qualities=input_file_format.has_qualities(),
-        interleaved=interleaved,
-        file_opener=file_opener,
-    )
 
 
 def complain_about_duplicate_paths(paths: List[str]):
@@ -1221,13 +1186,27 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
         check_arguments(args, paired)
         adapters, adapters2 = adapters_from_args(args)
         log_adapters(adapters, adapters2 if paired else None)
+        complain_about_duplicate_paths(
+            [
+                args.rest_file,
+                args.info_file,
+                args.wildcard_file,
+                args.too_short_output,
+                args.too_short_paired_output,
+                args.too_long_output,
+                args.too_long_paired_output,
+                args.untrimmed_output,
+                args.untrimmed_paired_output,
+                args.output,
+                args.paired_output,
+            ]
+        )
 
         with make_runner(input_paths, cores, args.buffer_size) as runner:
-            outfiles = open_output_files(
-                args,
-                file_opener,
+            outfiles = OutputFiles(
                 proxied=cores > 1,
-                input_file_format=runner.input_file_format(),
+                qualities=runner.input_file_format().has_qualities(),
+                file_opener=file_opener,
                 interleaved=args.interleaved,
             )
             pipeline = make_pipeline_from_args(
