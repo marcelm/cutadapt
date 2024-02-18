@@ -149,6 +149,10 @@ class ProxyWriter(ABC):
 
 
 class ProxyTextFile(ProxyWriter):
+    """
+    A file object for writing in text mode that is backed by a BytesIO object
+    """
+
     def __init__(self):
         self._buffer = io.BytesIO()
         self._file = io.TextIOWrapper(self._buffer)
@@ -172,6 +176,10 @@ class ProxyTextFile(ProxyWriter):
 
 
 class ProxyRecordWriter(ProxyWriter):
+    """
+    A writer for FASTA, FASTQ records etc. that is backed by a BytesIO object
+    """
+
     def __init__(self, n_files: int, **kwargs):
         self._n_files = n_files
         self._kwargs = kwargs
@@ -210,6 +218,7 @@ class OutputFiles:
             file_opener if file_opener is not None else FileOpener()
         )
         self._binary_files: List[BinaryIO] = []
+        self._binary_files_to_close: List[BinaryIO] = []
         self._text_files: List[TextIO] = []
         self._writers: List[Any] = []
         self._proxy_files: List[ProxyWriter] = []
@@ -226,6 +235,7 @@ class OutputFiles:
         if self._proxied:
             binary_file = self._file_opener.xopen(path, "wb")
             self._binary_files.append(binary_file)
+            self._binary_files_to_close.append(binary_file)
             proxy_file = ProxyTextFile()
             self._proxy_files.append(proxy_file)
             return proxy_file
@@ -253,6 +263,7 @@ class OutputFiles:
             binary_file = self._file_opener.xopen(path, "wb")
             binary_files.append(binary_file)
             self._binary_files.append(binary_file)
+            self._binary_files_to_close.append(binary_file)
         if self._proxied:
             proxy_writer = ProxyRecordWriter(len(paths), **kwargs)
             self._proxy_files.append(proxy_writer)
@@ -262,21 +273,21 @@ class OutputFiles:
             self._writers.append(writer)
             return writer
 
-    def open_record_writer_from_binary_io(
-        self, file: BinaryIO, interleaved: bool = False, force_fasta: bool = False
+    def open_stdout_record_writer(
+        self, interleaved: bool = False, force_fasta: bool = False
     ):
-        self._binary_files.append(file)
+        self._binary_files.append(sys.stdout.buffer)
         kwargs: Dict[str, Any] = dict(
             qualities=self._qualities, interleaved=interleaved
         )
-        if force_fasta and file is sys.stdout.buffer:
+        if force_fasta:
             kwargs["fileformat"] = "fasta"
         if self._proxied:
             proxy_writer = ProxyRecordWriter(1, **kwargs)
             self._proxy_files.append(proxy_writer)
             return proxy_writer
         else:
-            writer = self._file_opener.dnaio_open(file, mode="w", **kwargs)
+            writer = self._file_opener.dnaio_open(sys.stdout.buffer, mode="w", **kwargs)
             self._writers.append(writer)
             return writer
 
@@ -293,9 +304,8 @@ class OutputFiles:
                 f.close()
             for f in self._writers:
                 f.close()
-        for bf in self._binary_files:
-            if bf is not sys.stdout.buffer:
-                bf.close()
+        for bf in self._binary_files_to_close:
+            bf.close()
 
 
 class FileFormat(Enum):

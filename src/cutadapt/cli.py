@@ -626,7 +626,7 @@ def check_arguments(args, paired: bool) -> None:
 
 
 def make_pipeline_from_args(  # noqa: C901
-    args, input_file_format, outfiles, paired, adapters, adapters2, default_outfile
+    args, input_file_format, outfiles, paired, adapters, adapters2
 ):
     """
     Set up a processing pipeline from parsed command-line arguments.
@@ -904,8 +904,7 @@ def make_pipeline_from_args(  # noqa: C901
             )
         else:
             if args.output is None:
-                out = outfiles.open_record_writer_from_binary_io(
-                    default_outfile,
+                out = outfiles.open_stdout_record_writer(
                     interleaved=paired and args.interleaved,
                     force_fasta=args.fasta,
                 )
@@ -1134,13 +1133,10 @@ def main_cli():  # pragma: no cover
     return 0
 
 
-def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
+def main(cmdlineargs) -> Statistics:
     """
     Set up a processing pipeline from the command-line arguments, run it and return
     a Statistics object.
-
-    default_outfile is the file to which trimmed reads are sent if the ``-o``
-    parameter is not used.
     """
     start_time = time.time()
     parser = get_argument_parser()
@@ -1220,7 +1216,6 @@ def main(cmdlineargs, default_outfile=sys.stdout.buffer) -> Statistics:
                 paired,
                 adapters,
                 adapters2,
-                default_outfile,
             )
             logger.info(
                 "Processing %s reads on %d core%s ...",

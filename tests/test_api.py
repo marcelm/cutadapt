@@ -7,6 +7,7 @@ The tests in this module do not check results, they are just here to
 ensure that the code as shown can be executed.
 """
 import copy
+import io
 import json
 import os
 
@@ -22,6 +23,14 @@ from cutadapt.steps import (
 )
 from cutadapt.utils import DummyProgress
 from utils import datapath
+
+
+def test_main_without_sys_stdout_buffer_available(mocker):
+    """Within e.g. IPython, sys.stdout.buffer does not exist"""
+    from cutadapt.cli import main
+
+    mocker.patch("sys.stdout", io.StringIO())
+    main(["-o", os.devnull, datapath("small.fastq")])
 
 
 def test_command_line():
