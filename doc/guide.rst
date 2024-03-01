@@ -2077,8 +2077,26 @@ or this ::
 
     R1: reverseprimer-sequence  R2: barcode-forwardprimer-sequence
 
-To demultiplex such data with Cutadapt, choose one of the orientations first and
-demultiplex the reads as if only that existed in the data, using a command like this ::
+To demultiplex such data, use :ref:`the --revcomp option <reverse-complement>`.
+When used with paired-end reads, Cutadapt searches both R1/R2 as given, but
+then swaps R1 and R2 and searches that as well. It then keeps the swapped or
+unswapped version depending on where a barcode could be found.
+Example::
+
+    cutadapt --revcomp \
+        -g ^file:barcodes.fasta \
+        -o demultiplexed-{name}.R1.fastq.gz \
+        -p demultiplexed-{name}.R2.fastq.gz \
+        R1.fastq.gz R2.fastq.gz
+
+Option ``--revcomp`` is only supported starting with Cutadapt 4.6.
+For earlier versions, the following instructions can be used.
+The idea is to run Cutadapt twice, once with R1 and R2 as normal and then
+with R1 and R2 swapped.
+
+For Cutadapt versions before 4.6, choose one of the orientations first
+and demultiplex the reads as if only that existed in the data,
+using a command like this::
 
     cutadapt -g ^file:barcodes.fasta \
         -o round1-{name}.R1.fastq.gz \
@@ -2089,7 +2107,7 @@ Then all the read pairs in which no barcode could be found will end up in
 ``round1-unknown.R1.fastq.gz`` and ``round1-unknown.R2.fastq.gz``. This will
 also include the pairs in which the barcode was not actually in R1, but in R2. To
 demultiplex these reads as well, run Cutadapt a second time with those “unknown”
-files as input, but also reverse the roles of R1 and R2 ::
+files as input, but also reverse the roles of R1 and R2::
 
     cutadapt -g ^file:barcodes.fasta \
         -o round2-{name}.R2.fastq.gz \
