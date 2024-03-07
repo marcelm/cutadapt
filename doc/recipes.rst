@@ -338,3 +338,64 @@ Output::
 
     >r
     AA
+
+
+.. _many-samples:
+
+Processing many samples (with a for loop)
+-----------------------------------------
+
+Cutadapt can only process one set of input reads or read pairs at a time.
+If you have multiple inputs, possibly corresponding to multiple samples,
+Cutadapt needs to be run once for each input.
+Instead of typing in each command,
+this can be done with a ``for`` loop in the shell.
+
+Single-end reads
+~~~~~~~~~~~~~~~~
+
+We start with the simpler case of processing many single-end files.
+Let’s say these are the input files::
+
+    Sample1_L001_R1_001.fastq.gz
+    Sample2_L001_R1_001.fastq.gz
+    Sample3_L001_R1_001.fastq.gz
+    ...
+
+Then this loop will run ``cutadapt`` on each file and produce output files named
+``trimmed-Sample1_L001_R1_001.fastq.gz`` etc.::
+
+    for f in *.fastq.gz; do
+        cutadapt ... -o trimmed-${f} ${f}
+    done
+
+Of course the ``...`` need to be replaced with the trimming options you want to
+use. You can write this on one line as well::
+
+    for f in *.fastq.gz; do cutadapt ... -o trimmed-${f} ${f}; done
+
+
+Paired-end reads
+~~~~~~~~~~~~~~~~
+
+Let us assume the input consists of paired-end files named like this::
+
+    Sample1_L001_R1_001.fastq.gz
+    Sample1_L001_R2_001.fastq.gz
+    Sample2_L001_R1_001.fastq.gz
+    Sample2_L001_R2_001.fastq.gz
+    Sample3_L001_R1_001.fastq.gz
+    Sample3_L001_R2_001.fastq.gz
+    ...
+
+Then this loop can be used to trim each file pair::
+
+    for r1 in *_R1_*.fastq.gz; do
+        r2=${r1/_R1_/_R2_}
+        cutadapt ... -o trimmed-${r1} -p trimmed-${r2} ${r1} ${r2}
+    done
+
+Here, the trick is to loop only over the R1 files to ensure we run
+Cutadapt only once for each pair. In the ``r2=...`` line,
+we re-create the R2 file name from the R1 file name
+by replacing ``_R1_`` with ``_R2_``.
