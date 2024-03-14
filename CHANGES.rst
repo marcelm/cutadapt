@@ -2,11 +2,11 @@
 Changelog
 =========
 
-development version
--------------------
+v4.7 (2024-03-14)
+-----------------
 
-* :issue:`767`: Error messages are always sent to stderr. (They were
-  previously sent to stdout when using `-o`.)
+* :issue:`767`: Error messages are always sent to stderr. They were
+  previously sent to stdout when using `-o`.
 * Cutadapt can now read single-end data from unaligned BAM files (uBAM).
 * Dropped support for Python 3.7.
 
