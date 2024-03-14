@@ -72,6 +72,25 @@ def test_standard_output(tmp_path, cores):
     assert_files_equal(cutpath("small.fastq"), out_path)
 
 
+def test_errors_are_printed_to_stderr(tmp_path):
+    out_path = os.fspath(tmp_path / "out.fastq")
+    py = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "cutadapt",
+            "-o",
+            out_path,
+            tmp_path / "does-not-exist.fastq",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    stdout_bytes, stderr_bytes = py.communicate()
+    assert b"No such file or directory" in stderr_bytes
+    assert b"No such file or directory" not in stdout_bytes
+
+
 def test_explicit_standard_output(tmp_path, cores):
     """Write FASTQ to standard output (using "-o -")"""
 

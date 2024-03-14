@@ -51,5 +51,11 @@ def setup_logging(logger, log_to_stderr=True, minimal=False, quiet=False, debug=
     else:
         level = logging.INFO
     stream_handler.setLevel(level)
+    stderr_level = logging.WARNING
+    stream_handler.addFilter(lambda record: record.levelno < stderr_level)
     logger.setLevel(level)
     logger.addHandler(stream_handler)
+
+    stderr_handler = CrashingHandler(sys.stderr)
+    stderr_handler.setLevel(stderr_level)
+    logger.addHandler(stderr_handler)
