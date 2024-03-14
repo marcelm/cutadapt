@@ -82,7 +82,7 @@ jobs:
         CIBW_SKIP: "cp37-*"
     - uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.os }}
         path: wheelhouse/*.whl
 
   publish:
@@ -97,8 +97,9 @@ jobs:
         path: dist/
     - uses: actions/download-artifact@v4
       with:
-        name: wheels
+        pattern: wheels-*
         path: dist/
+        merge-multiple: true
     - name: Publish alpha release to test PyPI
       if: contains(github.ref_name, 'a')
       uses: pypa/gh-action-pypi-publish@release/v1
