@@ -157,8 +157,8 @@ To install a binary package via the pkgsrc system (for example on NetBSD), run :
 
     pkgin install py311-cutadapt
 
-The pkgsrc system also allows installation from source,
-see the `https://pkgsrc.org/ <pkgsrc home page>`_.
+The pkgsrc system also allows installation from source on any POSIX platform
+(including macOS), see the `https://pkgsrc.org/ <pkgsrc home page>`_.
 
 
 Shared installation (on a cluster)
