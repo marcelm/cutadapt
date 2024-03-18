@@ -141,6 +141,26 @@ When running Cutadapt this way, you will need to remember to write
 ``py -m cutadapt`` instead of just ``cutadapt``.
 
 
+FreeBSD ports and pkgsrc
+------------------------
+
+Cutadapt can be installed via the FreeBSD ports system.
+To install from a binary package, run::
+
+    pkg install py39-cutadapt
+
+The ``p39`` will change from time to time (``py310``, ``py311`` etc.).
+Alternatively, peruse the `FreeBSD ports documentation <https://www.freebsd.org/ports/index.html>`_
+to install from source, which may result in better optimized binaries.
+
+To install a binary package via the pkgsrc system (for example on NetBSD), run ::
+
+    pkgin install py311-cutadapt
+
+The pkgsrc system also allows installation from source,
+see the `https://pkgsrc.org/ <pkgsrc home page>`_.
+
+
 Shared installation (on a cluster)
 ----------------------------------
 
