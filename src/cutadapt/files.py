@@ -256,6 +256,8 @@ class OutputFiles:
             raise ValueError("Cannot write to two files when interleaved is True")
         if len(paths) == 1 and paths[0] == "-" and force_fasta:
             kwargs["fileformat"] = "fasta"
+        if paths == (None,):
+            paths = ["-"]
         for path in paths:
             assert path is not None
         binary_files = []

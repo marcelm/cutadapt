@@ -2,6 +2,12 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* :issue:`773`: Fix crash when writing interleaved data to stdout
+  (that is, when no ``-o`` option is provided).
+
 v4.7 (2024-03-14)
 -----------------
 

@@ -72,6 +72,30 @@ def test_standard_output(tmp_path, cores):
     assert_files_equal(cutpath("small.fastq"), out_path)
 
 
+def test_write_interleaved_to_standard_output(tmp_path, cores):
+    out_path = os.fspath(tmp_path / "out.fastq")
+    with open(out_path, "w") as out_file:
+        py = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "cutadapt",
+                "--cores",
+                str(cores),
+                *"-q 20 -a TTAGACATAT -A CAGTGGAGTA -m 14 -M 90".split(),
+                "-a",
+                "TTAGACATAT",
+                "--interleaved",
+                datapath("paired.1.fastq"),
+                datapath("paired.2.fastq"),
+            ],
+            stdout=out_file,
+        )
+        _ = py.communicate()
+
+    assert_files_equal(cutpath("interleaved.fastq"), out_path)
+
+
 def test_errors_are_printed_to_stderr(tmp_path):
     out_path = os.fspath(tmp_path / "out.fastq")
     py = subprocess.Popen(
