@@ -257,7 +257,7 @@ class OutputFiles:
         if len(paths) == 1 and paths[0] == "-" and force_fasta:
             kwargs["fileformat"] = "fasta"
         if paths == (None,):
-            paths = ["-"]
+            paths = ("-",)
         for path in paths:
             assert path is not None
         binary_files = []
