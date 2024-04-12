@@ -26,7 +26,7 @@ from cutadapt.utils import Progress
 
 logger = logging.getLogger()
 
-mpctx = multiprocessing.get_context("spawn")
+mpctx = multiprocessing.get_context()
 
 # See https://github.com/python/typeshed/issues/9860
 if TYPE_CHECKING:
