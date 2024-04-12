@@ -1128,3 +1128,17 @@ def test_json_report_with_demultiplexing_and_discard_untrimmed(tmp_path):
     )
     assert stats.n == 100
     assert stats.written == 64
+
+
+@pytest.mark.timeout(1)
+def test_does_not_hang_on_error_in_reader_process(tmp_path, cores):
+    with pytest.raises(SystemExit) as e:
+        main(
+            [
+                f"--cores={cores}",
+                "-o",
+                str(tmp_path / "out.fastq"),
+                str(tmp_path / "does-not-exist.fastq"),
+            ],
+        )
+    assert e.value.args[0] == 1

@@ -90,11 +90,16 @@ class ReaderProcess(mpctx_Process):
             sys.stdin = os.fdopen(self.stdin_fd)
         try:
             with ExitStack() as stack:
-                files = [
-                    stack.enter_context(xopen_rb_raise_limit(path))
-                    for path in self._paths
-                ]
-                file_format = detect_file_format(files[0])
+                try:
+                    files = [
+                        stack.enter_context(xopen_rb_raise_limit(path))
+                        for path in self._paths
+                    ]
+                    file_format = detect_file_format(files[0])
+                except Exception as e:
+                    self._file_format_connection.send(-2)
+                    self._file_format_connection.send((e, traceback.format_exc()))
+                    raise
                 self._file_format_connection.send(file_format)
                 if file_format is not None:
                     for index, chunks in enumerate(self._read_chunks(*files)):
@@ -313,7 +318,7 @@ class ParallelPipelineRunner(PipelineRunner):
         )
         self._reader_process.daemon = True
         self._reader_process.start()
-        file_format: Optional[FileFormat] = file_format_connection_r.recv()
+        file_format: Optional[FileFormat] = self._try_receive(file_format_connection_r)
         if file_format is None:
             raise dnaio.exceptions.UnknownFileFormat(
                 f"Format of input file '{self._inpaths.paths[0]}' not recognized."
@@ -375,7 +380,7 @@ class ParallelPipelineRunner(PipelineRunner):
     @staticmethod
     def _try_receive(connection):
         """
-        Try to receive data over `self.connection` and return it.
+        Try to receive data over `connection` and return it.
         If an exception was received, raise it.
         """
         result = connection.recv()
