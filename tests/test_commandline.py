@@ -1142,3 +1142,17 @@ def test_does_not_hang_on_error_in_reader_process(tmp_path, cores):
             ],
         )
     assert e.value.args[0] == 1
+
+
+def test_process_substitution(tmp_path, cores):
+    with open(datapath("small.fastq")) as infile:
+        inpath = f"/dev/fd/{infile.fileno()}"
+        main(
+            [
+                f"--cores={cores}",
+                "-o",
+                str(tmp_path / "out.fastq"),
+                inpath,
+            ]
+        )
+    assert_files_equal(datapath("small.fastq"), tmp_path / "out.fastq")
