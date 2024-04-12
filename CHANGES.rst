@@ -2,9 +2,11 @@
 Changelog
 =========
 
-development version
+v4.8 (2024-04-12)
 -------------------
 
+* :issue:`772`: Restore ability to provide input files via
+  process substitution.
 * :issue:`773`: Fix crash when writing interleaved data to stdout
   (that is, when no ``-o`` option is provided).
 
