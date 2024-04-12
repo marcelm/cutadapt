@@ -1144,6 +1144,7 @@ def test_does_not_hang_on_error_in_reader_process(tmp_path, cores):
     assert e.value.args[0] == 1
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="Platform specific")
 def test_process_substitution(tmp_path, cores):
     with open(datapath("small.fastq")) as infile:
         inpath = f"/dev/fd/{infile.fileno()}"
