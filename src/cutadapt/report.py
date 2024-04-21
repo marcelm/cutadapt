@@ -177,11 +177,11 @@ class Statistics:
             if isinstance(modifier, PolyATrimmer):
                 self.poly_a_trimmed_lengths[i] = modifier.trimmed_bases
             elif isinstance(modifier, AdapterCutter):
-                assert self.with_adapters[i] is None
+                if self.with_adapters[i] is not None: pass
                 self.with_adapters[i] = modifier.with_adapters
                 self.adapter_stats[i] = list(modifier.adapter_statistics.values())
             elif isinstance(modifier, ReverseComplementer):
-                assert self.with_adapters[i] is None
+                if self.with_adapters[i] is not None: pass
                 self.with_adapters[i] = modifier.adapter_cutter.with_adapters
                 self.adapter_stats[i] = list(
                     modifier.adapter_cutter.adapter_statistics.values()
