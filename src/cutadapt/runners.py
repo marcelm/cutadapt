@@ -107,6 +107,9 @@ class ReaderProcess(mpctx_Process):
             self.shutdown()
         except Exception as e:
             # TODO better send this to a common "something went wrong" Queue
+            # This code is rarely executed because there is little that can go wrong
+            # splitting up the input into chunks. FASTQ/FASTA parsing problems
+            # are caught within the workers.
             for connection in self.connections:
                 connection.send(-2)
                 connection.send((e, traceback.format_exc()))
