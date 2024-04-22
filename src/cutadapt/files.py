@@ -77,22 +77,6 @@ class FileOpener:
         )
         return f
 
-    def xopen_or_none(self, path, mode):
-        """Return opened file or None if the path is None"""
-        if path is None:
-            return None
-        return self.xopen(path, mode)
-
-    def xopen_pair(self, path1: str, path2: Optional[str], mode):
-        if path1 is None and path2 is not None:
-            raise ValueError(
-                "When giving paths for paired-end files, only providing the second"
-                " file is not supported"
-            )
-        file1 = self.xopen_or_none(path1, mode)
-        file2 = self.xopen_or_none(path2, mode)
-        return file1, file2
-
     def dnaio_open(self, *args, **kwargs):
         kwargs["opener"] = self.xopen
         f = dnaio.open(*args, **kwargs)
@@ -104,13 +88,6 @@ class FileOpener:
                 f,
             )
         return f
-
-    def dnaio_open_raise_limit(self, *args, **kwargs):
-        """
-        Open a FASTA/FASTQ file for writing. If it fails because the number of open files
-        would be exceeded, try to raise the soft limit and re-try.
-        """
-        return open_raise_limit(self.dnaio_open, *args, **kwargs)
 
 
 class InputFiles:
