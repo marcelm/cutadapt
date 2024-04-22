@@ -30,7 +30,7 @@ mpctx = multiprocessing.get_context()
 
 # See https://github.com/python/typeshed/issues/9860
 if TYPE_CHECKING:
-    mpctx_Process = multiprocessing.Process
+    mpctx_Process = multiprocessing.Process  # pragma: no cover
 else:
     mpctx_Process = mpctx.Process
 

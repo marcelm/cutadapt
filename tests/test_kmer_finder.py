@@ -70,10 +70,7 @@ def test_kmer_finder_per_char_matching(ref_wildcards, query_wildcards):
         )
         for comp_char in string.ascii_letters:
             should_match = comp_char.encode("ascii") in matches
-            if kmer_finder.kmers_present(comp_char) is not should_match:
-                raise ValueError(
-                    f"{char} should{' ' if should_match else ' not '}match {comp_char}"
-                )
+            assert kmer_finder.kmers_present(comp_char) is should_match
 
 
 def test_kmer_finder_initialize_bigword():
@@ -111,7 +108,7 @@ def test_kmer_finder_finds_in_region():
     kmer_finder = KmerFinder([(-20, None, ["peace"])])
     # Finding peace, quotes from Mahatma Gandhi
     assert kmer_finder.kmers_present("Each one has to find his peace from within")
-    # Peace not found here because outside of the search range.
+    # Peace not found here because outside the search range.
     assert not kmer_finder.kmers_present(
         "And peace to be real must be unaffected by outside circumstances."
     )

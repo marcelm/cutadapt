@@ -203,7 +203,7 @@ def kmer_probability_analysis(
     return out.getvalue()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # This allows for easy debugging and benchmarking of the kmer heuristic code.
     import argparse
     from ._kmer_finder import KmerFinder
