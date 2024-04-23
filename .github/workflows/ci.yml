@@ -62,6 +62,8 @@ jobs:
       run: tox -e py$(echo ${{ matrix.python-version }} | tr -d .)
     - name: Upload coverage report
       uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   wheels:
     if: github.event_name == 'push' && github.ref_type == 'tag'
