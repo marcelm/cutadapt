@@ -56,7 +56,6 @@ class ReaderProcess(mpctx_Process):
         connections: Sequence[Connection],
         queue: multiprocessing.Queue,
         buffer_size: int,
-        stdin_fd: int,
     ):
         """
         Args:
@@ -81,12 +80,8 @@ class ReaderProcess(mpctx_Process):
         self.connections = connections
         self.queue = queue
         self.buffer_size = buffer_size
-        self.stdin_fd = stdin_fd
 
     def run(self):
-        if self.stdin_fd != -1:
-            sys.stdin.close()
-            sys.stdin = os.fdopen(self.stdin_fd)
         try:
             with ExitStack() as stack:
                 try:
@@ -310,12 +305,6 @@ class ParallelPipelineRunner(PipelineRunner):
         # the workers read from these connections
         connections = [mpctx.Pipe(duplex=False) for _ in range(self._n_workers)]
         self._connections, connw = zip(*connections)
-        try:
-            fileno = sys.stdin.fileno()
-        except io.UnsupportedOperation:
-            # This happens during tests: pytest sets sys.stdin to an object
-            # that does not have a file descriptor.
-            fileno = -1
 
         file_format_connection_r, file_format_connection_w = mpctx.Pipe(duplex=False)
         input_fds_pipe_r, input_fds_pipe_w = mpctx.Pipe()
@@ -326,7 +315,6 @@ class ParallelPipelineRunner(PipelineRunner):
             connections=connw,
             queue=self._need_work_queue,
             buffer_size=self._buffer_size,
-            stdin_fd=fileno,
         )
         self._reader_process.daemon = True
         self._reader_process.start()
