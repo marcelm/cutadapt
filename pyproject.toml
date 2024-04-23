@@ -23,7 +23,7 @@ requires-python = ">=3.8"
 dynamic = ["version"]
 dependencies = [
     "dnaio >= 1.2.0",
-    "xopen >= 1.6.0",
+    "xopen >= 2.0.1",
 ]
 
 [project.urls]

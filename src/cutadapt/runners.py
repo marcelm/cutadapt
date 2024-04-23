@@ -50,34 +50,33 @@ class ReaderProcess(mpctx_Process):
 
     def __init__(
         self,
-        *paths: str,
+        input_fds_pipe: Connection,
+        n_files: int,
         file_format_connection: Connection,
         connections: Sequence[Connection],
         queue: multiprocessing.Queue,
         buffer_size: int,
-        stdin_fd,
+        stdin_fd: int,
     ):
         """
         Args:
-            paths: path to input files
+            input_fds_pipe: a Pipe through which file descriptors for the input files are
+                sent
+            n_files: Number of input files (this many file descriptors need to be sent
+                over the input_fds_pipe)
             connections: a list of Connection objects, one for each worker.
             queue: a Queue of worker indices. A worker writes its own index into this
                 queue to notify the reader that it is ready to receive more data.
             buffer_size:
             stdin_fd:
-
-        Note:
-            This expects the paths to the input files as strings because these can be pickled
-            while file-like objects such as BufferedReader cannot. When using multiprocessing with
-            the "spawn" method, which is the default method on macOS, function arguments must be
-            picklable.
         """
         super().__init__()
-        if len(paths) > 2:
+        self._input_fds_pipe = input_fds_pipe
+        if n_files > 2:
             raise ValueError("Reading from more than two files currently not supported")
-        if not paths:
+        if n_files < 1:
             raise ValueError("Must provide at least one file")
-        self._paths = paths
+        self._n_files = n_files
         self._file_format_connection = file_format_connection
         self.connections = connections
         self.queue = queue
@@ -91,9 +90,17 @@ class ReaderProcess(mpctx_Process):
         try:
             with ExitStack() as stack:
                 try:
+                    fds = [
+                        multiprocessing.reduction.recv_handle(self._input_fds_pipe)
+                        for _ in range(self._n_files)
+                    ]
+                    self._input_fds_pipe.close()
+                    raw_files = [
+                        stack.enter_context(os.fdopen(fd, mode="rb")) for fd in fds
+                    ]
                     files = [
-                        stack.enter_context(xopen_rb_raise_limit(path))
-                        for path in self._paths
+                        stack.enter_context(xopen_rb_raise_limit(file))
+                        for file in raw_files
                     ]
                     file_format = detect_file_format(files[0])
                 except Exception as e:
@@ -311,8 +318,10 @@ class ParallelPipelineRunner(PipelineRunner):
             fileno = -1
 
         file_format_connection_r, file_format_connection_w = mpctx.Pipe(duplex=False)
+        input_fds_pipe_r, input_fds_pipe_w = mpctx.Pipe()
         self._reader_process = ReaderProcess(
-            *inpaths.paths,
+            input_fds_pipe_r,
+            n_files=len(inpaths.paths),
             file_format_connection=file_format_connection_w,
             connections=connw,
             queue=self._need_work_queue,
@@ -321,6 +330,20 @@ class ParallelPipelineRunner(PipelineRunner):
         )
         self._reader_process.daemon = True
         self._reader_process.start()
+
+        pid = self._reader_process.pid
+        for path in inpaths.paths:
+            if path == "-":
+                multiprocessing.reduction.send_handle(
+                    input_fds_pipe_w, sys.stdin.fileno(), pid
+                )
+            else:
+                with open(path, "rb") as f:
+                    multiprocessing.reduction.send_handle(
+                        input_fds_pipe_w, f.fileno(), pid
+                    )
+        input_fds_pipe_w.close()
+
         file_format: Optional[FileFormat] = self._try_receive(file_format_connection_r)
         if file_format is None:
             raise dnaio.exceptions.UnknownFileFormat(
