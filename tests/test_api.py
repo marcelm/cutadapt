@@ -154,3 +154,31 @@ def test_pipeline_paired(tmp_path, cores):
     # - too many submodules (flatter namespace)
     # - use xopen directly instead of file_opener;
     #   possibly with myxopen = functools.partial(xopen, ...)
+
+
+def test_two_adapter_cutters_and_reverse_complementer(tmp_path):
+    from cutadapt.pipeline import SingleEndPipeline
+    from cutadapt.files import OutputFiles, InputPaths
+    from cutadapt.modifiers import AdapterCutter, ReverseComplementer
+    from cutadapt.adapters import BackAdapter
+
+    adapter = BackAdapter(sequence="GATCGGAAGA")
+    modifiers = [
+        AdapterCutter([adapter]),
+        AdapterCutter([adapter]),
+        ReverseComplementer(AdapterCutter([adapter])),
+    ]
+    inpaths = InputPaths(datapath("small.fastq"))
+    with make_runner(inpaths, cores=1) as runner:
+        outfiles = OutputFiles(
+            proxied=False,
+            qualities=True,
+            interleaved=False,
+        )
+        steps = [SingleEndSink(outfiles.open_record_writer(tmp_path / "out.fastq"))]
+        pipeline = SingleEndPipeline(modifiers, steps)
+        stats = runner.run(pipeline, DummyProgress(), outfiles)
+    outfiles.close()
+
+    assert stats is not None
+    assert len(stats.as_json()["adapters_read1"]) == 3
