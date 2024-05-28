@@ -2,6 +2,12 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* :issue:`784`: Fix some unexpected trimming results for anchored 5'
+  adapters (due to an incorrectly initialized alignment score matrix).
+
 v4.8 (2024-04-12)
 -------------------
 

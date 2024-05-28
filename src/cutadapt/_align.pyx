@@ -363,7 +363,7 @@ cdef class Aligner:
         # fill out columns only until 'last'
         if not self.start_in_reference and not self.start_in_query:
             for i in range(m + 1):
-                column[i].score = 0
+                column[i].score = i * self._deletion_score
                 column[i].cost = max(i, min_n) * self._insertion_cost
                 column[i].origin = 0
         elif self.start_in_reference and not self.start_in_query:
@@ -373,7 +373,7 @@ cdef class Aligner:
                 column[i].origin = min(0, min_n - i)
         elif not self.start_in_reference and self.start_in_query:
             for i in range(m + 1):
-                column[i].score = 0
+                column[i].score = i * self._deletion_score
                 column[i].cost = i * self._insertion_cost
                 column[i].origin = max(0, min_n - i)
         else:
@@ -411,7 +411,8 @@ cdef class Aligner:
             int last_filled_i = 0
             int best_length
             int origin_increment = 1 if self.start_in_query else 0
-            int insertion_cost_increment = self._insertion_cost if not self.start_in_query else 0
+            int insertion_cost_increment = 0 if self.start_in_query else self._insertion_cost
+            int insertion_score_increment = 0 if self.start_in_query else self._insertion_score
             bint characters_equal
             bint is_acceptable
             int insertion_cost = self._insertion_cost
@@ -436,6 +437,7 @@ cdef class Aligner:
                 # fill in first entry in this column
                 column[0].origin += origin_increment
                 column[0].cost += insertion_cost_increment
+                column[0].score += insertion_score_increment
                 for i in range(1, last + 1):
                     if compare_ascii:
                         characters_equal = (s1[i-1] == s2[j-1])

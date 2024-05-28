@@ -75,6 +75,17 @@ def test_front_adapter_finds_leftmost_match():
     assert match.errors == 1
 
 
+def test_front_adapter_alignment_should_not_include_indel():
+    # Issue #784
+    adapter = PrefixAdapter("AAA", max_errors=1, min_overlap=3)
+    match = adapter.match_to("AATGTCAAA")
+    assert match.astart == 0
+    assert match.astop == 3
+    assert match.rstart == 0
+    assert match.rstop == 3
+    assert match.errors == 1
+
+
 def test_rightmost_front_adapter():
     adapter = RightmostFrontAdapter("CTGAATT", max_errors=1, min_overlap=3)
     match = adapter.match_to("GGCTGAATTGGG")
