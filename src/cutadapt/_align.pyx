@@ -182,6 +182,7 @@ cdef class Aligner:
         bint wildcard_query
         bint debug
         object _dpmatrix
+        object _scorematrix
         str reference  # reference as set by the user (as str)
         bytes _reference  # internal, bytes version of reference (possibly translated to a non-ASCII representation)
         readonly int effective_length
@@ -212,6 +213,7 @@ cdef class Aligner:
         self._min_overlap = min_overlap
         self.debug = False
         self._dpmatrix = None
+        self._scorematrix = None
         if indel_cost < 1:
             raise ValueError('indel_cost must be at least 1')
         self._insertion_cost = indel_cost
@@ -282,10 +284,14 @@ cdef class Aligner:
         def __get__(self):
             return self._dpmatrix
 
+    property scorematrix:
+        def __get__(self):
+            return self._scorematrix
+
     def enable_debug(self):
         """
-        Store the dynamic programming matrix while running the locate() method
-        and make it available in the .dpmatrix attribute.
+        Store the dynamic programming matrices while running the locate() method
+        and make them available in the .dpmatrix and .scorematrix attributes.
         """
         self.debug = True
 
@@ -378,8 +384,10 @@ cdef class Aligner:
 
         if self.debug:
             self._dpmatrix = DPMatrix(self.reference, query)
+            self._scorematrix = DPMatrix(self.reference, query)
             for i in range(m + 1):
                 self._dpmatrix.set_entry(i, min_n, column[i].cost)
+                self._scorematrix.set_entry(i, min_n, column[i].score)
         cdef _Match best
         best.ref_stop = m
         best.query_stop = n
@@ -478,6 +486,7 @@ cdef class Aligner:
                     with gil:
                         for i in range(last + 1):
                             self._dpmatrix.set_entry(i, j, column[i].cost)
+                            self._scorematrix.set_entry(i, j, column[i].score)
                 while last >= 0 and column[last].cost > k:
                     last -= 1
                 # last can be -1 here, but will be incremented next.

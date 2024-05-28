@@ -59,6 +59,14 @@ def returns_defaultdict_int():
     return defaultdict(int)
 
 
+def print_matrices(aligner):
+    """For debugging"""
+    print("Edit distances:")
+    print(aligner.dpmatrix)
+    print("Scores:")
+    print(aligner.scorematrix)
+
+
 class EndStatistics:
     """Statistics about the 5' or 3' end"""
 
@@ -709,7 +717,7 @@ class FrontAdapter(SingleAdapter):
             sequence
         )
         if self._debug:
-            print(self.aligner.dpmatrix)
+            print_matrices(self.aligner)
         if alignment is None:
             return None
         return RemoveBeforeMatch(*alignment, adapter=self, sequence=sequence)
@@ -761,7 +769,7 @@ class RightmostFrontAdapter(FrontAdapter):
             reversed_sequence
         )
         if self._debug:
-            print(self.aligner.dpmatrix)
+            print_matrices(self.aligner.dpmatrix)
         if alignment is None:
             return None
 
@@ -817,7 +825,7 @@ class BackAdapter(SingleAdapter):
             sequence
         )
         if self._debug:
-            print(self.aligner.dpmatrix)  # pragma: no cover
+            print_matrices(self.aligner)  # pragma: no cover
         if alignment is None:
             return None
         return RemoveAfterMatch(*alignment, adapter=self, sequence=sequence)
@@ -860,7 +868,7 @@ class AnywhereAdapter(SingleAdapter):
             return None
         alignment = self.aligner.locate(sequence.upper())
         if self._debug:
-            print(self.aligner.dpmatrix)
+            print_matrices(self.aligner)
         if alignment is None:
             return None
         # guess: if alignment starts at pos 0, it’s a 5' adapter
@@ -903,7 +911,7 @@ class NonInternalFrontAdapter(FrontAdapter):
         alignment = self.aligner.locate(sequence)
         if self._debug:
             try:
-                print(self.aligner.dpmatrix)
+                print_matrices(self.aligner)
             except AttributeError:
                 pass
         if alignment is None:
@@ -940,7 +948,7 @@ class NonInternalBackAdapter(BackAdapter):
         alignment = self.aligner.locate(sequence)
         if self._debug:
             try:
-                print(self.aligner.dpmatrix)  # pragma: no cover
+                print_matrices(self.aligner)  # pragma: no cover
             except AttributeError:
                 pass
         if alignment is None:
