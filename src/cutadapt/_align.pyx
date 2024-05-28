@@ -364,22 +364,22 @@ cdef class Aligner:
         if not self.start_in_reference and not self.start_in_query:
             for i in range(m + 1):
                 column[i].score = i * self._deletion_score
-                column[i].cost = max(i, min_n) * self._insertion_cost
+                column[i].cost = max(i, min_n) * self._deletion_cost
                 column[i].origin = 0
         elif self.start_in_reference and not self.start_in_query:
             for i in range(m + 1):
                 column[i].score = 0
-                column[i].cost = min_n * self._insertion_cost
+                column[i].cost = min_n * self._deletion_cost
                 column[i].origin = min(0, min_n - i)
         elif not self.start_in_reference and self.start_in_query:
             for i in range(m + 1):
                 column[i].score = i * self._deletion_score
-                column[i].cost = i * self._insertion_cost
+                column[i].cost = i * self._deletion_cost
                 column[i].origin = max(0, min_n - i)
         else:
             for i in range(m + 1):
                 column[i].score = 0
-                column[i].cost = min(i, min_n) * self._insertion_cost
+                column[i].cost = min(i, min_n) * self._deletion_cost
                 column[i].origin = min_n - i
 
         if self.debug:
@@ -456,26 +456,24 @@ cdef class Aligner:
                         current_entry = column[i]
                         previous_entry = column[i-1]
                         cost_diag = diag_entry.cost + 1
-                        cost_deletion = current_entry.cost + deletion_cost
-                        cost_insertion = previous_entry.cost + insertion_cost
+                        cost_insertion = current_entry.cost + insertion_cost
+                        cost_deletion = previous_entry.cost + deletion_cost
 
                         if cost_diag <= cost_deletion and cost_diag <= cost_insertion:
                             # MISMATCH
                             cost = cost_diag
                             origin = diag_entry.origin
                             score = diag_entry.score + mismatch_score
-                        elif cost_insertion <= cost_deletion:
-                            # INSERTION
-                            cost = cost_insertion
-                            origin = previous_entry.origin
-                            # penalize insertions slightly
-                            score = previous_entry.score + insertion_score
-                        else:
+                        elif cost_deletion <= cost_insertion:
                             # DELETION
                             cost = cost_deletion
+                            origin = previous_entry.origin
+                            score = previous_entry.score + deletion_score
+                        else:
+                            # INSERTION
+                            cost = cost_insertion
                             origin = current_entry.origin
-                            # penalize deletions slightly
-                            score = current_entry.score + deletion_score
+                            score = current_entry.score + insertion_score
 
                     # Remember the current cell for next iteration
                     diag_entry = column[i]
