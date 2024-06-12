@@ -368,6 +368,28 @@ def test_paired_end_cut(run_paired, cores):
     )
 
 
+def test_paired_end_length(run_paired, cores):
+    run_paired(
+        "--length 5",
+        in1="paired.1.fastq",
+        in2="paired.2.fastq",
+        expected1="length5.1.fastq",
+        expected2="length5.2.fastq",
+        cores=cores,
+    )
+
+
+def test_paired_end_negative_length(run_paired, cores):
+    run_paired(
+        "--length -5",
+        in1="paired.1.fastq",
+        in2="paired.2.fastq",
+        expected1="length-5.1.fastq",
+        expected2="length-5.2.fastq",
+        cores=cores,
+    )
+
+
 def test_paired_end_upper_a_only(run_paired, cores):
     run_paired(
         "-A CAGTGGAGTA",
