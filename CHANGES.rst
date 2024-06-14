@@ -5,6 +5,8 @@ Changelog
 development version
 -------------------
 
+* :issue:`788`: Added option ``-L`` as a counterpart to ``-l``/``--length``,
+  which allows shortening R1 and R2 to different lengths.
 * :issue:`784`: Fix some unexpected trimming results for anchored 5'
   adapters (due to an incorrectly initialized alignment score matrix).
 

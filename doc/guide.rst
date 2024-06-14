@@ -1172,6 +1172,12 @@ the short version ``-l``::
 This shortens all reads from ``input.fastq.gz`` down to 10 bases. The removed bases
 are those on the 3' end.
 
+For paired-end data, by default,
+R1 and R2 and shortened in the same way.
+To trim them to different lengths, use option ``-L``:
+The value given for ``-l`` is applied to R1
+and the value given for ``-L`` is applied to R2.
+
 If you want to remove a fixed number of bases from each read, use
 :ref:`the --cut option instead <cut-bases>`.
 
@@ -1498,11 +1504,12 @@ Cutadapt will always ensure that it is also removed from the other file.
 
 The following command-line options are applied to *both* reads:
 
-* ``-q`` (along with ``--quality-base``)
+* ``-q`` (along with ``--quality-base``).
+  You can use ``-Q`` to specify a different quality-trimming threshold for R2.
 * ``--times`` applies to all the adapters given
 * ``--trim-n``
 * ``--action``
-* ``--length``
+* ``--length``. You can use ``-L`` to shorten R2 to a different length than R1.
 * ``--length-tag``
 * ``--prefix``, ``--suffix``
 

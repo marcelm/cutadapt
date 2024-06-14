@@ -380,6 +380,8 @@ def get_argument_parser() -> ArgumentParser:
         help="Remove LENGTH bases from R2")
     group.add_argument("-Q", dest="quality_cutoff2", default=None, metavar="[5'CUTOFF,]3'CUTOFF",
         help="Quality-trimming cutoff for R2. Default: same as for R1")
+    group.add_argument("-L", dest="length2", type=int, default=None, metavar="LENGTH",
+        help="Shorten R2 to LENGTH. Default: same as for R1")
     group.add_argument("-p", "--paired-output", metavar="FILE",
         help="Write R2 to FILE.")
     group.add_argument("--pair-adapters", action="store_true",
@@ -523,6 +525,7 @@ def determine_paired(args) -> bool:
         or args.interleaved
         or args.adapters2
         or args.cut2
+        or args.length2
         or args.pair_filter
         or args.untrimmed_paired_output
         or args.too_short_paired_output
@@ -953,6 +956,7 @@ def make_pipeline_from_args(  # noqa: C901
         else:
             modifiers.append(PolyATrimmer())
 
+    modifiers.extend(make_shortener(args.length, args.length2, paired))
     for modifier in modifiers_applying_to_both_ends_if_paired(args):
         if paired:
             modifiers.append((modifier, copy.copy(modifier)))
@@ -1097,9 +1101,21 @@ def make_adapter_cutter(
                 yield adapter_cutter
 
 
+def make_shortener(length1: Optional[int], length2: Optional[int], paired: bool):
+    if paired:
+        if length1 is not None and length2 is not None:
+            yield Shortener(length1), Shortener(length2)
+        elif length1 is not None and length2 is None:
+            # If -L not given, use same setting for both
+            yield Shortener(length1), Shortener(length1)
+        elif length1 is None and length2 is not None:
+            yield None, Shortener(length2)
+    else:
+        if length1 is not None:
+            yield Shortener(length1)
+
+
 def modifiers_applying_to_both_ends_if_paired(args) -> Iterator[SingleEndModifier]:
-    if args.length is not None:
-        yield Shortener(args.length)
     if args.trim_n:
         yield NEndTrimmer()
     if args.length_tag:
