@@ -238,13 +238,14 @@ def get_argument_parser() -> ArgumentParser:
     group.add_argument("-N", "--no-match-adapter-wildcards", action="store_false",
         default=True, dest="match_adapter_wildcards",
         help="Do not interpret IUPAC wildcards in adapters.")
-    group.add_argument("--action", choices=("trim", "retain", "mask", "lowercase", "none"),
+    group.add_argument("--action", choices=("trim", "retain", "mask", "lowercase", "crop", "none"),
         default="trim",
         help="What to do if a match was found. "
             "trim: trim adapter and up- or downstream sequence; "
             "retain: trim, but retain adapter; "
             "mask: replace with 'N' characters; "
             "lowercase: convert to lowercase; "
+            "crop: trim up and downstream sequence; "
             "none: leave unchanged. Default: %(default)s")
     group.add_argument("--rc", "--revcomp", dest="reverse_complement", default=False,
         action="store_true",

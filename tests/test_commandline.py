@@ -327,6 +327,14 @@ def test_action_retain_times():
         main(["-a", "ACGT", "--times=2", "--action=retain", datapath("small.fastq")])
 
 
+def test_action_crop(run):
+    run(
+        "-g GGTTAA -a CAAG --action=crop --discard-untrimmed",
+        "action_crop.fasta",
+        "action_retain.fasta",
+    )
+
+
 def test_gz_multiblock(run):
     """compressed gz file with multiple blocks (created by concatenating two .gz files)"""
     run("-b TTAGACATATCTCCGTCG", "small.fastq", "multiblock.fastq.gz")

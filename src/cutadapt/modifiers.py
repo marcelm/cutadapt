@@ -107,7 +107,7 @@ class AdapterCutter(SingleEndModifier):
         index: bool = True,
     ):
         self.times = times
-        assert action in ("trim", "mask", "lowercase", "retain", None)
+        assert action in ("trim", "mask", "lowercase", "retain", "crop", None)
         self.action = action
         self.with_adapters = 0
         self.adapter_statistics = {a: a.create_statistics() for a in adapters}
@@ -117,8 +117,8 @@ class AdapterCutter(SingleEndModifier):
             )
         else:
             self.adapters = MultipleAdapters(adapters)
-        if action == "retain" and times > 1:
-            raise ValueError("'retain' cannot be combined with times > 1")
+        if action in {"retain", "crop"} and times > 1:
+            raise ValueError("'retain' and 'crop' cannot be combined with times > 1")
         if self.times == 1 and self.action == "trim":
             self.match_and_trim = self._match_and_trim_once_action_trim  # type: ignore
 
@@ -196,6 +196,11 @@ class AdapterCutter(SingleEndModifier):
         )
         return result
 
+    @staticmethod
+    def cropped_read(read, matches: Sequence[Match]):
+        m = matches[-1]
+        return read[m.rstart : m.rstop]  # type: ignore
+
     def __call__(self, read, info: ModificationInfo):
         trimmed_read, matches = self.match_and_trim(read)
         if matches:
@@ -242,6 +247,8 @@ class AdapterCutter(SingleEndModifier):
         elif self.action == "lowercase":
             trimmed_read = self.lowercased_read(read, matches)
             assert len(trimmed_read.sequence) == len(read)
+        elif self.action == "crop":
+            trimmed_read = self.cropped_read(read, matches)
         elif self.action is None:
             trimmed_read = read[:]
 

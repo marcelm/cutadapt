@@ -5,6 +5,10 @@ Changelog
 development version
 -------------------
 
+* Added ``--action=crop`` for removing everything *except* the adapter sequence.
+  (The sequence before and after the adapter is removed.) This can be useful if the
+  "adapter" contains wildcards (such as ``N`` nucleotides) that you are interested
+  in.
 * :issue:`788`: Added option ``-L`` as a counterpart to ``-l``/``--length``,
   which allows shortening R1 and R2 to different lengths.
 * :issue:`784`: Fix some unexpected trimming results for anchored 5'

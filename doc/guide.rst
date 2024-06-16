@@ -526,7 +526,8 @@ will result in ::
 The 3' adapter in the last read is not trimmed because the anchored 5’ adapter is required, but
 missing in the read.
 
-Linked adapters do not work when used in combination with ``--info-file`` and ``--action=mask``.
+Linked adapters do not work in combination with ``--info-file``, ``--action=mask`` and
+``--action=crop``.
 
 To provide :ref:`adapter-search parameters <search-parameters>`
 for linked adapters, they need to be set for each constituent adapter separately, as in
@@ -1025,7 +1026,7 @@ a 5' and 3' adapter, in effect only the sequence between the 5' and the 3'
 adapter matches is kept.
 
 With ``--action=retain``, the read is trimmed, but the adapter sequence itself
-is not removed. Up- and downstream sequences are removed in the same way as
+is not removed. Up- or downstream sequences are removed in the same way as
 for the ``trim`` action. For linked adapters, both adapter sequences are kept.
 
 .. note::
@@ -1044,11 +1045,19 @@ the read.
 Use ``--action=mask`` to write ``N`` characters to those parts of the read
 that would otherwise have been removed.
 
+Use ``--action=crop`` to remove everything from the read *except* the adapter sequence.
+That is, the sequence before and after the adapter is removed.
+This is useful if the "adapter" contains wildcards (such as ``N`` nucleotides)
+that you are interested in.
+
 Use ``--action=lowercase`` to change to lowercase those parts of the read that
 would otherwise have been removed. The rest is converted to uppercase.
 
 .. versionadded:: 3.1
     The ``retain`` action.
+
+.. versionadded:: 4.9
+    The ``crop`` action.
 
 
 .. _cut-bases:
