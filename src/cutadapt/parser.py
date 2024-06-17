@@ -278,10 +278,7 @@ class AdapterSpecification:
             )
 
         if parameters.get("min_overlap", 0) > len(spec):
-            raise ValueError(
-                f"min_overlap={parameters['min_overlap']}"
-                f" exceeds length of adapter {spec}"
-            )
+            parameters["min_overlap"] = len(spec)
 
         if rightmost and (adapter_type != "front" or restriction is not None):
             raise ValueError("'rightmost' only allowed with regular 5' adapters")

@@ -266,9 +266,10 @@ def test_make_adapter_back():
         make_adapter("ACGT$;min_overlap=3", "back", parameters)
     assert "not possible" in e.value.args[0]
 
-    with pytest.raises(ValueError) as e:
-        make_adapter("ACGT;min_overlap=5", "back", parameters)
-    assert "exceeds" in e.value.args[0]
+
+def test_make_adapter_very_long_overlap():
+    a = make_adapter("ACGT;min_overlap=99", "back", {"min_overlap": 1})
+    assert a.min_overlap == 4
 
 
 def test_parse_file_notation_with_parameters(tmp_path):

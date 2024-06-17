@@ -7,19 +7,21 @@ development version
 
 * Added ``--action=crop`` for removing everything *except* the adapter sequence.
   (The sequence before and after the adapter is removed.) This can be useful if the
-  "adapter" contains wildcards (such as ``N`` nucleotides) that you are interested
-  in.
+  "adapter" contains wildcards (such as ``N``) that you are interested in.
 * :issue:`788`: Added option ``-L`` as a counterpart to ``-l``/``--length``,
   which allows shortening R1 and R2 to different lengths.
-* :issue:`784`: Fix some unexpected trimming results for anchored 5'
+* A too long minimum overlap is now automatically decreased to the length of
+  the adapter. That is, you can use ``-a 'ACGT;o=99'`` to force full-length
+  matches.
+* :issue:`784`: Fixed some unexpected trimming results for anchored 5'
   adapters (due to an incorrectly initialized alignment score matrix).
 
 v4.8 (2024-04-12)
 -------------------
 
-* :issue:`772`: Restore ability to provide input files via
+* :issue:`772`: Restored ability to provide input files via
   process substitution.
-* :issue:`773`: Fix crash when writing interleaved data to stdout
+* :issue:`773`: Fixed crash when writing interleaved data to stdout
   (that is, when no ``-o`` option is provided).
 
 v4.7 (2024-03-14)
