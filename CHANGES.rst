@@ -2,8 +2,8 @@
 Changelog
 =========
 
-development version
--------------------
+v4.9 (2024-06-19)
+-----------------
 
 * Added ``--action=crop`` for removing everything *except* the adapter sequence.
   (The sequence before and after the adapter is removed.) This can be useful if the
