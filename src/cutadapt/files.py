@@ -297,7 +297,7 @@ class FileFormat(Enum):
 
 
 # TODO copied and adjusted from dnaio; upstream this
-def detect_file_format(file: BinaryIO) -> Optional[FileFormat]:
+def detect_file_format(file: BinaryIO) -> FileFormat:
     if file.seekable():
         original_position = file.tell()
         magic = file.read(4)
@@ -313,4 +313,7 @@ def detect_file_format(file: BinaryIO) -> Optional[FileFormat]:
         return FileFormat.FASTA
     elif magic == b"BAM\1":
         return FileFormat.BAM
-    return None
+    raise dnaio.exceptions.UnknownFileFormat(
+        f"Input file format not recognized. The file starts with {magic!r}, "
+        "but files in supported formats start with '>' (FASTA), '@' (FASTQ) or 'BAM'"
+    )

@@ -101,9 +101,8 @@ class ReaderProcess(mpctx_Process):
                     self._file_format_connection.send((e, traceback.format_exc()))
                     raise
                 self._file_format_connection.send(file_format)
-                if file_format is not None:
-                    for index, chunks in enumerate(self._read_chunks(*files)):
-                        self.send_to_worker(index, *chunks)
+                for index, chunks in enumerate(self._read_chunks(*files)):
+                    self.send_to_worker(index, *chunks)
             self.shutdown()
         except Exception as e:
             # TODO better send this to a common "something went wrong" Queue
@@ -321,12 +320,7 @@ class ParallelPipelineRunner(PipelineRunner):
         )
         self._reader_process.daemon = True
         self._reader_process.start()
-        file_format: Optional[FileFormat] = self._try_receive(file_format_connection_r)
-        if file_format is None:
-            raise dnaio.exceptions.UnknownFileFormat(
-                f"Format of input file '{self._inpaths.paths[0]}' not recognized."
-            )
-        self._input_file_format = file_format
+        self._input_file_format = self._try_receive(file_format_connection_r)
 
     def _start_workers(
         self, pipeline, proxy_files
@@ -434,12 +428,7 @@ class SerialPipelineRunner(PipelineRunner):
         self._infiles.close()
 
     def input_file_format(self) -> FileFormat:
-        detected = detect_file_format(self._infiles._files[0])
-        if detected is None:
-            raise dnaio.exceptions.UnknownFileFormat(
-                f"Format of input file '{self._infiles._files[0].name}' not recognized."
-            )
-        return detected
+        return detect_file_format(self._infiles._files[0])
 
 
 def make_runner(
