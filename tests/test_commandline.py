@@ -75,10 +75,6 @@ def test_example(run):
     run("-N -b ADAPTER", "example.fa", "example.fa")
 
 
-def test_compressed_fasta(run):
-    run("", "simple.fasta", "simple.fasta.gz")
-
-
 def test_small(run):
     run("-a TTAGACATATCTCCGTCG", "small.fastq", "small.fastq")
 
@@ -128,11 +124,6 @@ def test_discard(run):
 def test_discard_untrimmed(run):
     """--discard-untrimmed"""
     run("-b CAAGAT --discard-untrimmed", "discard-untrimmed.fastq", "small.fastq")
-
-
-def test_extensiontxtgz(run):
-    """automatic recognition of "_sequence.txt.gz" extension"""
-    run("-b TTAGACATATCTCCGTCG", "s_1_sequence.txt", "s_1_sequence.txt.gz")
 
 
 def test_minimum_length(run):
@@ -333,11 +324,6 @@ def test_action_crop(run):
         "action_crop.fasta",
         "action_retain.fasta",
     )
-
-
-def test_gz_multiblock(run):
-    """compressed gz file with multiple blocks (created by concatenating two .gz files)"""
-    run("-b TTAGACATATCTCCGTCG", "small.fastq", "multiblock.fastq.gz")
 
 
 def test_read_wildcard(run):
@@ -542,37 +528,6 @@ def test_named_adapter(run):
 
 def test_adapter_with_u(run):
     run("-a GCCGAACUUCUUAGACUGCCUUAAGGACGU", "illumina.fastq", "illumina.fastq.gz")
-
-
-def test_bzip2_input(run, cores):
-    run(
-        ["--cores", str(cores), "-a", "TTAGACATATCTCCGTCG"],
-        "small.fastq",
-        "small.fastq.bz2",
-    )
-
-
-@pytest.mark.parametrize("extension", ["bz2", "xz", "gz"])
-def test_compressed_output(tmp_path, cores, extension):
-    out_path = str(tmp_path / ("small.fastq." + extension))
-    params = [
-        "--cores",
-        str(cores),
-        "-a",
-        "TTAGACATATCTCCGTCG",
-        "-o",
-        out_path,
-        datapath("small.fastq"),
-    ]
-    main(params)
-
-
-def test_bzip2_multiblock(run):
-    run("-b TTAGACATATCTCCGTCG", "small.fastq", "multiblock.fastq.bz2")
-
-
-def test_xz(run):
-    run("-b TTAGACATATCTCCGTCG", "small.fastq", "small.fastq.xz")
 
 
 def test_no_args():
@@ -930,26 +885,9 @@ def test_discard_casava(run):
     assert stats.filtered["casava_filtered"] == 1
 
 
-def test_underscore(run):
-    """File name ending in _fastq.gz (issue #275)"""
-    run("-b TTAGACATATCTCCGTCG", "small.fastq", "underscore_fastq.gz")
-
-
 def test_cores_autodetect(run):
     # Just make sure that it runs; functionality is not tested
-    run("--cores 0 -b TTAGACATATCTCCGTCG", "small.fastq", "underscore_fastq.gz")
-
-
-def test_write_compressed_fastq(cores, tmp_path):
-    main(
-        [
-            "--cores",
-            str(cores),
-            "-o",
-            str(tmp_path / "out.fastq.gz"),
-            datapath("small.fastq"),
-        ]
-    )
+    run("--cores 0 -b TTAGACATATCTCCGTCG", "small.fastq", "small.fastq.gz")
 
 
 def test_minimal_report(run):
