@@ -1103,3 +1103,54 @@ def test_process_substitution(tmp_path, cores):
             ]
         )
     assert_files_equal(datapath("small.fastq"), tmp_path / "out.fastq")
+
+
+def test_concatenate_many_single_end_input_files(tmp_path):
+    paths = [tmp_path / f"file{i}.fastq" for i in (1, 2, 3)]
+    with dnaio.open(tmp_path / "expected.fastq", mode="w") as out:
+        for i, path in enumerate(paths, 1):
+            with dnaio.open(path, mode="w") as part:
+                for j in range(1, 4):
+                    record = dnaio.SequenceRecord(
+                        f"record{i}-{j}", "A" * i + "C" * j, "#" * (i + j)
+                    )
+                    out.write(record)
+                    part.write(record)
+    main(["-o", str(tmp_path / "merged.fastq")] + [str(path) for path in paths])
+    assert_files_equal(tmp_path / "expected.fastq", "merged.fastq")
+
+
+def test_concatenate_many_paired_end_input_files(tmp_path):
+    paths_r1 = [tmp_path / f"file{i}.1.fastq" for i in (1, 2, 3)]
+    paths_r2 = [tmp_path / f"file{i}.2.fastq" for i in (1, 2, 3)]
+    with dnaio.open(
+        tmp_path / "expected.1.fastq", tmp_path / "expected.2.fastq", mode="w"
+    ) as out:
+        for i, (path_r1, path_r2) in enumerate(zip(paths_r1, paths_r2), 1):
+            with dnaio.open(path_r1, path_r2, mode="w") as part:
+                for j in range(1, 4):
+                    name = f"record{i}-{j}"
+                    record1 = dnaio.SequenceRecord(
+                        name, "A" * i + "C" * j, "#" * (i + j)
+                    )
+                    record2 = dnaio.SequenceRecord(
+                        name, "G" * i + "T" * j, "#" * (i + j)
+                    )
+                    out.write(record1, record2)
+                    part.write(record1, record2)
+    flattened = [str(r) for r1r2 in zip(paths_r1, paths_r2) for r in r1r2]
+    main(
+        ["-o", str(tmp_path / "merged.1.fastq"), "-p", str(tmp_path / "merged.2.fastq")]
+        + flattened
+    )
+    assert_files_equal(tmp_path / "expected.1.fastq", "merged.1.fastq")
+    assert_files_equal(tmp_path / "expected.2.fastq", "merged.2.fastq")
+
+
+def test_concatenate_two_single_end_inputs():
+    raise NotImplemented
+
+
+def test_concatenate_different_formats():
+    # FASTA and FASTQ
+    raise NotImplemented
