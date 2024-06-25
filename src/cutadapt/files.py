@@ -1,13 +1,15 @@
 import errno
 import io
 import sys
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import BinaryIO, Optional, Dict, List, TextIO, Any
-
 import dnaio
 from xopen import xopen
-
+import smart_open
+import logging
+import json
 from cutadapt.utils import logger
 
 try:
@@ -17,15 +19,40 @@ except ImportError:
     resource = None  # type: ignore
 
 
-def xopen_rb_raise_limit(path: str):
+def xopen_rb_raise_limit(path: str, transport_params: str = ""):
     """
     Open a (possibly compressed) file for reading in binary mode, trying to avoid the
     "Too many open files" problem using `open_raise_limit`.
     """
     mode = "rb"
-    f = open_raise_limit(xopen, path, mode, threads=0)
+    # transfer options : string of key=value,key=value or a file path: convert to dictionary
+    transport_params = get_transport_params(path, transport_params)
+    # smart_open to automatically open remote files, disable auto-compression
+    f = open_raise_limit(
+        smart_open.open,
+        path,
+        mode,
+        compression="disable",
+        transport_params=transport_params,
+    )
+    logging.getLogger("smart_open").setLevel(logging.WARNING)
+    # pass through to xopen to handle compression
+    f = open_raise_limit(xopen, f, mode, threads=4)
     logger.debug("Opening '%s', mode '%s' with xopen resulted in %s", path, mode, f)
     return f
+
+
+def get_transport_params(path, transport_params):
+    if not transport_params:
+        return {}
+    # load from json file
+    if os.path.isfile(transport_params):
+        with open(transport_params) as f:
+            transport_params = json.load(f)
+    else:
+        transport_params = json.loads(transport_params)
+
+    return transport_params
 
 
 def open_raise_limit(func, *args, **kwargs):
@@ -54,7 +81,12 @@ def raise_open_files_limit(n):
 
 
 class FileOpener:
-    def __init__(self, compression_level: int = 1, threads: Optional[int] = None):
+    def __init__(
+        self,
+        compression_level: int = 1,
+        threads: Optional[int] = None,
+        transport_params: str = "",
+    ):
         """
         threads -- no. of external compression threads.
             0: write in-process
@@ -62,18 +94,46 @@ class FileOpener:
         """
         self.compression_level = compression_level
         self.threads = threads
+        self.transport_params = transport_params
+
+    def smart_open(self, path, mode):
+        # get transport params for smart_open
+        transport_params = get_transport_params(path, self.transport_params)
+        # smart_open to automatically open remote files, disable auto-compression
+        f = open_raise_limit(
+            smart_open.open,
+            path,
+            mode,
+            compression="disable",
+            transport_params=transport_params,
+        )
+        logging.getLogger("smart_open").setLevel(logging.ERROR)
+        logger.debug(
+            "Opening output '%s', mode '%s' with smart_open resulted in %s",
+            path,
+            mode,
+            f,
+        )
+        return f
 
     def xopen(self, path, mode):
         threads = self.threads if "w" in mode else 0
+        # smart open to handle remote files
+        f = self.smart_open(path, mode)
+        # xopen to handle compression
         f = open_raise_limit(
-            xopen, path, mode, compresslevel=self.compression_level, threads=threads
+            xopen, f, mode, compresslevel=self.compression_level, threads=threads
         )
         if "w" in mode:
             extra = f" (compression level {self.compression_level}, {threads} threads)"
         else:
             extra = ""
         logger.debug(
-            "Opening '%s', mode '%s'%s with xopen resulted in %s", path, mode, extra, f
+            "Opening output '%s', mode '%s'%s with xopen resulted in %s",
+            path,
+            mode,
+            extra,
+            f,
         )
         return f
 
@@ -110,12 +170,17 @@ class InputFiles:
 
 
 class InputPaths:
-    def __init__(self, *paths: str, interleaved: bool = False):
+    def __init__(
+        self, *paths: str, interleaved: bool = False, transport_params: str = ""
+    ):
         self.paths = paths
         self.interleaved = interleaved
+        self.transport_params = transport_params
 
     def open(self) -> InputFiles:
-        files = [xopen_rb_raise_limit(path) for path in self.paths]
+        files = [
+            xopen_rb_raise_limit(path, self.transport_params) for path in self.paths
+        ]
         return InputFiles(*files, interleaved=self.interleaved)
 
 
