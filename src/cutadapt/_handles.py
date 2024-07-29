@@ -12,11 +12,11 @@ import os
 try:
     import msvcrt
 except ImportError:
-    msvcrt = None
+    msvcrt = None  # type: ignore
 try:
     import _winapi
 except ImportError:
-    _winapi = None
+    _winapi = None  # type: ignore
 
 
 class _PatchedDupHandle:
