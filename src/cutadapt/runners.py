@@ -11,6 +11,7 @@ from typing import Any, List, Optional, Tuple, Sequence, Iterator, TYPE_CHECKING
 
 import dnaio
 
+from ._handles import recv_handle, send_handle
 from cutadapt.files import (
     InputFiles,
     OutputFiles,
@@ -85,8 +86,7 @@ class ReaderProcess(mpctx_Process):
             with ExitStack() as stack:
                 try:
                     fds = [
-                        multiprocessing.reduction.recv_handle(self._input_fds_pipe)
-                        for _ in range(self._n_files)
+                        recv_handle(self._input_fds_pipe) for _ in range(self._n_files)
                     ]
                     self._input_fds_pipe.close()
                     raw_files = [
@@ -326,9 +326,7 @@ class ParallelPipelineRunner(PipelineRunner):
                 )
             else:
                 with open(path, "rb") as f:
-                    multiprocessing.reduction.send_handle(
-                        input_fds_pipe_w, f.fileno(), pid
-                    )
+                    send_handle(input_fds_pipe_w, f.fileno(), pid)
         input_fds_pipe_w.close()
 
         file_format: Optional[FileFormat] = self._try_receive(file_format_connection_r)
