@@ -103,81 +103,38 @@ static const double SCORE_TO_ERROR_RATE[94] = {
 static inline double
 expected_errors_from_phreds(const uint8_t *phreds, size_t phreds_length, uint8_t base) {
     const uint8_t *end_ptr = phreds + phreds_length;
+    const uint8_t *unroll_end_ptr = end_ptr - 3;
     const uint8_t *cursor = phreds;
-    double expected_errors = 0.0;
+    double expected_errors0 = 0.0;
+    double expected_errors1 = 0.0;
+    double expected_errors2 = 0.0;
+    double expected_errors3 = 0.0;
     uint8_t max_phred = 126 - base;
-    #ifdef __SSE2__ 
-    const uint8_t *vec_end_ptr = end_ptr - sizeof(__m128i);
-    __m128d accumulator = _mm_set1_pd(0.0);
-    while (cursor < vec_end_ptr) {
-        __m128i phred_array = _mm_loadu_si128((__m128i *)cursor);
-        __m128i illegal_phreds = _mm_cmpgt_epi8(phred_array, _mm_set1_epi8(126));
-        illegal_phreds = _mm_or_si128(
-            illegal_phreds, _mm_cmplt_epi8(phred_array, _mm_set1_epi8(base)));
-        if (_mm_movemask_epi8(illegal_phreds)) {
-            return -1.0;
+
+    while (cursor < unroll_end_ptr) {
+        uint8_t phred0 = cursor[0] - base;
+        uint8_t phred1 = cursor[1] - base;
+        uint8_t phred2 = cursor[2] - base;
+        uint8_t phred3 = cursor[3] - base;
+        if (phred0 > max_phred ||
+            phred1 > max_phred ||
+            phred2 > max_phred ||
+            phred3 > max_phred) {
+               return -1.0;
         }
-        /* By explicitly setting multiple accumulators, the processor 
-           can perform out of order execution for increased speed 
-            See also: https://stackoverflow.com/a/36591776/16437839   
-        */
-        __m128d accumulator1 = _mm_add_pd(
-            _mm_set_pd(
-                SCORE_TO_ERROR_RATE[cursor[0] - base],
-                SCORE_TO_ERROR_RATE[cursor[1] - base]
-            ),
-            _mm_set_pd(
-                SCORE_TO_ERROR_RATE[cursor[2] - base],
-                SCORE_TO_ERROR_RATE[cursor[3] - base]
-            )
-        );
-        __m128d accumulator2 = _mm_add_pd(
-            _mm_set_pd(
-                SCORE_TO_ERROR_RATE[cursor[4] - base],
-                SCORE_TO_ERROR_RATE[cursor[5] - base]
-            ),
-            _mm_set_pd(
-                SCORE_TO_ERROR_RATE[cursor[6] - base],
-                SCORE_TO_ERROR_RATE[cursor[7] - base]
-            )
-        );
-        __m128d accumulator3 = _mm_add_pd(
-            _mm_set_pd(
-                SCORE_TO_ERROR_RATE[cursor[8] - base],
-                SCORE_TO_ERROR_RATE[cursor[9] - base]
-            ),
-            _mm_set_pd(
-                SCORE_TO_ERROR_RATE[cursor[10] - base],
-                SCORE_TO_ERROR_RATE[cursor[11] - base]
-            )
-        );
-        __m128d accumulator4 = _mm_add_pd(
-            _mm_set_pd(
-                SCORE_TO_ERROR_RATE[cursor[12] - base],
-                SCORE_TO_ERROR_RATE[cursor[13] - base]
-            ),
-            _mm_set_pd(
-                SCORE_TO_ERROR_RATE[cursor[14] - base],
-                SCORE_TO_ERROR_RATE[cursor[15] - base]
-            )
-        ); 
-        accumulator = _mm_add_pd(accumulator, accumulator1);
-        accumulator = _mm_add_pd(accumulator, accumulator2);
-        accumulator = _mm_add_pd(accumulator, accumulator3);
-        accumulator = _mm_add_pd(accumulator, accumulator4);
-        cursor += sizeof(__m128i);
+        expected_errors0 += SCORE_TO_ERROR_RATE[phred0];
+        expected_errors1 += SCORE_TO_ERROR_RATE[phred1];
+        expected_errors2 += SCORE_TO_ERROR_RATE[phred2];
+        expected_errors3 += SCORE_TO_ERROR_RATE[phred3];
+        cursor += 4;
     }
-    double double_store[2];
-    _mm_store_pd(double_store, accumulator);
-    expected_errors = double_store[0] + double_store[1];
-    #endif
     while (cursor < end_ptr) {
         uint8_t phred = *cursor - base;
         if (phred > max_phred) {
             return -1.0;
         }
-        expected_errors += SCORE_TO_ERROR_RATE[phred];
+        expected_errors0 += SCORE_TO_ERROR_RATE[phred];
         cursor += 1;
     }
-    return expected_errors;
+    return expected_errors0 + expected_errors1 + expected_errors2 + expected_errors3;
 }
