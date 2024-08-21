@@ -2,6 +2,11 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* :issue:`820`: On Bioconda, Cutadapt is now also available for ARM64 Macs (M1/M2).
+
 v4.9 (2024-06-19)
 -----------------
 
