@@ -280,7 +280,7 @@ class Statistics:
                     error_rate=end_statistics.max_error_rate,
                 ).lengths()
             else:
-                eranges = None
+                eranges = []
             base_stats = AdjacentBaseStatistics(end_statistics.adjacent_bases)
             trimmed_lengths = [
                 make_line(
