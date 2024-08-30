@@ -1,7 +1,12 @@
 import os
 import pickle
 
-from cutadapt.files import ProxyTextFile, ProxyRecordWriter, OutputFiles
+from cutadapt.files import (
+    ProxyTextFile,
+    ProxyRecordWriter,
+    OutputFiles,
+    xopen_rb_raise_limit,
+)
 from dnaio import SequenceRecord
 
 
@@ -125,6 +130,35 @@ class TestOutputFiles:
         o.close()
         assert path.read_text() == "@r\nAACC\n+\n####\n@r\nGGTT\n+\n####\n"
 
+
+def test_open_rb_local_file(tmp_path):
+
+    # Create a local file
+    file_path = tmp_path / "test.txt"
+    file_path.write_text("Hello, World!")
+    # Test opening a local file
+    file = xopen_rb_raise_limit(str(file_path))
+    assert file.read() == b"Hello, World!"
+    file.close()
+
+
+def test_open_rb_remote_file():
+    # Test opening a remote file over https
+    file = xopen_rb_raise_limit(
+        "https://raw.githubusercontent.com/marcelm/cutadapt/main/tests/data/454.fa"
+    )
+    assert file.readline() == b">000163_1255_2627 length=52 uaccno=E0R4ISW01DCIQD\n"
+    file.close()
+
+
+def test_open_rb_s3_file():
+    # Test opening a remote file on s3
+    file = xopen_rb_raise_limit("s3://platinum-genomes/2017-1.0/md5sum.txt")
+    assert (
+        file.readline()
+        == b"2e6aa26b42283bbbc4ca03686f427dc2  ./hg38/small_variants/ConfidentRegions.bed.gz\n"
+    )
+    file.close()
     # - test force fasta
     # - test qualities
     # - test proxied
