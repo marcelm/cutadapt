@@ -382,6 +382,32 @@ To provide :ref:`adapter-search parameters <search-parameters>`
 for linked adapters, they need to be set for each constituent adapter separately, as in
 ``-g "ADAPTER1;min_overlap=5...ADAPTER2;min_overlap=6"``.
 
+.. admonition::
+    Why use linked adapters instead of separate 5' and 3' adapters?
+
+    To remove two adapters from a read, option ``-n 2`` has to be used,
+    so instead of a linked adapter, one could use ``-g ^FORWARD -a REVERSE -n 2``.
+
+    The problem with this is that Cutadapt does not understand that the two adapters
+    belong together. In detail:
+
+    * With ``-n 2``, it is possible that two 5' or two 3' adapters are removed from
+      a read. Linked adapters prevent this.
+
+    * If a read does not contain the 5' adapter, but the 3' adapter,
+      it does not have the expected structure,
+      but Cutadapt will still consider it "trimmed" and therefore count it as
+      such in the report and keep it when using ``--discard-untrimmed``.
+
+      On the other hand, in linked adapters with an anchored 5' adapter,
+      the 5' adapter is required:
+      If it cannot be found, the search stops and the read is considered untrimmed.
+      (The 3' adapter won’t even be searched for.)
+
+    * If one has a primer mix (with multiple primer pairs),
+      there is no way to specify which 5' adapter goes with which 3' adapter.
+      With linked adapters, one can just use multiple ``-a`` options.
+
 .. versionadded:: 1.10
 
 .. versionadded:: 1.13
