@@ -39,9 +39,12 @@ in the group of `Prof. Dr. Sven Rahmann <https://www.rahmannlab.de/>`_.
 It is currently being developed within
 `NBIS (National Bioinformatics Infrastructure Sweden) <https://nbis.se/>`_.
 
+
+Citation
+--------
+
 If you use Cutadapt, please cite
 `DOI:10.14806/ej.17.1.200 <http://dx.doi.org/10.14806/ej.17.1.200>`_ .
-
 
 Links
 -----

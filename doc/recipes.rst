@@ -184,10 +184,35 @@ principle::
 Note the ``-`` character in the second invocation to Cutadapt.
 
 
-Support for concatenated compressed files
------------------------------------------
+.. _speedup:
 
-Cutadapt supports concatenated gzip and bzip2 input files.
+Speeding up Cutadapt
+--------------------
+
+There are several tricks for limiting wall-clock time while using Cutadapt.
+
+Option ``-Z`` (equivalent to ``--compression-level=1``) can be used to limit the
+amount of CPU time which is spent on the compression of output files.
+Alternatively, choosing filenames not ending with ``.gz``, ``.bz2`` or ``.xz``
+will make sure no CPU time is spent on compression at all. On systems
+with slow I/O, it can actually be faster to set a higher compression-level
+than 1.
+
+Increasing the number of cores with ``-j`` will increase the number of reads per
+minute at near-linear rate.
+
+It is also possible to use pipes in order to bypass the filesystem and pipe
+Cutadapt's output into an aligner such as BWA. The ``mkfifo`` command allows
+you to create named pipes in bash.
+
+.. code-block::bash
+
+    mkfifo R1.fastq R2.fastq
+    cutadapt -a ${ADAPTER_R1} -A ${ADAPTER_R2} -o R1.fastq -p R2.fastq ${READ1} ${READ2} > cutadapt.log & \
+    bwa mem ${INDEX} R1.fastq R2.fastq
+
+This command will run cutadapt and BWA simultaneously, using Cutadapt’s output as
+BWA’s input, and capturing Cutadapt’s report in ``cutadapt.log``.
 
 
 Check whether a FASTQ file is properly formatted

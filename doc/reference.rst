@@ -2,6 +2,134 @@
 Reference guide
 ===============
 
+.. _supported-file-formats:
+
+Supported file formats
+======================
+
+Supported input formats are FASTA, FASTQ and unaligned BAM
+(uBAM, only for single-end data at the moment).
+Supported output formats are FASTA and FASTQ. Compression
+:ref:`is supported in multiple formats and detected automatically <compressed-files>`.
+
+The input file format is recognized from the file name extension. If the
+extension was not recognized or when Cutadapt reads from standard input,
+the contents are inspected instead.
+
+The output file format is also recognized from the file name extension. If the
+extensions was not recognized or when Cutadapt writes to standard output, the
+same format as the input is used for the output.
+
+When writing a FASTQ file, a second header (the text after the ``+`` on the
+third line of a record) that possibly exists in the input is removed.
+When writing a FASTA file, line breaks within the sequence are removed.
+
+See also :ref:`file format conversion <file-format-conversion>`.
+
+.. _compressed-files:
+
+Compressed files
+----------------
+
+Cutadapt supports compressed input and output files. Whether an input file
+needs to be decompressed or an output file needs to be compressed is detected
+automatically by inspecting the file name: For example, if it ends in ``.gz``,
+then gzip compression is assumed ::
+
+    cutadapt -a AACCGGTT -o output.fastq.gz input.fastq.gz
+
+All of Cutadapt's options that expect a file name support this.
+
+The supported compression formats are gzip (``.gz``), bzip2 (``.bz2``),
+xz (``.xz``) and zstandard (``.zst``).
+
+The default compression level for gzip output is 4. Use option ``-Z`` to
+change this to level 1. The files need more space, but it is faster and
+therefore a good choice for short-lived intermediate files.
+
+Cutadapt uses the `xopen library <https://github.com/pycompression/xopen>`_
+to speed up reading and writing compressed files.
+
+Concatenated gzip input files (multiblock gzips) are supported, as well as
+concatenated bzip2 files.
+
+.. _standard-input-output:
+
+Standard input and output
+-------------------------
+
+If no output file is specified via the ``-o`` option, then the output is sent to
+the standard output stream. Example::
+
+    cutadapt -a AACCGGTT input.fastq > output.fastq
+
+There is one difference in behavior if you use Cutadapt without ``-o``: The
+report is sent to the standard error stream instead of standard output. You
+can redirect it to a file like this::
+
+    cutadapt -a AACCGGTT input.fastq > output.fastq 2> report.txt
+
+Wherever Cutadapt expects a file name, you can also write a dash (``-``) in
+order to specify that standard input or output should be used. For example::
+
+    tail -n 4 input.fastq | cutadapt -a AACCGGTT - > output.fastq
+
+The ``tail -n 4`` prints out only the last four lines of ``input.fastq``, which
+are then piped into Cutadapt. Thus, Cutadapt will work only on the last read in
+the input file.
+
+In most cases, you should probably use ``-`` at most once for an input file and
+at most once for an output file, in order not to get mixed output.
+
+For the same reason, you should not use ``-`` for non-interleaved paired-end
+data.
+
+You cannot combine ``-`` and gzip compression since Cutadapt needs to know the
+file name of the output or input file. if you want to have a gzip-compressed
+output file, use ``-o`` with an explicit name.
+
+One last "trick" is to use ``/dev/null`` as an output file name. This special
+file discards everything you send into it. If you only want to see the
+statistics output, for example, and do not care about the trimmed reads at all,
+you could use something like this::
+
+    cutadapt -a AACCGGTT -o /dev/null input.fastq.gz
+
+
+.. _multicore:
+
+Multi-core support
+------------------
+
+Cutadapt supports parallel processing, that is, it can use multiple CPU cores.
+Multi-core is not enabled by default. To enable it, use the option ``-j N``
+(or the spelled-out version ``--cores=N``), where ``N`` is the
+number of cores to use.
+
+To automatically detect the number of available cores, use ``-j 0``
+(or ``--cores=0``). The detection takes into account resource restrictions
+that may be in place. For example, if running Cutadapt as a batch job on a
+cluster system, the actual number of cores assigned to the job will be used.
+(This works if the cluster systems uses the cpuset(1) mechanism to impose
+the resource limitation.)
+
+
+.. versionadded:: 1.15
+
+.. versionadded:: 1.18
+    ``--cores=0`` for autodetection
+
+.. versionadded:: 2.5
+    Multicore works with ``--untrimmed/too-short/too-long-(paired)-output``
+
+.. versionadded:: 2.7
+    Multicore works with ``--info-file``, ``--rest-file``, ``--wildcard-file``
+
+.. versionadded:: 3.0
+    Multicore support for demultiplexing added.
+
+
+.. _command-line-options:
 
 Command-line options
 ====================
