@@ -158,6 +158,7 @@ class WorkerProcess(mpctx_Process):
         read_pipe: Connection,
         write_pipe: Connection,
         need_work_queue: multiprocessing.Queue,
+        file_format,
     ):
         super().__init__()
         self._id = id_
@@ -168,6 +169,7 @@ class WorkerProcess(mpctx_Process):
         self._write_pipe = write_pipe
         self._need_work_queue = need_work_queue
         self._proxy_files = proxy_files
+        self._file_format = file_format
 
     def run(self):
         try:
@@ -189,7 +191,11 @@ class WorkerProcess(mpctx_Process):
                     io.BytesIO(self._read_pipe.recv_bytes())
                     for _ in range(self._n_input_files)
                 ]
-                infiles = InputFiles(*files, interleaved=self._interleaved_input)
+                infiles = InputFiles(
+                    *files,
+                    interleaved=self._interleaved_input,
+                    fileformat=self._file_format,
+                )
                 (n, bp1, bp2) = self._pipeline.process_reads(infiles)
                 stats += Statistics().collect(n, bp1, bp2, [], [])
                 self._send_outfiles(chunk_index, n)
@@ -320,7 +326,13 @@ class ParallelPipelineRunner(PipelineRunner):
         )
         self._reader_process.daemon = True
         self._reader_process.start()
-        self._input_file_format = self._try_receive(file_format_connection_r)
+        self._input_file_format: FileFormat = self._try_receive(
+            file_format_connection_r
+        )
+        self._file_format_string = self._input_file_format.name.lower()
+        if self._file_format_string == "bam":
+            # Individual BAM record chunks will have no header
+            self._file_format_string = "bam_no_header"
 
     def _start_workers(
         self, pipeline, proxy_files
@@ -338,6 +350,7 @@ class ParallelPipelineRunner(PipelineRunner):
                 self._connections[index],
                 conn_w,
                 self._need_work_queue,
+                file_format=self._file_format_string,
             )
             worker.daemon = True
             worker.start()

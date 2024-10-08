@@ -22,7 +22,7 @@ classifiers = [
 requires-python = ">=3.9"
 dynamic = ["version"]
 dependencies = [
-    "dnaio >= 1.2.0",
+    "dnaio >= 1.2.3",
     "xopen >= 1.6.0",
 ]
 

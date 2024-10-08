@@ -4,7 +4,8 @@ Changelog
 
 development version
 -------------------
-
+* :issue:`812`: Fixed an issue where multithreaded reading of unaligned BAM
+  files would cause an error.
 * :issue:`820`: On Bioconda, Cutadapt is now also available for ARM64 Macs (M1/M2).
 * Dropped support for Python 3.8.
 * Added support for Python 3.13.
