@@ -7,6 +7,7 @@ development version
 
 * :issue:`820`: On Bioconda, Cutadapt is now also available for ARM64 Macs (M1/M2).
 * Dropped support for Python 3.8.
+* Added support for Python 3.13.
 
 v4.9 (2024-06-19)
 -----------------
