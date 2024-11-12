@@ -186,9 +186,6 @@ def get_argument_parser() -> ArgumentParser:
     # Buffer size for the reader process when running in parallel
     group.add_argument("--buffer-size", type=int, default=4000000,
         help=SUPPRESS)
-    # Compression level for gzipped output files. Not exposed since we have -Z
-    group.add_argument("--compression-level", type=int, default=5,
-        help=SUPPRESS)
     # Disable adapter index creation
     group.add_argument("--no-index", dest="index", default=True, action="store_false", help=SUPPRESS)
 
@@ -344,8 +341,10 @@ def get_argument_parser() -> ArgumentParser:
             "Default: write to standard output")
     group.add_argument("--fasta", default=False, action='store_true',
         help="Output FASTA to standard output even on FASTQ input.")
+    group.add_argument("--compression-level", type=int, default=1, metavar="N",
+        help="Compression level for compressed output files. Default: %(default)s")
     group.add_argument("-Z", action="store_const", const=1, dest="compression_level",
-        help="Use compression level 1 for gzipped output files (faster, but uses more space)")
+        help="DEPRECATED because compression level 1 is now the default.")
     group.add_argument("--info-file", metavar="FILE",
         help="Write information about each read and its adapter matches into FILE. "
             "See the documentation for the file format.")

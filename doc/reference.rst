@@ -348,6 +348,8 @@ Output
     Use this option to force FASTA even in such a case.
 
 ``-Z``
+    **Deprecated**: This option has become the default in Cutadapt 4.10.
+
     Use compression level 1 for gzipped output files.
     This is a shorthand for ``--compression-level=1``.
 
