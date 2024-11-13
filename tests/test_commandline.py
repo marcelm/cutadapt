@@ -79,6 +79,14 @@ def test_small(run):
     run("-a TTAGACATATCTCCGTCG", "small.fastq", "small.fastq")
 
 
+def test_small_bam(run, cores):
+    run(
+        "--cores {} -a TTAGACATATCTCCGTCG".format(cores),
+        "small_from_bam.fastq",
+        "small.bam",
+    )
+
+
 def test_empty_fastq(run, cores):
     run("--cores {} -a TTAGACATATCTCCGTCG".format(cores), "empty.fastq", "empty.fastq")
 

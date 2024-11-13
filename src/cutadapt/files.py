@@ -95,14 +95,21 @@ class InputFiles:
         self,
         *files: BinaryIO,
         interleaved: bool = False,
+        fileformat=None,
     ):
         self._files = files
         self.interleaved = interleaved
+        self.fileformat = fileformat
         for f in self._files:
             assert f is not None
 
     def open(self):
-        return dnaio.open(*self._files, interleaved=self.interleaved, mode="r")
+        return dnaio.open(
+            *self._files,
+            interleaved=self.interleaved,
+            mode="r",
+            fileformat=self.fileformat,
+        )
 
     def close(self) -> None:
         for file in self._files:
