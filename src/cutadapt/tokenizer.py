@@ -23,7 +23,7 @@ class TokenizeError(Exception):
     pass
 
 
-def tokenize_braces(s: str) -> Iterator[Token]:
+def tokenize_braces(s: str, left: str = "{", right: str = "}") -> Iterator[Token]:
     """
     >>> list(tokenize_braces(""))
     []
@@ -31,17 +31,23 @@ def tokenize_braces(s: str) -> Iterator[Token]:
     [StringToken("before "), BraceToken("braced"), StringToken(" after")]
     >>> list(tokenize_braces("ab{cd}{ef}"))
     [StringToken("ab"), BraceToken("cd"), BraceToken("ef")]
+    >>> list(tokenize_braces("ab(cd)ef", left="(", right=")"))
+    [StringToken("ab"), BraceToken("cd"), StringToken("ef")]
     """
-    for value in re.split("({[^}]*})", s):
+    if len(left) != 1 or len(right) != 1 or left == right:
+        raise ValueError("left and right must be unequal one-character strings")
+    for value in re.split(
+        f"({re.escape(left)}[^{re.escape(right)}]*{re.escape(right)})", s
+    ):
         if value == "":
             continue
-        if value.startswith("{") and value.endswith("}"):
+        if value.startswith(left) and value.endswith(right):
             value = value[1:-1]
             token_class: Type[Token] = BraceToken
         else:
             token_class = StringToken
-        if "{" in value:
-            raise TokenizeError("Unexpected '{' encountered")
-        if "}" in value:
-            raise TokenizeError("Unexpected '}' encountered")
+        if left in value:
+            raise TokenizeError(f"Unexpected '{left}' encountered")
+        if right in value:
+            raise TokenizeError(f"Unexpected '{right}' encountered")
         yield token_class(value)

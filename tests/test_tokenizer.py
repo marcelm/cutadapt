@@ -14,6 +14,14 @@ def test_tokenize_braces():
     ]
 
 
+def test_tokenize_parentheses():
+    assert list(tokenize_braces("abc(def) ghi", left="(", right=")")) == [
+        StringToken("abc"),
+        BraceToken("def"),
+        StringToken(" ghi"),
+    ]
+
+
 def test_tokenize_unexpected_braces():
     with pytest.raises(TokenizeError):
         list(tokenize_braces("abc {def{ghi}"))
