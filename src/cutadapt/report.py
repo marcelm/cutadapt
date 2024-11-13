@@ -28,6 +28,7 @@ from .modifiers import (
     ReverseComplementer,
     PairedEndModifierWrapper,
     PolyATrimmer,
+    PairedReverseComplementer,
 )
 from .statistics import ReadLengthStatistics
 from .steps import HasStatistics, HasFilterStatistics
@@ -167,6 +168,9 @@ class Statistics:
             return
         if isinstance(m, PairedEndModifierWrapper):
             modifiers_list = [(0, m._modifier1), (1, m._modifier2)]
+        elif isinstance(m, PairedReverseComplementer):
+            modifiers_list = [(0, m.adapter_cutter1), (1, m.adapter_cutter2)]
+            self.reverse_complemented = m.reverse_complemented
         else:
             modifiers_list = [(0, m)]
         for i, modifier in modifiers_list:

@@ -854,7 +854,7 @@ def test_revcomp_only_r2(run_paired):
 
 
 def test_revcomp_r1_and_r2(run_paired):
-    run_paired(
+    stats = run_paired(
         [
             "--revcomp",
             "-g",
@@ -868,3 +868,4 @@ def test_revcomp_r1_and_r2(run_paired):
         expected2="revcomp-r1r2.2.fastq",
         cores=1,
     )
+    assert stats.reverse_complemented == 2

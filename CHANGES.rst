@@ -17,6 +17,8 @@ development version
 * The previously hidden option ``--compression-level`` is now shown in the
   ``--help`` output.
 * :issue:`820`: On Bioconda, Cutadapt is now also available for ARM64 Macs (M1/M2).
+* :issue:`817`: Fixed missing statistics when ``--revcomp`` was used for
+  paired-end data.
 * Dropped support for Python 3.8.
 * Added support for Python 3.13.
 
