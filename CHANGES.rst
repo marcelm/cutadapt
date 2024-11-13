@@ -4,9 +4,23 @@ Changelog
 
 development version
 -------------------
+
+* :issue:`808`: Made gzip compression level 1 the default, which improves
+  runtime significantly in many cases. (Compressing the output is often a
+  bottleneck when using multiple threads.) Output files will be larger, but because
+  Cutadapt is typically used in intermediate step where the output would be
+  deleted, this may often not have an impact on final disk usage.
+  Suggested by @rhpvorderman (many times). Use ``--compression-level=N`` with
+  ``N`` greater than ``N`` to get higher compression at the cost of speed.
+  (``N=5`` is the old default.)
+  Option ``-Z`` (equivalent to ``--compression-level=1``) is now deprecated.
+* The previously hidden option ``--compression-level`` is now shown in the
+  ``--help`` output.
 * :issue:`812`: Fixed an issue where multithreaded reading of unaligned BAM
   files would cause an error.
 * :issue:`820`: On Bioconda, Cutadapt is now also available for ARM64 Macs (M1/M2).
+* :issue:`817`: Fixed missing statistics when ``--revcomp`` was used for
+  paired-end data.
 * Dropped support for Python 3.8.
 * Added support for Python 3.13.
 
