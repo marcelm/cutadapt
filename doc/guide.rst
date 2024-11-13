@@ -1781,9 +1781,9 @@ Example::
 This command will create the three files ``demulti-one.fastq.gz``,
 ``demulti-two.fastq.gz`` and ``demulti-unknown.fastq.gz``.
 
-More realistically, your “adapters” would actually be barcode sequences that you
-will want to :ref:`provide in a FASTA file <multiple-adapters>`. Here is a
-made-up example for such a ``barcodes.fasta`` file::
+More realistically, your “adapters” would actually be something like barcode
+sequences that you would :ref:`provide in a FASTA file <multiple-adapters>`.
+Here is a made-up example for such a ``barcodes.fasta`` file::
 
     >barcode01
     TTAAGGCC
@@ -1794,7 +1794,7 @@ made-up example for such a ``barcodes.fasta`` file::
 
 Since our barcodes are located at the 5’ end of the R1 read, we use the ``-g``
 option to provide Cutadapt with the adapter sequences, as in ``-g ^file:barcodes.fasta``.
-Also, we prefix the ``^file:`` with the ``^`` character to specify that we want to
+Also, we prefix ``file:`` with the ``^`` character to specify that we want to
 :ref:`anchor the 5’ adapters <anchored-5adapters>`.
 
 Since these barcode sequences have a length of 8 and the default maximum error
@@ -1831,7 +1831,7 @@ More advice on demultiplexing:
   untrimmed reads (those in which no barcode could be found).
 * Similarly, you can use ``--untrimmed-paired-output`` to change the name of the output file that
   receives the untrimmed R2 reads.
-* If you want to demultiplex, but keep the barcode in the reads, use the option ``--action=none``.
+* If you want to demultiplex but keep the barcode in the reads, use the option ``--action=none``.
 
 
 .. _combinatorial-demultiplexing:
