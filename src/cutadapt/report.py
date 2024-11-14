@@ -272,7 +272,7 @@ class Statistics:
         adapter = adapter_statistics.adapter
         ends: List[Optional[Dict[str, Any]]] = []
         total_trimmed_reads = 0
-        make_line = OneLine if one_line else list
+        make_line = OneLine if one_line else lambda value: value
         for end_statistics in adapter_statistics.end_statistics():
             if end_statistics is None:
                 ends.append(None)
