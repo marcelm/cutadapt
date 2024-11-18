@@ -89,7 +89,10 @@ class TooHighAverageErrorRate(Predicate):
         return f"TooHighAverageErrorRate(max_error_rate={self.max_error_rate}"
 
     def test(self, read, info: ModificationInfo):
-        return (expected_errors(read.qualities) / len(read)) > self.max_error_rate
+        read_length = len(read)
+        if read_length == 0:
+            return False
+        return (expected_errors(read.qualities) / read_length) > self.max_error_rate
 
 
 class TooManyN(Predicate):
