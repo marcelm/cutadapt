@@ -29,10 +29,6 @@ from .info import ModificationInfo
 logger = logging.getLogger()
 
 
-# If the number of prefix or suffix adapters is higher than this, switch to using an index
-INDEXING_THRESHOLD = 5
-
-
 class SingleEndModifier(ABC):
     @abstractmethod
     def __call__(self, read: SequenceRecord, info: ModificationInfo):
@@ -130,9 +126,7 @@ class AdapterCutter(SingleEndModifier):
 
     def _regroup_into_indexed_adapters(self, adapters):
         prefix, suffix, single = self._split_adapters(adapters)
-        # For somewhat better backwards compatibility, avoid re-ordering
-        # the adapters when we don’t need to
-        if len(prefix) > INDEXING_THRESHOLD or len(suffix) > INDEXING_THRESHOLD:
+        if len(prefix) > 1 or len(suffix) > 1:
             result = single
             if len(prefix) > 1:
                 result.append(IndexedPrefixAdapters(prefix))
@@ -144,6 +138,8 @@ class AdapterCutter(SingleEndModifier):
                 result.extend(suffix)
             return result
         else:
+            # For somewhat better backwards compatibility, avoid re-ordering
+            # the adapters when we don’t need to
             return adapters
 
     @staticmethod
