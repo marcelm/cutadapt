@@ -25,6 +25,10 @@ development version
   empty read. By @rhpvorderman.
 * :issue:`824`: Fix: discard_(un)trimmed values were always ``none`` in JSON
   report.
+* An index (that speeds up matching of many anchored adapters such as barcodes)
+  is now created for up to three allowed errors (instead of two). Since this can
+  be slow and memory intensive, particularly when indels are enabled,
+  a message is printed that suggests using ``--no-indels`` or ``--no-index``.
 * Dropped support for Python 3.8.
 * Added support for Python 3.13.
 

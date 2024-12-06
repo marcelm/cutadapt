@@ -1916,32 +1916,37 @@ To demultiplex this type of data, the
 
 .. _speed-up-demultiplexing:
 
-Speeding up demultiplexing
---------------------------
+Speeding up demultiplexing/adapter indexing
+-------------------------------------------
 
 Finding many adapters/barcodes simultaneously (which is what demultiplexing in Cutadapt is about),
 can be sped up tremendously by using the right options since Cutadapt will then be able to create an
-index of the barcode sequences instead of checking for each barcode separately. Currently, the
-following conditions need to be met in order for index creation to be enabled:
+index of the barcode sequences instead of checking for each barcode separately.
+The following conditions need to be met for index creation to be enabled:
 
 * The barcodes/adapters must be anchored:
   For 5’ adapters, use ``-g ^ADAPTER`` or ``-g ^file:adapters.fasta``.
   For 3’ adapters, use ``-a ADAPTER$`` or ``-a file$:adapters.fasta``.
-* The maximum error rate (``-e``) must be set such that at most 2 errors are allowed:
-  Use ``-e 0``, ``-e 1`` or ``-e 2``.
+* The maximum error rate (``-e``) must be set such that at most 3 errors are allowed:
+  Use ``-e 0`` up to ``-e 3``.
 * No IUPAC wildcards must be used in the barcode/adapter. Also, you cannot use the option
   ``--match-read-wildcards``.
 
+Index creation is significantly faster and uses less memory if ``--no-indels`` is provided.
+
+Index creation can be disabled with ``--no-index``.
+
 An index will be built for all the adapters that fulfill these criteria if there are at least two
 of them. You can provide additional adapters/barcodes, and they will just not be included in the
-index. Whether an index is created or not should not affect the results, only how fast you get them.
+index. Instead, they will be searched for one by one.
+Whether an index is created or not should not affect the results, only how fast you get them.
 
 To see whether an index is created, look for a message like this in the first few lines of
 Cutadapt’s output::
 
     Building index of 23 adapters ...
 
-Hopefully some of the above restrictions will be lifted in the future.
+
 
 .. versionadded:: 1.15
    Demultiplexing of paired-end data.
@@ -1953,6 +1958,8 @@ Hopefully some of the above restrictions will be lifted in the future.
    An index can be built even when indels are allowed (that is, ``--no-indels``
    is no longer required).
 
+.. versionadded:: 5.0
+   An index is created up to three (instead of two) allowed errors.
 
 Demultiplexing paired-end reads in mixed orientation
 ----------------------------------------------------

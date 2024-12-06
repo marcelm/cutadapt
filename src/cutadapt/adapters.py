@@ -4,6 +4,7 @@ Adapter finding and trimming classes
 The ...Adapter classes are responsible for finding adapters.
 The ...Match classes trim the reads.
 """
+
 import logging
 from enum import IntFlag
 from collections import defaultdict
@@ -1319,7 +1320,7 @@ class AdapterIndex:
         if adapter.adapter_wildcards:
             raise ValueError("Wildcards in the adapter not supported")
         k = int(len(adapter) * adapter.max_error_rate)
-        if k > 2:
+        if k > 3:
             raise ValueError("Error rate too high")
 
     @classmethod
@@ -1338,7 +1339,21 @@ class AdapterIndex:
 
     def _make_index(self) -> Tuple[List[int], "AdapterIndexDict"]:
         start_time = time.time()
+        max_k = max(
+            (
+                int(adapter.max_error_rate * len(adapter.sequence))
+                for adapter in self._adapters
+                if adapter.indels
+            ),
+            default=0,
+        )
         logger.info("Building index of %s adapters ...", len(self._adapters))
+        if max_k == 3:
+            logger.info(
+                "Three errors and indels allowed for at least one of the adapter sequences: "
+                "Indexing could take long and use a lot of memory. "
+                "If this becomes a problem, try --no-indels and/or --no-index."
+            )
         index: Dict[str, Tuple[SingleAdapter, int, int]] = dict()
         lengths = set()
         has_warned = False

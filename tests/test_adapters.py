@@ -516,8 +516,8 @@ def test_indexed_too_high_k():
     with pytest.raises(ValueError) as e:
         IndexedPrefixAdapters(
             [
-                PrefixAdapter("ACGTACGT", max_errors=3, indels=False),
-                PrefixAdapter("AAGGTTCC", max_errors=2, indels=False),
+                PrefixAdapter("ACGTACGT", max_errors=4, indels=False),
+                PrefixAdapter("AAGGTTCC", max_errors=3, indels=False),
             ]
         )
     assert "Error rate too high" in e.value.args[0]
