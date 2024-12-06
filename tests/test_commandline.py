@@ -1067,6 +1067,44 @@ def test_terminates_correctly_on_error_in_subprocess(tmp_path):
         main(params)
 
 
+def test_json_report_and_discard_untrimmed(tmp_path):
+    stats = main(
+        [
+            "--json",
+            str(tmp_path / "cutadapt.json"),
+            "--discard-untrimmed",
+            "-a",
+            "name=ACGT",
+            "-o",
+            str(tmp_path / "trimmed.fastq"),
+            datapath("illumina.fastq.gz"),
+        ]
+    )
+    assert stats.n == 100
+    assert stats.written == 64
+    js = stats.as_json()
+    assert js["read_counts"]["filtered"]["discard_untrimmed"] == 36
+
+
+def test_json_report_and_discard_trimmed(tmp_path):
+    stats = main(
+        [
+            "--json",
+            str(tmp_path / "cutadapt.json"),
+            "--discard-trimmed",
+            "-a",
+            "name=ACGT",
+            "-o",
+            str(tmp_path / "trimmed.fastq"),
+            datapath("illumina.fastq.gz"),
+        ]
+    )
+    assert stats.n == 100
+    assert stats.written == 36
+    js = stats.as_json()
+    assert js["read_counts"]["filtered"]["discard_trimmed"] == 64
+
+
 def test_json_report_with_demultiplexing_and_discard_untrimmed(tmp_path):
     stats = main(
         [
@@ -1082,6 +1120,8 @@ def test_json_report_with_demultiplexing_and_discard_untrimmed(tmp_path):
     )
     assert stats.n == 100
     assert stats.written == 64
+    js = stats.as_json()
+    assert js["read_counts"]["filtered"]["discard_untrimmed"] == 36
 
 
 @pytest.mark.timeout(1)

@@ -152,6 +152,10 @@ class IsUntrimmed(Predicate):
     def test(self, read, info: ModificationInfo):
         return not info.matches
 
+    @classmethod
+    def descriptive_identifier(cls) -> str:
+        return "discard_untrimmed"
+
 
 class IsTrimmed(Predicate):
     """
@@ -163,3 +167,7 @@ class IsTrimmed(Predicate):
 
     def test(self, read, info: ModificationInfo):
         return bool(info.matches)
+
+    @classmethod
+    def descriptive_identifier(cls) -> str:
+        return "discard_trimmed"

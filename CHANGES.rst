@@ -23,6 +23,8 @@ development version
   paired-end data.
 * :issue:`820`: Fix division by zero problem if ``--max-ee`` is used with an
   empty read. By @rhpvorderman.
+* :issue:`824`: Fix: discard_(un)trimmed values were always ``none`` in JSON
+  report.
 * Dropped support for Python 3.8.
 * Added support for Python 3.13.
 
