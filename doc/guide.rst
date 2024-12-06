@@ -1915,6 +1915,7 @@ To demultiplex this type of data, the
 
 
 .. _speed-up-demultiplexing:
+.. _adapter-indexing:
 
 Speeding up demultiplexing/adapter indexing
 -------------------------------------------
@@ -1960,6 +1961,24 @@ Cutadapt’s output::
 
 .. versionadded:: 5.0
    An index is created up to three (instead of two) allowed errors.
+
+Ambiguous sequences
+~~~~~~~~~~~~~~~~~~~
+
+When :ref:`an index is created for multiple anchored adapters <adapter-indexing>`, Cutadapt checks
+whether there are any possible input sequences that lead to ambiguous matches, that is, which
+would match two or more adapter sequences equally well.
+If there are ambiguous sequences, Cutadapt prints a warning like this::
+
+    WARNING: The adapters are too similar. When creating the index, 31 ambiguous sequences were found that cannot be assigned uniquely.
+    WARNING: For example, 'TAGTGCTTGA', when found in a read, would result in 10 matches for both bc3 'TAGTGCTTGA' and bc11 'TAGTGCTTGA'
+    WARNING: Reads with ambiguous sequence will *not* be trimmed.
+
+If you use ``-no-index``, Cutadapt will not print this warning and instead assign ambiguous reads
+to the first of the adapters that match equally well.
+
+.. versionadded:: 5.0
+   Ambiguous sequences were not handled specially in earlier versions.
 
 Demultiplexing paired-end reads in mixed orientation
 ----------------------------------------------------
