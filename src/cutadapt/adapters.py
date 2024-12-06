@@ -1389,9 +1389,8 @@ class AdapterIndex:
                         index[s] = (adapter, errors, matches)
                 lengths.add(n)
         elapsed = time.time() - start_time
-        logger.info(
-            "Built an index containing %s strings in %.1f s.", len(index), elapsed
-        )
+        logger.info("Built an index containing %s strings.", len(index))
+        logger.debug("Building the index took %.1f s", elapsed)
 
         return sorted(lengths, reverse=True), index
 
