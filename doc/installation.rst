@@ -44,7 +44,7 @@ Cutadapt is available as a Conda package from the
 4. Activate the Conda environment. This needs to be done every time you open a
    new shell in order to be able to use Cutadapt::
 
-     conda activate cutadaptenv
+     conda activate cutadapt
 
 5. Finally, check whether the installation was successful::
 
