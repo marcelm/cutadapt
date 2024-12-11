@@ -32,7 +32,6 @@ from .modifiers import (
 )
 from .statistics import ReadLengthStatistics
 from .steps import HasStatistics, HasFilterStatistics
-from .utils import MICRO
 
 FILTERS = {
     "too_short": "that were too short",
@@ -609,19 +608,11 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
     """Print report to standard output."""
     if stats.n == 0:
         return "No reads processed!"
-    if time == 0:
-        time = 1e-6
     sio = StringIO()
 
     def print_s(*args, **kwargs):
         kwargs["file"] = sio
         print(*args, **kwargs)
-
-    print_s(
-        "Finished in {:.3F} s ({:.3F} {}s/read; {:.2F} M reads/minute).".format(
-            time, 1e6 * time / stats.n, MICRO, stats.n / time * 60 / 1e6
-        )
-    )
 
     report = "\n=== Summary ===\n\n"
     if stats.paired:

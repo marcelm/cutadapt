@@ -170,3 +170,23 @@ def test_non_utf8_locale():
         [sys.executable, "-m", "cutadapt", "-o", os.devnull, datapath("small.fastq")],
         env={"LC_CTYPE": "C"},
     )
+
+
+def test_reproducible_report(tmp_path):
+    # Run Cutadapt twice and ensure the log is identical
+    report_paths = [os.fspath(tmp_path / f"report{i}.txt") for i in (1, 2)]
+    for report_path in report_paths:
+        with open(report_path, "w") as report_file:
+            py = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "cutadapt",
+                    "-o",
+                    os.devnull,
+                    datapath("small.fastq"),
+                ],
+                stdout=report_file,
+            )
+            _ = py.communicate()
+    assert_files_equal(*report_paths)

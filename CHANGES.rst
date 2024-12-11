@@ -16,6 +16,9 @@ development version
   Option ``-Z`` (equivalent to ``--compression-level=1``) is now deprecated.
 * The previously hidden option ``--compression-level`` is now shown in the
   ``--help`` output.
+* :issue:`819`: To enable reproducible output, the report no longer includes
+  the runtime (``Finished in XY.Z s``). Runtime is still shown as part of the
+  progress "bar".
 * :issue:`812`: Fixed an issue where multithreaded reading of unaligned BAM
   files would cause an error.
 * :issue:`820`: On Bioconda, Cutadapt is now also available for ARM64 Macs (M1/M2).
