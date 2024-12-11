@@ -1,37 +1,39 @@
 """
 Routines for printing a report.
 """
+import textwrap
+from collections import Counter, defaultdict
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from io import StringIO
-import textwrap
-from collections import defaultdict, Counter
-from typing import Any, Optional, List, Dict, Iterator, Tuple, Mapping
+from typing import Any, Optional
+
 from .adapters import (
-    EndStatistics,
     AdapterStatistics,
-    FrontAdapter,
-    BackAdapter,
     AnywhereAdapter,
-    LinkedAdapter,
-    SingleAdapter,
-    LinkedAdapterStatistics,
-    FrontAdapterStatistics,
-    BackAdapterStatistics,
     AnywhereAdapterStatistics,
+    BackAdapter,
+    BackAdapterStatistics,
+    EndStatistics,
+    FrontAdapter,
+    FrontAdapterStatistics,
+    LinkedAdapter,
+    LinkedAdapterStatistics,
+    SingleAdapter,
 )
 from .json import OneLine
 from .modifiers import (
-    QualityTrimmer,
-    NextseqQualityTrimmer,
     AdapterCutter,
+    NextseqQualityTrimmer,
     PairedAdapterCutter,
-    ReverseComplementer,
     PairedEndModifierWrapper,
-    PolyATrimmer,
     PairedReverseComplementer,
+    PolyATrimmer,
+    QualityTrimmer,
+    ReverseComplementer,
 )
 from .statistics import ReadLengthStatistics
-from .steps import HasStatistics, HasFilterStatistics
+from .steps import HasFilterStatistics, HasStatistics
 from .utils import MICRO
 
 FILTERS = {
@@ -46,13 +48,46 @@ FILTERS = {
 
 
 def safe_divide(numerator: Optional[int], denominator: int) -> float:
+    """
+    Return the result of dividing numerator by denominator, or 0.0 if either is None
+
+    Args:
+        numerator (Optional[int]): The numerator
+        denominator (int): The denominator
+
+    Returns:
+        float: The result of the division
+
+    >>> safe_divide(10, 20)
+    0.5
+    >>> safe_divide(None, 20)
+    0.0
+    >>> safe_divide(10, 0)
+    0.0
+    """
     if numerator is None or not denominator:
         return 0.0
-    else:
-        return numerator / denominator
+    return numerator / denominator
 
 
 def add_if_not_none(a: Optional[int], b: Optional[int]) -> Optional[int]:
+    """
+    Add two numbers if both are not None, otherwise return the one that is not None
+
+    Args:
+        a (Optional[int]): The first number
+        b (Optional[int]): The second number
+
+    Returns:
+        Optional[int]: The sum of a and b, or the one that is not None
+
+    >>> add_if_not_none(10, 20)
+    30
+    >>> add_if_not_none(None, 20)
+    20
+    >>> add_if_not_none(10, None)
+    10
+    """
     if a is None:
         return b
     if b is None:
@@ -61,25 +96,60 @@ def add_if_not_none(a: Optional[int], b: Optional[int]) -> Optional[int]:
 
 
 class Statistics:
+
+    """
+    Class for storing statistics about the processing of reads
+
+    Includes functions for collecting statistics and returning them in JSON
+    format as well as methods to merge statistic objects together
+
+    Attributes:
+        paired (Optional[bool]): Whether the reads are paired-end
+        filtered (dict[str, int]): Map a filter name to the number of filtered reads/read pairs
+        reverse_complemented (Optional[int]): If the reads were reverse complemented
+        n (int): The number of reads
+        total_bp (list[int]): The total number of base pairs in read 1 and read 2
+        read_length_statistics (ReadLengthStatistics): The read length statistics
+        with_adapters (list[Optional[int]]): The number of reads with adapters in read 1 and read 2
+        quality_trimmed_bp (list[Optional[int]]): The number of quality trimmed base pairs in read 1 and read 2
+        poly_a_trimmed_lengths (list[Optional[defaultdict[int, int]]]): The lengths of poly-A trimmed reads in read 1 and read 2
+        adapter_stats (list[list[AdapterStatistics]]): The adapter statistics for read 1 and read 2
+        _collected (bool): Whether the statistics have been collected
+    """
+
     def __init__(self) -> None:
-        """ """
+        """Initialize a new Statistics object with empty values"""
         self.paired: Optional[bool] = None
         # Map a filter name to the number of filtered reads/read pairs
-        self.filtered: Dict[str, int] = defaultdict(int)
+        self.filtered: dict[str, int] = defaultdict(int)
         self.reverse_complemented: Optional[int] = None
         self.n = 0
         self.total_bp = [0, 0]
         self.read_length_statistics = ReadLengthStatistics()
-        self.with_adapters: List[Optional[int]] = [None, None]
-        self.quality_trimmed_bp: List[Optional[int]] = [None, None]
-        self.poly_a_trimmed_lengths: List[Optional[defaultdict[int, int]]] = [
+        self.with_adapters: list[Optional[int]] = [None, None]
+        self.quality_trimmed_bp: list[Optional[int]] = [None, None]
+        self.poly_a_trimmed_lengths: list[Optional[defaultdict[int, int]]] = [
             None,
             None,
         ]
-        self.adapter_stats: List[List[AdapterStatistics]] = [[], []]
+        self.adapter_stats: list[list[AdapterStatistics]] = [[], []]
         self._collected: bool = False
 
-    def __iadd__(self, other: Any):
+    def __iadd__(self, other: "Statistics") -> "Statistics":
+        """
+        Allow for the addition of two Statistics objects together
+
+        Args:
+            other (Statistics): The other Statistics object to add to the current one
+
+        Returns:
+            self (Statistics): The current Statistics object (post addition)
+
+        Raises:
+            ValueError: If the other object is not a Statistics object
+            ValueError: If the paired attribute is not equal between the two objects
+            ValueError: If the adapter_stats length is not equal between the two objects
+        """
         if not isinstance(other, Statistics):
             raise ValueError(f"Cannot add {other.__type__.__name__}")
         self.n += other.n
@@ -127,12 +197,23 @@ class Statistics:
         return self
 
     def collect(
-        self, n: int, total_bp1: int, total_bp2: Optional[int], modifiers, steps
-    ):
+        self, n: int, total_bp1: int, total_bp2: Optional[int], modifiers: list[Any], steps: list[Any]
+    ) -> "Statistics":
         """
-        n -- total number of reads
-        total_bp1 -- number of bases in first reads
-        total_bp2 -- number of bases in second reads. None for single-end data.
+        Collect statistics from a number of reads
+
+        Args:
+            n (int): The number of reads
+            total_bp1 (int): The total number of base pairs in read 1
+            total_bp2 (Optional[int]): The total number of base pairs in read 2. None if single-end
+            modifiers (list): List of modifiers attributes in the pipeline object
+            steps (list): List of steps attributes in the pipeline object
+
+        Returns:
+            Statistics: The Statistics object
+
+        Raises:
+            ValueError: If the Statistics object has already been collected
         """
         if self._collected:
             raise ValueError("Cannot call Statistics.collect more than once")
@@ -204,15 +285,25 @@ class Statistics:
                         self.reverse_complemented, modifier.reverse_complemented
                     )
 
-    def as_json(self, gc_content: float = 0.5, one_line: bool = False) -> Dict:
+    def as_json(self, gc_content: float = 0.5, one_line: bool = False) -> dict:
         """
         Return a dict representation suitable for dumping in JSON format
 
         To achieve a more compact representation, set one_line to True, which
         will wrap some items in a `cutadapt.json.OneLine` object, and use
         `cutadapt.json.dumps` instead of `json.dumps` to dump the dict.
+
+        Args:
+            gc_content (float): The GC content percentage for use in histogram creation
+            one_line (bool): Whether to use a one-line representation
+
+        Returns:
+            dict: The JSON representation
+
+        Raises:
+            AssertionError: If written reads and filtered reads do not add up to the total number of reads
         """
-        filtered = {name: self.filtered.get(name) for name in FILTERS.keys()}
+        filtered = {name: self.filtered.get(name) for name in FILTERS}
         filtered_total = sum(self.filtered.values())
         written_reads = self.read_length_statistics.written_reads()
         written_bp = self.read_length_statistics.written_bp()
@@ -270,7 +361,7 @@ class Statistics:
         one_line: bool = False,
     ):
         adapter = adapter_statistics.adapter
-        ends: List[Optional[Dict[str, Any]]] = []
+        ends: list[Optional[dict[str, Any]]] = []
         total_trimmed_reads = 0
         make_line = OneLine if one_line else lambda value: value
         for end_statistics in adapter_statistics.end_statistics():
@@ -343,7 +434,7 @@ class Statistics:
         return add_if_not_none(*self.quality_trimmed_bp)
 
     @property
-    def poly_a_trimmed_bp(self) -> Tuple[Optional[int], Optional[int]]:
+    def poly_a_trimmed_bp(self) -> tuple[Optional[int], Optional[int]]:
         def trimmed(i: int) -> Optional[int]:
             lengths = self.poly_a_trimmed_lengths[i]
             if lengths is None:
@@ -369,7 +460,7 @@ class Statistics:
         return safe_divide(self.read_length_statistics.written_reads(), self.n)
 
     @property
-    def with_adapters_fraction(self) -> List[float]:
+    def with_adapters_fraction(self) -> list[float]:
         return [safe_divide(v, self.n) for v in self.with_adapters]
 
     @property
@@ -377,7 +468,7 @@ class Statistics:
         return safe_divide(self.quality_trimmed, self.total)
 
     @property
-    def written_bp(self) -> Tuple[int, int]:
+    def written_bp(self) -> tuple[int, int]:
         return self.read_length_statistics.written_bp()
 
     @property
@@ -397,9 +488,9 @@ class Statistics:
 
 
 class ErrorRanges:
+
     """
-    Representation of the lengths up to which a number of errors is allowed
-    for partial adapter matches.
+    Representation of the lengths up to which a number of errors is allowed for partial adapter matches.
 
     >>> ErrorRanges(length=8, error_rate=0.1).lengths()
     [8]
@@ -419,12 +510,22 @@ class ErrorRanges:
     The last number in the list is always the length of the adapter sequence.
     """
 
-    def __init__(self, length: int, error_rate: float):
+    def __init__(self, length: int, error_rate: float) -> None:
+        """
+        Initialize a new ErrorRanges object
+
+        Args:
+            length (int): The length of the adapter
+            error_rate (float): The error rate allowed
+
+        Returns:
+            None
+        """
         self.length = length
         self.error_rate = error_rate
         self._lengths = self._compute_lengths()
 
-    def _compute_lengths(self) -> List[int]:
+    def _compute_lengths(self) -> list[int]:
         lengths = [
             int(errors / self.error_rate) - 1
             for errors in range(1, int(self.error_rate * self.length) + 1)
@@ -464,6 +565,15 @@ class ErrorRanges:
 
 
 def error_ranges(end_statistics: EndStatistics) -> str:
+    """
+    Provides the allowed errors for a given EndStatistics object
+
+    Args:
+        end_statistics (EndStatistics): The EndStatistics object
+
+    Returns:
+        str: The allowed errors
+    """
     length = end_statistics.effective_length
     error_rate = end_statistics.max_error_rate
     if end_statistics.allows_partial_matches:
@@ -475,12 +585,18 @@ def error_ranges(end_statistics: EndStatistics) -> str:
 
 def histogram(end_statistics: EndStatistics, n: int, gc_content: float) -> str:
     """
-    Return a formatted histogram. Include the no. of reads expected to be
-    trimmed by chance (assuming a uniform distribution of nucleotides in the reads).
+    Return a formatted histogram.
 
-    adapter_statistics -- EndStatistics object
-    adapter_length -- adapter length
-    n -- total no. of reads.
+    Include the no. of reads expected to be trimmed by chance
+    (assuming a uniform distribution of nucleotides in the reads).
+
+    Args:
+        end_statistics (EndStatistics): The EndStatistics object to build histogram from
+        n (int): The total number of reads
+        gc_content (float): The GC content percentage for use in histogram creation
+
+    Returns:
+        str: The formatted histogram
     """
     sio = StringIO()
 
@@ -500,13 +616,14 @@ def histogram(end_statistics: EndStatistics, n: int, gc_content: float) -> str:
 
 @dataclass
 class HistogramRow:
+
     """One row in the "trimmed lengths" histogram"""
 
     length: int
     count: int
     expect: float
     max_err: int
-    error_counts: List[int]
+    error_counts: list[int]
 
 
 def histogram_rows(
@@ -515,12 +632,19 @@ def histogram_rows(
     gc_content: float,
 ) -> Iterator[HistogramRow]:
     """
-    Yield histogram rows
+    Generate individual histogram rows
 
-    Include the no. of reads expected to be
-    trimmed by chance (assuming a uniform distribution of nucleotides in the reads).
+    Include the no. of reads expected to be trimmed by chance
+    (assuming a uniform distribution of nucleotides in the reads).
 
-    n -- total no. of reads.
+    Args:
+        end_statistics (EndStatistics): The EndStatistics object to build histogram from
+        n (int): The total number of reads
+        gc_content (float): The GC content percentage for use in histogram creation
+
+    Yields:
+        HistogramRow: The histogram row
+
     """
     d = end_statistics.lengths
     errors = end_statistics.errors
@@ -549,9 +673,12 @@ def histogram_rows(
 
 
 class AdjacentBaseStatistics:
-    def __init__(self, bases: Dict[str, int]):
+
+    """ """
+
+    def __init__(self, bases: dict[str, int]) -> None:
         """ """
-        self.bases: Dict[str, int] = bases
+        self.bases: dict[str, int] = bases
         self._warnbase: Optional[str] = None
         total = sum(self.bases.values())
         if total == 0:
@@ -559,16 +686,13 @@ class AdjacentBaseStatistics:
         else:
             self._fractions = []
             for base in ["A", "C", "G", "T", ""]:
-                text = base if base != "" else "none/other"
+                text = base if base else "none/other"
                 fraction = 1.0 * self.bases[base] / total
                 self._fractions.append((text, 1.0 * self.bases[base] / total))
-                if fraction > 0.8 and base != "":
+                if fraction > 0.8 and base:
                     self._warnbase = text
             if total < 20:
                 self._warnbase = None
-
-    def __repr__(self):
-        return f"AdjacentBaseStatistics(bases={self.bases})"
 
     @property
     def should_warn(self) -> bool:
@@ -598,29 +722,42 @@ class AdjacentBaseStatistics:
             print("    Ignore this warning when trimming primers.", file=sio)
         return sio.getvalue()
 
-    def as_json(self) -> Optional[Dict[str, int]]:
+    def __repr__(self) -> str:
+        return f"AdjacentBaseStatistics(bases={self.bases})"
+
+    def as_json(self) -> Optional[dict[str, int]] | None:
         if self._fractions:
             return {b: self.bases.get(b, 0) for b in ["A", "C", "G", "T", ""]}
-        else:
-            return None
+        return None
 
 
 def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # noqa: C901
-    """Print report to standard output."""
+    """
+    Print report to standard output
+
+    Args:
+        stats (Statistics): The statistics object
+        time (float): The time taken for processing
+        gc_content (float): The GC content percentage for use in histogram creation
+
+    Returns:
+        str: The report, or error message if no reads were processed
+
+    Raises:
+        ValueError: If the statistics object has not been collected
+    """
     if stats.n == 0:
         return "No reads processed!"
     if time == 0:
         time = 1e-6
     sio = StringIO()
 
-    def print_s(*args, **kwargs):
+    def print_s(*args, **kwargs) -> None:
         kwargs["file"] = sio
         print(*args, **kwargs)
 
     print_s(
-        "Finished in {:.3F} s ({:.3F} {}s/read; {:.2F} M reads/minute).".format(
-            time, 1e6 * time / stats.n, MICRO, stats.n / time * 60 / 1e6
-        )
+        f"Finished in {time:.3F} s ({1e6 * time / stats.n:.3F} {MICRO}s/read; {stats.n / time * 60 / 1e6:.2F} M reads/minute)."
     )
 
     report = "\n=== Summary ===\n\n"
@@ -629,7 +766,7 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
         for i in (0, 1):
             if stats.with_adapters[i] is not None:
                 report += (
-                    f"  Read {i+1} with adapter:           "
+                    f"  Read {i + 1} with adapter:           "
                     f"{stats.with_adapters[i]:13,d} ({stats.with_adapters_fraction[i]:.1%})\n"
                 )
     else:
@@ -723,26 +860,14 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
 
             if isinstance(adapter_statistics, LinkedAdapterStatistics):
                 print_s(
-                    "Sequence: {}...{}; Type: linked; Length: {}+{}; "
-                    "5' trimmed: {} times; 3' trimmed: {} times".format(
-                        adapter_statistics.front.sequence,
-                        adapter_statistics.back.sequence,
-                        len(adapter_statistics.front.sequence),
-                        len(adapter_statistics.back.sequence),
-                        total_front,
-                        total_back,
-                    ),
+                    f"Sequence: {adapter_statistics.front.sequence}...{adapter_statistics.back.sequence}; Type: linked; Length: {len(adapter_statistics.front.sequence)}+{len(adapter_statistics.back.sequence)}; "
+                    f"5' trimmed: {total_front} times; 3' trimmed: {total_back} times",
                     end="",
                 )
             else:
                 assert isinstance(adapter, (SingleAdapter, AnywhereAdapter))
                 print_s(
-                    "Sequence: {}; Type: {}; Length: {}; Trimmed: {} times".format(
-                        adapter.sequence,
-                        adapter.description,
-                        len(adapter.sequence),
-                        total,
-                    ),
+                    f"Sequence: {adapter.sequence}; Type: {adapter.description}; Length: {len(adapter.sequence)}; Trimmed: {total} times",
                     end="",
                 )
             if stats.reverse_complemented is not None:
@@ -816,6 +941,19 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
 
 
 def poly_a_report(poly_a: Mapping[int, int], which_in_pair: Optional[int]) -> str:
+    """
+    Create a report of the poly-A trimming
+
+    Args:
+        poly_a (Mapping[int, int]): The poly-A trimming lengths
+        which_in_pair (Optional[int]): The read pair index
+
+    Returns:
+        str: The poly-A trimming report
+
+    Raises:
+        AssertionError: If the which_in_pair argument is not 0, 1 or None
+    """
     sio = StringIO()
     if which_in_pair is None:
         title = "Poly-A"
@@ -835,7 +973,16 @@ def poly_a_report(poly_a: Mapping[int, int], which_in_pair: Optional[int]) -> st
     return sio.getvalue() + "\n"
 
 
-def format_filter_report(stats):
+def format_filter_report(stats: Statistics) -> str:
+    """
+    Create a filter report with format strings ready for final populating
+
+    Args:
+        stats (Statistics): The statistics object to format the report from
+
+    Returns:
+        str: The formatted filter report
+    """
     report = ""
     for name, description in FILTERS.items():
         if name not in stats.filtered:
@@ -852,7 +999,20 @@ def format_filter_report(stats):
 
 
 def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
-    """Create a minimal tabular report suitable for concatenation"""
+    """
+    Create a minimal tabular report suitable for concatenation
+
+    Minimal report drops the time and gc_content arguments, they are included in the args due to
+    upstream usage relying on partial functions
+
+    Args:
+        stats (Statistics): Statistics object
+        time (float): Time taken for processing
+        gc_content (float): GC content
+
+    Returns:
+        str: Tabular report
+    """
     _ = time
     _ = gc_content
 

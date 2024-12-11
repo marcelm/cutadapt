@@ -1,8 +1,9 @@
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from typing import DefaultDict, Tuple
 
 
 class ReadLengthStatistics:
+
     """
     Keep track of the lengths of written reads or read pairs
     """
