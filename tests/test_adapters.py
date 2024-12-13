@@ -509,7 +509,7 @@ def test_indexed_very_similar(caplog):
             PrefixAdapter("GAAG", max_errors=1, indels=False),
         ]
     )
-    assert "cannot be assigned uniquely" in caplog.text
+    assert "ambiguous sequences" in caplog.text
 
 
 def test_indexed_too_high_k():
@@ -580,6 +580,26 @@ def test_indexed_prefix_adapters_with_n_collision(sequence):
 
     assert isinstance(result, RemoveBeforeMatch)
     assert result.adapter is a2
+
+
+def test_indexed_prefix_adapters_ignore_ambiguous_matches():
+    a1 = PrefixAdapter("AAAAA", max_errors=1, indels=False)
+    a2 = PrefixAdapter("TTAAA", max_errors=1, indels=False)
+    ipa = IndexedPrefixAdapters([a1, a2])
+
+    result = ipa.match_to("ATAAA")
+
+    assert result is None
+
+
+def test_indexed_prefix_adapters_ignore_ambiguous_matches_with_indels():
+    a1 = PrefixAdapter("AGTACGT", max_errors=1, indels=True)
+    a2 = PrefixAdapter("ACGTAGT", max_errors=1, indels=True)
+    ipa = IndexedPrefixAdapters([a1, a2])
+
+    result = ipa.match_to("ACGTACGT")
+
+    assert result is None
 
 
 def test_inosine_wildcard():

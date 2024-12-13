@@ -1255,10 +1255,11 @@ class AdapterIndex:
         for adapter in adapters:
             self._accept(adapter, prefix)
         self._adapters = adapters
-        self._lengths, self._index = self._make_index()
+        self._lengths, self._index, self._ambiguous = self._make_index()
         logger.debug(
             "String lengths in the index: %s", sorted(self._lengths, reverse=True)
         )
+
         if len(self._lengths) == 1:
             self._length = self._lengths[0]
             self.match_to = self._match_to_one_length
@@ -1337,7 +1338,7 @@ class AdapterIndex:
             return False
         return True
 
-    def _make_index(self) -> Tuple[List[int], "AdapterIndexDict"]:
+    def _make_index(self) -> Tuple[List[int], "AdapterIndexDict", int]:
         start_time = time.time()
         max_k = max(
             (
@@ -1356,7 +1357,7 @@ class AdapterIndex:
             )
         index: Dict[str, Tuple[SingleAdapter, int, int]] = dict()
         lengths = set()
-        has_warned = False
+        ambiguous = []
         for adapter in self._adapters:
             sequence = adapter.sequence
             k = int(adapter.max_error_rate * len(sequence))
@@ -1367,47 +1368,54 @@ class AdapterIndex:
                         other_adapter, other_errors, other_matches = index[s]
                         if matches < other_matches:
                             continue
-                        if other_matches == matches and not has_warned:
-                            self._warn_similar(adapter, other_adapter, k, s, matches)
-                            has_warned = True
+                        if other_matches == matches:
+                            ambiguous.append((s, adapter, other_adapter, k, matches))
                     index[s] = (adapter, errors, matches)
                     lengths.add(len(s))
             else:
                 n = len(sequence)
                 for errors in range(k + 1):
+                    matches = n - errors
                     for s in hamming_sphere(sequence, errors):
-                        matches = n - errors
                         if s in index:
                             other_adapter, other_errors, other_matches = index[s]
                             if matches < other_matches:
                                 continue
-                            if other_matches == matches and not has_warned:
-                                self._warn_similar(
-                                    adapter, other_adapter, k, s, matches
+                            if other_matches == matches:
+                                ambiguous.append(
+                                    (s, adapter, other_adapter, k, matches)
                                 )
-                                has_warned = True
                         index[s] = (adapter, errors, matches)
                 lengths.add(n)
+
+        if ambiguous:
+            logger.warning(
+                "WARNING: The adapters are too similar. When creating the index, "
+                "%d ambiguous sequences were found that cannot be assigned uniquely.",
+                len(ambiguous),
+            )
+            s, adapter, other_adapter, k, matches = ambiguous[0]
+            logger.warning(
+                "WARNING: For example, %r, when found in a read, would result in "
+                "%s matches for both %s %r and %s %r",
+                s,
+                matches,
+                other_adapter.name,
+                other_adapter.sequence,
+                adapter.name,
+                adapter.sequence,
+            )
+            logger.warning(
+                "WARNING: Reads with ambiguous sequence will *not* be trimmed."
+            )
+            for s, adapter, other_adapter, k, matches in ambiguous:
+                del index[s]
+
         elapsed = time.time() - start_time
         logger.info("Built an index containing %s strings.", len(index))
         logger.debug("Building the index took %.1f s", elapsed)
 
-        return sorted(lengths, reverse=True), index
-
-    @staticmethod
-    def _warn_similar(adapter, other_adapter, k, s, matches):
-        logger.warning(
-            "Adapters %s %r and %s %r are very similar. At %s allowed errors, "
-            "the sequence %r cannot be assigned uniquely because the number of "
-            "matches is %s compared to both adapters.",
-            other_adapter.name,
-            other_adapter.sequence,
-            adapter.name,
-            adapter.sequence,
-            k,
-            s,
-            matches,
-        )
+        return sorted(lengths, reverse=True), index, len(ambiguous)
 
     def _match_to_one_length(self, sequence: str):
         """

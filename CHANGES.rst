@@ -5,6 +5,12 @@ Changelog
 development version
 -------------------
 
+This release increases the major version number because results when
+demultiplexing may change with this release.
+
+* :pr:`827`: When matching multiple adapters (typically when demultiplexing
+  using barcodes), Cutadapt now no longer assigns ambiguous matches to one
+  of the adapters/barcodes.
 * :issue:`808`: Made gzip compression level 1 the default, which improves
   runtime significantly in many cases. (Compressing the output is often a
   bottleneck when using multiple threads.) Output files will be larger, but because
