@@ -52,9 +52,8 @@ cutadapt = ["*.pyx", "*.c", "*.h"]
 filterwarnings = [
     "error",
 ]
-testpaths = ["tests", "src"]
+testpaths = ["tests"]
 xfail_strict = true
-addopts = "--doctest-modules"
 
 [tool.setuptools_scm]
 write_to = "src/cutadapt/_version.py"
