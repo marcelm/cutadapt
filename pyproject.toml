@@ -55,6 +55,7 @@ filterwarnings = [
 testpaths = ["tests", "src"]
 xfail_strict = true
 addopts = "--doctest-modules"
+timeout = 10
 
 [tool.setuptools_scm]
 write_to = "src/cutadapt/_version.py"
