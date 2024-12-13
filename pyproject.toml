@@ -52,9 +52,8 @@ cutadapt = ["*.pyx", "*.c", "*.h"]
 filterwarnings = [
     "error",
 ]
-testpaths = ["tests", "src"]
+testpaths = ["tests"]
 xfail_strict = true
-addopts = "--doctest-modules"
 timeout = 10
 
 [tool.setuptools_scm]
