@@ -2,8 +2,8 @@
 Changelog
 =========
 
-development version
--------------------
+v5.0 (2024-12-13)
+-----------------
 
 This release increases the major version number because results when
 demultiplexing may change with this release.
