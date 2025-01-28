@@ -2,6 +2,12 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* :issue:`829`: Fix crash (``KeyError``) when creating an index with ambiguous
+  sequences.
+
 v5.0 (2024-12-13)
 -----------------
 

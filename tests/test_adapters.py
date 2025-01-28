@@ -512,6 +512,16 @@ def test_indexed_very_similar(caplog):
     assert "ambiguous sequences" in caplog.text
 
 
+@pytest.mark.parametrize("indels", [False, True])
+def test_indexed_very_similar2(indels):
+    adapters = [
+        PrefixAdapter("AAA", max_errors=1, indels=indels),
+        PrefixAdapter("ATT", max_errors=1, indels=indels),
+        PrefixAdapter("TTA", max_errors=1, indels=indels),
+    ]
+    IndexedPrefixAdapters(adapters)
+
+
 def test_indexed_too_high_k():
     with pytest.raises(ValueError) as e:
         IndexedPrefixAdapters(

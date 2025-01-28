@@ -1357,7 +1357,7 @@ class AdapterIndex:
             )
         index: Dict[str, Tuple[SingleAdapter, int, int]] = dict()
         lengths = set()
-        ambiguous = []
+        ambiguous = {}
         for adapter in self._adapters:
             sequence = adapter.sequence
             k = int(adapter.max_error_rate * len(sequence))
@@ -1368,8 +1368,8 @@ class AdapterIndex:
                         other_adapter, other_errors, other_matches = index[s]
                         if matches < other_matches:
                             continue
-                        if other_matches == matches:
-                            ambiguous.append((s, adapter, other_adapter, k, matches))
+                        if other_matches == matches and s not in ambiguous:
+                            ambiguous[s] = (adapter, other_adapter, k, matches)
                     index[s] = (adapter, errors, matches)
                     lengths.add(len(s))
             else:
@@ -1381,10 +1381,8 @@ class AdapterIndex:
                             other_adapter, other_errors, other_matches = index[s]
                             if matches < other_matches:
                                 continue
-                            if other_matches == matches:
-                                ambiguous.append(
-                                    (s, adapter, other_adapter, k, matches)
-                                )
+                            if other_matches == matches and s not in ambiguous:
+                                ambiguous[s] = (adapter, other_adapter, k, matches)
                         index[s] = (adapter, errors, matches)
                 lengths.add(n)
 
@@ -1394,7 +1392,8 @@ class AdapterIndex:
                 "%d ambiguous sequences were found that cannot be assigned uniquely.",
                 len(ambiguous),
             )
-            s, adapter, other_adapter, k, matches = ambiguous[0]
+            s = next(iter(ambiguous))
+            adapter, other_adapter, k, matches = ambiguous[s]
             logger.warning(
                 "WARNING: For example, %r, when found in a read, would result in "
                 "%s matches for both %s %r and %s %r",
@@ -1408,7 +1407,7 @@ class AdapterIndex:
             logger.warning(
                 "WARNING: Reads with ambiguous sequence will *not* be trimmed."
             )
-            for s, adapter, other_adapter, k, matches in ambiguous:
+            for s in ambiguous:
                 del index[s]
 
         elapsed = time.time() - start_time
