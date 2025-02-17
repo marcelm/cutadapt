@@ -20,4 +20,6 @@ If you report unexpected trimming behavior, this is also helpful:
 - The output that Cutadapt produces
 - The output that you would have expected
 
+Avoid posting screenshots of terminal output. Copy and paste the actual text instead.
+
 Feel free to delete this text before submitting your issue.
