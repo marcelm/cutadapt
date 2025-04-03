@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 63", "setuptools_scm[toml] >= 6.2", "Cython >= 0.29.20"]
+requires = ["setuptools >= 78", "setuptools_scm[toml] >= 6.2", "Cython >= 0.29.20"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,12 +9,11 @@ authors = [
 ]
 description = "Adapter trimming and other preprocessing of high-throughput sequencing reads"
 readme = "README.rst"
-license = {text = "MIT"}
+license = "MIT"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Cython",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering :: Bio-Informatics"
