@@ -1,8 +1,10 @@
 import errno
 import io
+import os
 import sys
 from abc import ABC, abstractmethod
 from enum import Enum
+from pathlib import Path
 from typing import BinaryIO, Optional, Dict, List, TextIO, Any
 
 import dnaio
@@ -164,10 +166,15 @@ class ProxyRecordWriter(ProxyWriter):
     A writer for FASTA, FASTQ records etc. that is backed by a BytesIO object
     """
 
-    def __init__(self, n_files: int, **kwargs):
-        self._n_files = n_files
+    def __init__(self, paths: list[Path], **kwargs):
+        self._paths = paths
         self._kwargs = kwargs
-        self._buffers = [io.BytesIO() for _ in range(n_files)]
+        self._buffers = []
+        for path in paths:
+            bio = io.BytesIO()
+            # dnaio.open uses the name attribute to determine the output file format
+            bio.name = os.fspath(path)
+            self._buffers.append(bio)
         self._writer = open_raise_limit(dnaio.open, *self._buffers, mode="w", **kwargs)
 
     def write(self, *args, **kwargs):
@@ -182,11 +189,11 @@ class ProxyRecordWriter(ProxyWriter):
 
     def __getstate__(self):
         """Exclude the dnaio Reader class from the state"""
-        return (self._n_files, self._kwargs)
+        return (self._paths, self._kwargs)
 
     def __setstate__(self, state):
-        n_files, kwargs = state
-        self.__init__(n_files, **kwargs)
+        paths, kwargs = state
+        self.__init__(paths, **kwargs)
 
 
 class OutputFiles:
@@ -251,7 +258,7 @@ class OutputFiles:
             self._binary_files.append(binary_file)
             self._binary_files_to_close.append(binary_file)
         if self._proxied:
-            proxy_writer = ProxyRecordWriter(len(paths), **kwargs)
+            proxy_writer = ProxyRecordWriter([Path(path) for path in paths], **kwargs)
             self._proxy_files.append(proxy_writer)
             return proxy_writer
         else:
@@ -269,7 +276,7 @@ class OutputFiles:
         if force_fasta:
             kwargs["fileformat"] = "fasta"
         if self._proxied:
-            proxy_writer = ProxyRecordWriter(1, **kwargs)
+            proxy_writer = ProxyRecordWriter([Path("-")], **kwargs)
             self._proxy_files.append(proxy_writer)
             return proxy_writer
         else:

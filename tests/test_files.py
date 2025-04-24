@@ -1,5 +1,6 @@
 import os
 import pickle
+from pathlib import Path
 
 from cutadapt.files import ProxyTextFile, ProxyRecordWriter, OutputFiles
 from dnaio import SequenceRecord
@@ -26,7 +27,7 @@ def test_proxy_test_file_pickleable():
 
 
 def test_proxy_record_writer():
-    pw = ProxyRecordWriter(n_files=1, qualities=True)
+    pw = ProxyRecordWriter(["out.fastq"], qualities=True)
     pw.write(SequenceRecord("name", "ACGT", qualities="####"))
     assert pw.drain() == [
         b"@name\nACGT\n+\n####\n",
@@ -40,7 +41,7 @@ def test_proxy_record_writer():
 
 
 def test_proxy_record_writer_paired():
-    pw = ProxyRecordWriter(n_files=2, qualities=True)
+    pw = ProxyRecordWriter([Path("out.1.fastq"), Path("out.2.fastq")], qualities=True)
     pw.write(
         SequenceRecord("name", "ACGT", qualities="####"),
         SequenceRecord("name", "GGGG", qualities="!!!!"),
@@ -62,12 +63,12 @@ def test_proxy_record_writer_paired():
 
 
 def test_proxy_record_writer_picklable():
-    pw = ProxyRecordWriter(n_files=2, qualities=True)
+    pw = ProxyRecordWriter([Path("out.1.fastq"), Path("out.2.fastq")], qualities=True)
     pickled = pickle.dumps(pw)
 
     unpickled = pickle.loads(pickled)
     assert isinstance(unpickled, ProxyRecordWriter)
-    assert unpickled._n_files == 2
+    assert unpickled._paths == [Path("out.1.fastq"), Path("out.2.fastq")]
 
 
 class TestOutputFiles:

@@ -825,8 +825,8 @@ def test_anywhere_anchored_3p():
         main(["-b", "TTT$", datapath("small.fastq")])
 
 
-def test_fasta(run):
-    run("-a TTAGACATATCTCCGTCG", "small.fasta", "small.fastq")
+def test_fastq_input_fasta_output(run, cores):
+    run(f"-j {cores} -a TTAGACATATCTCCGTCG", "small.fasta", "small.fastq")
 
 
 def test_fasta_no_trim(run):

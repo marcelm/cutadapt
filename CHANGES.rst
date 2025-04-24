@@ -7,6 +7,8 @@ development version
 
 * :issue:`829`: Fix crash (``KeyError``) when creating an index with ambiguous
   sequences.
+* :issue:`838`: Fix incorrect writing of FASTQ data to FASTA output when running on
+  multiple cores.
 
 v5.0 (2024-12-13)
 -----------------
