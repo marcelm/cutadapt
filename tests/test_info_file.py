@@ -169,3 +169,34 @@ def test_issue_296(tmp_path):
     )
     # Output should be unchanged because of --no-trim
     assert_files_equal(reads_path, out_path)
+
+
+def test_paired_info_file(run_paired, tmp_path, cores):
+    info_path = tmp_path / "info1.txt"
+    info_path2 = tmp_path / "info2.txt"
+
+    run_paired(
+        [
+            "--info-file",
+            str(info_path),
+            "--info-file-paired",
+            str(info_path2),
+            "-a",
+            "r1adapt=TTAGACATAT",
+            "-A",
+            "r2adapt=CAGTGGAGTA",
+            "-m",
+            "14",
+        ],
+        in1="paired.1.fastq",
+        in2="paired.2.fastq",
+        expected1="paired.1.fastq",
+        expected2="paired.2.fastq",
+        cores=cores,
+    )
+    assert_files_equal(
+        cutpath("paired.info1.txt"), info_path, ignore_trailing_space=True
+    )
+    assert_files_equal(
+        cutpath("paired.info2.txt"), info_path2, ignore_trailing_space=True
+    )

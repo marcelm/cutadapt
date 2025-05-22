@@ -5,6 +5,9 @@ Changelog
 development version
 -------------------
 
+* :issue:`302`, :issue:`842`: Added option ``--info-file-paired``. Together with
+  ``--info-file``, this allows writing an info file for both R1 and R2 when
+  processing paired-end data.
 * :issue:`829`: Fix crash (``KeyError``) when creating an index with ambiguous
   sequences.
 * :issue:`838`: Fix incorrect writing of FASTQ data to FASTA output when running on

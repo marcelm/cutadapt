@@ -16,6 +16,7 @@ Steps are added to the pipeline in a certain order:
 3. The last pipeline step should be one of the "Sinks", which consume all reads.
    Demultiplexers are sinks, for example.
 """
+
 import itertools
 from abc import ABC, abstractmethod
 from typing import Tuple, Optional, Any, TextIO, Sequence, List
@@ -250,6 +251,22 @@ class InfoFileWriter(SingleEndStep):
             print(read.name, -1, seq, qualities, sep="\t", file=self._file)
 
         return read
+
+
+class PairedInfoFileWriter(PairedEndStep):
+    def __init__(self, file1: TextIO, file2: TextIO):
+        self._info_writer1 = InfoFileWriter(file1)
+        self._info_writer2 = InfoFileWriter(file2)
+
+    def __repr__(self):
+        return f"PairedInfoFileWriter({self._info_writer1}, {self._info_writer2})"
+
+    def __call__(
+        self, read1, read2, info1: ModificationInfo, info2: ModificationInfo
+    ) -> Optional[RecordPair]:
+        self._info_writer1(read1, info1)
+        self._info_writer2(read2, info2)
+        return (read1, read2)
 
 
 class PairedSingleEndStep(PairedEndStep):

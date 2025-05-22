@@ -61,7 +61,7 @@ import platform
 import itertools
 import multiprocessing
 from pathlib import Path
-from typing import Tuple, Optional, Sequence, List, Any, Iterator, Union, Dict
+from typing import Tuple, Optional, Sequence, List, Iterator, Union, Dict
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
@@ -108,6 +108,7 @@ from cutadapt.runners import make_runner
 from cutadapt.files import InputPaths, OutputFiles, FileOpener
 from cutadapt.steps import (
     InfoFileWriter,
+    PairedInfoFileWriter,
     PairedSingleEndStep,
     RestFileWriter,
     WildcardFileWriter,
@@ -384,6 +385,8 @@ def get_argument_parser() -> ArgumentParser:
         help="Shorten R2 to LENGTH. Default: same as for R1")
     group.add_argument("-p", "--paired-output", metavar="FILE",
         help="Write R2 to FILE.")
+    group.add_argument("--info-file-paired", dest="info_file2", metavar="FILE",
+        help="Write info about R2 to FILE (see --info-file)")
     group.add_argument("--pair-adapters", action="store_true",
         help="Treat adapters given with -a/-A etc. as pairs. Either both "
              "or none are removed from each read pair.")
@@ -531,6 +534,7 @@ def determine_paired(args) -> bool:
         or args.too_short_paired_output
         or args.too_long_paired_output
         or args.quality_cutoff2
+        or args.info_file2
     )
 
 
@@ -675,9 +679,14 @@ def make_pipeline_from_args(  # noqa: C901
         steps.append(step)
 
     if args.info_file is not None:
-        step = InfoFileWriter(outfiles.open_text(args.info_file))
-        if paired:
-            step = PairedSingleEndStep(step)
+        if paired and args.info_file2 is not None:
+            step = PairedInfoFileWriter(
+                outfiles.open_text(args.info_file), outfiles.open_text(args.info_file2)
+            )
+        else:
+            step = InfoFileWriter(outfiles.open_text(args.info_file))
+            if paired:
+                step = PairedSingleEndStep(step)
         steps.append(step)
 
     if args.wildcard_file is not None:
@@ -878,9 +887,9 @@ def make_pipeline_from_args(  # noqa: C901
                 step = PairedEndFilter(
                     predicate,
                     predicate,
-                    pair_filter_mode="both"
-                    if override_pair_filter_mode
-                    else pair_filter_mode,
+                    pair_filter_mode=(
+                        "both" if override_pair_filter_mode else pair_filter_mode
+                    ),
                 )
             else:
                 step = SingleEndFilter(predicate)
@@ -894,9 +903,9 @@ def make_pipeline_from_args(  # noqa: C901
                     predicate2 if paired else None,
                     args.untrimmed_output,
                     args.untrimmed_paired_output,
-                    pair_filter_mode="both"
-                    if override_pair_filter_mode
-                    else pair_filter_mode,
+                    pair_filter_mode=(
+                        "both" if override_pair_filter_mode else pair_filter_mode
+                    ),
                 )
             )
 
@@ -1045,9 +1054,11 @@ def make_quality_trimmers(
     paired: bool,
 ):
     qtrimmers = [
-        QualityTrimmer(*parse_cutoffs(cutoff), quality_base)
-        if cutoff is not None and cutoff != "0"
-        else None
+        (
+            QualityTrimmer(*parse_cutoffs(cutoff), quality_base)
+            if cutoff is not None and cutoff != "0"
+            else None
+        )
         for cutoff in (cutoff1, cutoff2)
     ]
     if paired:
