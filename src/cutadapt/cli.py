@@ -344,7 +344,7 @@ def get_argument_parser() -> ArgumentParser:
     group.add_argument("--compression-level", type=int, default=1, metavar="N",
         help="Compression level for compressed output files. Default: %(default)s")
     group.add_argument("-Z", action="store_const", const=1, dest="compression_level",
-        help="DEPRECATED because compression level 1 is now the default.")
+        help=SUPPRESS)  # deprecated because compression level 1 is now the default
     group.add_argument("--info-file", metavar="FILE",
         help="Write information about each read and its adapter matches into FILE. "
             "See the documentation for the file format.")
