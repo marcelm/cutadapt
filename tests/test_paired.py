@@ -158,7 +158,7 @@ def test_no_trimming_legacy():
 
 
 def test_no_trimming():
-    # make sure that this doesn"t divide by zero
+    # make sure that this doesn’t divide by zero
     main(
         [
             "-a",

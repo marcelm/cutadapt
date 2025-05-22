@@ -557,7 +557,7 @@ def make_input_paths(
         if len(inputs) == 1:
             raise CommandLineError(
                 "You used an option that enables paired-end mode (such as -p, -A, -G, -B, -U), but "
-                "only provided one input file. Pleise either provide two input files or use "
+                "only provided one input file. Please either provide two input files or use "
                 "use --interleaved as appropriate."
             )
         else:
