@@ -667,14 +667,21 @@ def make_pipeline_from_args(  # noqa: C901
     adapter_names2: List[Optional[str]] = [a.name for a in adapters2]
 
     steps = []
-    for step_class, path in (
-        (RestFileWriter, args.rest_file),
-        (InfoFileWriter, args.info_file),
-        (WildcardFileWriter, args.wildcard_file),
-    ):
-        if path is None:
-            continue
-        step: Any = step_class(outfiles.open_text(path))
+
+    if args.rest_file is not None:
+        step = RestFileWriter(outfiles.open_text(args.rest_file))
+        if paired:
+            step = PairedSingleEndStep(step)
+        steps.append(step)
+
+    if args.info_file is not None:
+        step = InfoFileWriter(outfiles.open_text(args.info_file))
+        if paired:
+            step = PairedSingleEndStep(step)
+        steps.append(step)
+
+    if args.wildcard_file is not None:
+        step = WildcardFileWriter(outfiles.open_text(args.wildcard_file))
         if paired:
             step = PairedSingleEndStep(step)
         steps.append(step)
