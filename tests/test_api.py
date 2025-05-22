@@ -6,6 +6,7 @@ mostly in order to figure out where improvements need to be made.
 The tests in this module do not check results, they are just here to
 ensure that the code as shown can be executed.
 """
+
 import copy
 import io
 import json

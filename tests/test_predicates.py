@@ -1,6 +1,7 @@
 """
 Tests write output (should it return True or False or write)
 """
+
 import pytest
 from dnaio import SequenceRecord
 

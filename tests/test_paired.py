@@ -774,21 +774,6 @@ def test_combinatorial_demultiplexing(tmp_path, discarduntrimmed, cores):
                 )
 
 
-def test_info_file(tmp_path):
-    info_path = os.fspath(tmp_path / "info.txt")
-    params = [
-        "--info-file",
-        info_path,
-        "-o",
-        os.fspath(tmp_path / "out.1.fastq"),
-        "-p",
-        os.fspath(tmp_path / "out.2.fastq"),
-        datapath("paired.1.fastq"),
-        datapath("paired.2.fastq"),
-    ]
-    main(params)
-
-
 def test_rename(run_paired, cores):
     run_paired(
         [

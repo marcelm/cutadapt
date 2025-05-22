@@ -40,7 +40,7 @@ demultiplexing may change with this release.
   paired-end data.
 * :issue:`820`: Fix division by zero problem if ``--max-ee`` is used with an
   empty read. By @rhpvorderman.
-* :issue:`824`: Fix: discard_(un)trimmed values were always ``none`` in JSON
+* :issue:`824`: Fix: ``discard_(un)trimmed`` values were always ``none`` in JSON
   report.
 * An index (that speeds up matching of many anchored adapters such as barcodes)
   is now created for up to three allowed errors (instead of two). Since this can
