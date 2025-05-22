@@ -182,7 +182,7 @@ def test_first_too_short(tmp_path, cores):
                 os.fspath(tmp_path / "out.fastq"),
                 "--cores",
                 str(cores),
-                str(trunc1),
+                trunc1,
                 datapath("paired.2.fastq"),
             ]
         )
@@ -206,7 +206,7 @@ def test_second_too_short(tmp_path, cores):
                 "--cores",
                 str(cores),
                 datapath("paired.1.fastq"),
-                str(trunc2),
+                trunc2,
             ]
         )
 
@@ -229,7 +229,7 @@ def test_unmatched_read_names(tmp_path, cores):
                 os.fspath(tmp_path / "out2.fastq"),
                 "--cores",
                 str(cores),
-                str(swapped),
+                swapped,
                 datapath("paired.2.fastq"),
             ]
         )

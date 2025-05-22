@@ -24,7 +24,7 @@ def test_write_compressed_fastq(cores, tmp_path):
             "--cores",
             str(cores),
             "-o",
-            str(tmp_path / "out.fastq.gz"),
+            tmp_path / "out.fastq.gz",
             datapath("small.fastq"),
         ]
     )

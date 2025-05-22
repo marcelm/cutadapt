@@ -80,13 +80,13 @@ def test_info_file_revcomp(run, tmp_path):
     main(
         [
             "--info-file",
-            str(info_path),
+            info_path,
             "-a",
             "adapt=GAGTCG",
             "--revcomp",
             "--rename={header}",
             "-o",
-            str(tmp_path / "out.fasta"),
+            tmp_path / "out.fasta",
             datapath("info-rc.fasta"),
         ]
     )
@@ -94,7 +94,7 @@ def test_info_file_revcomp(run, tmp_path):
 
 
 def test_reverse_complement_and_info_file(run, tmp_path, cores):
-    info_path = str(tmp_path / "info.txt")
+    info_path = tmp_path / "info.txt"
     run(
         [
             "--revcomp",
@@ -122,9 +122,9 @@ def test_linked_info_file(tmp_path):
         [
             "-a linkedadapter=^AAAAAAAAAA...TTTTTTTTTT",
             "--info-file",
-            str(info_path),
+            info_path,
             "-o",
-            str(tmp_path / "out.fasta"),
+            tmp_path / "out.fasta",
             datapath("linked.fasta"),
         ]
     )
@@ -137,11 +137,11 @@ def test_info_file_paired_only_r1(tmp_path):
     info_path = tmp_path / "info.txt"
     params = [
         "--info-file",
-        str(info_path),
+        info_path,
         "-o",
-        str(tmp_path / "out.1.fastq"),
+        tmp_path / "out.1.fastq",
         "-p",
-        str(tmp_path / "out.2.fastq"),
+        tmp_path / "out.2.fastq",
         datapath("paired.1.fastq"),
         datapath("paired.2.fastq"),
     ]
@@ -158,13 +158,13 @@ def test_issue_296(tmp_path):
     main(
         [
             "--info-file",
-            str(info_path),
+            info_path,
             "--no-trim",
             "-g",
             "TTTCAC",
             "-o",
-            str(out_path),
-            str(reads_path),
+            out_path,
+            reads_path,
         ]
     )
     # Output should be unchanged because of --no-trim

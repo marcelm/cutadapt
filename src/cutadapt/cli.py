@@ -1160,6 +1160,7 @@ def main(cmdlineargs) -> Statistics:
         parser.print_usage()
         sys.exit(2)
 
+    cmdlineargs = [str(arg) if isinstance(arg, Path) else arg for arg in cmdlineargs]
     args, leftover_args = parser.parse_known_args(args=cmdlineargs)
     # Setup logging only if there are not already any handlers (can happen when
     # this function is being called externally such as from unit tests)
