@@ -26,3 +26,24 @@ def run(tmp_path):
         return stats
 
     return _run
+
+
+@pytest.fixture
+def run_paired(tmp_path):
+    def _run(params, in1, in2, expected1, expected2, cores):
+        if type(params) is str:
+            params = params.split()
+        params += ["--cores", str(cores), "--buffer-size=512"]
+        params += ["--json", os.fspath(tmp_path / "stats.cutadapt.json")]
+        (tmp_path / "r1").mkdir()
+        (tmp_path / "r2").mkdir()
+        path1 = os.fspath(tmp_path / "r1" / expected1)
+        path2 = os.fspath(tmp_path / "r2" / expected2)
+        params += ["-o", path1, "-p", path2]
+        params += [datapath(in1), datapath(in2)]
+        stats = main(params)
+        assert_files_equal(cutpath(expected1), path1)
+        assert_files_equal(cutpath(expected2), path2)
+        return stats
+
+    return _run
