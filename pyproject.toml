@@ -62,9 +62,10 @@ write_to = "src/cutadapt/_version.py"
 warn_unused_configs = true
 
 [tool.cibuildwheel]
-environment = {"CFLAGS" = "-g0", "PYTEST_ADDOPTS" = "--doctest-ignore-import-errors"}
+environment = {"CFLAGS" = "-O3 -DNDEBUG", "PYTEST_ADDOPTS" = "--doctest-ignore-import-errors"}
 test-extras = ["dev"]
 test-command = ["pytest {project}"]
+build-verbosity = 1
 
 [tool.ruff]
 line-length = 130
