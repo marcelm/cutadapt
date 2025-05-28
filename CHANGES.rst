@@ -2,8 +2,8 @@
 Changelog
 =========
 
-development version
--------------------
+v5.1 (2025-05-28)
+-----------------
 
 * :issue:`302`, :issue:`842`: Added option ``--info-file-paired``. Together with
   ``--info-file``, this allows writing an info file for both R1 and R2 when
