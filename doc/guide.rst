@@ -783,26 +783,31 @@ Searching reverse complements
 By default, Cutadapt expects adapters to be given in the same orientation (5' to 3') as the reads.
 That is, Cutadapt considers neither the reverse complement of the reads nor of the adapters.
 
-To make Cutadapt consider the reverse-complement as well,
+To make Cutadapt consider reverse-complements,
 use option ``--revcomp`` or its abbreviation ``--rc``.
 
-If given, both the input sequence and its reverse complement are searched for adapters.
-Whichever of the two versions matches best is kept.
-That is, if the reverse-complemented sequence yields a better match, the output file will contain the
-reverse-complemented version.
-This can be used to “normalize” read orientation/strandedness.
+With this option, Cutadapt runs the adapter search twice for each read,
+once on the original read and once on the reverse-complemented read.
+If the reverse-complemented read results in a better match
+than the original orientation,
+the reverse-complemented version of the read is written to the output
+and the read name is annotated with the text ``rc`` (after a space).
+
+This can be used to “normalize” read orientation/strandedness:
+For a library that contains reads with mixed orientation,
+using ``--revcomp`` will produce output in which all reads have the same orientation.
+The ``rc`` annotation can be used to tell
+whether the read is the reverse-complemented version of the original.
 
 For paired-end reads, reverse complementing is done by swapping R1 and R2.
 
-To determine whether the forward or reverse-complemented sequence yields the better match,
+To determine whether the original or reverse-complemented sequence yields the better match,
 the full adapter search is done independently on both versions,
 and the version that results in the higher number of matching
 nucleotides is considered to be the better one.
 
-If the reverse-complemented version of a read or read pair was chosen,
-a space and the text ``rc`` is added to the read name.
-To not change the read name, add option ``--rename="{header}"``.
-(Please file an issue if you would like this to be configurable.)
+To prevent the ``rc`` annotation from being added to the read name,
+use option ``--rename="{header}"``.
 
 The report will show the number of reads or read pairs that were reverse-complemented, like this::
 
