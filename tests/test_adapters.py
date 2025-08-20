@@ -9,6 +9,7 @@ from cutadapt.adapters import (
     PrefixAdapter,
     SuffixAdapter,
     RightmostFrontAdapter,
+    RightmostBackAdapter,
     LinkedAdapter,
     MultipleAdapters,
     IndexedPrefixAdapters,
@@ -86,8 +87,9 @@ def test_front_adapter_alignment_should_not_include_indel():
     assert match.errors == 1
 
 
-def test_rightmost_front_adapter():
-    adapter = RightmostFrontAdapter("CTGAATT", max_errors=1, min_overlap=3)
+@pytest.mark.parametrize("adapter_class", [RightmostFrontAdapter, RightmostBackAdapter])
+def test_rightmost_adapter(adapter_class):
+    adapter = adapter_class("CTGAATT", max_errors=1, min_overlap=3)
     match = adapter.match_to("GGCTGAATTGGG")
     assert match.astart == 0
     assert match.astop == 7
@@ -125,6 +127,16 @@ def test_rightmost_front_adapter_partial_occurrence():
     assert match.astop == 8
     assert match.rstart == 0
     assert match.rstop == 4
+
+
+def test_rightmost_back_adapter_partial_occurrence():
+    adapter = RightmostBackAdapter("ACGTAAAA")
+    match = adapter.match_to("TTTTTTTTACGT")
+    assert match is not None
+    assert match.astart == 0
+    assert match.astop == 4
+    assert match.rstart == 8
+    assert match.rstop == 12
 
 
 def test_wildcards():

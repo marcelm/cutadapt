@@ -2,6 +2,12 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* :issue:`853`: Add ability to search for rightmost 3' adapters. Use the ``rightmost``
+  search parameter for this, as in ``-a "ACGT;rightmost"``.
+
 v5.1 (2025-05-28)
 -----------------
 

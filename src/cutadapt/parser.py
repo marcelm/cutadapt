@@ -19,6 +19,7 @@ from .adapters import (
     LinkedAdapter,
     InvalidCharacter,
     RightmostFrontAdapter,
+    RightmostBackAdapter,
 )
 
 logger = logging.getLogger(__name__)
@@ -280,8 +281,10 @@ class AdapterSpecification:
         if parameters.get("min_overlap", 0) > len(spec):
             parameters["min_overlap"] = len(spec)
 
-        if rightmost and (adapter_type != "front" or restriction is not None):
-            raise ValueError("'rightmost' only allowed with regular 5' adapters")
+        if rightmost and (
+            adapter_type not in ("front", "back") or restriction is not None
+        ):
+            raise ValueError("'rightmost' only allowed with regular 5' and 3' adapters")
 
         return cls(name, restriction, spec, parameters, adapter_type, rightmost)
 
@@ -335,7 +338,10 @@ class AdapterSpecification:
                     f"Value {restriction} for a front restriction not allowed"
                 )
         elif adapter_type == "back":
-            if restriction is None:
+            if rightmost:
+                assert restriction is None
+                return RightmostBackAdapter
+            elif restriction is None:
                 return BackAdapter
             elif restriction == "anchored":
                 return SuffixAdapter
@@ -529,6 +535,7 @@ def _make_not_linked_adapter(
         FrontAdapter,
         BackAdapter,
         RightmostFrontAdapter,
+        RightmostBackAdapter,
     ):
         aspec.parameters["force_anywhere"] = True
     if "required" in aspec.parameters:

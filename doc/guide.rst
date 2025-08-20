@@ -514,10 +514,13 @@ When the adapter is a 5' adapter instead, the read will be trimmed to ::
 
     gggggADAPTERttttt
 
-For 5' adapters, this can be changed so that the *rightmost* occurrence is found
+This can be changed so that the *rightmost* occurrence is found
 by using the ``rightmost`` :ref:`search parameter <search-parameters>`, as in
-``-g "ACGT;rightmost"``.
+``-g "ACGT;rightmost"`` or ``-a "ACGT;rightmost"``.
 
+
+.. versionadded:: 5.2
+   Support ``rightmost`` for 3' adapters
 
 .. versionadded:: 4.1
    The ``rightmost`` search parameter
@@ -565,7 +568,7 @@ Allow matches anywhere                                                  ``ADAPTE
 
 :ref:`Linked adapter required <linked-override>`                        ``ADAPTER;required``
 :ref:`Linked adapter optional <linked-override>`                        ``ADAPTER;optional``
-:ref:`Find rightmost 5' adapter occurrence <rightmost>`                 ``ADAPTER;rightmost``
+:ref:`Find rightmost adapter occurrence <rightmost>`                    ``ADAPTER;rightmost``
 ======================================================= =============== ================================
 
 The minimum overlap length cannot be set for anchored adapters as these always need to occur at full

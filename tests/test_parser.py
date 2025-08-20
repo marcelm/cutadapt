@@ -10,6 +10,7 @@ from cutadapt.adapters import (
     InvalidCharacter,
     PrefixAdapter,
     RightmostFrontAdapter,
+    RightmostBackAdapter,
     SuffixAdapter,
 )
 from cutadapt.parser import (
@@ -222,13 +223,12 @@ def test_make_adapter_front():
     assert "not possible" in e.value.args[0]
 
 
-def test_make_adapter_rightmost_front():
+def test_make_adapter_rightmost():
     a = make_adapter("ACGT; rightmost", "front", dict())
     assert isinstance(a, RightmostFrontAdapter)
 
-    with pytest.raises(ValueError) as e:
-        make_adapter("ACGT; rightmost", "back", dict())
-    assert "only allowed" in e.value.args[0]
+    a = make_adapter("ACGT; rightmost", "back", dict())
+    assert isinstance(a, RightmostBackAdapter)
 
 
 def test_make_adapter_back():
@@ -509,3 +509,8 @@ def test_linked_adapter_rightmost():
     a = make_adapter("ACG;rightmost...TGT", "back", dict())
     assert isinstance(a, LinkedAdapter)
     assert isinstance(a.front_adapter, RightmostFrontAdapter)
+
+    a = make_adapter("ACG;rightmost...TGT;rightmost", "back", dict())
+    assert isinstance(a, LinkedAdapter)
+    assert isinstance(a.front_adapter, RightmostFrontAdapter)
+    assert isinstance(a.back_adapter, RightmostBackAdapter)

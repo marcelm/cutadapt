@@ -838,6 +838,61 @@ class BackAdapter(SingleAdapter):
         return BackAdapterStatistics(self)
 
 
+class RightmostBackAdapter(BackAdapter):
+    """A 3' adapter that prefers rightmost matches"""
+
+    description = "rightmost 3'"
+
+    def descriptive_identifier(self) -> str:
+        return "rightmost_three_prime"
+
+    def _aligner(self) -> Aligner:
+        aligner = self._make_aligner(
+            self.sequence[::-1],
+            Where.ANYWHERE.value if self._force_anywhere else Where.FRONT.value,
+        )
+        return aligner
+
+    def _kmer_finder(self):
+        kmer_finder = self._make_kmer_finder(
+            self.sequence[::-1], back_adapter=self._force_anywhere, front_adapter=True
+        )
+        return kmer_finder
+
+    def match_to(self, sequence: str):
+        """
+        Attempt to match this adapter to the given read.
+
+        Return a Match instance if a match was found;
+        return None if no match was found given the matching criteria (minimum
+        overlap length, maximum error rate).
+        """
+        reversed_sequence = sequence[::-1]
+        if not self.kmer_finder.kmers_present(reversed_sequence):
+            return None
+        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
+            reversed_sequence
+        )
+        if self._debug:
+            print_matrices(self.aligner.dpmatrix)
+        if alignment is None:
+            return None
+
+        ref_start, ref_end, query_start, query_end, score, errors = alignment
+        alignment = (
+            len(self.sequence) - ref_end,
+            len(self.sequence) - ref_start,
+            len(sequence) - query_end,
+            len(sequence) - query_start,
+            score,
+            errors,
+        )
+        return RemoveAfterMatch(*alignment, adapter=self, sequence=sequence)
+
+    def spec(self) -> str:
+        return f"{self.sequence};rightmost"
+
+
 class AnywhereAdapter(SingleAdapter):
     """
     An adapter that can be 5' or 3'. If a match involves the first base of
