@@ -657,7 +657,11 @@ class Renamer(SingleEndModifier):
             token.value for token in self._tokens if isinstance(token, BraceToken)
         )
         lines = ["def rename(self, read, info):"]
-        if "id" in placeholders or "header" in placeholders:
+        if (
+            "id" in placeholders
+            or "header" in placeholders
+            or "comment" in placeholders
+        ):
             lines.append("  id_, comment = self.parse_name(read.name)")
         lines.append("  return self._template.format(")
         for placeholder in placeholders:

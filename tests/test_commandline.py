@@ -910,6 +910,20 @@ def test_rename(run, cores):
     )
 
 
+def test_rename_comment_without_id(run, cores):
+    run(
+        [
+            "--rename={adapter_name};{comment}",
+            "-a",
+            "adapter=TTTTTT",
+            "--cores",
+            str(cores),
+        ],
+        "rename_comment_without_id.fastq",
+        "suffix.fastq",
+    )
+
+
 def test_terminates_correctly_on_error_in_subprocess(tmp_path):
     params = [
         "-j",
