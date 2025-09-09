@@ -924,7 +924,6 @@ def test_rename_comment_without_id(run, cores):
     )
 
 
-
 def test_terminates_correctly_on_error_in_subprocess(tmp_path):
     params = [
         "-j",
