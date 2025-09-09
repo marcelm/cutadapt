@@ -919,7 +919,7 @@ def test_rename_comment_without_id(run, cores):
             "--cores",
             str(cores),
         ],
-        "rename_comment_only.fastq",
+        "rename_comment_without_id.fastq",
         "suffix.fastq",
     )
 
