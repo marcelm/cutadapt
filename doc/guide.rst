@@ -60,7 +60,7 @@ Each read is processed in the following order:
 Adapter types
 =============
 
-Cutadapt can find multiple types of adapters. 5' adapters preceed the sequence of
+Cutadapt can find multiple types of adapters. 5' adapters precede the sequence of
 interest and 3' adapters follow it. Further distinctions are made according to
 where in the read the adapter sequence is allowed to occur.
 
@@ -163,7 +163,7 @@ be the result::
     mysequence
 
 As this example shows, Cutadapt allows regular 3' adapters to occur in full
-anywhere within the read (preceeded and/or succeeded by zero or more bases), and
+anywhere within the read (preceded and/or succeeded by zero or more bases), and
 also partially degraded at the 3' end. Cutadapt deals with 3' adapters
 by removing the adapter itself and any sequence that may follow. As a consequence,
 a sequence that starts with an adapter, like this, will be trimmed to an empty read::
@@ -872,7 +872,7 @@ Repeated bases
 If you have many repeated bases in the adapter sequence, such as many ``N`` s or
 many ``A`` s, you do not have to spell them out. For example, instead of writing
 ten ``A`` in a row (``AAAAAAAAAA``), write ``A{10}`` instead. The number within
-the curly braces specifies how often the character that preceeds it will be
+the curly braces specifies how often the character that precedes it will be
 repeated. This works also for IUPAC wildcard characters, as in ``N{5}``.
 
 It is recommended that you use quotation marks around your adapter sequence if
