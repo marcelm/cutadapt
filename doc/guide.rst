@@ -9,7 +9,7 @@ To trim a 3' adapter, the basic command-line for Cutadapt is::
 
     cutadapt -a AACCGGTT -o output.fastq input.fastq.gz
 
-The sequence of a 5' adapter is given with the ``-a`` option. You need to replace
+The sequence of the adapter is given with the ``-a`` option. You need to replace
 ``AACCGGTT`` with the correct adapter sequence. Reads are read from the input
 file ``input.fastq`` and are written to the output file ``output.fastq``.
 
