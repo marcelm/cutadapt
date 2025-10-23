@@ -9,9 +9,9 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v6
         with:
           python-version: '3.9'
       - name: Install
@@ -28,7 +28,7 @@ jobs:
         run: dist/cutadapt.exe --version
       - name: Test multicore
         run: ( echo ">read" && echo "ACGT" ) | dist/cutadapt.exe -j 2 --quiet -
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: cutadapt-exe
           path: dist/cutadapt.exe
