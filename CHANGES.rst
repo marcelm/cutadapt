@@ -9,6 +9,7 @@ v5.2 (2025-10-23)
   Use the ``rightmost`` search parameter for this, as in ``-a "ACGT;rightmost"``.
 * :pr:`858`: With ``--rename``, make it possible to use ``{comment}``
   without ``{id}``/``{header}``.
+* Dropped support for Python 3.9.
 
 v5.1 (2025-05-28)
 -----------------
