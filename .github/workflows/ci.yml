@@ -76,6 +76,7 @@ jobs:
       uses: pypa/cibuildwheel@v3.2.1
       env:
         CIBW_BUILD: "cp*-manylinux_x86_64 cp3*-win_amd64 cp3*-macosx_x86_64 cp3*-macosx_arm64"
+        CIBW_SKIP: "cp314*"
     - uses: actions/upload-artifact@v4
       with:
         name: wheels-${{ matrix.os }}
