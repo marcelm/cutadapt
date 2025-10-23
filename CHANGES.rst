@@ -2,11 +2,13 @@
 Changelog
 =========
 
-development version
--------------------
+v5.2 (2025-10-23)
+-----------------
 
-* :issue:`853`: Add ability to search for rightmost 3' adapters. Use the ``rightmost``
-  search parameter for this, as in ``-a "ACGT;rightmost"``.
+* :issue:`853`: Added ability to search for rightmost 3' adapters.
+  Use the ``rightmost`` search parameter for this, as in ``-a "ACGT;rightmost"``.
+* :pr:`858`: With ``--rename``, make it possible to use ``{comment}``
+  without ``{id}``/``{header}``.
 
 v5.1 (2025-05-28)
 -----------------
