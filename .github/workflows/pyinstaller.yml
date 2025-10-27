@@ -28,7 +28,7 @@ jobs:
         run: dist/cutadapt.exe --version
       - name: Test multicore
         run: ( echo ">read" && echo "ACGT" ) | dist/cutadapt.exe -j 2 --quiet -
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: cutadapt-exe
           path: dist/cutadapt.exe
