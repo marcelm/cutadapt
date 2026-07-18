@@ -1122,11 +1122,13 @@ def make_adapter_cutter(
 def make_shortener(length1: Optional[int], length2: Optional[int], paired: bool):
     if paired:
         if length1 is not None and length2 is not None:
+            # If -l and -L are given, shorten both reads.
             yield Shortener(length1), Shortener(length2)
         elif length1 is not None and length2 is None:
-            # If -L not given, use same setting for both
-            yield Shortener(length1), Shortener(length1)
+            # If only -l is given, shorten read 1.
+            yield Shortener(length1), None
         elif length1 is None and length2 is not None:
+            # If only -L is given, shorten read 2.
             yield None, Shortener(length2)
     else:
         if length1 is not None:
