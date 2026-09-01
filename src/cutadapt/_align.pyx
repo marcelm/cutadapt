@@ -48,8 +48,6 @@ cdef _ScoreParameters _score_parameters(_MatchingPolicy policy) except *:
         parameters.insertion = INSERTION_SCORE
         parameters.deletion = DELETION_SCORE
     elif policy == _SEQUENCE_SIMILARITY:
-        # Atropos-compatible objective: maximize the number of matching
-        # bases while retaining the edit-distance admissibility criterion.
         parameters.match = 1
         parameters.mismatch = 0
         parameters.insertion = 0
