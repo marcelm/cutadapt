@@ -38,11 +38,13 @@ def test_unconditional_cutter():
     assert UnconditionalCutter(length=2)(read, info).sequence == "cdefg"
     assert info.cut_prefix == "ab"
     assert info.cut_suffix is None
+    assert (info.removed_front, info.removed_back) == (2, 0)
 
     info = ModificationInfo(read)
     assert UnconditionalCutter(length=-2)(read, info).sequence == "abcde"
     assert info.cut_suffix == "fg"
     assert info.cut_prefix is None
+    assert (info.removed_front, info.removed_back) == (0, 2)
 
     assert UnconditionalCutter(length=100)(read, info).sequence == ""
     assert UnconditionalCutter(length=-100)(read, info).sequence == ""
@@ -91,9 +93,9 @@ def test_quality_trimmer():
     read = SequenceRecord("read1", "ACGTTTACGTA", "##456789###")
 
     qt = QualityTrimmer(10, 10, 33)
-    assert qt(read, ModificationInfo(read)) == SequenceRecord(
-        "read1", "GTTTAC", "456789"
-    )
+    info = ModificationInfo(read)
+    assert qt(read, info) == SequenceRecord("read1", "GTTTAC", "456789")
+    assert (info.removed_front, info.removed_back) == (2, 3)
 
     qt = QualityTrimmer(0, 10, 33)
     assert qt(read, ModificationInfo(read)) == SequenceRecord(

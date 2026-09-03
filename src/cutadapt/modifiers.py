@@ -520,9 +520,11 @@ class UnconditionalCutter(SingleEndModifier):
     def __call__(self, read, info: ModificationInfo):
         if self.length > 0:
             info.cut_prefix = read.sequence[: self.length]
+            info.removed_front += len(info.cut_prefix)
             return read[self.length :]
         elif self.length < 0:
             info.cut_suffix = read.sequence[self.length :]
+            info.removed_back += len(info.cut_suffix)
             return read[: self.length]
 
 
@@ -834,6 +836,7 @@ class NextseqQualityTrimmer(SingleEndModifier):
     def __call__(self, read, info: ModificationInfo):
         stop = nextseq_trim_index(read, self.cutoff, self.base)
         self.trimmed_bases += len(read) - stop
+        info.removed_back += len(read) - stop
         return read[:stop]
 
 
@@ -855,6 +858,8 @@ class QualityTrimmer(SingleEndModifier):
             read.qualities, self.cutoff_front, self.cutoff_back, self.base
         )
         self.trimmed_bases += len(read) - (stop - start)
+        info.removed_front += start
+        info.removed_back += len(read) - stop
         return read[start:stop]
 
 

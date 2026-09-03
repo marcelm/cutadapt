@@ -231,11 +231,28 @@ class InfoFileWriter(SingleEndStep):
 
     def __call__(self, read, info: ModificationInfo) -> Optional[SequenceRecord]:
         current_read = info.original_read
+        removed_front = info.removed_front
+        removed_back = info.removed_back
         if info.is_rc:
             current_read = current_read.reverse_complement()
+            removed_front, removed_back = removed_back, removed_front
         if info.matches:
+            # The adapters were searched in the read after preceding modifiers
+            # (--cut, --quality-cutoff, --nextseq-trim) had removed bases from
+            # its ends, so the match coordinates refer to that shortened read.
+            # Compute the records relative to it and add the removed bases
+            # back to the first record so that it describes the original read.
+            prefix = current_read[:removed_front]
+            suffix = current_read[len(current_read) - removed_back :]
+            current_read = current_read[
+                removed_front : len(current_read) - removed_back
+            ]
+            first_record = True
             for match in info.matches:
                 for info_record in match.get_info_records(current_read):
+                    if first_record:
+                        self._add_removed_ends(info_record, prefix, suffix)
+                        first_record = False
                     # info_record[0] is the read name suffix
                     print(
                         read.name + info_record[0],
@@ -251,6 +268,20 @@ class InfoFileWriter(SingleEndStep):
             print(read.name, -1, seq, qualities, sep="\t", file=self._file)
 
         return read
+
+    @staticmethod
+    def _add_removed_ends(info_record, prefix, suffix) -> None:
+        """
+        Modify an info record (see Match.get_info_records) in place such that
+        it refers to the read with *prefix* and *suffix* added back
+        """
+        info_record[2] += len(prefix)
+        info_record[3] += len(prefix)
+        info_record[4] = prefix.sequence + info_record[4]
+        info_record[6] = info_record[6] + suffix.sequence
+        if prefix.qualities is not None:
+            info_record[8] = prefix.qualities + info_record[8]
+            info_record[10] = info_record[10] + suffix.qualities
 
 
 class PairedInfoFileWriter(PairedEndStep):
