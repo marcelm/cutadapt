@@ -10,6 +10,7 @@ from cutadapt.align import (
     hamming_sphere,
     edit_environment,
     edit_distance,
+    max_errors_for_length,
     naive_edit_environment,
     slow_edit_environment,
     py_edit_environment,
@@ -495,3 +496,30 @@ def test_edit_environment(k, s, environment_func):
             assert m == score
             assert m <= len(s), (s, t, dist)
             assert m <= len(t), (s, t, dist)
+
+
+def test_max_errors_for_length_floating_point_boundary():
+    # 49 * (1 / 49) == 0.9999999999999999
+    assert max_errors_for_length(49, 1 / 49) == 1
+    assert max_errors_for_length(98, 2 / 98) == 2
+    assert max_errors_for_length(47, 3 / 47) == 3
+    assert max_errors_for_length(48, 1 / 49) == 0
+    assert max_errors_for_length(10, 0.1) == 1
+    assert max_errors_for_length(9, 0.1) == 0
+
+
+def test_absolute_errors_floating_point_boundary():
+    # An adapter of length 49 with max_errors=1 gets max_error_rate 1/49,
+    # and 49 * (1 / 49) is slightly less than 1 in floating point
+    reference = "CAGATTTTCATATTATGCAGAAAATCTACTTCGCCTGATACGAGTCGGT"
+    assert len(reference) == 49
+    mutated = reference[:20] + "T" + reference[21:]
+    assert mutated != reference
+    aligner = Aligner(reference, 1 / 49, flags=Where.BACK)
+    result = aligner.locate("GGGG" + mutated + "GGGG")
+    assert result is not None
+    assert result[5] == 1  # errors
+    comparer = PrefixComparer(reference, 1 / 49)
+    result = comparer.locate(mutated + "GGGG")
+    assert result is not None
+    assert result[5] == 1

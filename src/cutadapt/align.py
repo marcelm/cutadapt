@@ -7,6 +7,7 @@ __all__ = [
     "hamming_environment",
     "edit_environment",
     "edit_distance",
+    "max_errors_for_length",
 ]
 
 from enum import IntFlag
@@ -19,6 +20,21 @@ from cutadapt._align import (
     hamming_sphere,
     edit_environment,
 )
+
+
+# Products such as 49 * (1 / 49) evaluate to 0.9999999999999999 in floating
+# point, which would turn "one allowed error" (-e 1) into "no errors". The
+# tolerance is far below the resolution of any meaningful error rate. The same
+# constant is used in _align.pyx.
+ERROR_RATE_TOLERANCE = 1e-9
+
+
+def max_errors_for_length(length: int, max_error_rate: float) -> int:
+    """
+    Return the number of errors allowed in an alignment covering *length*
+    characters of the adapter at the given maximum error rate.
+    """
+    return int(length * max_error_rate + ERROR_RATE_TOLERANCE)
 
 
 class EndSkip(IntFlag):

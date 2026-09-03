@@ -2,6 +2,8 @@ import io
 from typing import List, Optional, Set, Tuple
 from collections import defaultdict
 
+from .align import max_errors_for_length
+
 
 def kmer_chunks(sequence: str, chunks: int) -> Set[str]:
     """
@@ -92,7 +94,7 @@ def create_back_overlap_searchsets(
     max_error = 0
     search_sets: List[SearchSet] = []
     for i in range(adapter_length + 1):
-        if int(i * error_rate) > max_error:
+        if max_errors_for_length(i, error_rate) > max_error:
             error_lengths.append((max_error, i - 1))
             max_error += 1
     error_lengths.append((max_error, adapter_length))
@@ -139,7 +141,7 @@ def create_positions_and_kmers(
     This function returns the positions and the accompanying words while also
     taking into account partial overlap for back and front adapters.
     """
-    max_errors = int(len(adapter) * error_rate)
+    max_errors = max_errors_for_length(len(adapter), error_rate)
     search_sets = []
     if back_adapter:
         search_sets.extend(

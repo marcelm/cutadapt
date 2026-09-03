@@ -2,6 +2,15 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* Fixed: An absolute number of allowed errors (``-e N`` with N >= 1, or
+  ``max_errors=N``) is now honoured for every adapter length. Previously,
+  floating-point rounding reduced the number of allowed errors by one for some
+  adapter lengths: for example, ``-e 1`` allowed no errors at all for a 49 nt
+  adapter and ``-e 2`` allowed only one error for a 98 nt adapter.
+
 v5.2 (2025-10-23)
 -----------------
 
