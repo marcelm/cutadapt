@@ -5,7 +5,6 @@ import multiprocessing
 import logging
 import locale
 
-
 logger = logging.getLogger(__name__)
 
 try:

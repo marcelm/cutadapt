@@ -3,6 +3,7 @@ This module implements all the read modifications that cutadapt supports.
 A modifier must be callable and typically implemented as a class with a
 __call__ method.
 """
+
 import re
 import logging
 from collections import defaultdict

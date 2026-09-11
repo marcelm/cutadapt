@@ -52,6 +52,7 @@ http://dx.doi.org/10.14806/ej.17.1.200
 Run "cutadapt --help" to see all command-line options.
 See https://cutadapt.readthedocs.io/ for full documentation.
 """
+
 import copy
 import sys
 import time

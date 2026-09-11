@@ -27,7 +27,7 @@ SearchSet = Tuple[int, Optional[int], Set[str]]
 
 
 def minimize_kmer_search_list(
-    kmer_search_list: List[Tuple[str, int, Optional[int]]]
+    kmer_search_list: List[Tuple[str, int, Optional[int]]],
 ) -> List[Tuple[str, int, Optional[int]]]:
     kmer_and_offsets_dict = defaultdict(list)
     for kmer, start, stop in kmer_search_list:  # type: ignore

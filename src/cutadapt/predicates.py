@@ -1,6 +1,7 @@
 """
 Filtering criteria (predicates)
 """
+
 from abc import ABC, abstractmethod
 
 from .qualtrim import expected_errors

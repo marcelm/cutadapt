@@ -1,6 +1,7 @@
 """
 Routines for printing a report.
 """
+
 from dataclasses import dataclass
 from io import StringIO
 import textwrap
@@ -245,14 +246,16 @@ class Statistics:
                 )
                 for astats in self.adapter_stats[0]
             ],
-            "adapters_read2": [
-                self._adapter_statistics_as_json(
-                    astats, self.n, gc_content, one_line=one_line
-                )
-                for astats in self.adapter_stats[1]
-            ]
-            if self.paired
-            else None,
+            "adapters_read2": (
+                [
+                    self._adapter_statistics_as_json(
+                        astats, self.n, gc_content, one_line=one_line
+                    )
+                    for astats in self.adapter_stats[1]
+                ]
+                if self.paired
+                else None
+            ),
             "poly_a_trimmed_read1": self._poly_a_trimmed_as_json(
                 self.poly_a_trimmed_lengths[0]
             ),
@@ -642,13 +645,11 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
         report += "\n== Read fate breakdown ==\n"
         report += filter_report
 
-    report += textwrap.dedent(
-        """\
+    report += textwrap.dedent("""\
     {pairs_or_reads} written (passing filters): {o.written:13,d} ({o.written_fraction:.1%})
 
     Total basepairs processed: {o.total:13,d} bp
-    """
-    )
+    """)
     if stats.paired:
         report += "  Read 1: {o.total_bp[0]:13,d} bp\n"
         report += "  Read 2: {o.total_bp[1]:13,d} bp\n"
@@ -856,19 +857,23 @@ def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
         stats.filtered.get("too_many_n", 0),  # reads/pairs
         stats.read_length_statistics.written_reads(),  # reads/pairs out
         stats.with_adapters[0] if stats.with_adapters[0] is not None else 0,  # reads
-        stats.quality_trimmed_bp[0]
-        if stats.quality_trimmed_bp[0] is not None
-        else 0,  # bases
+        (
+            stats.quality_trimmed_bp[0]
+            if stats.quality_trimmed_bp[0] is not None
+            else 0
+        ),  # bases
         stats.read_length_statistics.written_bp()[0],  # bases out
     ]
     if stats.paired:
         fields += [
-            stats.with_adapters[1]
-            if stats.with_adapters[1] is not None
-            else 0,  # reads/pairs
-            stats.quality_trimmed_bp[1]
-            if stats.quality_trimmed_bp[1] is not None
-            else 0,  # bases
+            (
+                stats.with_adapters[1] if stats.with_adapters[1] is not None else 0
+            ),  # reads/pairs
+            (
+                stats.quality_trimmed_bp[1]
+                if stats.quality_trimmed_bp[1] is not None
+                else 0
+            ),  # bases
             stats.read_length_statistics.written_bp()[1],  # bases
         ]
 

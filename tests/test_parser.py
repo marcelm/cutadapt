@@ -64,15 +64,11 @@ def test_expand_braces_fail():
 
 def test_parse_file_notation(tmp_path):
     tmp = tmp_path / "adapters.fasta"
-    tmp.write_text(
-        dedent(
-            """>first_name
+    tmp.write_text(dedent(""">first_name
             ADAPTER1
             >second_name
             ADAPTER2
-            """
-        )
-    )
+            """))
     search_parameters = dict(
         max_errors=0.2,
         min_overlap=4,
@@ -274,15 +270,11 @@ def test_make_adapter_very_long_overlap():
 
 def test_parse_file_notation_with_parameters(tmp_path):
     tmp = tmp_path / "adapters.fasta"
-    tmp.write_text(
-        dedent(
-            """>first_name
+    tmp.write_text(dedent(""">first_name
             ADAPTER1;min_overlap=2
             >second_name
             ADAPTER2;max_errors=0.4
-            """
-        )
-    )
+            """))
     parameters = dict(
         max_errors=0.2,
         min_overlap=4,
@@ -316,15 +308,11 @@ def test_parse_file_notation_with_parameters(tmp_path):
 
 def test_parse_file_notation_with_5prime_anchoring(tmp_path):
     tmp = tmp_path / "adapters.fasta"
-    tmp.write_text(
-        dedent(
-            """>first
+    tmp.write_text(dedent(""">first
             ACCGGGTTTT
             >second
             AAAACCCGGT
-            """
-        )
-    )
+            """))
     adapters = list(
         make_adapters_from_one_specification(
             "^file:" + os.fspath(tmp) + ";max_errors=0.3",
@@ -340,15 +328,11 @@ def test_parse_file_notation_with_5prime_anchoring(tmp_path):
 
 def test_parse_file_notation_with_3prime_anchoring(tmp_path):
     tmp = tmp_path / "adapters.fasta"
-    tmp.write_text(
-        dedent(
-            """>first
+    tmp.write_text(dedent(""">first
             ACCGGGTTTT
             >second
             AAAACCCGGT
-            """
-        )
-    )
+            """))
     adapters = list(
         make_adapters_from_one_specification(
             "file$:" + os.fspath(tmp) + ";max_errors=0.3",

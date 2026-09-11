@@ -196,7 +196,7 @@ class WorkerProcess(mpctx_Process):
                     interleaved=self._interleaved_input,
                     fileformat=self._file_format,
                 )
-                (n, bp1, bp2) = self._pipeline.process_reads(infiles)
+                n, bp1, bp2 = self._pipeline.process_reads(infiles)
                 stats += Statistics().collect(n, bp1, bp2, [], [])
                 self._send_outfiles(chunk_index, n)
 
@@ -427,7 +427,7 @@ class SerialPipelineRunner(PipelineRunner):
     def run(
         self, pipeline: Pipeline, progress: Progress, outfiles: OutputFiles
     ) -> Statistics:
-        (n, total1_bp, total2_bp) = pipeline.process_reads(
+        n, total1_bp, total2_bp = pipeline.process_reads(
             self._infiles, progress=progress
         )
         if progress is not None:
