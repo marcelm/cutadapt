@@ -2,6 +2,11 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* Support Python 3.14
+
 v5.2 (2025-10-23)
 -----------------
 

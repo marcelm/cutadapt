@@ -44,7 +44,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
     - uses: actions/checkout@v7
     - name: Set up Python ${{ matrix.python-version }}
@@ -61,7 +61,7 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
 
   wheels:
-    if: github.event_name == 'push' && github.ref_type == 'tag'
+#    if: github.event_name == 'push' && github.ref_type == 'tag'
     needs: [lint, build, test]
     timeout-minutes: 20
     strategy:
@@ -76,7 +76,6 @@ jobs:
       uses: pypa/cibuildwheel@v4.1.1
       env:
         CIBW_BUILD: "cp*-manylinux_x86_64 cp3*-win_amd64 cp3*-macosx_x86_64 cp3*-macosx_arm64"
-        CIBW_SKIP: "cp314*"
     - uses: actions/upload-artifact@v7
       with:
         name: wheels-${{ matrix.os }}
