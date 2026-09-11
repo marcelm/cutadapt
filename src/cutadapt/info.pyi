@@ -7,5 +7,7 @@ class ModificationInfo:
     cut_prefix: str
     cut_suffix: str
     is_rc: bool | None
+    removed_front: int
+    removed_back: int
     def __init__(self, read: SequenceRecord) -> None: ...
     def __repr__(self) -> str: ...

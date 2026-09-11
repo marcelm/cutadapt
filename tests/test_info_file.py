@@ -171,6 +171,114 @@ def test_issue_296(tmp_path):
     assert_files_equal(reads_path, out_path)
 
 
+@pytest.mark.parametrize(
+    "params,qualities,expected_qualities",
+    [
+        (["-u", "5"], "I" * 27, "I" * 16 + "\t" + "I" * 7 + "\t" + "I" * 4),
+        (["-u", "-3"], "I" * 27, "I" * 16 + "\t" + "I" * 7 + "\t" + "I" * 4),
+        (
+            ["-q", "20,20"],
+            "#" * 5 + "I" * 18 + "#" * 4,
+            "#" * 5 + "I" * 11 + "\t" + "I" * 7 + "\t" + "####",
+        ),
+        (
+            ["--nextseq-trim", "20"],
+            "I" * 23 + "####",
+            "I" * 16 + "\t" + "I" * 7 + "\t####",
+        ),
+        (
+            ["-u", "5", "--revcomp"],
+            "I" * 27,
+            "I" * 16 + "\t" + "I" * 7 + "\t" + "I" * 4,
+        ),
+    ],
+)
+def test_info_file_offsets_after_cut_or_quality_trim(
+    tmp_path, params, qualities, expected_qualities
+):
+    # Issue #518: Offsets and sequences in the info file must refer to the
+    # original read, not to the read as seen by the adapter trimmer
+    info_path = tmp_path / "info.txt"
+    reads_path = tmp_path / "reads.fastq"
+    reads_path.write_text(f"@r1\nAAAAACCCCCCCCCCCGATTACAGGGG\n+\n{qualities}\n")
+    main(
+        params
+        + [
+            "-a",
+            "ad=GATTACA",
+            "--info-file",
+            info_path,
+            "-o",
+            tmp_path / "out.fastq",
+            reads_path,
+        ]
+    )
+    rc = "\t0" if "--revcomp" in params else "\t"
+    assert info_path.read_text() == (
+        "r1\t0\t16\t23\tAAAAACCCCCCCCCCC\tGATTACA\tGGGG\tad\t"
+        + expected_qualities
+        + rc
+        + "\n"
+    )
+
+
+def test_info_file_offsets_after_cut_reverse_complemented(tmp_path):
+    # Issue #518, read is reverse-complemented by --revcomp
+    info_path = tmp_path / "info.txt"
+    reads_path = tmp_path / "reads.fastq"
+    reads_path.write_text(
+        "@r1\nCCCCTGTAATCGGGGGGGGGGGTTTTT\n+\n" + "#" * 4 + "I" * 23 + "\n"
+    )
+    main(
+        [
+            "-u",
+            "-3",
+            "-q",
+            "20,0",
+            "--revcomp",
+            "-a",
+            "ad=GATTACA",
+            "--info-file",
+            info_path,
+            "-o",
+            tmp_path / "out.fastq",
+            reads_path,
+        ]
+    )
+    assert info_path.read_text() == (
+        "r1 rc\t0\t16\t23\tAAAAACCCCCCCCCCC\tGATTACA\tGGGG\tad\t"
+        "IIIIIIIIIIIIIIII\tIIIIIII\t####\t1\n"
+    )
+
+
+def test_info_file_offsets_after_cut_times(tmp_path):
+    # Issue #518 with --times 2: only the first row refers to the original read
+    info_path = tmp_path / "info.txt"
+    reads_path = tmp_path / "reads.fasta"
+    reads_path.write_text(">r1\nAAAAACCCCCTTGGCCGATTACAGGGG\n")
+    main(
+        [
+            "-u",
+            "5",
+            "--times",
+            "2",
+            "-a",
+            "one=GATTACA",
+            "-a",
+            "two=TTGG",
+            "--info-file",
+            info_path,
+            "-o",
+            tmp_path / "out.fasta",
+            reads_path,
+        ]
+    )
+    assert info_path.read_text() == (
+        "r1\t0\t16\t23\tAAAAACCCCCTTGGCC\tGATTACA\tGGGG\tone\t\t\t\t\n"
+        "r1\t0\t5\t9\tCCCCC\tTTGG\tCC\ttwo\t\t\t\t\n"
+    )
+
+
 def test_paired_info_file(run_paired, tmp_path, cores):
     info_path = tmp_path / "info1.txt"
     info_path2 = tmp_path / "info2.txt"

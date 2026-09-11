@@ -2,6 +2,14 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* :issue:`518`: Fixed incorrect offsets and sequences in the ``--info-file``
+  when bases had been removed from the read before adapter trimming
+  (``--cut``, ``--quality-cutoff``, ``--nextseq-trim``): The match coordinates
+  now refer to the original read, and columns 5-7 again concatenate to it.
+
 v5.2 (2025-10-23)
 -----------------
 
