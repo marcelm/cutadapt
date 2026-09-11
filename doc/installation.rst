@@ -141,6 +141,15 @@ When running Cutadapt this way, you will need to remember to write
 ``py -m cutadapt`` instead of just ``cutadapt``.
 
 
+macOS with Homebrew
+------------------------
+
+Cutadapt can be installed on macOS with the following command::
+
+    brew install cutadapt
+    cutadapt --version
+
+
 FreeBSD ports and pkgsrc
 ------------------------
 
