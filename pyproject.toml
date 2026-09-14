@@ -68,4 +68,44 @@ test-command = ["pytest {project}"]
 build-verbosity = 1
 
 [tool.ruff]
-line-length = 130
+line-length = 120
+
+[tool.ruff.lint]
+ignore = [
+    "C408",    # Unnecessary `dict()` call (rewrite as a literal)
+    "I001",    # Import block is un-sorted or un-formatted
+    "UP035",   # Import from `collections.abc` instead: `Sequence`
+    "UP032",   # Use f-string instead of `format` call
+    "ISC004",  # Unparenthesized implicit string concatenation in collection
+    "SIM905",  # Consider using a list literal instead of `str.split`
+    "UP030",   # Use implicit references for positional format fields
+    "UP006",   # Use `list` instead of `List` for type annotation
+    "B009",    # Do not call `getattr` with a constant attribute value. It is not any safer than normal property access.
+    "B010",    # Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
+    "SIM117",  # Use a single `with` statement with multiple contexts instead of nested `with` statements
+    "RUF059",  # Unpacked variable `matches` is never used
+    "SIM102",  # Use a single `if` statement instead of nested `if` statements
+    "FA100",   # Add `from __future__ import annotations` to simplify `typing.Optional`
+    "RUF100",  # Unused `noqa` directive (non-enabled: `C901`)
+    "D419",    # Docstring is empty
+    "SIM118",  # Use `key in dict` instead of `key in dict.keys()`
+    "TRY004",  # Prefer `TypeError` exception for invalid type
+    "PIE810",  # Call `startswith` once with a `tuple`
+    "S102",    # Use of `exec` detected
+    "C401",    # Unnecessary generator (rewrite as a set comprehension)
+    "RUF012",  # Mutable default value for class attribute
+    "FURB188", # Prefer `str.removesuffix()` over conditionally replacing with slice.
+    "PYI029",  # Defining `__repr__` in a stub is almost always redundant
+    "PIE810",  # Call `startswith` once with a `tuple`
+    "PLC0414", # Import alias does not rename original package
+    "PLR1704", # Redefining argument with the local name `s`
+    "B020",    # Loop control variable `s` overrides iterable it iterates
+    "RUF022",  # `__all__` is not sorted
+    "BLE001",  # Do not catch blind exception: `Exception`
+    "UP028",   # Replace `yield` over `for` loop with `yield from`
+    "B006",    # Do not use mutable data structures for argument defaults
+    "EXE001",  # Shebang is present but file is not executable
+    "RUF023",  # `SingleMatch.__slots__` is not sorted
+    "UP045",   # Use `X | None` for type annotations
+    "PYI063",  # Use PEP 570 syntax for positional-only parameters
+]
