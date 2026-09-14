@@ -107,5 +107,4 @@ ignore = [
     "EXE001",  # Shebang is present but file is not executable
     "RUF023",  # `SingleMatch.__slots__` is not sorted
     "UP045",   # Use `X | None` for type annotations
-    "PYI063",  # Use PEP 570 syntax for positional-only parameters
 ]
