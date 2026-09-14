@@ -73,7 +73,6 @@ line-length = 120
 [tool.ruff.lint]
 ignore = [
     # Leave enabled
-    "BLE001",  # Do not catch blind exception: `Exception`
     "C408",    # Unnecessary `dict()` call (rewrite as a literal)
     "S102",    # Use of `exec` detected
     "SIM905",  # Consider using a list literal instead of `str.split`

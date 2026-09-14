@@ -105,7 +105,7 @@ class ReaderProcess(mpctx_Process):
                 for index, chunks in enumerate(self._read_chunks(*files)):
                     self.send_to_worker(index, *chunks)
             self.shutdown()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             # TODO better send this to a common "something went wrong" Queue
             # This code is rarely executed because there is little that can go wrong
             # splitting up the input into chunks. FASTQ/FASTA parsing problems
@@ -207,7 +207,7 @@ class WorkerProcess(mpctx_Process):
             )
             self._write_pipe.send(-1)
             self._write_pipe.send(stats)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self._write_pipe.send(-2)
             self._write_pipe.send((e, traceback.format_exc()))
 
