@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from io import StringIO
 import textwrap
 from collections import defaultdict, Counter
-from typing import Any, Optional, List, Dict, Iterator, Tuple, Mapping
+from typing import Any, Optional
+from collections.abc import Iterator, Mapping
 from .adapters import (
     EndStatistics,
     AdapterStatistics,
@@ -65,18 +66,18 @@ class Statistics:
         """ """
         self.paired: Optional[bool] = None
         # Map a filter name to the number of filtered reads/read pairs
-        self.filtered: Dict[str, int] = defaultdict(int)
+        self.filtered: dict[str, int] = defaultdict(int)
         self.reverse_complemented: Optional[int] = None
         self.n = 0
         self.total_bp = [0, 0]
         self.read_length_statistics = ReadLengthStatistics()
-        self.with_adapters: List[Optional[int]] = [None, None]
-        self.quality_trimmed_bp: List[Optional[int]] = [None, None]
-        self.poly_a_trimmed_lengths: List[Optional[defaultdict[int, int]]] = [
+        self.with_adapters: list[Optional[int]] = [None, None]
+        self.quality_trimmed_bp: list[Optional[int]] = [None, None]
+        self.poly_a_trimmed_lengths: list[Optional[defaultdict[int, int]]] = [
             None,
             None,
         ]
-        self.adapter_stats: List[List[AdapterStatistics]] = [[], []]
+        self.adapter_stats: list[list[AdapterStatistics]] = [[], []]
         self._collected: bool = False
 
     def __iadd__(self, other: Any):
@@ -204,7 +205,7 @@ class Statistics:
                         self.reverse_complemented, modifier.reverse_complemented
                     )
 
-    def as_json(self, gc_content: float = 0.5, one_line: bool = False) -> Dict:
+    def as_json(self, gc_content: float = 0.5, one_line: bool = False) -> dict:
         """
         Return a dict representation suitable for dumping in JSON format
 
@@ -272,7 +273,7 @@ class Statistics:
         one_line: bool = False,
     ):
         adapter = adapter_statistics.adapter
-        ends: List[Optional[Dict[str, Any]]] = []
+        ends: list[Optional[dict[str, Any]]] = []
         total_trimmed_reads = 0
         make_line = OneLine if one_line else lambda value: value
         for end_statistics in adapter_statistics.end_statistics():
@@ -345,7 +346,7 @@ class Statistics:
         return add_if_not_none(*self.quality_trimmed_bp)
 
     @property
-    def poly_a_trimmed_bp(self) -> Tuple[Optional[int], Optional[int]]:
+    def poly_a_trimmed_bp(self) -> tuple[Optional[int], Optional[int]]:
         def trimmed(i: int) -> Optional[int]:
             lengths = self.poly_a_trimmed_lengths[i]
             if lengths is None:
@@ -371,7 +372,7 @@ class Statistics:
         return safe_divide(self.read_length_statistics.written_reads(), self.n)
 
     @property
-    def with_adapters_fraction(self) -> List[float]:
+    def with_adapters_fraction(self) -> list[float]:
         return [safe_divide(v, self.n) for v in self.with_adapters]
 
     @property
@@ -379,7 +380,7 @@ class Statistics:
         return safe_divide(self.quality_trimmed, self.total)
 
     @property
-    def written_bp(self) -> Tuple[int, int]:
+    def written_bp(self) -> tuple[int, int]:
         return self.read_length_statistics.written_bp()
 
     @property
@@ -426,7 +427,7 @@ class ErrorRanges:
         self.error_rate = error_rate
         self._lengths = self._compute_lengths()
 
-    def _compute_lengths(self) -> List[int]:
+    def _compute_lengths(self) -> list[int]:
         lengths = [
             int(errors / self.error_rate) - 1
             for errors in range(1, int(self.error_rate * self.length) + 1)
@@ -508,7 +509,7 @@ class HistogramRow:
     count: int
     expect: float
     max_err: int
-    error_counts: List[int]
+    error_counts: list[int]
 
 
 def histogram_rows(
@@ -551,9 +552,9 @@ def histogram_rows(
 
 
 class AdjacentBaseStatistics:
-    def __init__(self, bases: Dict[str, int]):
+    def __init__(self, bases: dict[str, int]):
         """ """
-        self.bases: Dict[str, int] = bases
+        self.bases: dict[str, int] = bases
         self._warnbase: Optional[str] = None
         total = sum(self.bases.values())
         if total == 0:
@@ -600,7 +601,7 @@ class AdjacentBaseStatistics:
             print("    Ignore this warning when trimming primers.", file=sio)
         return sio.getvalue()
 
-    def as_json(self) -> Optional[Dict[str, int]]:
+    def as_json(self) -> Optional[dict[str, int]]:
         if self._fractions:
             return {b: self.bases.get(b, 0) for b in ["A", "C", "G", "T", ""]}
         else:

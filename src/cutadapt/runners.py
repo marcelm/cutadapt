@@ -7,7 +7,8 @@ import traceback
 from abc import ABC, abstractmethod
 from contextlib import ExitStack
 from multiprocessing.connection import Connection
-from typing import Any, List, Optional, Tuple, Sequence, Iterator, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING
+from collections.abc import Sequence, Iterator
 
 import dnaio
 
@@ -113,7 +114,7 @@ class ReaderProcess(mpctx_Process):
                 connection.send(-2)
                 connection.send((e, traceback.format_exc()))
 
-    def _read_chunks(self, *files) -> Iterator[Tuple[memoryview, ...]]:
+    def _read_chunks(self, *files) -> Iterator[tuple[memoryview, ...]]:
         if len(files) == 1:
             for chunk in dnaio.read_chunks(files[0], self.buffer_size):
                 yield (chunk,)
@@ -151,7 +152,7 @@ class WorkerProcess(mpctx_Process):
         id_: int,
         pipeline: Pipeline,
         inpaths: InputPaths,
-        proxy_files: List[ProxyWriter],
+        proxy_files: list[ProxyWriter],
         read_pipe: Connection,
         write_pipe: Connection,
         need_work_queue: multiprocessing.Queue,
@@ -333,7 +334,7 @@ class ParallelPipelineRunner(PipelineRunner):
 
     def _start_workers(
         self, pipeline, proxy_files
-    ) -> Tuple[List[WorkerProcess], List[Connection]]:
+    ) -> tuple[list[WorkerProcess], list[Connection]]:
         workers = []
         connections = []
         for index in range(self._n_workers):
@@ -361,7 +362,7 @@ class ParallelPipelineRunner(PipelineRunner):
             chunk_writers.append(OrderedChunkWriter(f))
         stats = Statistics()
         while connections:
-            ready_connections: List[Any] = multiprocessing.connection.wait(connections)
+            ready_connections: list[Any] = multiprocessing.connection.wait(connections)
             for connection in ready_connections:
                 chunk_index: int = self._try_receive(connection)
                 if chunk_index == -1:

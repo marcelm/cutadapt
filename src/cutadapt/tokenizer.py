@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass
-from typing import Iterator, Type
+from collections.abc import Iterator
 
 
 @dataclass
@@ -43,7 +43,7 @@ def tokenize_braces(s: str, left: str = "{", right: str = "}") -> Iterator[Token
             continue
         if value.startswith(left) and value.endswith(right):
             value = value[1:-1]
-            token_class: Type[Token] = BraceToken
+            token_class: type[Token] = BraceToken
         else:
             token_class = StringToken
         if left in value:

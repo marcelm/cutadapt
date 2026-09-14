@@ -5,7 +5,8 @@ Parse adapter specifications
 import re
 import logging
 from pathlib import Path
-from typing import Type, Optional, List, Tuple, Any, Dict, Iterable
+from typing import Optional, Any
+from collections.abc import Iterable
 from xopen import xopen
 from dnaio.readers import FastaReader
 from .adapters import (
@@ -47,7 +48,7 @@ def parse_search_parameters(spec: str):
     }
 
     fields = spec.split(";")
-    result: Dict[str, Any] = dict()
+    result: dict[str, Any] = dict()
     for field in fields:
         field = field.strip()
         if not field:
@@ -127,7 +128,7 @@ def expand_braces(sequence: str) -> str:
     return result
 
 
-def _normalize_ellipsis(spec1: str, spec2: str, adapter_type) -> Tuple[str, str]:
+def _normalize_ellipsis(spec1: str, spec2: str, adapter_type) -> tuple[str, str]:
     if adapter_type == "anywhere":
         raise ValueError('No ellipsis ("...") allowed in "anywhere" adapters')
     if not spec1:
@@ -197,7 +198,7 @@ class AdapterSpecification:
         )
 
     @staticmethod
-    def _extract_name(spec: str) -> Tuple[Optional[str], str]:
+    def _extract_name(spec: str) -> tuple[Optional[str], str]:
         """
         Parse an adapter specification given as 'name=adapt' into 'name' and 'adapt'.
         """
@@ -283,7 +284,7 @@ class AdapterSpecification:
         return cls(name, restriction, spec, parameters, adapter_type, rightmost)
 
     @staticmethod
-    def _parse_restrictions(spec: str) -> Tuple[Optional[str], Optional[str], str]:
+    def _parse_restrictions(spec: str) -> tuple[Optional[str], Optional[str], str]:
         front_restriction = None
         if spec.startswith("^"):
             front_restriction = "anchored"
@@ -361,9 +362,9 @@ class AdapterSpecification:
 
 
 def make_adapters_from_specifications(
-    type_spec_pairs: List[Tuple[str, str]],
-    search_parameters: Dict[str, Any],
-) -> List[Adapter]:
+    type_spec_pairs: list[tuple[str, str]],
+    search_parameters: dict[str, Any],
+) -> list[Adapter]:
     """
     Create a list of Adapter classes from specification strings and adapter types.
 
@@ -378,7 +379,7 @@ def make_adapters_from_specifications(
 
     Return a list of appropriate Adapter instances.
     """
-    adapters: List[Adapter] = []
+    adapters: list[Adapter] = []
     for adapter_type, spec in type_spec_pairs:
         adapters.extend(
             make_adapters_from_one_specification(spec, adapter_type, search_parameters)
@@ -389,7 +390,7 @@ def make_adapters_from_specifications(
 def make_adapters_from_one_specification(
     spec: str,
     adapter_type: str,
-    search_parameters: Dict[str, Any],
+    search_parameters: dict[str, Any],
 ) -> Iterable[Adapter]:
     """
     Parse an adapter specification and yield appropriate Adapter classes.
@@ -431,7 +432,7 @@ def make_adapters_from_one_specification(
 def make_adapter(
     spec: str,
     adapter_type: str,
-    search_parameters: Dict[str, Any],
+    search_parameters: dict[str, Any],
     name: Optional[str] = None,
 ) -> Adapter:
     """
@@ -464,7 +465,7 @@ def _make_linked_adapter(
     spec2: str,
     name: Optional[str],
     adapter_type: str,
-    search_parameters: Dict[str, Any],
+    search_parameters: dict[str, Any],
 ) -> LinkedAdapter:
     """Return a linked adapter from two specification strings"""
 
@@ -516,10 +517,10 @@ def _make_not_linked_adapter(
     spec: str,
     name: Optional[str],
     adapter_type: str,
-    search_parameters: Dict[str, Any],
+    search_parameters: dict[str, Any],
 ) -> Adapter:
     aspec = AdapterSpecification.parse(spec, adapter_type)
-    adapter_class: Type[Adapter] = aspec.adapter_class()
+    adapter_class: type[Adapter] = aspec.adapter_class()
 
     if aspec.parameters.pop("anywhere", False) and adapter_class in (
         FrontAdapter,
