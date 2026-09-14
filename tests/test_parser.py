@@ -125,7 +125,7 @@ def test_parse_not_linked():
 @pytest.mark.parametrize("reqopt", ("required", "optional"))
 def test_parse_invalid_adapter_specific_parameter(where, reqopt):
     with pytest.raises(ValueError) as e:
-        _make_not_linked_adapter("A;{}".format(reqopt), "name", where, {})
+        _make_not_linked_adapter(f"A;{reqopt}", "name", where, {})
     assert "can only be used within linked adapters" in e.value.args[0]
 
 

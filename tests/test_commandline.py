@@ -81,14 +81,14 @@ def test_small(run):
 
 def test_small_bam(run, cores):
     run(
-        "--cores {} -a TTAGACATATCTCCGTCG".format(cores),
+        f"--cores {cores} -a TTAGACATATCTCCGTCG",
         "small_from_bam.fastq",
         "small.bam",
     )
 
 
 def test_empty_fastq(run, cores):
-    run("--cores {} -a TTAGACATATCTCCGTCG".format(cores), "empty.fastq", "empty.fastq")
+    run(f"--cores {cores} -a TTAGACATATCTCCGTCG", "empty.fastq", "empty.fastq")
 
 
 def test_empty_fasta_input(run, cores):
@@ -597,7 +597,7 @@ def test_demultiplex(cores, tmp_path, ext):
         if ext == ".gz":
             subprocess.run(["gzip", "-d", actual], check=True)
             actual = actual[:-3]
-        expected = cutpath("twoadapters.{name}.fasta".format(name=name))
+        expected = cutpath(f"twoadapters.{name}.fasta")
         assert_files_equal(expected, actual)
 
 

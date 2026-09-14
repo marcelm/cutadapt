@@ -516,8 +516,8 @@ def test_too_short_paired_output(run_paired, tmp_path, cores):
     p2 = os.fspath(tmp_path / "too-short.2.fastq")
     run_paired(
         " -a TTAGACATAT -A CAGTGGAGTA -m 14"
-        " --too-short-output {}"
-        " --too-short-paired-output {}".format(p1, p2),
+        f" --too-short-output {p1}"
+        f" --too-short-paired-output {p2}",
         in1="paired.1.fastq",
         in2="paired.2.fastq",
         expected1="paired.1.fastq",
@@ -533,8 +533,8 @@ def test_too_long_output(run_paired, tmp_path, cores):
     p2 = os.fspath(tmp_path / "too-long.2.fastq")
     run_paired(
         " -a TTAGACATAT -A CAGTGGAGTA -M 14"
-        " --too-long-output {}"
-        " --too-long-paired-output {}".format(p1, p2),
+        f" --too-long-output {p1}"
+        f" --too-long-paired-output {p2}",
         in1="paired.1.fastq",
         in2="paired.2.fastq",
         expected1="paired-too-short.1.fastq",
@@ -549,7 +549,7 @@ def test_too_short_output_paired_option_missing(run_paired, tmp_path):
     p1 = os.fspath(tmp_path / "too-short.1.fastq")
     with pytest.raises(SystemExit):
         run_paired(
-            "-a TTAGACATAT -A CAGTGGAGTA -m 14 --too-short-output " "{0}".format(p1),
+            "-a TTAGACATAT -A CAGTGGAGTA -m 14 --too-short-output " f"{p1}",
             in1="paired.1.fastq",
             in2="paired.2.fastq",
             expected1="paired.1.fastq",
@@ -644,7 +644,7 @@ def test_separate_minmaxlength(tmp_path, name_op, l1, l2, m):
     if m2 is None:
         m2 = ""
 
-    main(["--interleaved", "-o", outpath, "-" + name, "{}:{}".format(m1, m2), inpath])
+    main(["--interleaved", "-o", outpath, "-" + name, f"{m1}:{m2}", inpath])
     assert_files_equal(expected, outpath)
 
 
@@ -739,9 +739,7 @@ def test_combinatorial_demultiplexing(tmp_path, discarduntrimmed, cores):
     main(params)
     for name1, name2, should_exist in combinations:
         for i in (1, 2):
-            name = "combinatorial.{name1}_{name2}.{i}.fastq".format(
-                name1=name1, name2=name2, i=i
-            )
+            name = f"combinatorial.{name1}_{name2}.{i}.fastq"
             path = cutpath(os.path.join("combinatorial", name))
             if should_exist:
                 assert (tmp_path / name).exists(), ("Output file missing", name)

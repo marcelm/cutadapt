@@ -715,26 +715,14 @@ def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # no
 
             if isinstance(adapter_statistics, LinkedAdapterStatistics):
                 print_s(
-                    "Sequence: {}...{}; Type: linked; Length: {}+{}; "
-                    "5' trimmed: {} times; 3' trimmed: {} times".format(
-                        adapter_statistics.front.sequence,
-                        adapter_statistics.back.sequence,
-                        len(adapter_statistics.front.sequence),
-                        len(adapter_statistics.back.sequence),
-                        total_front,
-                        total_back,
-                    ),
+                    f"Sequence: {adapter_statistics.front.sequence}...{adapter_statistics.back.sequence}; Type: linked; Length: {len(adapter_statistics.front.sequence)}+{len(adapter_statistics.back.sequence)}; "
+                    f"5' trimmed: {total_front} times; 3' trimmed: {total_back} times",
                     end="",
                 )
             else:
                 assert isinstance(adapter, (SingleAdapter, AnywhereAdapter))
                 print_s(
-                    "Sequence: {}; Type: {}; Length: {}; Trimmed: {} times".format(
-                        adapter.sequence,
-                        adapter.description,
-                        len(adapter.sequence),
-                        total,
-                    ),
+                    f"Sequence: {adapter.sequence}; Type: {adapter.description}; Length: {len(adapter.sequence)}; Trimmed: {total} times",
                     end="",
                 )
             if stats.reverse_complemented is not None:

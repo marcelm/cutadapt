@@ -79,7 +79,6 @@ ignore = [
     # Possibly disable the following ones:
     "I001",    # Import block is un-sorted or un-formatted
     "UP035",   # Import from `collections.abc` instead: `Sequence`
-    "UP032",   # Use f-string instead of `format` call
     "ISC004",  # Unparenthesized implicit string concatenation in collection
     "SIM905",  # Consider using a list literal instead of `str.split`
     "UP030",   # Use implicit references for positional format fields

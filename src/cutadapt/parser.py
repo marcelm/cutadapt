@@ -185,14 +185,7 @@ class AdapterSpecification:
         self.rightmost = rightmost
 
     def __repr__(self):
-        return "{}(name={!r}, restriction={!r}, sequence={!r}, parameters={!r}, adapter_type={!r})".format(
-            self.__class__.__name__,
-            self.name,
-            self.restriction,
-            self.sequence,
-            self.parameters,
-            self.adapter_type,
-        )
+        return f"{self.__class__.__name__}(name={self.name!r}, restriction={self.restriction!r}, sequence={self.sequence!r}, parameters={self.parameters!r}, adapter_type={self.adapter_type!r})"
 
     def __eq__(self, other):
         return (

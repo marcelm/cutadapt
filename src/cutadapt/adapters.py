@@ -87,11 +87,7 @@ class EndStatistics:
 
     def __repr__(self):
         errors = {k: dict(v) for k, v in self.errors.items()}
-        return "EndStatistics(max_error_rate={}, errors={}, adjacent_bases={})".format(
-            self.max_error_rate,
-            errors,
-            self.adjacent_bases,
-        )
+        return f"EndStatistics(max_error_rate={self.max_error_rate}, errors={errors}, adjacent_bases={self.adjacent_bases})"
 
     def __iadd__(self, other: Any):
         if not isinstance(other, self.__class__):
@@ -1106,9 +1102,7 @@ class LinkedMatch(Match):
         self.adapter: LinkedAdapter = adapter
 
     def __repr__(self):
-        return "<LinkedMatch(front_match={!r}, back_match={}, adapter={})>".format(
-            self.front_match, self.back_match, self.adapter
-        )
+        return f"<LinkedMatch(front_match={self.front_match!r}, back_match={self.back_match}, adapter={self.adapter})>"
 
     @property
     def score(self):

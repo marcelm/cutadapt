@@ -428,7 +428,7 @@ class PairedAdapterCutter(PairedEndModifier):
         if len(adapters1) != len(adapters2):
             raise PairedAdapterCutterError(
                 "The number of adapters to trim from R1 and R2 must be the same. "
-                "Given: {} for R1, {} for R2".format(len(adapters1), len(adapters2))
+                f"Given: {len(adapters1)} for R1, {len(adapters2)} for R2"
             )
         if not adapters1:
             raise PairedAdapterCutterError("No adapters given")

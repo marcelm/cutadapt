@@ -616,9 +616,7 @@ def check_arguments(args, paired: bool) -> None:
             if bool(out) != bool(paired_out):
                 raise CommandLineError(
                     "When trimming paired-end data, you must use either none or both of the"
-                    " --{name}-output/--{name}-paired-output options.".format(
-                        name=argname
-                    )
+                    f" --{argname}-output/--{argname}-paired-output options."
                 )
 
     if args.overlap < 1:
