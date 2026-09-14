@@ -81,14 +81,14 @@ def test_small(run):
 
 def test_small_bam(run, cores):
     run(
-        "--cores {} -a TTAGACATATCTCCGTCG".format(cores),
+        f"--cores {cores} -a TTAGACATATCTCCGTCG",
         "small_from_bam.fastq",
         "small.bam",
     )
 
 
 def test_empty_fastq(run, cores):
-    run("--cores {} -a TTAGACATATCTCCGTCG".format(cores), "empty.fastq", "empty.fastq")
+    run(f"--cores {cores} -a TTAGACATATCTCCGTCG", "empty.fastq", "empty.fastq")
 
 
 def test_empty_fasta_input(run, cores):
@@ -597,7 +597,7 @@ def test_demultiplex(cores, tmp_path, ext):
         if ext == ".gz":
             subprocess.run(["gzip", "-d", actual], check=True)
             actual = actual[:-3]
-        expected = cutpath("twoadapters.{name}.fasta".format(name=name))
+        expected = cutpath(f"twoadapters.{name}.fasta")
         assert_files_equal(expected, actual)
 
 
@@ -642,8 +642,8 @@ def test_max_n(run):
 def test_quiet_is_quiet():
     captured_standard_output = StringIO()
     captured_standard_error = StringIO()
-    setattr(captured_standard_output, "buffer", BytesIO())
-    setattr(captured_standard_error, "buffer", BytesIO())
+    captured_standard_output.buffer = BytesIO()
+    captured_standard_error.buffer = BytesIO()
     old_stdout = sys.stdout
     old_stderr = sys.stderr
     try:
@@ -655,8 +655,8 @@ def test_quiet_is_quiet():
         sys.stderr = old_stderr
     assert captured_standard_output.getvalue() == ""
     assert captured_standard_error.getvalue() == ""
-    assert getattr(captured_standard_output, "buffer").getvalue() == b""
-    assert getattr(captured_standard_output, "buffer").getvalue() == b""
+    assert captured_standard_output.buffer.getvalue() == b""
+    assert captured_standard_output.buffer.getvalue() == b""
 
 
 def test_x_brace_notation():

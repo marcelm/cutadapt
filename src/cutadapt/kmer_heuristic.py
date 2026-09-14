@@ -1,16 +1,16 @@
 import io
-from typing import List, Optional, Set, Tuple
+from typing import Optional
 from collections import defaultdict
 
 
-def kmer_chunks(sequence: str, chunks: int) -> Set[str]:
+def kmer_chunks(sequence: str, chunks: int) -> set[str]:
     """
     Partition a sequence in almost equal sized chunks. Returns the shortest
     possibility. AABCABCABC, 3 returns {"AABC", "ABC"}
     """
     chunk_size = len(sequence) // (chunks)
     remainder = len(sequence) % (chunks)
-    chunk_sizes: List[int] = remainder * [chunk_size + 1] + (chunks - remainder) * [
+    chunk_sizes: list[int] = remainder * [chunk_size + 1] + (chunks - remainder) * [
         chunk_size
     ]
     offset = 0
@@ -23,16 +23,16 @@ def kmer_chunks(sequence: str, chunks: int) -> Set[str]:
 
 # A SearchSet is a start and stop combined with a set of strings to search
 # for at that position
-SearchSet = Tuple[int, Optional[int], Set[str]]
+SearchSet = tuple[int, Optional[int], set[str]]
 
 
 def minimize_kmer_search_list(
-    kmer_search_list: List[Tuple[str, int, Optional[int]]]
-) -> List[Tuple[str, int, Optional[int]]]:
+    kmer_search_list: list[tuple[str, int, Optional[int]]],
+) -> list[tuple[str, int, Optional[int]]]:
     kmer_and_offsets_dict = defaultdict(list)
     for kmer, start, stop in kmer_search_list:  # type: ignore
         kmer_and_offsets_dict[kmer].append((start, stop))
-    kmers_and_positions: List[Tuple[str, int, Optional[int]]] = []
+    kmers_and_positions: list[tuple[str, int, Optional[int]]] = []
     for kmer, positions in kmer_and_offsets_dict.items():
         if len(positions) == 1:
             start, stop = positions[0]
@@ -65,8 +65,8 @@ def minimize_kmer_search_list(
 
 
 def remove_redundant_kmers(
-    search_sets: List[SearchSet],
-) -> List[Tuple[int, Optional[int], List[str]]]:
+    search_sets: list[SearchSet],
+) -> list[tuple[int, Optional[int], list[str]]]:
     """
     This removes kmers that are searched in multiple search sets and makes
     sure they are only searched in the larger search set. This reduces the
@@ -86,11 +86,11 @@ def remove_redundant_kmers(
 
 def create_back_overlap_searchsets(
     adapter: str, min_overlap: int, error_rate: float
-) -> List[SearchSet]:
+) -> list[SearchSet]:
     adapter_length = len(adapter)
     error_lengths = []
     max_error = 0
-    search_sets: List[SearchSet] = []
+    search_sets: list[SearchSet] = []
     for i in range(adapter_length + 1):
         if int(i * error_rate) > max_error:
             error_lengths.append((max_error, i - 1))
@@ -124,7 +124,7 @@ def create_positions_and_kmers(
     back_adapter: bool,
     front_adapter: bool,
     internal: bool = True,
-) -> List[Tuple[int, Optional[int], List[str]]]:
+) -> list[tuple[int, Optional[int], list[str]]]:
     """
     Create a set of position and words combinations where at least one of the
     words needs to occur at its specified position. If not an alignment
@@ -165,7 +165,7 @@ def create_positions_and_kmers(
 
 
 def kmer_probability_analysis(
-    kmers_and_offsets: List[Tuple[int, Optional[int], List[str]]],
+    kmers_and_offsets: list[tuple[int, Optional[int], list[str]]],
     default_length: int = 150,
 ) -> str:  # pragma: no cover  # only for debugging use
     """

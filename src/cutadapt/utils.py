@@ -5,7 +5,6 @@ import multiprocessing
 import logging
 import locale
 
-
 logger = logging.getLogger(__name__)
 
 try:
@@ -107,18 +106,8 @@ class Progress:
             animation = "Done".ljust(len(animation))
         print(
             "\r"
-            "{animation} {hours:02d}:{minutes:02d}:{seconds:02d} "
-            "{total:13,d} reads @ {per_item:5.1F} {micro}s/read; {per_minute:6.2F} M reads/minute"
-            "".format(
-                hours=hours,
-                minutes=minutes,
-                seconds=seconds,
-                total=self._n,
-                per_item=per_item * 1e6,
-                micro=MICRO,
-                per_minute=per_second * 60 / 1e6,
-                animation=animation,
-            ),
+            f"{animation} {hours:02d}:{minutes:02d}:{seconds:02d} "
+            f"{self._n:13,d} reads @ {per_item * 1e6:5.1F} {MICRO}s/read; {per_second * 60 / 1e6:6.2F} M reads/minute",
             end="",
             file=sys.stderr,
         )

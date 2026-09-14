@@ -5,7 +5,7 @@ import sys
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import BinaryIO, Optional, Dict, List, TextIO, Any
+from typing import BinaryIO, Optional, TextIO, Any
 
 import dnaio
 from xopen import xopen
@@ -130,7 +130,7 @@ class InputPaths:
 
 class ProxyWriter(ABC):
     @abstractmethod
-    def drain(self) -> List[bytes]:
+    def drain(self) -> list[bytes]:
         pass
 
 
@@ -146,7 +146,7 @@ class ProxyTextFile(ProxyWriter):
     def write(self, text):
         self._file.write(text)
 
-    def drain(self) -> List[bytes]:
+    def drain(self) -> list[bytes]:
         self._file.flush()
         chunk = self._buffer.getvalue()
         self._buffer.seek(0)
@@ -180,7 +180,7 @@ class ProxyRecordWriter(ProxyWriter):
     def write(self, *args, **kwargs):
         self._writer.write(*args, **kwargs)
 
-    def drain(self) -> List[bytes]:
+    def drain(self) -> list[bytes]:
         chunks = [buf.getvalue() for buf in self._buffers]
         for buf in self._buffers:
             buf.seek(0)
@@ -208,13 +208,13 @@ class OutputFiles:
         self._file_opener: FileOpener = (
             file_opener if file_opener is not None else FileOpener()
         )
-        self._binary_files: List[BinaryIO] = []
-        self._binary_files_to_close: List[BinaryIO] = []
-        self._text_files: List[TextIO] = []
-        self._writers: List[Any] = []
-        self._proxy_files: List[ProxyWriter] = []
+        self._binary_files: list[BinaryIO] = []
+        self._binary_files_to_close: list[BinaryIO] = []
+        self._text_files: list[TextIO] = []
+        self._writers: list[Any] = []
+        self._proxy_files: list[ProxyWriter] = []
         self._proxied = proxied
-        self._to_close: List[BinaryIO] = []
+        self._to_close: list[BinaryIO] = []
         self._qualities = qualities
         self._interleaved = interleaved
 
@@ -238,7 +238,7 @@ class OutputFiles:
     def open_record_writer(
         self, *paths, interleaved: bool = False, force_fasta: bool = False
     ):
-        kwargs: Dict[str, Any] = dict(
+        kwargs: dict[str, Any] = dict(
             qualities=self._qualities, interleaved=interleaved
         )
         if len(paths) not in (1, 2):
@@ -270,7 +270,7 @@ class OutputFiles:
         self, interleaved: bool = False, force_fasta: bool = False
     ):
         self._binary_files.append(sys.stdout.buffer)
-        kwargs: Dict[str, Any] = dict(
+        kwargs: dict[str, Any] = dict(
             qualities=self._qualities, interleaved=interleaved
         )
         if force_fasta:
@@ -284,10 +284,10 @@ class OutputFiles:
             self._writers.append(writer)
             return writer
 
-    def binary_files(self) -> List[BinaryIO]:
+    def binary_files(self) -> list[BinaryIO]:
         return self._binary_files[:]
 
-    def proxy_files(self) -> List[ProxyWriter]:
+    def proxy_files(self) -> list[ProxyWriter]:
         return self._proxy_files
 
     def close(self) -> None:
@@ -322,7 +322,7 @@ def detect_file_format(file: BinaryIO) -> FileFormat:
     if magic.startswith(b"@") or magic == b"":
         # Pretend FASTQ for empty input
         return FileFormat.FASTQ
-    elif magic.startswith(b">") or magic.startswith(b"#"):
+    elif magic.startswith((b">", b"#")):
         # Some FASTA variants allow comments
         return FileFormat.FASTA
     elif magic == b"BAM\1":

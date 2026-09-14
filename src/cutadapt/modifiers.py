@@ -3,11 +3,13 @@ This module implements all the read modifications that cutadapt supports.
 A modifier must be callable and typically implemented as a class with a
 __call__ method.
 """
+
 import re
 import logging
 from collections import defaultdict
 from types import SimpleNamespace
-from typing import Sequence, List, Tuple, Optional, Set
+from typing import Optional
+from collections.abc import Sequence
 from abc import ABC, abstractmethod
 
 from dnaio import record_names_match, SequenceRecord
@@ -43,7 +45,7 @@ class PairedEndModifier(ABC):
         read2: SequenceRecord,
         info1: ModificationInfo,
         info2: ModificationInfo,
-    ) -> Tuple[SequenceRecord, SequenceRecord]:
+    ) -> tuple[SequenceRecord, SequenceRecord]:
         pass
 
 
@@ -145,7 +147,7 @@ class AdapterCutter(SingleEndModifier):
     @staticmethod
     def _split_adapters(
         adapters: Sequence[SingleAdapter],
-    ) -> Tuple[
+    ) -> tuple[
         Sequence[SingleAdapter], Sequence[SingleAdapter], Sequence[SingleAdapter]
     ]:
         """
@@ -155,9 +157,9 @@ class AdapterCutter(SingleEndModifier):
         - suffix is a list of all anchored 3' adapters that MultiAdapter would accept
         - other is a list of all remaining adapters.
         """
-        prefix: List[SingleAdapter] = []
-        suffix: List[SingleAdapter] = []
-        other: List[SingleAdapter] = []
+        prefix: list[SingleAdapter] = []
+        suffix: list[SingleAdapter] = []
+        other: list[SingleAdapter] = []
         for a in adapters:
             if AdapterIndex.is_acceptable(a, prefix=True):
                 prefix.append(a)
@@ -427,7 +429,7 @@ class PairedAdapterCutter(PairedEndModifier):
         if len(adapters1) != len(adapters2):
             raise PairedAdapterCutterError(
                 "The number of adapters to trim from R1 and R2 must be the same. "
-                "Given: {} for R1, {} for R2".format(len(adapters1), len(adapters2))
+                f"Given: {len(adapters1)} for R1, {len(adapters2)} for R2"
             )
         if not adapters1:
             raise PairedAdapterCutterError("No adapters given")
@@ -479,7 +481,7 @@ class PairedAdapterCutter(PairedEndModifier):
 
     def _find_best_match_pair(
         self, sequence1: str, sequence2: str
-    ) -> Optional[Tuple[Match, Match]]:
+    ) -> Optional[tuple[Match, Match]]:
         best = None
         best_score = None
         best_errors = None
@@ -653,9 +655,9 @@ class Renamer(SingleEndModifier):
             "rc": "'rc' if info.is_rc else ''",
             "match_sequence": "info.matches[-1].match_sequence() if info.matches else ''",
         }
-        placeholders = set(
+        placeholders = {
             token.value for token in self._tokens if isinstance(token, BraceToken)
-        )
+        }
         lines = ["def rename(self, read, info):"]
         if (
             "id" in placeholders
@@ -673,7 +675,7 @@ class Renamer(SingleEndModifier):
         return namespace["rename"]
 
     @staticmethod
-    def raise_if_invalid_variable(tokens: List[Token], allowed: Set[str]) -> None:
+    def raise_if_invalid_variable(tokens: list[Token], allowed: set[str]) -> None:
         for token in tokens:
             if not isinstance(token, BraceToken):
                 continue
@@ -684,7 +686,7 @@ class Renamer(SingleEndModifier):
                 )
 
     @staticmethod
-    def parse_name(read_name: str) -> Tuple[str, str]:
+    def parse_name(read_name: str) -> tuple[str, str]:
         """Parse read header and return (id, comment) tuple"""
         fields = read_name.split(maxsplit=1)
         if len(fields) == 2:
@@ -720,7 +722,7 @@ class PairedEndRenamer(PairedEndModifier):
         self._template = template.replace(r"\t", "\t")
 
     @staticmethod
-    def _get_allowed_variables() -> Set[str]:
+    def _get_allowed_variables() -> set[str]:
         allowed = (Renamer.variables - {"rc"}) | {"rn"}
         for v in Renamer.variables - {"id", "rc"}:
             allowed.add("r1." + v)
@@ -733,7 +735,7 @@ class PairedEndRenamer(PairedEndModifier):
         read2: SequenceRecord,
         info1: ModificationInfo,
         info2: ModificationInfo,
-    ) -> Tuple[SequenceRecord, SequenceRecord]:
+    ) -> tuple[SequenceRecord, SequenceRecord]:
         if not record_names_match(read1.name, read2.name):
             id1 = Renamer.parse_name(read1.name)[0]
             id2 = Renamer.parse_name(read1.name)[1]
@@ -759,7 +761,7 @@ class PairedEndRenamer(PairedEndModifier):
         read2: SequenceRecord,
         info1: ModificationInfo,
         info2: ModificationInfo,
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         id1, comment1 = Renamer.parse_name(read1.name)
         id2, comment2 = Renamer.parse_name(read2.name)
         header1 = read1.name

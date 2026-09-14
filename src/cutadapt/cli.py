@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # Copyright (c) 2010 Marcel Martin <marcel.martin@scilifelab.se> and contributors
 #
@@ -52,6 +51,7 @@ http://dx.doi.org/10.14806/ej.17.1.200
 Run "cutadapt --help" to see all command-line options.
 See https://cutadapt.readthedocs.io/ for full documentation.
 """
+
 import copy
 import sys
 import time
@@ -61,7 +61,8 @@ import platform
 import itertools
 import multiprocessing
 from pathlib import Path
-from typing import Tuple, Optional, Sequence, List, Iterator, Union, Dict
+from typing import Optional, Union
+from collections.abc import Sequence, Iterator
 from argparse import ArgumentParser, SUPPRESS, HelpFormatter
 
 import dnaio
@@ -416,7 +417,7 @@ def get_argument_parser() -> ArgumentParser:
 # fmt: on
 
 
-def parse_cutoffs(s: str) -> Tuple[int, int]:
+def parse_cutoffs(s: str) -> tuple[int, int]:
     """Parse a string INT[,INT] into a pair of integers
 
     >>> parse_cutoffs("5")
@@ -440,7 +441,7 @@ def parse_cutoffs(s: str) -> Tuple[int, int]:
     return (cutoffs[0], cutoffs[1])
 
 
-def parse_lengths(s: str) -> Tuple[Optional[int], ...]:
+def parse_lengths(s: str) -> tuple[Optional[int], ...]:
     """Parse [INT][:[INT]] into a pair of integers. If a value is omitted, use None
 
     >>> parse_lengths('25')
@@ -466,7 +467,7 @@ def parse_lengths(s: str) -> Tuple[Optional[int], ...]:
     return tuple(values)
 
 
-def complain_about_duplicate_paths(paths: List[str]):
+def complain_about_duplicate_paths(paths: list[str]):
     if sys.platform == "win32" and sys.version_info < (3, 8):
         # Bug in handling of NUL
         return
@@ -616,9 +617,7 @@ def check_arguments(args, paired: bool) -> None:
             if bool(out) != bool(paired_out):
                 raise CommandLineError(
                     "When trimming paired-end data, you must use either none or both of the"
-                    " --{name}-output/--{name}-paired-output options.".format(
-                        name=argname
-                    )
+                    f" --{argname}-output/--{argname}-paired-output options."
                 )
 
     if args.overlap < 1:
@@ -632,7 +631,7 @@ def check_arguments(args, paired: bool) -> None:
         raise CommandLineError("--pair-adapters cannot be used with --times")
 
 
-def make_pipeline_from_args(  # noqa: C901
+def make_pipeline_from_args(
     args, input_file_format, outfiles, paired, adapters, adapters2
 ):
     """
@@ -667,8 +666,8 @@ def make_pipeline_from_args(  # noqa: C901
             step = SingleEndFilter(predicate1, record_writer)
         return step
 
-    adapter_names: List[Optional[str]] = [a.name for a in adapters]
-    adapter_names2: List[Optional[str]] = [a.name for a in adapters2]
+    adapter_names: list[Optional[str]] = [a.name for a in adapters]
+    adapter_names2: list[Optional[str]] = [a.name for a in adapters2]
 
     steps = []
 
@@ -999,7 +998,7 @@ def make_pipeline_from_args(  # noqa: C901
     return pipeline
 
 
-def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
+def adapters_from_args(args) -> tuple[list[Adapter], list[Adapter]]:
     search_parameters = dict(
         max_errors=args.error_rate,
         min_overlap=args.overlap,
@@ -1024,7 +1023,7 @@ def adapters_from_args(args) -> Tuple[List[Adapter], List[Adapter]]:
     return adapters, adapters2
 
 
-def make_unconditional_cutters(cut1: List[int], cut2: List[int], paired: bool):
+def make_unconditional_cutters(cut1: list[int], cut2: list[int], paired: bool):
     for i, cut_arg in enumerate([cut1, cut2]):
         # cut_arg is a list
         if not cut_arg:
@@ -1381,13 +1380,13 @@ def is_any_output_stdout(args):
 
 def json_report(
     stats: Statistics,
-    cmdlineargs: List[str],
+    cmdlineargs: list[str],
     path1: str,
     path2: Optional[str],
     cores: int,
     paired: bool,
     gc_content: float,
-) -> Dict:
+) -> dict:
     d = {
         "tag": "Cutadapt report",
         "schema_version": OneLine([0, 3]),

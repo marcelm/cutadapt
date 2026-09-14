@@ -8,7 +8,8 @@ The ...Match classes trim the reads.
 import logging
 from enum import IntFlag
 from collections import defaultdict
-from typing import Optional, Tuple, Sequence, Dict, Any, List, Union
+from typing import Optional, Any, Union
+from collections.abc import Sequence
 from abc import ABC, abstractmethod
 import time
 
@@ -80,18 +81,14 @@ class EndStatistics:
         self.adapter_type: str = adapter.descriptive_identifier()
         self.allows_partial_matches: bool = adapter.allows_partial_matches
         # self.errors[l][e] == n iff a sequence of length l matching at e errors was removed n times
-        self.errors: Dict[int, Dict[int, int]] = defaultdict(returns_defaultdict_int)
+        self.errors: dict[int, dict[int, int]] = defaultdict(returns_defaultdict_int)
         self.adjacent_bases = {"A": 0, "C": 0, "G": 0, "T": 0, "": 0}
         # TODO avoid hard-coding the list of classes
         self._remove_prefix = isinstance(adapter, FrontAdapter)
 
     def __repr__(self):
         errors = {k: dict(v) for k, v in self.errors.items()}
-        return "EndStatistics(max_error_rate={}, errors={}, adjacent_bases={})".format(
-            self.max_error_rate,
-            errors,
-            self.adjacent_bases,
-        )
+        return f"EndStatistics(max_error_rate={self.max_error_rate}, errors={errors}, adjacent_bases={self.adjacent_bases})"
 
     def __iadd__(self, other: Any):
         if not isinstance(other, self.__class__):
@@ -115,7 +112,7 @@ class EndStatistics:
         d = {length: sum(errors.values()) for length, errors in self.errors.items()}
         return d
 
-    def random_match_probabilities(self, gc_content: float) -> List[float]:
+    def random_match_probabilities(self, gc_content: float) -> list[float]:
         """
         Estimate probabilities that this adapter end matches a
         random sequence. Indels are not taken into account.
@@ -151,7 +148,7 @@ class AdapterStatistics(ABC):
         pass
 
     @abstractmethod
-    def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
+    def end_statistics(self) -> tuple[Optional[EndStatistics], Optional[EndStatistics]]:
         pass
 
     @abstractmethod
@@ -185,7 +182,7 @@ class FrontAdapterStatistics(SingleAdapterStatistics):
     def add_match(self, match: "RemoveBeforeMatch"):
         self.end.errors[match.removed_sequence_length()][match.errors] += 1
 
-    def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
+    def end_statistics(self) -> tuple[Optional[EndStatistics], Optional[EndStatistics]]:
         return self.end, None
 
 
@@ -198,7 +195,7 @@ class BackAdapterStatistics(SingleAdapterStatistics):
         except KeyError:
             self.end.adjacent_bases[""] += 1
 
-    def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
+    def end_statistics(self) -> tuple[Optional[EndStatistics], Optional[EndStatistics]]:
         return None, self.end
 
 
@@ -246,7 +243,7 @@ class LinkedAdapterStatistics(AdapterStatistics):
             except KeyError:
                 self.back.adjacent_bases[""] += 1
 
-    def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
+    def end_statistics(self) -> tuple[Optional[EndStatistics], Optional[EndStatistics]]:
         return self.front, self.back
 
 
@@ -285,7 +282,7 @@ class AnywhereAdapterStatistics(AdapterStatistics):
             except KeyError:
                 self.back.adjacent_bases[""] += 1
 
-    def end_statistics(self) -> Tuple[Optional[EndStatistics], Optional[EndStatistics]]:
+    def end_statistics(self) -> tuple[Optional[EndStatistics], Optional[EndStatistics]]:
         return self.front, self.back
 
 
@@ -293,15 +290,15 @@ class Match(ABC):
     adapter: "Adapter"
 
     @abstractmethod
-    def remainder_interval(self) -> Tuple[int, int]:
+    def remainder_interval(self) -> tuple[int, int]:
         pass
 
     @abstractmethod
-    def retained_adapter_interval(self) -> Tuple[int, int]:
+    def retained_adapter_interval(self) -> tuple[int, int]:
         pass
 
     @abstractmethod
-    def get_info_records(self, read) -> List[List]:
+    def get_info_records(self, read) -> list[list]:
         pass
 
     @abstractmethod
@@ -392,7 +389,7 @@ class SingleMatch(Match, ABC):
         ]
         return "".join(wildcards)
 
-    def get_info_records(self, read) -> List[List]:
+    def get_info_records(self, read) -> list[list]:
         seq = read.sequence
         qualities = read.qualities
         info = [
@@ -436,14 +433,14 @@ class RemoveBeforeMatch(SingleMatch):
         """
         return self.sequence[: self.rstart]
 
-    def remainder_interval(self) -> Tuple[int, int]:
+    def remainder_interval(self) -> tuple[int, int]:
         """
         Return an interval (start, stop) that describes the part of the read that would
         remain after trimming
         """
         return self.rstop, len(self.sequence)
 
-    def retained_adapter_interval(self) -> Tuple[int, int]:
+    def retained_adapter_interval(self) -> tuple[int, int]:
         return self.rstart, len(self.sequence)
 
     def trim_slice(self):
@@ -469,14 +466,14 @@ class RemoveAfterMatch(SingleMatch):
         """
         return self.sequence[self.rstop :]
 
-    def remainder_interval(self) -> Tuple[int, int]:
+    def remainder_interval(self) -> tuple[int, int]:
         """
         Return an interval (start, stop) that describes the part of the read that would
         remain after trimming
         """
         return 0, self.rstart
 
-    def retained_adapter_interval(self) -> Tuple[int, int]:
+    def retained_adapter_interval(self) -> tuple[int, int]:
         return 0, self.rstop
 
     def trim_slice(self):
@@ -714,7 +711,7 @@ class FrontAdapter(SingleAdapter):
         """
         if not self.kmer_finder.kmers_present(sequence):
             return None
-        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
+        alignment: Optional[tuple[int, int, int, int, int, int]] = self.aligner.locate(
             sequence
         )
         if self._debug:
@@ -766,7 +763,7 @@ class RightmostFrontAdapter(FrontAdapter):
         reversed_sequence = sequence[::-1]
         if not self.kmer_finder.kmers_present(reversed_sequence):
             return None
-        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
+        alignment: Optional[tuple[int, int, int, int, int, int]] = self.aligner.locate(
             reversed_sequence
         )
         if self._debug:
@@ -822,7 +819,7 @@ class BackAdapter(SingleAdapter):
         """
         if not self.kmer_finder.kmers_present(sequence):
             return None
-        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
+        alignment: Optional[tuple[int, int, int, int, int, int]] = self.aligner.locate(
             sequence
         )
         if self._debug:
@@ -870,7 +867,7 @@ class RightmostBackAdapter(BackAdapter):
         reversed_sequence = sequence[::-1]
         if not self.kmer_finder.kmers_present(reversed_sequence):
             return None
-        alignment: Optional[Tuple[int, int, int, int, int, int]] = self.aligner.locate(
+        alignment: Optional[tuple[int, int, int, int, int, int]] = self.aligner.locate(
             reversed_sequence
         )
         if self._debug:
@@ -1106,9 +1103,7 @@ class LinkedMatch(Match):
         self.adapter: LinkedAdapter = adapter
 
     def __repr__(self):
-        return "<LinkedMatch(front_match={!r}, back_match={}, adapter={})>".format(
-            self.front_match, self.back_match, self.adapter
-        )
+        return f"<LinkedMatch(front_match={self.front_match!r}, back_match={self.back_match}, adapter={self.adapter})>"
 
     @property
     def score(self):
@@ -1136,13 +1131,13 @@ class LinkedMatch(Match):
             read = self.back_match.trimmed(read)
         return read
 
-    def remainder_interval(self) -> Tuple[int, int]:
+    def remainder_interval(self) -> tuple[int, int]:
         matches = [
             match for match in [self.front_match, self.back_match] if match is not None
         ]
         return remainder(matches)
 
-    def retained_adapter_interval(self) -> Tuple[int, int]:
+    def retained_adapter_interval(self) -> tuple[int, int]:
         if self.front_match:
             start = self.front_match.rstart
             offset = self.front_match.rstop
@@ -1154,7 +1149,7 @@ class LinkedMatch(Match):
             end = len(self.front_match.sequence)
         return start, end
 
-    def get_info_records(self, read) -> List[List]:
+    def get_info_records(self, read) -> list[list]:
         records = []
         for match, namesuffix in [
             (self.front_match, ";1"),
@@ -1301,7 +1296,7 @@ class AdapterIndex:
     Use the is_acceptable() method to check individual adapters.
     """
 
-    AdapterIndexDict = Dict[str, Tuple[SingleAdapter, int, int]]
+    AdapterIndexDict = dict[str, tuple[SingleAdapter, int, int]]
 
     def __init__(self, adapters, prefix: bool):
         """All given adapters must be of the same type"""
@@ -1393,7 +1388,7 @@ class AdapterIndex:
             return False
         return True
 
-    def _make_index(self) -> Tuple[List[int], "AdapterIndexDict", int]:
+    def _make_index(self) -> tuple[list[int], "AdapterIndexDict", int]:
         start_time = time.time()
         max_k = max(
             (
@@ -1410,7 +1405,7 @@ class AdapterIndex:
                 "Indexing could take long and use a lot of memory. "
                 "If this becomes a problem, try --no-indels and/or --no-index."
             )
-        index: Dict[str, Tuple[SingleAdapter, int, int]] = dict()
+        index: dict[str, tuple[SingleAdapter, int, int]] = dict()
         lengths = set()
         ambiguous = {}
         for adapter in self._adapters:
@@ -1585,7 +1580,7 @@ def warn_duplicate_adapters(adapters):
         d[key] = adapter.name
 
 
-def remainder(matches: Sequence[Match]) -> Tuple[int, int]:
+def remainder(matches: Sequence[Match]) -> tuple[int, int]:
     """
     Determine which section of the read would not be trimmed. Return a tuple (start, stop)
     that gives the interval of the untrimmed part relative to the original read.

@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 from dnaio import SequenceRecord
 from cutadapt.adapters import (
@@ -204,7 +202,7 @@ def test_action_retain():
 def test_linked_action_retain(s, expected):
     front = FrontAdapter("GGTTAACC")
     back = BackAdapter("AACCGG")
-    adapters: List[Adapter] = [
+    adapters: list[Adapter] = [
         LinkedAdapter(
             front, back, front_required=False, back_required=False, name="linked"
         )

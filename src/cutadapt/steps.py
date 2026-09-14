@@ -19,7 +19,8 @@ Steps are added to the pipeline in a certain order:
 
 import itertools
 from abc import ABC, abstractmethod
-from typing import Tuple, Optional, Any, TextIO, Sequence, List
+from typing import Optional, Any, TextIO
+from collections.abc import Sequence
 
 from dnaio import SequenceRecord
 
@@ -28,7 +29,7 @@ from .predicates import Predicate
 from .modifiers import ModificationInfo
 from .statistics import ReadLengthStatistics
 
-RecordPair = Tuple[SequenceRecord, SequenceRecord]
+RecordPair = tuple[SequenceRecord, SequenceRecord]
 
 
 class SingleEndStep(ABC):
@@ -544,7 +545,7 @@ class CombinatorialDemultiplexer(PairedEndStep, HasStatistics):
         outfiles: OutputFiles,
     ):
         writers = dict()
-        extra: List[Tuple[Optional[str], Optional[str]]]
+        extra: list[tuple[Optional[str], Optional[str]]]
         if discard_untrimmed:
             extra = []
         else:

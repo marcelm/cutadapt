@@ -6,7 +6,6 @@ from cutadapt._match_tables import matches_lookup
 from cutadapt.adapters import KmerFinder
 from cutadapt._kmer_finder import MAXIMUM_WORD_SIZE
 
-
 KMER_FINDER_TESTS = [
     # kmer, start, stop, ref_wildcards, query_wildcards, sequence, expected
     ("ACGT", 0, None, False, False, "ACGTACG", True),

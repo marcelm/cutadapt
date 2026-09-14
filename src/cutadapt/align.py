@@ -10,7 +10,7 @@ __all__ = [
 ]
 
 from enum import IntFlag
-from typing import Iterator, Tuple
+from collections.abc import Iterator
 
 from cutadapt._align import (
     Aligner,
@@ -60,7 +60,7 @@ def edit_distance(s: str, t: str) -> int:
     return costs[-1]
 
 
-def hamming_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
+def hamming_environment(s: str, k: int) -> Iterator[tuple[str, int, int]]:
     """
     Find all strings t for which the hamming distance between s and t is at most k,
     assuming the alphabet is A, C, G, T.
@@ -96,7 +96,7 @@ def naive_edit_environment(s: str, k: int) -> Iterator[str]:
             yield s[:i] + s[i + 1 :]
 
 
-def py_edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
+def py_edit_environment(s: str, k: int) -> Iterator[tuple[str, int, int]]:
     """
     Find all strings t for which the edit distance between s and t is at most k,
     assuming the alphabet is A, C, G, T.
@@ -116,7 +116,7 @@ def py_edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
         yield t, errors, score
 
 
-def slow_edit_environment(s: str, k: int) -> Iterator[Tuple[str, int, int]]:
+def slow_edit_environment(s: str, k: int) -> Iterator[tuple[str, int, int]]:
     """
     Find all strings t for which the edit distance between s and t is at most k,
     assuming the alphabet is A, C, G, T.

@@ -64,15 +64,11 @@ def test_expand_braces_fail():
 
 def test_parse_file_notation(tmp_path):
     tmp = tmp_path / "adapters.fasta"
-    tmp.write_text(
-        dedent(
-            """>first_name
+    tmp.write_text(dedent(""">first_name
             ADAPTER1
             >second_name
             ADAPTER2
-            """
-        )
-    )
+            """))
     search_parameters = dict(
         max_errors=0.2,
         min_overlap=4,
@@ -129,7 +125,7 @@ def test_parse_not_linked():
 @pytest.mark.parametrize("reqopt", ("required", "optional"))
 def test_parse_invalid_adapter_specific_parameter(where, reqopt):
     with pytest.raises(ValueError) as e:
-        _make_not_linked_adapter("A;{}".format(reqopt), "name", where, dict())
+        _make_not_linked_adapter(f"A;{reqopt}", "name", where, {})
     assert "can only be used within linked adapters" in e.value.args[0]
 
 
@@ -224,10 +220,10 @@ def test_make_adapter_front():
 
 
 def test_make_adapter_rightmost():
-    a = make_adapter("ACGT; rightmost", "front", dict())
+    a = make_adapter("ACGT; rightmost", "front", {})
     assert isinstance(a, RightmostFrontAdapter)
 
-    a = make_adapter("ACGT; rightmost", "back", dict())
+    a = make_adapter("ACGT; rightmost", "back", {})
     assert isinstance(a, RightmostBackAdapter)
 
 
@@ -274,15 +270,11 @@ def test_make_adapter_very_long_overlap():
 
 def test_parse_file_notation_with_parameters(tmp_path):
     tmp = tmp_path / "adapters.fasta"
-    tmp.write_text(
-        dedent(
-            """>first_name
+    tmp.write_text(dedent(""">first_name
             ADAPTER1;min_overlap=2
             >second_name
             ADAPTER2;max_errors=0.4
-            """
-        )
-    )
+            """))
     parameters = dict(
         max_errors=0.2,
         min_overlap=4,
@@ -316,20 +308,16 @@ def test_parse_file_notation_with_parameters(tmp_path):
 
 def test_parse_file_notation_with_5prime_anchoring(tmp_path):
     tmp = tmp_path / "adapters.fasta"
-    tmp.write_text(
-        dedent(
-            """>first
+    tmp.write_text(dedent(""">first
             ACCGGGTTTT
             >second
             AAAACCCGGT
-            """
-        )
-    )
+            """))
     adapters = list(
         make_adapters_from_one_specification(
             "^file:" + os.fspath(tmp) + ";max_errors=0.3",
             adapter_type="front",
-            search_parameters=dict(),
+            search_parameters={},
         )
     )
     assert len(adapters) == 2
@@ -340,20 +328,16 @@ def test_parse_file_notation_with_5prime_anchoring(tmp_path):
 
 def test_parse_file_notation_with_3prime_anchoring(tmp_path):
     tmp = tmp_path / "adapters.fasta"
-    tmp.write_text(
-        dedent(
-            """>first
+    tmp.write_text(dedent(""">first
             ACCGGGTTTT
             >second
             AAAACCCGGT
-            """
-        )
-    )
+            """))
     adapters = list(
         make_adapters_from_one_specification(
             "file$:" + os.fspath(tmp) + ";max_errors=0.3",
             adapter_type="back",
-            search_parameters=dict(),
+            search_parameters={},
         )
     )
     assert len(adapters) == 2
@@ -364,18 +348,18 @@ def test_parse_file_notation_with_3prime_anchoring(tmp_path):
 
 def test_parse_with_adapter_sequence_as_a_path(tmp_path):
     with pytest.raises(InvalidCharacter):
-        make_adapter("invalid.character", "back", dict())
+        make_adapter("invalid.character", "back", {})
     # user forgot to write "file:"
     path = tmp_path / "afile.fasta"
     path.write_text(">abc\nACGT\n")
     with pytest.raises(InvalidCharacter) as e:
-        list(make_adapters_from_one_specification(str(path), "back", dict()))
+        list(make_adapters_from_one_specification(str(path), "back", {}))
     assert "A file exists named" in e.value.args[0]
 
 
 def test_make_adapters_from_specifications():
     with pytest.raises(ValueError) as e:
-        make_adapters_from_specifications([("invalid-type", "A")], dict())
+        make_adapters_from_specifications([("invalid-type", "A")], {})
     assert "adapter_type must be" in e.value.args[0]
 
 
@@ -408,7 +392,7 @@ def test_normalize_ellipsis():
 )
 def test_anchoring_makes_front_linked_adapter_required(seq, req1, req2):
     # -a X...Y
-    a = make_adapter(seq, "back", dict())
+    a = make_adapter(seq, "back", {})
     assert isinstance(a, LinkedAdapter)
     assert a.front_required is req1
     assert a.back_required is req2
@@ -428,7 +412,7 @@ def test_anchoring_makes_front_linked_adapter_required(seq, req1, req2):
 )
 def test_linked_adapter_back_required_optional(r1, r2, req1, req2):
     # -a X...Y
-    a = make_adapter("ACG" + r1 + "...TGT" + r2, "back", dict())
+    a = make_adapter("ACG" + r1 + "...TGT" + r2, "back", {})
     assert isinstance(a, LinkedAdapter)
     assert a.front_required is req1
     assert a.back_required is req2
@@ -448,7 +432,7 @@ def test_linked_adapter_back_required_optional(r1, r2, req1, req2):
 )
 def test_linked_adapter_front_required_optional(r1, r2, exp1, exp2):
     # -g X...Y
-    a = make_adapter("ACG" + r1 + "...TGT" + r2, "front", dict())
+    a = make_adapter("ACG" + r1 + "...TGT" + r2, "front", {})
     assert isinstance(a, LinkedAdapter)
     assert a.front_required is exp1
     assert a.back_required is exp2
@@ -466,13 +450,13 @@ def test_linked_adapter_parameters():
 
 def test_linked_adapter_name():
     # issue #414
-    a = make_adapter("the_name=^ACG...TGT", "back", dict())
+    a = make_adapter("the_name=^ACG...TGT", "back", {})
     assert isinstance(a, LinkedAdapter)
     assert a.create_statistics().name == "the_name"
 
 
 def test_anywhere_parameter_back():
-    adapter = make_adapter("CTGAAGTGAAGTACACGGTT;anywhere", "back", dict())
+    adapter = make_adapter("CTGAAGTGAAGTACACGGTT;anywhere", "back", {})
     assert isinstance(adapter, BackAdapter)
     assert adapter._force_anywhere
 
@@ -486,13 +470,13 @@ def test_anywhere_parameter_back():
 
 
 def test_anywhere_parameter_rightmost_front():
-    adapter = make_adapter("ACGT; rightmost; anywhere", "front", dict())
+    adapter = make_adapter("ACGT; rightmost; anywhere", "front", {})
     assert isinstance(adapter, RightmostFrontAdapter)
     assert adapter._force_anywhere
 
 
 def test_anywhere_parameter_front():
-    adapter = make_adapter("CTGAAGTGAAGTACACGGTT;anywhere", "front", dict())
+    adapter = make_adapter("CTGAAGTGAAGTACACGGTT;anywhere", "front", {})
     assert isinstance(adapter, FrontAdapter)
     assert adapter._force_anywhere
 
@@ -506,11 +490,11 @@ def test_anywhere_parameter_front():
 
 
 def test_linked_adapter_rightmost():
-    a = make_adapter("ACG;rightmost...TGT", "back", dict())
+    a = make_adapter("ACG;rightmost...TGT", "back", {})
     assert isinstance(a, LinkedAdapter)
     assert isinstance(a.front_adapter, RightmostFrontAdapter)
 
-    a = make_adapter("ACG;rightmost...TGT;rightmost", "back", dict())
+    a = make_adapter("ACG;rightmost...TGT;rightmost", "back", {})
     assert isinstance(a, LinkedAdapter)
     assert isinstance(a.front_adapter, RightmostFrontAdapter)
     assert isinstance(a.back_adapter, RightmostBackAdapter)

@@ -1,7 +1,6 @@
 import sys
 import logging
 
-
 # Custom log level
 REPORT = 25
 

@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from .files import InputFiles
 from .utils import Progress
@@ -25,7 +25,7 @@ class Pipeline(ABC):
         self,
         infiles: InputFiles,
         progress: Optional[Progress] = None,
-    ) -> Tuple[int, int, Optional[int]]:
+    ) -> tuple[int, int, Optional[int]]:
         pass
 
 
@@ -38,17 +38,17 @@ class SingleEndPipeline(Pipeline):
 
     def __init__(
         self,
-        modifiers: List[SingleEndModifier],
-        steps: List[SingleEndStep],
+        modifiers: list[SingleEndModifier],
+        steps: list[SingleEndStep],
     ):
-        self._modifiers: List[SingleEndModifier] = modifiers
+        self._modifiers: list[SingleEndModifier] = modifiers
         self._steps = steps
 
     def process_reads(
         self,
         infiles: InputFiles,
         progress: Optional[Progress] = None,
-    ) -> Tuple[int, int, Optional[int]]:
+    ) -> tuple[int, int, Optional[int]]:
         """Run the pipeline. Return statistics"""
         reader = infiles.open()
         for i, step in enumerate(self._steps, 1):
@@ -82,15 +82,15 @@ class PairedEndPipeline(Pipeline):
 
     def __init__(
         self,
-        modifiers: List[
+        modifiers: list[
             Union[
                 PairedEndModifier,
-                Tuple[Optional[SingleEndModifier], Optional[SingleEndModifier]],
+                tuple[Optional[SingleEndModifier], Optional[SingleEndModifier]],
             ]
         ],
         steps,
     ):
-        self._modifiers: List[PairedEndModifier] = []
+        self._modifiers: list[PairedEndModifier] = []
         self._steps = steps
         self._reader = None
         # Whether to ignore pair_filter mode for discard-untrimmed filter
@@ -126,7 +126,7 @@ class PairedEndPipeline(Pipeline):
         self,
         infiles: InputFiles,
         progress: Optional[Progress] = None,
-    ) -> Tuple[int, int, Optional[int]]:
+    ) -> tuple[int, int, Optional[int]]:
         self._infiles = infiles
         self._reader = infiles.open()
         n = 0  # no. of processed reads

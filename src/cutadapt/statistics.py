@@ -1,5 +1,4 @@
 from collections import defaultdict, Counter
-from typing import DefaultDict, Tuple
 
 
 class ReadLengthStatistics:
@@ -10,8 +9,8 @@ class ReadLengthStatistics:
     def __init__(self) -> None:
         # It would be more natural to use a Counter, but a
         # defaultdict is much faster
-        self._written_lengths1: DefaultDict[int, int] = defaultdict(int)
-        self._written_lengths2: DefaultDict[int, int] = defaultdict(int)
+        self._written_lengths1: defaultdict[int, int] = defaultdict(int)
+        self._written_lengths2: defaultdict[int, int] = defaultdict(int)
 
     def update(self, read) -> None:
         """Add a single-end read to the statistics"""
@@ -26,17 +25,17 @@ class ReadLengthStatistics:
         """Return number of written reads or read pairs"""
         return sum(self._written_lengths1.values())
 
-    def written_bp(self) -> Tuple[int, int]:
+    def written_bp(self) -> tuple[int, int]:
         return (
             self._compute_total_bp(self._written_lengths1),
             self._compute_total_bp(self._written_lengths2),
         )
 
-    def written_lengths(self) -> Tuple[Counter, Counter]:
+    def written_lengths(self) -> tuple[Counter, Counter]:
         return (Counter(self._written_lengths1), Counter(self._written_lengths2))
 
     @staticmethod
-    def _compute_total_bp(counts: DefaultDict[int, int]) -> int:
+    def _compute_total_bp(counts: defaultdict[int, int]) -> int:
         return sum(length * count for length, count in counts.items())
 
     def __iadd__(self, other):
