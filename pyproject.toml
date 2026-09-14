@@ -104,7 +104,6 @@ ignore = [
     "BLE001",  # Do not catch blind exception: `Exception`
     "UP028",   # Replace `yield` over `for` loop with `yield from`
     "B006",    # Do not use mutable data structures for argument defaults
-    "EXE001",  # Shebang is present but file is not executable
     "RUF023",  # `SingleMatch.__slots__` is not sorted
     "UP045",   # Use `X | None` for type annotations
 ]

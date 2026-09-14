@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # Copyright (c) 2010 Marcel Martin <marcel.martin@scilifelab.se> and contributors
 #
