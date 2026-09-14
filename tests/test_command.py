@@ -29,8 +29,9 @@ def test_standard_input_pipe(tmp_path, cores):
     out_path = os.fspath(tmp_path / "out.fastq")
     in_path = datapath("small.fastq")
     # Simulate that no file name is available for stdin
-    with subprocess.Popen(["cat", in_path], stdout=subprocess.PIPE) as cat:
-        with subprocess.Popen(
+    with (
+        subprocess.Popen(["cat", in_path], stdout=subprocess.PIPE) as cat,
+        subprocess.Popen(
             [
                 sys.executable,
                 "-m",
@@ -44,10 +45,11 @@ def test_standard_input_pipe(tmp_path, cores):
                 "-",
             ],
             stdin=cat.stdout,
-        ) as py:
-            _ = py.communicate()
-            cat.stdout.close()
-            _ = py.communicate()[0]
+        ) as py,
+    ):
+        _ = py.communicate()
+        cat.stdout.close()
+        _ = py.communicate()[0]
     assert_files_equal(cutpath("small.fastq"), out_path)
 
 
