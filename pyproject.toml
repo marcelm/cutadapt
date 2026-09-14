@@ -86,7 +86,6 @@ ignore = [
     "TRY004",  # Prefer `TypeError` exception for invalid type
     "RUF012",  # Mutable default value for class attribute
     "FURB188", # Prefer `str.removesuffix()` over conditionally replacing with slice.
-    "PYI029",  # Defining `__repr__` in a stub is almost always redundant
     "PLR1704", # Redefining argument with the local name `s`
     "B020",    # Loop control variable `s` overrides iterable it iterates
     "RUF022",  # `__all__` is not sorted
