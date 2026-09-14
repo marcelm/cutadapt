@@ -28,6 +28,22 @@ def test_help():
     assert e.value.args[0] == 0
 
 
+def test_matching_policy_option(tmp_path):
+    output = tmp_path / "out.fastq"
+    main(
+        [
+            "--matching-policy",
+            "sequence-similarity",
+            "-a",
+            "TTAGACATATCTCCGTCG",
+            "-o",
+            output,
+            datapath("small.fastq"),
+        ]
+    )
+    assert output.exists()
+
+
 def test_unknown_file_format(tmp_path, cores):
     path = tmp_path / "unknown_format.txt"
     path.write_text("raw text")

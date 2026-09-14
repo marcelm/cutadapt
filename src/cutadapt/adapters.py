@@ -26,6 +26,16 @@ from .kmer_heuristic import create_positions_and_kmers, kmer_probability_analysi
 
 logger = logging.getLogger()
 
+MATCHING_POLICIES = ("default", "sequence-similarity")
+
+
+def _validate_matching_policy(matching_policy: str) -> str:
+    if matching_policy not in MATCHING_POLICIES:
+        raise ValueError(
+            "matching_policy must be either 'default' or 'sequence-similarity'"
+        )
+    return matching_policy
+
 
 class MockKmerFinder:
     def kmers_present(self, sequence: str):
@@ -554,6 +564,10 @@ class SingleAdapter(Adapter, ABC):
             unique number.
 
         indels: Whether indels are allowed in the alignment.
+
+        matching_policy: The alignment and adapter-selection policy. ``default``
+            is the standard behavior. ``sequence-similarity`` maximizes matching
+            bases and keeps the first adapter on ties.
     """
 
     allows_partial_matches: bool = True
@@ -567,6 +581,7 @@ class SingleAdapter(Adapter, ABC):
         adapter_wildcards: bool = True,
         name: Optional[str] = None,
         indels: bool = True,
+        matching_policy: str = "default",
     ):
         self.name: str = _generate_adapter_name() if name is None else name
         super().__init__(self.name)
@@ -592,6 +607,7 @@ class SingleAdapter(Adapter, ABC):
         ) <= set("ACGT")
         self.read_wildcards: bool = read_wildcards
         self.indels: bool = indels
+        self.matching_policy = _validate_matching_policy(matching_policy)
         self.aligner = self._aligner()
         self.kmer_finder = self._kmer_finder()
 
@@ -608,6 +624,7 @@ class SingleAdapter(Adapter, ABC):
             wildcard_query=self.read_wildcards,
             indel_cost=indel_cost,
             min_overlap=self.min_overlap,
+            matching_policy=self.matching_policy,
         )
 
     def _make_kmer_finder(
@@ -1243,9 +1260,15 @@ class MultipleAdapters(Matchable):
     Represent multiple adapters at once
     """
 
-    def __init__(self, adapters: Sequence[Matchable]):
+    def __init__(
+        self,
+        adapters: Sequence[Matchable],
+        matching_policy: str = "default",
+    ):
         super().__init__(name="multiple_adapters")
         self._adapters = adapters
+        self.matching_policy = _validate_matching_policy(matching_policy)
+        self._break_score_ties_by_fewer_errors = self.matching_policy == "default"
 
     def enable_debug(self):
         for a in self._adapters:
@@ -1274,7 +1297,9 @@ class MultipleAdapters(Matchable):
                 best_match is None
                 or match.score > best_match.score
                 or (
-                    match.score == best_match.score and match.errors < best_match.errors
+                    self._break_score_ties_by_fewer_errors
+                    and match.score == best_match.score
+                    and match.errors < best_match.errors
                 )
             ):
                 best_match = match
@@ -1298,10 +1323,12 @@ class AdapterIndex:
 
     AdapterIndexDict = dict[str, tuple[SingleAdapter, int, int]]
 
-    def __init__(self, adapters, prefix: bool):
+    def __init__(self, adapters, prefix: bool, matching_policy: str = "default"):
         """All given adapters must be of the same type"""
         if not adapters:
             raise ValueError("Adapter list is empty")
+        self.matching_policy = _validate_matching_policy(matching_policy)
+        self._break_score_ties_by_fewer_errors = self.matching_policy == "default"
         for adapter in adapters:
             self._accept(adapter, prefix)
         self._adapters = adapters
@@ -1418,8 +1445,14 @@ class AdapterIndex:
                         other_adapter, _other_errors, other_matches = index[s]
                         if matches < other_matches:
                             continue
-                        if other_matches == matches and s not in ambiguous:
+                        if (
+                            self._break_score_ties_by_fewer_errors
+                            and other_matches == matches
+                            and s not in ambiguous
+                        ):
                             ambiguous[s] = (adapter, other_adapter, k, matches)
+                        elif other_matches == matches:
+                            continue
                     index[s] = (adapter, errors, matches)
                     lengths.add(len(s))
             else:
@@ -1431,8 +1464,14 @@ class AdapterIndex:
                             other_adapter, _other_errors, other_matches = index[s]
                             if matches < other_matches:
                                 continue
-                            if other_matches == matches and s not in ambiguous:
+                            if (
+                                self._break_score_ties_by_fewer_errors
+                                and other_matches == matches
+                                and s not in ambiguous
+                            ):
                                 ambiguous[s] = (adapter, other_adapter, k, matches)
+                            elif other_matches == matches:
+                                continue
                         index[s] = (adapter, errors, matches)
                 lengths.add(n)
 
@@ -1514,7 +1553,9 @@ class AdapterIndex:
                 except KeyError:
                     continue
 
-            if m > best_m or (m == best_m and e < best_e):
+            if m > best_m or (
+                self._break_score_ties_by_fewer_errors and m == best_m and e < best_e
+            ):
                 # TODO this could be made to work:
                 # assert best_m == -1
                 best_adapter = adapter
@@ -1547,9 +1588,11 @@ class AdapterIndex:
 
 
 class IndexedPrefixAdapters(Matchable):
-    def __init__(self, adapters):
+    def __init__(self, adapters, matching_policy: str = "default"):
         super().__init__(name="indexed_prefix_adapters")
-        self._index = AdapterIndex(adapters, prefix=True)
+        self._index = AdapterIndex(
+            adapters, prefix=True, matching_policy=matching_policy
+        )
         self.match_to = self._index.match_to
 
     def match_to(self, sequence: str):
@@ -1557,9 +1600,11 @@ class IndexedPrefixAdapters(Matchable):
 
 
 class IndexedSuffixAdapters(Matchable):
-    def __init__(self, adapters):
+    def __init__(self, adapters, matching_policy: str = "default"):
         super().__init__(name="indexed_suffix_adapters")
-        self._index = AdapterIndex(adapters, prefix=False)
+        self._index = AdapterIndex(
+            adapters, prefix=False, matching_policy=matching_policy
+        )
         self.match_to = self._index.match_to
 
     def match_to(self, sequence: str):

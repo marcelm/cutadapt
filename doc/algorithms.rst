@@ -120,6 +120,13 @@ a *hybrid* algorithm that uses both edit distance and score:
 
 The score function is currently: match: +1, mismatch: -1, indel: -2
 
+The optional ``--matching-policy sequence-similarity`` setting enables a sequence similarity
+objective for compatibility with Atropos-style adapter selection. In that
+mode, matches contribute +1 and mismatches and indels contribute 0 to the
+alignment score; the independent unit edit-distance matrix still enforces the
+maximum error rate. When multiple adapters have the same score, the first one
+specified is retained, since errors are effectively ignored.
+
 A second change in the alignment algorithm is relevant if there are
 multiple adapter occurrences in a read (such as adapter dimers).
 With the new algorithm, leftmost (earlier) adapter occurrences are now more

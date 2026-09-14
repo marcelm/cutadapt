@@ -91,6 +91,21 @@ class TestAligner:
         result = aligner.locate("TCGATGC")
         assert (0, 6, 0, 6, 4, 1) == result
 
+    def test_sequence_similarity_policy_scores_matching_bases(self):
+        aligner = Aligner(
+            "TCGATC",
+            1 / 6,
+            flags=Where.PREFIX,
+            matching_policy="sequence-similarity",
+        )
+        result = aligner.locate("TCGATG")
+        assert result[4:] == (5, 1)
+
+    @pytest.mark.parametrize("matching_policy", ["unknown", "cutadapt"])
+    def test_invalid_matching_policy(self, matching_policy):
+        with pytest.raises(ValueError, match="matching_policy"):
+            Aligner("ACGT", 0.1, matching_policy=matching_policy)
+
     def test_align_illumina(self):
         aligner = Aligner("GCCGAACTTCTTAGACTGCCTTAAGGACGT", 0.1, flags=Where.BACK)
         result = AlignmentResult(
@@ -116,6 +131,11 @@ def test_poly_t():
     assert result.query_end == 6
     assert result.score == 4
     assert result.errors == 0
+
+
+def test_prefix_comparer_sequence_similarity_policy_scores_matching_bases():
+    comparer = PrefixComparer("TCGATC", 1 / 6, matching_policy="sequence-similarity")
+    assert comparer.locate("TCGATG") == (0, 6, 0, 6, 5, 1)
 
 
 def test_poly_t_partial_match():

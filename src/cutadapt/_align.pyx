@@ -18,6 +18,44 @@ DEF MISMATCH_SCORE = -1
 DEF INSERTION_SCORE = -2
 DEF DELETION_SCORE = -2
 
+cdef enum _MatchingPolicy:
+    _DEFAULT = 0
+    _SEQUENCE_SIMILARITY = 1
+
+
+ctypedef struct _ScoreParameters:
+    int match
+    int mismatch
+    int insertion
+    int deletion
+
+
+cdef int _parse_matching_policy(str matching_policy) except -1:
+    if matching_policy == "default":
+        return _DEFAULT
+    elif matching_policy == "sequence-similarity":
+        return _SEQUENCE_SIMILARITY
+    raise ValueError(
+        "matching_policy must be either 'default' or 'sequence-similarity'"
+    )
+
+
+cdef _ScoreParameters _score_parameters(_MatchingPolicy policy) except *:
+    cdef _ScoreParameters parameters
+    if policy == _DEFAULT:
+        parameters.match = MATCH_SCORE
+        parameters.mismatch = MISMATCH_SCORE
+        parameters.insertion = INSERTION_SCORE
+        parameters.deletion = DELETION_SCORE
+    elif policy == _SEQUENCE_SIMILARITY:
+        parameters.match = 1
+        parameters.mismatch = 0
+        parameters.insertion = 0
+        parameters.deletion = 0
+    else:
+        raise AssertionError("Invalid matching policy enum value")
+    return parameters
+
 
 # structure for a DP matrix entry
 ctypedef struct _Entry:
@@ -187,10 +225,9 @@ cdef class Aligner:
         bytes _reference  # internal, bytes version of reference (possibly translated to a non-ASCII representation)
         readonly int effective_length
         int* n_counts  # n_counts[i] == number of N characters in reference[:i]
-        int _match_score
-        int _mismatch_score
-        int _insertion_score
-        int _deletion_score
+        _MatchingPolicy _policy
+        _ScoreParameters _score
+        str matching_policy
 
     def __cinit__(
         self,
@@ -201,6 +238,7 @@ cdef class Aligner:
         bint wildcard_query=False,
         int indel_cost=1,
         int min_overlap=1,
+        str matching_policy="default",
     ):
         self.max_error_rate = max_error_rate
         self.start_in_reference = flags & 1
@@ -219,10 +257,9 @@ cdef class Aligner:
         self._insertion_cost = indel_cost
         self._deletion_cost = indel_cost
 
-        self._match_score = MATCH_SCORE
-        self._mismatch_score = MISMATCH_SCORE
-        self._insertion_score = INSERTION_SCORE
-        self._deletion_score = DELETION_SCORE
+        self._policy = <_MatchingPolicy>_parse_matching_policy(matching_policy)
+        self._score = _score_parameters(self._policy)
+        self.matching_policy = matching_policy
 
     def _compute_flags(self):
         cdef int flags = 0
@@ -237,14 +274,14 @@ cdef class Aligner:
         return flags
 
     def __reduce__(self):
-        return (Aligner, (self.reference, self.max_error_rate, self._compute_flags(), self.wildcard_ref, self.wildcard_query, self._insertion_cost, self._min_overlap))
+        return (Aligner, (self.reference, self.max_error_rate, self._compute_flags(), self.wildcard_ref, self.wildcard_query, self._insertion_cost, self._min_overlap, self.matching_policy))
 
     def __repr__(self):
         return (
             f"Aligner(reference='{self.reference}', max_error_rate={self.max_error_rate}, "
             f"flags={self._compute_flags()}, wildcard_ref={self.wildcard_ref}, "
             f"wildcard_query={self.wildcard_query}, indel_cost={self._insertion_cost}, "
-            f"min_overlap={self._min_overlap})"
+            f"min_overlap={self._min_overlap}, matching_policy={self.matching_policy!r})"
         )
 
     def _set_reference(self, str reference):
@@ -363,7 +400,7 @@ cdef class Aligner:
         # fill out columns only until 'last'
         if not self.start_in_reference and not self.start_in_query:
             for i in range(m + 1):
-                column[i].score = i * self._deletion_score
+                column[i].score = i * self._score.deletion
                 column[i].cost = max(i, min_n) * self._deletion_cost
                 column[i].origin = 0
         elif self.start_in_reference and not self.start_in_query:
@@ -373,7 +410,7 @@ cdef class Aligner:
                 column[i].origin = min(0, min_n - i)
         elif not self.start_in_reference and self.start_in_query:
             for i in range(m + 1):
-                column[i].score = i * self._deletion_score
+                column[i].score = i * self._score.deletion
                 column[i].cost = i * self._deletion_cost
                 column[i].origin = max(0, min_n - i)
         else:
@@ -412,15 +449,15 @@ cdef class Aligner:
             int best_length
             int origin_increment = 1 if self.start_in_query else 0
             int insertion_cost_increment = 0 if self.start_in_query else self._insertion_cost
-            int insertion_score_increment = 0 if self.start_in_query else self._insertion_score
+            int insertion_score_increment = 0 if self.start_in_query else self._score.insertion
             bint characters_equal
             bint is_acceptable
             int insertion_cost = self._insertion_cost
             int deletion_cost = self._deletion_cost
-            int match_score = self._match_score
-            int mismatch_score = self._mismatch_score
-            int insertion_score = self._insertion_score
-            int deletion_score = self._deletion_score
+            int match_score = self._score.match
+            int mismatch_score = self._score.mismatch
+            int insertion_score = self._score.insertion
+            int deletion_score = self._score.deletion
             # We keep only a single column of the DP matrix in memory.
             # To access the diagonal cell to the upper left,
             # we store it here before overwriting it.
@@ -610,6 +647,9 @@ cdef class PrefixComparer:
         int max_k  # max. number of errors
         readonly int effective_length
         int min_overlap
+        _MatchingPolicy _policy
+        _ScoreParameters _score
+        str matching_policy
 
     # __init__ instead of __cinit__ because we need to override this in SuffixComparer
     def __init__(
@@ -619,6 +659,7 @@ cdef class PrefixComparer:
         bint wildcard_ref=False,
         bint wildcard_query=False,
         int min_overlap=1,
+        str matching_policy="default",
     ):
         self.wildcard_ref = wildcard_ref
         self.wildcard_query = wildcard_query
@@ -634,6 +675,9 @@ cdef class PrefixComparer:
         if min_overlap < 1:
             raise ValueError("min_overlap must be at least 1")
         self.min_overlap = min_overlap
+        self._policy = <_MatchingPolicy>_parse_matching_policy(matching_policy)
+        self._score = _score_parameters(self._policy)
+        self.matching_policy = matching_policy
         if self.wildcard_ref:
             self.reference = translate(reference, IUPAC_TABLE)
         elif self.wildcard_query:
@@ -689,7 +733,7 @@ cdef class PrefixComparer:
 
         if errors > self.max_k or length < self.min_overlap:
             return None
-        score = (length - errors) * MATCH_SCORE + errors * MISMATCH_SCORE
+        score = (length - errors) * self._score.match + errors * self._score.mismatch
         return (0, length, 0, length, score, errors)
 
 
@@ -702,8 +746,16 @@ cdef class SuffixComparer(PrefixComparer):
         bint wildcard_ref=False,
         bint wildcard_query=False,
         int min_overlap=1,
+        str matching_policy="default",
     ):
-        super().__init__(reference[::-1], max_error_rate, wildcard_ref, wildcard_query, min_overlap)
+        super().__init__(
+            reference[::-1],
+            max_error_rate,
+            wildcard_ref,
+            wildcard_query,
+            min_overlap,
+            matching_policy,
+        )
 
     def locate(self, str query):
         cdef int n = len(query)

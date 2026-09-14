@@ -491,6 +491,29 @@ def test_multiple_adapters():
     assert match.adapter is a2
 
 
+def test_multiple_adapters_sequence_similarity_policy_keeps_first_on_tie():
+    a1 = BackAdapter("GTAGTCCCGC", matching_policy="sequence-similarity")
+    a2 = BackAdapter("GTAGTCCCCC", matching_policy="sequence-similarity")
+    ma = MultipleAdapters([a1, a2], matching_policy="sequence-similarity")
+    match = ma.match_to("ATACCCCTGTAGTCCCC")
+    assert match.adapter is a1
+
+
+def test_sequence_similarity_policy_is_propagated_to_index():
+    adapters = [
+        PrefixAdapter(
+            "GAAC", max_errors=1, indels=False, matching_policy="sequence-similarity"
+        ),
+        PrefixAdapter(
+            "GAAG", max_errors=1, indels=False, matching_policy="sequence-similarity"
+        ),
+    ]
+    ma = IndexedPrefixAdapters(adapters, matching_policy="sequence-similarity")
+    match = ma.match_to("GAAT")
+    assert match is not None
+    assert match.adapter is adapters[0]
+
+
 def test_indexed_prefix_adapters():
     adapters = [
         PrefixAdapter("GAAC", indels=False),
