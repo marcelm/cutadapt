@@ -1415,7 +1415,7 @@ class AdapterIndex:
             if adapter.indels:
                 for s, errors, matches in edit_environment(sequence, k):
                     if s in index:
-                        other_adapter, other_errors, other_matches = index[s]
+                        other_adapter, _other_errors, other_matches = index[s]
                         if matches < other_matches:
                             continue
                         if other_matches == matches and s not in ambiguous:
@@ -1428,7 +1428,7 @@ class AdapterIndex:
                     matches = n - errors
                     for s in hamming_sphere(sequence, errors):
                         if s in index:
-                            other_adapter, other_errors, other_matches = index[s]
+                            other_adapter, _other_errors, other_matches = index[s]
                             if matches < other_matches:
                                 continue
                             if other_matches == matches and s not in ambiguous:
