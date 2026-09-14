@@ -212,7 +212,7 @@ class Statistics:
         will wrap some items in a `cutadapt.json.OneLine` object, and use
         `cutadapt.json.dumps` instead of `json.dumps` to dump the dict.
         """
-        filtered = {name: self.filtered.get(name) for name in FILTERS.keys()}
+        filtered = {name: self.filtered.get(name) for name in FILTERS}
         filtered_total = sum(self.filtered.values())
         written_reads = self.read_length_statistics.written_reads()
         written_bp = self.read_length_statistics.written_bp()

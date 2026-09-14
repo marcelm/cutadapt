@@ -91,9 +91,8 @@ ignore = [
     "SIM102",  # Use a single `if` statement instead of nested `if` statements
     "FA100",   # Add `from __future__ import annotations` to simplify `typing.Optional`
     "D419",    # Docstring is empty
-    "SIM118",  # Use `key in dict` instead of `key in dict.keys()`
+#    "SIM118",  # Use `key in dict` instead of `key in dict.keys()`
     "TRY004",  # Prefer `TypeError` exception for invalid type
-#    "C401",    # Unnecessary generator (rewrite as a set comprehension)
     "RUF012",  # Mutable default value for class attribute
     "FURB188", # Prefer `str.removesuffix()` over conditionally replacing with slice.
     "PYI029",  # Defining `__repr__` in a stub is almost always redundant
