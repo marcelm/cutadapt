@@ -85,3 +85,23 @@ ignore = [
     "RUF022",  # `__all__` is not sorted
     "RUF023",  # `SingleMatch.__slots__` is not sorted
 ]
+
+[tool.coverage.run]
+branch = true
+parallel = true
+concurrency = ["multiprocessing"]
+source_pkgs = ["cutadapt"]
+source = ["tests"]
+
+[tool.coverage.report]
+precision = 1
+exclude_also = [
+    "def __repr__",
+    "@overload",
+]
+
+[tool.coverage.paths]
+source = [
+    "src/",
+    "*/site-packages/",
+]
