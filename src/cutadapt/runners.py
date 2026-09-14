@@ -118,10 +118,7 @@ class ReaderProcess(mpctx_Process):
             for chunk in dnaio.read_chunks(files[0], self.buffer_size):
                 yield (chunk,)
         elif len(files) == 2:
-            for chunks in dnaio.read_paired_chunks(
-                files[0], files[1], self.buffer_size
-            ):
-                yield chunks
+            yield from dnaio.read_paired_chunks(files[0], files[1], self.buffer_size)
         else:
             raise NotImplementedError
 
