@@ -72,18 +72,16 @@ line-length = 120
 
 [tool.ruff.lint]
 ignore = [
-    # Leave enabled
     "C408",    # Unnecessary `dict()` call (rewrite as a literal)
     "S102",    # Use of `exec` detected
     "SIM905",  # Consider using a list literal instead of `str.split`
+    "RUF012",  # Mutable default value for class attribute
 
-    # Possibly disable the following ones:
+    # Possibly fix the following lints:
     "I001",    # Import block is un-sorted or un-formatted
     "PLC0414", # Import alias does not rename original package
     "FA100",   # Add `from __future__ import annotations` to simplify `typing.Optional`
     "D419",    # Docstring is empty
-    "RUF012",  # Mutable default value for class attribute
     "RUF022",  # `__all__` is not sorted
-    "B006",    # Do not use mutable data structures for argument defaults
     "RUF023",  # `SingleMatch.__slots__` is not sorted
 ]

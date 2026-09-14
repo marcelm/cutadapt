@@ -490,7 +490,7 @@ class RemoveAfterMatch(SingleMatch):
         return len(self.sequence) - self.rstart
 
 
-def _generate_adapter_name(_start=[1]) -> str:
+def _generate_adapter_name(_start=[1]) -> str:  # noqa: B006
     name = str(_start[0])
     _start[0] += 1
     return name
