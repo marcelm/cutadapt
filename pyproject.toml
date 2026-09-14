@@ -81,7 +81,6 @@ ignore = [
     # Possibly disable the following ones:
     "I001",    # Import block is un-sorted or un-formatted
     "PLC0414", # Import alias does not rename original package
-    "ISC004",  # Unparenthesized implicit string concatenation in collection
     "RUF059",  # Unpacked variable `matches` is never used
     "SIM102",  # Use a single `if` statement instead of nested `if` statements
     "FA100",   # Add `from __future__ import annotations` to simplify `typing.Optional`
