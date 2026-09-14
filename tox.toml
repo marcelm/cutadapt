@@ -1,0 +1,42 @@
+env_list = ["ruff", "black", "py310", "py311", "py312", "py313", "mypy", "docs"]
+
+[env_run_base]
+default_base_python = "3.10"
+deps = [
+    "coverage",
+    "pytest",
+    "pytest-timeout",
+    "pytest-mock",
+]
+commands = [
+    ["coverage", "run", "-m", "pytest", "--doctest-modules", "--pyargs", "cutadapt", "tests"],
+    ["coverage", "combine", "-q"],
+    ["coverage", "report"],
+    ["coverage", "xml"],
+]
+
+[env_run_base.set_env]
+PYTHONDEVMODE = "1"
+PYTHONWANDEFAULTENCODING = "1"
+PIP_ONLY_BINARY = ":all:"
+
+[env.docs]
+skip_install = true
+deps = ["-r doc/requirements.txt"]
+commands = [
+    ["sphinx-build", "-W", "-b", "html", "-d", "{envtmpdir}/doctrees", "doc", "{envtmpdir}/html"]
+]
+
+[env.ruff]
+deps = ["ruff"]
+skip_install = true
+commands = [["ruff", "check", "src/", "tests/", "setup.py"]]
+
+[env.mypy]
+deps = ["mypy"]
+commands = [["mypy", "src/"]]
+
+[env.black]
+deps = ["black==26.5.1"]
+skip_install = true
+commands = [["black", "--check", "src/", "tests/", "setup.py"]]
