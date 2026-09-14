@@ -394,11 +394,7 @@ def make_adapters_from_one_specification(
     """
     Parse an adapter specification and yield appropriate Adapter classes.
     """
-    if (
-        spec.startswith("file:")
-        or spec.startswith("^file:")
-        or spec.startswith("file$:")
-    ):
+    if spec.startswith(("file:", "^file:", "file$:")):
         anchoring_prefix = ""
         anchoring_suffix = ""
         if spec.startswith("^"):

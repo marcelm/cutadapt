@@ -322,7 +322,7 @@ def detect_file_format(file: BinaryIO) -> FileFormat:
     if magic.startswith(b"@") or magic == b"":
         # Pretend FASTQ for empty input
         return FileFormat.FASTQ
-    elif magic.startswith(b">") or magic.startswith(b"#"):
+    elif magic.startswith((b">", b"#")):
         # Some FASTA variants allow comments
         return FileFormat.FASTA
     elif magic == b"BAM\1":
