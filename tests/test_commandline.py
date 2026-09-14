@@ -642,8 +642,8 @@ def test_max_n(run):
 def test_quiet_is_quiet():
     captured_standard_output = StringIO()
     captured_standard_error = StringIO()
-    setattr(captured_standard_output, "buffer", BytesIO())
-    setattr(captured_standard_error, "buffer", BytesIO())
+    captured_standard_output.buffer = BytesIO()
+    captured_standard_error.buffer = BytesIO()
     old_stdout = sys.stdout
     old_stderr = sys.stderr
     try:
@@ -655,8 +655,8 @@ def test_quiet_is_quiet():
         sys.stderr = old_stderr
     assert captured_standard_output.getvalue() == ""
     assert captured_standard_error.getvalue() == ""
-    assert getattr(captured_standard_output, "buffer").getvalue() == b""
-    assert getattr(captured_standard_output, "buffer").getvalue() == b""
+    assert captured_standard_output.buffer.getvalue() == b""
+    assert captured_standard_output.buffer.getvalue() == b""
 
 
 def test_x_brace_notation():
