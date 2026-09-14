@@ -84,7 +84,6 @@ ignore = [
     "FA100",   # Add `from __future__ import annotations` to simplify `typing.Optional`
     "D419",    # Docstring is empty
     "RUF012",  # Mutable default value for class attribute
-    "FURB188", # Prefer `str.removesuffix()` over conditionally replacing with slice.
     "RUF022",  # `__all__` is not sorted
     "B006",    # Do not use mutable data structures for argument defaults
     "RUF023",  # `SingleMatch.__slots__` is not sorted

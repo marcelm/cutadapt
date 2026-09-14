@@ -562,8 +562,7 @@ class SuffixRemover(SingleEndModifier):
 
     def __call__(self, read, info: ModificationInfo):
         read = read[:]
-        if read.name.endswith(self.suffix):
-            read.name = read.name[: -len(self.suffix)]
+        read.name = read.name.removesuffix(self.suffix)
         return read
 
 
