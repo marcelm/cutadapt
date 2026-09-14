@@ -72,7 +72,11 @@ line-length = 120
 
 [tool.ruff.lint]
 ignore = [
+    # Leave enabled
+    "BLE001",  # Do not catch blind exception: `Exception`
     "C408",    # Unnecessary `dict()` call (rewrite as a literal)
+
+    # Possibly disable the following ones:
     "I001",    # Import block is un-sorted or un-formatted
     "UP035",   # Import from `collections.abc` instead: `Sequence`
     "UP032",   # Use f-string instead of `format` call
@@ -101,7 +105,6 @@ ignore = [
     "PLR1704", # Redefining argument with the local name `s`
     "B020",    # Loop control variable `s` overrides iterable it iterates
     "RUF022",  # `__all__` is not sorted
-    "BLE001",  # Do not catch blind exception: `Exception`
     "UP028",   # Replace `yield` over `for` loop with `yield from`
     "B006",    # Do not use mutable data structures for argument defaults
     "RUF023",  # `SingleMatch.__slots__` is not sorted
