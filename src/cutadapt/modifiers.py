@@ -654,9 +654,9 @@ class Renamer(SingleEndModifier):
             "rc": "'rc' if info.is_rc else ''",
             "match_sequence": "info.matches[-1].match_sequence() if info.matches else ''",
         }
-        placeholders = set(
+        placeholders = {
             token.value for token in self._tokens if isinstance(token, BraceToken)
-        )
+        }
         lines = ["def rename(self, read, info):"]
         if (
             "id" in placeholders

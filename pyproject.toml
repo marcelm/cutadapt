@@ -93,7 +93,7 @@ ignore = [
     "D419",    # Docstring is empty
     "SIM118",  # Use `key in dict` instead of `key in dict.keys()`
     "TRY004",  # Prefer `TypeError` exception for invalid type
-    "C401",    # Unnecessary generator (rewrite as a set comprehension)
+#    "C401",    # Unnecessary generator (rewrite as a set comprehension)
     "RUF012",  # Mutable default value for class attribute
     "FURB188", # Prefer `str.removesuffix()` over conditionally replacing with slice.
     "PYI029",  # Defining `__repr__` in a stub is almost always redundant
