@@ -754,8 +754,10 @@ def test_combinatorial_demultiplexing(tmp_path, discarduntrimmed, cores):
 def test_rename(run_paired, cores):
     run_paired(
         [
-            "--rename={id} {r1.cut_prefix} {cut_prefix}"
-            " {comment} {adapter_name} {r2.adapter_name}",
+            (
+                "--rename={id} {r1.cut_prefix} {cut_prefix}"
+                " {comment} {adapter_name} {r2.adapter_name}"
+            ),
             "--cut=4",
             "-a",
             "R1adapter=GTCTCCAGCT",

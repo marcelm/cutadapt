@@ -475,7 +475,7 @@ def test_hamming_sphere(sk):
 )
 def test_edit_environment(k, s, environment_func):
     result = list(environment_func(s, k))
-    strings, distances, matches = zip(*result)
+    strings, _distances, _matches = zip(*result)
     naive = set(naive_edit_environment(s, k))
     assert len(set(strings)) == len(strings)
     assert set(strings) == naive

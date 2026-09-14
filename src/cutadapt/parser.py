@@ -228,7 +228,7 @@ class AdapterSpecification:
         if adapter_type not in ("front", "back", "anywhere"):
             raise ValueError("adapter_type must be front, back or anywhere")
 
-        spec, middle, parameters_spec = spec.partition(";")
+        spec, _middle, parameters_spec = spec.partition(";")
         name, spec = cls._extract_name(spec)
         spec = spec.strip()
         parameters = parse_search_parameters(parameters_spec)

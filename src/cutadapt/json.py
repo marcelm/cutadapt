@@ -69,4 +69,4 @@ def dumps(obj, indent: int = 2, _level: int = 0) -> str:
             + "}"
         )
     else:
-        raise ValueError(f"cannot serialize type {obj.__class__.__name__}")
+        raise TypeError(f"cannot serialize type {obj.__class__.__name__}")

@@ -92,7 +92,7 @@ class EndStatistics:
 
     def __iadd__(self, other: Any):
         if not isinstance(other, self.__class__):
-            raise ValueError("Cannot compare")
+            raise TypeError("Cannot compare")
         if (
             self.max_error_rate != other.max_error_rate
             or self.sequence != other.sequence
@@ -172,7 +172,7 @@ class SingleAdapterStatistics(AdapterStatistics, ABC):
 
     def __iadd__(self, other: "SingleAdapterStatistics"):
         if not isinstance(other, self.__class__):
-            raise ValueError("Cannot iadd")
+            raise TypeError("Cannot iadd")
         self.end += other.end
         self.reverse_complemented += other.reverse_complemented
         return self
@@ -221,7 +221,7 @@ class LinkedAdapterStatistics(AdapterStatistics):
 
     def __iadd__(self, other: "LinkedAdapterStatistics"):
         if not isinstance(other, self.__class__):
-            raise ValueError("Cannot iadd")
+            raise TypeError("Cannot iadd")
         self.front += other.front
         self.back += other.back
         self.reverse_complemented += other.reverse_complemented
@@ -264,7 +264,7 @@ class AnywhereAdapterStatistics(AdapterStatistics):
 
     def __iadd__(self, other: "AnywhereAdapterStatistics"):
         if not isinstance(other, AnywhereAdapterStatistics):
-            raise ValueError("Cannot add")
+            raise TypeError("Cannot add")
         self.front += other.front
         self.back += other.back
         self.reverse_complemented += other.reverse_complemented
@@ -490,7 +490,7 @@ class RemoveAfterMatch(SingleMatch):
         return len(self.sequence) - self.rstart
 
 
-def _generate_adapter_name(_start=[1]) -> str:
+def _generate_adapter_name(_start=[1]) -> str:  # noqa: B006
     name = str(_start[0])
     _start[0] += 1
     return name
@@ -1415,7 +1415,7 @@ class AdapterIndex:
             if adapter.indels:
                 for s, errors, matches in edit_environment(sequence, k):
                     if s in index:
-                        other_adapter, other_errors, other_matches = index[s]
+                        other_adapter, _other_errors, other_matches = index[s]
                         if matches < other_matches:
                             continue
                         if other_matches == matches and s not in ambiguous:
@@ -1428,7 +1428,7 @@ class AdapterIndex:
                     matches = n - errors
                     for s in hamming_sphere(sequence, errors):
                         if s in index:
-                            other_adapter, other_errors, other_matches = index[s]
+                            other_adapter, _other_errors, other_matches = index[s]
                             if matches < other_matches:
                                 continue
                             if other_matches == matches and s not in ambiguous:

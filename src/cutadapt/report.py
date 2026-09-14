@@ -82,7 +82,7 @@ class Statistics:
 
     def __iadd__(self, other: Any):
         if not isinstance(other, Statistics):
-            raise ValueError(f"Cannot add {other.__type__.__name__}")
+            raise TypeError(f"Cannot add {other.__type__.__name__}")
         self.n += other.n
         self.read_length_statistics += other.read_length_statistics
 
@@ -869,12 +869,14 @@ def minimal_report(stats: Statistics, time: float, gc_content: float) -> str:
     warning = False
     for which_in_pair in (0, 1):
         for adapter_statistics in stats.adapter_stats[which_in_pair]:
-            if isinstance(adapter_statistics, BackAdapterStatistics):
-                if AdjacentBaseStatistics(
+            if (
+                isinstance(adapter_statistics, BackAdapterStatistics)
+                and AdjacentBaseStatistics(
                     adapter_statistics.end.adjacent_bases
-                ).should_warn:
-                    warning = True
-                    break
+                ).should_warn
+            ):
+                warning = True
+                break
     if warning:
         fields[0] = "WARN"
     header = [
