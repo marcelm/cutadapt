@@ -92,7 +92,7 @@ class EndStatistics:
 
     def __iadd__(self, other: Any):
         if not isinstance(other, self.__class__):
-            raise ValueError("Cannot compare")
+            raise TypeError("Cannot compare")
         if (
             self.max_error_rate != other.max_error_rate
             or self.sequence != other.sequence
@@ -172,7 +172,7 @@ class SingleAdapterStatistics(AdapterStatistics, ABC):
 
     def __iadd__(self, other: "SingleAdapterStatistics"):
         if not isinstance(other, self.__class__):
-            raise ValueError("Cannot iadd")
+            raise TypeError("Cannot iadd")
         self.end += other.end
         self.reverse_complemented += other.reverse_complemented
         return self
@@ -221,7 +221,7 @@ class LinkedAdapterStatistics(AdapterStatistics):
 
     def __iadd__(self, other: "LinkedAdapterStatistics"):
         if not isinstance(other, self.__class__):
-            raise ValueError("Cannot iadd")
+            raise TypeError("Cannot iadd")
         self.front += other.front
         self.back += other.back
         self.reverse_complemented += other.reverse_complemented
@@ -264,7 +264,7 @@ class AnywhereAdapterStatistics(AdapterStatistics):
 
     def __iadd__(self, other: "AnywhereAdapterStatistics"):
         if not isinstance(other, AnywhereAdapterStatistics):
-            raise ValueError("Cannot add")
+            raise TypeError("Cannot add")
         self.front += other.front
         self.back += other.back
         self.reverse_complemented += other.reverse_complemented

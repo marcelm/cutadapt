@@ -82,7 +82,7 @@ class Statistics:
 
     def __iadd__(self, other: Any):
         if not isinstance(other, Statistics):
-            raise ValueError(f"Cannot add {other.__type__.__name__}")
+            raise TypeError(f"Cannot add {other.__type__.__name__}")
         self.n += other.n
         self.read_length_statistics += other.read_length_statistics
 

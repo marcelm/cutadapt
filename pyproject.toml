@@ -83,7 +83,6 @@ ignore = [
     "PLC0414", # Import alias does not rename original package
     "FA100",   # Add `from __future__ import annotations` to simplify `typing.Optional`
     "D419",    # Docstring is empty
-    "TRY004",  # Prefer `TypeError` exception for invalid type
     "RUF012",  # Mutable default value for class attribute
     "FURB188", # Prefer `str.removesuffix()` over conditionally replacing with slice.
     "RUF022",  # `__all__` is not sorted
