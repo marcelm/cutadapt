@@ -607,7 +607,7 @@ class AdjacentBaseStatistics:
             return None
 
 
-def full_report(stats: Statistics, time: float, gc_content: float) -> str:  # noqa: C901
+def full_report(stats: Statistics, time: float, gc_content: float) -> str:
     """Print report to standard output."""
     if stats.n == 0:
         return "No reads processed!"

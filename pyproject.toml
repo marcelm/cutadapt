@@ -89,7 +89,6 @@ ignore = [
     "RUF059",  # Unpacked variable `matches` is never used
     "SIM102",  # Use a single `if` statement instead of nested `if` statements
     "FA100",   # Add `from __future__ import annotations` to simplify `typing.Optional`
-    "RUF100",  # Unused `noqa` directive (non-enabled: `C901`)
     "D419",    # Docstring is empty
     "SIM118",  # Use `key in dict` instead of `key in dict.keys()`
     "TRY004",  # Prefer `TypeError` exception for invalid type

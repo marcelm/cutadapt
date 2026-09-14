@@ -630,7 +630,7 @@ def check_arguments(args, paired: bool) -> None:
         raise CommandLineError("--pair-adapters cannot be used with --times")
 
 
-def make_pipeline_from_args(  # noqa: C901
+def make_pipeline_from_args(
     args, input_file_format, outfiles, paired, adapters, adapters2
 ):
     """
