@@ -83,17 +83,17 @@ def naive_edit_environment(s: str, k: int) -> Iterator[str]:
     yield s
     if k == 0:
         return
-    for s in naive_edit_environment(s, k - 1):
-        n = len(s)
+    for t in naive_edit_environment(s, k - 1):
+        n = len(t)
         for ch in "ACGT":
             for i in range(n):
-                prefix = s[:i] + ch
-                yield prefix + s[i:]  # insertion
-                yield prefix + s[i + 1 :]  # substitution
-            yield s + ch  # insertion into final position
+                prefix = t[:i] + ch
+                yield prefix + t[i:]  # insertion
+                yield prefix + t[i + 1 :]  # substitution
+            yield t + ch  # insertion into final position
         # all deletions
         for i in range(n):
-            yield s[:i] + s[i + 1 :]
+            yield t[:i] + t[i + 1 :]
 
 
 def py_edit_environment(s: str, k: int) -> Iterator[tuple[str, int, int]]:
