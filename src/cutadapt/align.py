@@ -21,7 +21,6 @@ from cutadapt._align import (
     edit_environment,
 )
 
-
 # Products such as 49 * (1 / 49) evaluate to 0.9999999999999999 in floating
 # point, which would turn "one allowed error" (-e 1) into "no errors". The
 # tolerance is far below the resolution of any meaningful error rate. The same
