@@ -21,6 +21,7 @@ from .align import (
     SuffixComparer,
     edit_environment,
     hamming_sphere,
+    max_errors_for_length,
 )
 from .kmer_heuristic import create_positions_and_kmers, kmer_probability_analysis
 
@@ -1370,7 +1371,7 @@ class AdapterIndex:
             raise ValueError("Wildcards in the read not supported")
         if adapter.adapter_wildcards:
             raise ValueError("Wildcards in the adapter not supported")
-        k = int(len(adapter) * adapter.max_error_rate)
+        k = max_errors_for_length(len(adapter), adapter.max_error_rate)
         if k > 3:
             raise ValueError("Error rate too high")
 
@@ -1392,7 +1393,7 @@ class AdapterIndex:
         start_time = time.time()
         max_k = max(
             (
-                int(adapter.max_error_rate * len(adapter.sequence))
+                max_errors_for_length(len(adapter.sequence), adapter.max_error_rate)
                 for adapter in self._adapters
                 if adapter.indels
             ),
@@ -1410,7 +1411,7 @@ class AdapterIndex:
         ambiguous = {}
         for adapter in self._adapters:
             sequence = adapter.sequence
-            k = int(adapter.max_error_rate * len(sequence))
+            k = max_errors_for_length(len(sequence), adapter.max_error_rate)
 
             if adapter.indels:
                 for s, errors, matches in edit_environment(sequence, k):

@@ -703,3 +703,32 @@ def test_very_long_adapter_issue_749():
     assert match.astart == 0
     assert match.astop == 20
     assert match.errors == 0
+
+
+def test_back_adapter_absolute_errors_floating_point_boundary():
+    # 49 * (1 / 49) is slightly less than 1 in floating point;
+    # one error must nevertheless be allowed
+    sequence = "CAGATTTTCATATTATGCAGAAAATCTACTTCGCCTGATACGAGTCGGT"
+    assert len(sequence) == 49
+    mutated = sequence[:20] + "T" + sequence[21:]
+    adapter = BackAdapter(sequence, max_errors=1)
+    match = adapter.match_to("GGGG" + mutated + "GGGG")
+    assert match is not None
+    assert match.errors == 1
+    assert (match.rstart, match.rstop) == (4, 53)
+
+
+def test_indexed_prefix_adapters_absolute_errors_floating_point_boundary():
+    sequence1 = "CAGATTTTCATATTATGCAGAAAATCTACTTCGCCTGATACGAGTCGGT"
+    sequence2 = "TGCCGTAATCGAGGCTAGTTCACCGATAGGTCCTAAGCTTGACGATCAA"
+    assert len(sequence1) == len(sequence2) == 49
+    adapters = [
+        PrefixAdapter(sequence1, max_errors=1, indels=False),
+        PrefixAdapter(sequence2, max_errors=1, indels=False),
+    ]
+    ma = IndexedPrefixAdapters(adapters)
+    mutated = sequence1[:20] + "T" + sequence1[21:]
+    match = ma.match_to(mutated + "GGGG")
+    assert match is not None
+    assert match.adapter is adapters[0]
+    assert match.errors == 1

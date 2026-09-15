@@ -18,6 +18,11 @@ DEF MISMATCH_SCORE = -1
 DEF INSERTION_SCORE = -2
 DEF DELETION_SCORE = -2
 
+# Products such as 49 * (1 / 49) evaluate to 0.9999999999999999 in floating
+# point, which would turn "one allowed error" (-e 1) into "no errors". The
+# tolerance is far below the resolution of any meaningful error rate.
+DEF ERROR_RATE_TOLERANCE = 1e-9
+
 
 # structure for a DP matrix entry
 ctypedef struct _Entry:
@@ -340,7 +345,7 @@ cdef class Aligner:
         cdef int i, j
 
         # maximum no. of errors
-        cdef int k = <int> (max_error_rate * m)
+        cdef int k = <int> (max_error_rate * m + ERROR_RATE_TOLERANCE)
 
         # Determine largest and smallest column we need to compute
         cdef int max_n = n
@@ -510,7 +515,7 @@ cdef class Aligner:
                             cur_effective_length = self.effective_length
                     is_acceptable = (
                         length >= self._min_overlap
-                        and cost <= cur_effective_length * max_error_rate
+                        and cost <= cur_effective_length * max_error_rate + ERROR_RATE_TOLERANCE
                     )
                     best_length = m + min(best.origin, 0)
 
@@ -556,7 +561,7 @@ cdef class Aligner:
 
                 is_acceptable = (
                     length >= self._min_overlap
-                    and cost <= cur_effective_length * max_error_rate
+                    and cost <= cur_effective_length * max_error_rate + ERROR_RATE_TOLERANCE
                 )
                 best_length = best.ref_stop + min(best.origin, 0)
 
@@ -630,7 +635,7 @@ cdef class PrefixComparer:
                 raise ValueError("Cannot have only N wildcards in the sequence")
         if not (0 <= max_error_rate <= 1.):
             raise ValueError("max_error_rate must be between 0 and 1")
-        self.max_k = int(max_error_rate * self.effective_length)
+        self.max_k = int(max_error_rate * self.effective_length + ERROR_RATE_TOLERANCE)
         if min_overlap < 1:
             raise ValueError("min_overlap must be at least 1")
         self.min_overlap = min_overlap
