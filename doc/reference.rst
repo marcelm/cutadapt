@@ -874,7 +874,10 @@ If an adapter match was found, these fields are output in a row:
 12. Flag indicating whether the read was reverse complemented: 1 if yes, 0 if not,
     and empty if ``--revcomp`` was not used.
 
-The concatenation of the fields 5-7 yields the full read sequence. Column 8 identifies
+The concatenation of the fields 5-7 yields the full read sequence. The coordinates
+in fields 3 and 4 refer to the original read even if bases were removed from the
+read before adapter trimming (with ``--cut``, ``--quality-cutoff`` or
+``--nextseq-trim``). Column 8 identifies
 the found adapter. `The section about named adapters <named-adapters>` describes
 how to give a name to an adapter. Adapters without a name are numbered starting
 from 1. Fields 9-11 are empty if quality values are not available.
