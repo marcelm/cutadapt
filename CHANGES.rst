@@ -2,6 +2,13 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+* :issue:`856`: Report a command-line error when ``--rest-file`` or
+  ``--wildcard-file`` is combined with linked adapters for R1, before opening
+  output files. Previously these combinations could fail during processing.
+
 v5.2 (2025-10-23)
 -----------------
 
