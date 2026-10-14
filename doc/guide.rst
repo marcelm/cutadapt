@@ -378,6 +378,10 @@ missing in the read.
 Linked adapters do not work in combination with ``--info-file``, ``--action=mask`` and
 ``--action=crop``.
 
+The ``--rest-file`` and ``--wildcard-file`` options also cannot be used with linked
+adapters. For paired-end input, this restriction applies to adapters for R1,
+since these output files describe R1 only.
+
 To provide :ref:`adapter-search parameters <search-parameters>`
 for linked adapters, they need to be set for each constituent adapter separately, as in
 ``-g "ADAPTER1;min_overlap=5...ADAPTER2;min_overlap=6"``.

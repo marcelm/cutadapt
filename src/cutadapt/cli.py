@@ -69,7 +69,12 @@ import dnaio
 import xopen as xopen
 
 from cutadapt import __version__
-from cutadapt.adapters import warn_duplicate_adapters, Adapter, InvalidCharacter
+from cutadapt.adapters import (
+    warn_duplicate_adapters,
+    Adapter,
+    InvalidCharacter,
+    LinkedAdapter,
+)
 from cutadapt.json import OneLine, dumps as json_dumps
 from cutadapt.parser import make_adapters_from_specifications
 from cutadapt.modifiers import (
@@ -1219,6 +1224,15 @@ def main(cmdlineargs) -> Statistics:
         input_paths = make_input_paths(args.inputs, paired, is_interleaved_input)
         check_arguments(args, paired)
         adapters, adapters2 = adapters_from_args(args)
+        if any(isinstance(adapter, LinkedAdapter) for adapter in adapters):
+            for option, path in (
+                ("--rest-file", args.rest_file),
+                ("--wildcard-file", args.wildcard_file),
+            ):
+                if path is not None:
+                    raise CommandLineError(
+                        f"{option} cannot be used with linked adapters"
+                    )
         log_adapters(adapters, adapters2 if paired else None)
         complain_about_duplicate_paths(
             [

@@ -124,6 +124,75 @@ def test_restfront(run, tmp_path):
     assert_files_equal(datapath("restfront.txt"), path)
 
 
+@pytest.mark.parametrize("output_option", ["--rest-file", "--wildcard-file"])
+@pytest.mark.parametrize("adapter_option", ["-a", "-g"])
+@pytest.mark.parametrize("paired", [False, True])
+def test_linked_auxiliary_output_rejected_before_opening_files(
+    tmp_path, cores, caplog, output_option, adapter_option, paired
+):
+    reads = tmp_path / "reads.fastq"
+    reads.write_text("@read\nAAAACCCCTTTTGGGG\n+\nIIIIIIIIIIIIIIII\n")
+    output = tmp_path / "out.fastq"
+    auxiliary = tmp_path / "auxiliary.txt"
+    output.write_text("keep output\n")
+    auxiliary.write_text("keep auxiliary\n")
+    args = [
+        "--cores",
+        str(cores),
+        adapter_option,
+        "AAAA...TTTT",
+        output_option,
+        auxiliary,
+        "-o",
+        output,
+    ]
+    if paired:
+        args.extend(["-p", tmp_path / "out2.fastq"])
+    args.append(reads)
+    if paired:
+        args.append(reads)
+    with pytest.raises(SystemExit) as exc:
+        main(args)
+    assert exc.value.code == 2
+    assert f"{output_option} cannot be used with linked adapters" in caplog.text
+    assert output.read_text() == "keep output\n"
+    assert auxiliary.read_text() == "keep auxiliary\n"
+    assert not (tmp_path / "out2.fastq").exists()
+
+
+@pytest.mark.parametrize(
+    "output_option, expected",
+    [
+        ("--rest-file", "GGGG read\n"),
+        ("--wildcard-file", "T read\n"),
+    ],
+)
+def test_auxiliary_output_allows_linked_adapter_in_r2_only(
+    tmp_path, output_option, expected
+):
+    reads = tmp_path / "reads.fastq"
+    reads.write_text("@read\nAAAACCCCTTTTGGGG\n+\nIIIIIIIIIIIIIIII\n")
+    auxiliary = tmp_path / "auxiliary.txt"
+    main(
+        [
+            "-a",
+            "TTNT",
+            "-A",
+            "AAAA...TTTT",
+            output_option,
+            auxiliary,
+            "-o",
+            tmp_path / "out1.fastq",
+            "-p",
+            tmp_path / "out2.fastq",
+            reads,
+            reads,
+        ]
+    )
+    assert auxiliary.read_text() == expected
+    assert (tmp_path / "out2.fastq").read_text().splitlines()[1] == "CCCC"
+
+
 def test_discard(run):
     """--discard"""
     run("-b TTAGACATATCTCCGTCG --discard", "discard.fastq", "small.fastq")
