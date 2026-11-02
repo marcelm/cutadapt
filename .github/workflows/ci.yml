@@ -54,7 +54,7 @@ jobs:
     - name: Install tox
       run: pip install tox
     - name: Test
-      run: tox -e py$(echo ${{ matrix.python-version }} | tr -d .)
+      run: tox -e ${{ matrix.python-version }}
     - name: Upload coverage report
       uses: codecov/codecov-action@v7
       with:
