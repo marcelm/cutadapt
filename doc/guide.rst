@@ -375,8 +375,7 @@ will result in ::
 The 3' adapter in the last read is not trimmed because the anchored 5’ adapter is required, but
 missing in the read.
 
-Linked adapters do not work in combination with ``--info-file``, ``--action=mask`` and
-``--action=crop``.
+Linked adapters do not work in combination with ``--action=mask`` and ``--action=crop``.
 
 To provide :ref:`adapter-search parameters <search-parameters>`
 for linked adapters, they need to be set for each constituent adapter separately, as in
