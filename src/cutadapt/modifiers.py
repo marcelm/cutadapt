@@ -24,6 +24,7 @@ from .adapters import (
     remainder,
     Adapter,
     AdapterIndex,
+    _validate_matching_policy,
 )
 from .tokenizer import tokenize_braces, TokenizeError, Token, BraceToken
 from .info import ModificationInfo
@@ -95,6 +96,9 @@ class AdapterCutter(SingleEndModifier):
             - "lowercase": Convert the part of the sequence that would have been removed to lowercase
             - "retain": Like "trim", but leave the adapter sequence itself in the read
         index: If True, attempt to create an index to speed up the search (if possible)
+        matching_policy: The adapter alignment and selection policy. ``default``
+            is the standard behavior. ``sequence-similarity`` maximizes matching
+            bases and keeps the first adapter on ties.
     """
 
     def __init__(
@@ -103,18 +107,21 @@ class AdapterCutter(SingleEndModifier):
         times: int = 1,
         action: Optional[str] = "trim",
         index: bool = True,
+        matching_policy: str = "default",
     ):
         self.times = times
         assert action in ("trim", "mask", "lowercase", "retain", "crop", None)
         self.action = action
+        self.matching_policy = _validate_matching_policy(matching_policy)
         self.with_adapters = 0
         self.adapter_statistics = {a: a.create_statistics() for a in adapters}
         if index:
             self.adapters = MultipleAdapters(
-                self._regroup_into_indexed_adapters(adapters)
+                self._regroup_into_indexed_adapters(adapters, matching_policy),
+                matching_policy=matching_policy,
             )
         else:
-            self.adapters = MultipleAdapters(adapters)
+            self.adapters = MultipleAdapters(adapters, matching_policy=matching_policy)
         if action in {"retain", "crop"} and times > 1:
             raise ValueError("'retain' and 'crop' cannot be combined with times > 1")
         if self.times == 1 and self.action == "trim":
@@ -126,16 +133,16 @@ class AdapterCutter(SingleEndModifier):
             f"adapters={self.adapters!r}, times={self.times}, action='{self.action}')"
         )
 
-    def _regroup_into_indexed_adapters(self, adapters):
+    def _regroup_into_indexed_adapters(self, adapters, matching_policy):
         prefix, suffix, single = self._split_adapters(adapters)
         if len(prefix) > 1 or len(suffix) > 1:
             result = single
             if len(prefix) > 1:
-                result.append(IndexedPrefixAdapters(prefix))
+                result.append(IndexedPrefixAdapters(prefix, matching_policy))
             else:
                 result.extend(prefix)
             if len(suffix) > 1:
-                result.append(IndexedSuffixAdapters(suffix))
+                result.append(IndexedSuffixAdapters(suffix, matching_policy))
             else:
                 result.extend(suffix)
             return result
@@ -416,7 +423,9 @@ class PairedAdapterCutter(PairedEndModifier):
     Trim adapters in pairs from R1 and R2.
     """
 
-    def __init__(self, adapters1, adapters2, action="trim"):
+    def __init__(
+        self, adapters1, adapters2, action="trim", matching_policy: str = "default"
+    ):
         """
         adapters1 -- list of Adapters to be removed from R1
         adapters2 -- list of Adapters to be removed from R2
@@ -438,6 +447,8 @@ class PairedAdapterCutter(PairedEndModifier):
         for a1, a2 in self._adapter_pairs:
             logger.debug(" • %s=%s -- %s=%s", a1.name, a1.spec(), a2.name, a2.spec())
         self.action = action
+        self.matching_policy = _validate_matching_policy(matching_policy)
+        self._break_score_ties_by_fewer_errors = self.matching_policy == "default"
         self.with_adapters = 0
         self.adapter_statistics = [None, None]
         self.adapter_statistics[0] = {a: a.create_statistics() for a in adapters1}
@@ -497,7 +508,11 @@ class PairedAdapterCutter(PairedEndModifier):
             if (
                 best is None
                 or total_score > best_score
-                or (total_score == best_score and total_errors < best_errors)
+                or (
+                    self._break_score_ties_by_fewer_errors
+                    and total_score == best_score
+                    and total_errors < best_errors
+                )
             ):
                 best = match1, match2
                 best_score = total_score

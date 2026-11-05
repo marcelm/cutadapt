@@ -69,7 +69,12 @@ import dnaio
 import xopen as xopen
 
 from cutadapt import __version__
-from cutadapt.adapters import warn_duplicate_adapters, Adapter, InvalidCharacter
+from cutadapt.adapters import (
+    MATCHING_POLICIES,
+    warn_duplicate_adapters,
+    Adapter,
+    InvalidCharacter,
+)
 from cutadapt.json import OneLine, dumps as json_dumps
 from cutadapt.parser import make_adapters_from_specifications
 from cutadapt.modifiers import (
@@ -237,6 +242,10 @@ def get_argument_parser() -> ArgumentParser:
     group.add_argument("-N", "--no-match-adapter-wildcards", action="store_false",
         default=True, dest="match_adapter_wildcards",
         help="Do not interpret IUPAC wildcards in adapters.")
+    group.add_argument("--matching-policy", choices=MATCHING_POLICIES,
+        default="default",
+        help="Adapter alignment and selection policy. 'sequence-similarity' maximizes matching "
+            "bases and keeps the first adapter on ties. Default: %(default)s")
     group.add_argument("--action", choices=("trim", "retain", "mask", "lowercase", "crop", "none"),
         default="trim",
         help="What to do if a match was found. "
@@ -962,6 +971,7 @@ def make_pipeline_from_args(
             args.reverse_complement,
             not args.rename,  # no "rc" suffix if --rename is used
             args.index,
+            args.matching_policy,
         )
     )
 
@@ -1005,6 +1015,7 @@ def adapters_from_args(args) -> tuple[list[Adapter], list[Adapter]]:
         read_wildcards=args.match_read_wildcards,
         adapter_wildcards=args.match_adapter_wildcards,
         indels=args.indels,
+        matching_policy=args.matching_policy,
     )
     try:
         adapters = make_adapters_from_specifications(args.adapters, search_parameters)
@@ -1080,12 +1091,13 @@ def make_adapter_cutter(
     reverse_complement: bool,
     add_rc_suffix: bool,
     allow_index: bool,
+    matching_policy: str = "default",
 ):
     if pair_adapters:
         if reverse_complement:
             raise CommandLineError("Cannot use --revcomp with --pair-adapters")
         try:
-            cutter = PairedAdapterCutter(adapters, adapters2, action)
+            cutter = PairedAdapterCutter(adapters, adapters2, action, matching_policy)
         except PairedAdapterCutterError as e:
             raise CommandLineError("--pair-adapters: " + str(e))
         yield cutter
@@ -1093,9 +1105,13 @@ def make_adapter_cutter(
         adapter_cutter, adapter_cutter2 = None, None
         try:
             if adapters:
-                adapter_cutter = AdapterCutter(adapters, times, action, allow_index)
+                adapter_cutter = AdapterCutter(
+                    adapters, times, action, allow_index, matching_policy
+                )
             if adapters2:
-                adapter_cutter2 = AdapterCutter(adapters2, times, action, allow_index)
+                adapter_cutter2 = AdapterCutter(
+                    adapters2, times, action, allow_index, matching_policy
+                )
         except ValueError as e:
             raise CommandLineError(e)
         if paired:

@@ -16,6 +16,7 @@ class Aligner:
         wildcard_query: bool = False,
         indel_cost: int = 1,
         min_overlap: int = 1,
+        matching_policy: str = "default",
     ): ...
     def _set_reference(self, reference: str) -> None: ...
     @property
@@ -34,6 +35,7 @@ class PrefixComparer:
         wildcard_ref: bool = False,
         wildcard_query: bool = False,
         min_overlap: int = 1,
+        matching_policy: str = "default",
     ): ...
     def locate(self, query: str) -> tuple[int, int, int, int, int, int] | None: ...
 
