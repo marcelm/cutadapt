@@ -306,6 +306,60 @@ def test_parse_file_notation_with_parameters(tmp_path):
     assert a.indels is True
 
 
+@pytest.mark.parametrize(
+    "adapter_type,regular_class,rightmost_class",
+    [
+        ("front", FrontAdapter, RightmostFrontAdapter),
+        ("back", BackAdapter, RightmostBackAdapter),
+    ],
+)
+def test_parse_file_notation_rightmost(
+    tmp_path, adapter_type, regular_class, rightmost_class
+):
+    path = tmp_path / "adapters.fasta"
+    path.write_text(">first\nACGT\n>second\nTGCA;rightmost=0\n>third\nGTAC;rightmost\n")
+    parameters = {"max_errors": 0.2}
+    adapters = list(
+        make_adapters_from_one_specification(
+            f"file:{path};rightmost",
+            adapter_type=adapter_type,
+            search_parameters=parameters,
+        )
+    )
+    assert [type(a) for a in adapters] == [
+        rightmost_class,
+        regular_class,
+        rightmost_class,
+    ]
+    assert [a.name for a in adapters] == ["first", "second", "third"]
+    assert parameters == {"max_errors": 0.2}
+
+
+@pytest.mark.parametrize(
+    "file_spec,adapter_type",
+    [("^file:", "front"), ("file$:", "back"), ("file:", "anywhere")],
+)
+def test_parse_file_notation_rightmost_restrictions(tmp_path, file_spec, adapter_type):
+    path = tmp_path / "adapters.fasta"
+    path.write_text(">adapter\nACGT\n")
+    with pytest.raises(ValueError, match="'rightmost' only allowed"):
+        list(
+            make_adapters_from_one_specification(
+                f"{file_spec}{path};rightmost", adapter_type, {}
+            )
+        )
+
+
+def test_parse_file_notation_rightmost_linked(tmp_path):
+    path = tmp_path / "adapters.fasta"
+    path.write_text(">adapter\nACG;rightmost=0...TGT\n")
+    (adapter,) = make_adapters_from_one_specification(
+        f"file:{path};rightmost", "back", {}
+    )
+    assert type(adapter.front_adapter) is FrontAdapter
+    assert isinstance(adapter.back_adapter, RightmostBackAdapter)
+
+
 def test_parse_file_notation_with_5prime_anchoring(tmp_path):
     tmp = tmp_path / "adapters.fasta"
     tmp.write_text(dedent(""">first
