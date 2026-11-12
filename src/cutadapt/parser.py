@@ -211,7 +211,9 @@ class AdapterSpecification:
         return name, spec
 
     @classmethod
-    def parse(cls, spec: str, adapter_type: str) -> "AdapterSpecification":
+    def parse(
+        cls, spec: str, adapter_type: str, rightmost: bool = False
+    ) -> "AdapterSpecification":
         """
         Parse an adapter specification for a non-linked adapter (without '...')
         and return an AdapterSpecification instance.
@@ -233,7 +235,7 @@ class AdapterSpecification:
         spec = spec.strip()
         parameters = parse_search_parameters(parameters_spec)
         spec = expand_braces(spec)
-        rightmost = parameters.pop("rightmost", False)
+        rightmost = parameters.pop("rightmost", rightmost)
 
         # Special case for adapters consisting of only X characters:
         # This needs to be supported for backwards-compatibilitity
@@ -471,17 +473,21 @@ def _make_linked_adapter(
 
     if adapter_type == "anywhere":
         raise ValueError("'anywhere' (-b) adapters may not be linked")
-    front_spec = AdapterSpecification.parse(spec1, "front")
-    back_spec = AdapterSpecification.parse(spec2, "back")
+    front_parameters = search_parameters.copy()
+    back_parameters = search_parameters.copy()
+    front_spec = AdapterSpecification.parse(
+        spec1, "front", rightmost=front_parameters.pop("rightmost", False)
+    )
+    back_spec = AdapterSpecification.parse(
+        spec2, "back", rightmost=back_parameters.pop("rightmost", False)
+    )
     if name is None:
         name = front_spec.name
 
     front_anchored = front_spec.restriction is not None
     back_anchored = back_spec.restriction is not None
 
-    front_parameters = search_parameters.copy()
     front_parameters.update(front_spec.parameters)
-    back_parameters = search_parameters.copy()
     back_parameters.update(back_spec.parameters)
 
     if adapter_type == "front":
@@ -519,7 +525,10 @@ def _make_not_linked_adapter(
     adapter_type: str,
     search_parameters: dict[str, Any],
 ) -> Adapter:
-    aspec = AdapterSpecification.parse(spec, adapter_type)
+    parameters = search_parameters.copy()
+    aspec = AdapterSpecification.parse(
+        spec, adapter_type, rightmost=parameters.pop("rightmost", False)
+    )
     adapter_class: type[Adapter] = aspec.adapter_class()
 
     if aspec.parameters.pop("anywhere", False) and adapter_class in (
@@ -533,7 +542,6 @@ def _make_not_linked_adapter(
         raise ValueError(
             "'required' and 'optional' can only be used within linked adapters"
         )
-    parameters = search_parameters.copy()
     parameters.update(aspec.parameters)
     return adapter_class(
         sequence=aspec.sequence,

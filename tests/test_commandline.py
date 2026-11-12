@@ -758,11 +758,17 @@ def test_not_rightmost(tmp_path):
     assert trimmed.read_text() == ">r\nGGACTGAATTGGGT\n"
 
 
-def test_rightmost(tmp_path):
+@pytest.mark.parametrize("from_file", [False, True])
+def test_rightmost(tmp_path, from_file):
     path = tmp_path / "reads.fasta"
     path.write_text(">r\nGGCTGAATTGGACTGAATTGGGT\n")
     trimmed = tmp_path / "trimmed.fasta"
-    main(["-g", "CTGAATT;rightmost", "-o", trimmed, path])
+    adapter = "CTGAATT"
+    if from_file:
+        adapters = tmp_path / "adapters.fasta"
+        adapters.write_text(">adapter\nCTGAATT\n")
+        adapter = f"file:{adapters}"
+    main(["-g", f"{adapter};rightmost", "-o", trimmed, path])
     assert trimmed.read_text() == ">r\nGGGT\n"
 
 

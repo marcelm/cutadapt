@@ -6,6 +6,8 @@ development version
 -------------------
 
 * Dropped support for Python 3.10.
+* :issue:`889`: Fix a crash when using the ``rightmost`` search parameter with
+  adapters read from a FASTA file (``file:`` notation).
 
 v5.2 (2025-10-23)
 -----------------
